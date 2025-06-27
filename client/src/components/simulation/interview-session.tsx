@@ -128,46 +128,72 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
 
   // Initialize speech recognition
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
+    // Check if browser supports speech recognition
+    const hasSpeechRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+    
+    if (hasSpeechRecognition) {
+      try {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false; // Changed to false for better control
+        recognitionRef.current.interimResults = false; // Changed to false to avoid partial results
+        recognitionRef.current.lang = 'en-US';
+        recognitionRef.current.maxAlternatives = 1;
 
-      recognitionRef.current.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            transcript += event.results[i][0].transcript;
+        recognitionRef.current.onresult = (event: any) => {
+          if (event.results && event.results.length > 0) {
+            const transcript = event.results[0][0].transcript;
+            if (transcript && transcript.trim()) {
+              setCurrentResponse(prev => {
+                const newText = prev ? prev + ' ' + transcript : transcript;
+                return newText;
+              });
+              toast({
+                title: "Speech Recognized",
+                description: "Voice input added to your response.",
+              });
+            }
           }
-        }
-        if (transcript) {
-          setCurrentResponse(prev => prev + transcript);
-        }
-      };
+        };
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setIsRecording(false);
-        toast({
-          title: "Recording Error",
-          description: "Could not access microphone. Please check permissions.",
-          variant: "destructive"
-        });
-      };
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          
+          let errorMessage = "Speech recognition failed. Please try typing instead.";
+          if (event.error === 'network') {
+            errorMessage = "Internet connection required for voice recognition. Please check your connection or type your response.";
+          } else if (event.error === 'not-allowed') {
+            errorMessage = "Microphone access denied. Please allow microphone access in your browser settings.";
+          } else if (event.error === 'no-speech') {
+            return; // Don't show error for no speech detected
+          }
+          
+          toast({
+            title: "Voice Input Failed",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        };
 
-      recognitionRef.current.onend = () => {
-        setIsRecording(false);
-      };
+        recognitionRef.current.onstart = () => {
+          setIsRecording(true);
+        };
+
+        recognitionRef.current.onend = () => {
+          setIsRecording(false);
+        };
+      } catch (error) {
+        console.error('Failed to initialize speech recognition:', error);
+      }
     }
   }, []);
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
       toast({
-        title: "Voice Recording Not Supported",
-        description: "Your browser doesn't support voice recording.",
+        title: "Voice Input Not Available",
+        description: "Speech recognition requires Chrome, Edge, or Safari with internet access. Please type your response instead.",
         variant: "destructive"
       });
       return;
@@ -175,10 +201,22 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
 
     if (isRecording) {
       recognitionRef.current.stop();
-      setIsRecording(false);
     } else {
-      recognitionRef.current.start();
-      setIsRecording(true);
+      try {
+        recognitionRef.current.start();
+        toast({
+          title: "Listening...",
+          description: "Speak now. Recording will stop automatically when you finish speaking.",
+        });
+      } catch (error) {
+        console.error('Failed to start recording:', error);
+        setIsRecording(false);
+        toast({
+          title: "Microphone Access Required",
+          description: "Please allow microphone access when prompted, then try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 

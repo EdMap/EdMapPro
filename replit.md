@@ -91,6 +91,7 @@ edmap is a comprehensive B2B onboarding platform that leverages AI-powered works
 
 ## Changelog
 - June 27, 2025. Initial setup
+- June 27, 2025. Added voice recording functionality to interview simulator with Web Speech API integration
 
 ## User Preferences
 
