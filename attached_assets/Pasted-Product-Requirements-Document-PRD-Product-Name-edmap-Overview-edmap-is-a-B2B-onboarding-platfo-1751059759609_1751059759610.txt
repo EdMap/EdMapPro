@@ -1,0 +1,211 @@
+Product Requirements Document (PRD)
+
+Product Name: edmap
+
+Overview:
+edmap is a B2B onboarding platform that uses AI-powered workspace simulators to help enterprises accelerate and optimize onboarding by providing new hires with hands-on, team-based, industry-specific simulations. It ensures they deliver value faster while offering companies actionable insights.
+
+Product Breakdown
+
+edmap consists of three core simulation products:
+
+Interview Simulator
+
+Negotiation Simulator
+
+Workspace Simulator
+
+Each simulator targets a key stage in a professional's journey from pre-hire to post-hire integration.
+
+1. Interview Simulator
+
+Goal
+
+Help users practice and improve their technical and behavioral interview skills in realistic scenarios.
+
+Key Features
+
+AI-generated interviewers (adjustable difficulty, profession, tone)
+
+Real-time question-answer flow
+
+Feedback analysis (clarity, structure, relevance)
+
+Performance report (strengths & areas to improve)
+
+Users
+
+Primary: Students, jobseekers, training center learners
+
+Secondary: Universities and training centers (tracking progress)
+
+User Flow
+
+User logs in or signs up.
+
+User selects profession and interview type (technical, HR, etc).
+
+Users can copy/paste the job posting they want to have the interview on and edmap generates interview based on the job posting
+
+edmap generates an AI interviewer based on selection.
+
+Interview session begins (voice or text-based interaction).
+
+Upon completion, user receives feedback + score.
+
+Option to review transcript and retry.
+
+Metrics
+
+Engagement rate per session
+
+Completion rate
+
+Interview skill improvement over time
+
+2. Negotiation Simulator
+
+Goal
+
+Train users on real-life negotiation strategies for offers, promotions, salary discussions.
+
+Key Features
+
+Role-based AI agent (e.g. recruiter, manager, client)
+
+Scenario selection (salary negotiation, offer acceptance, stakeholder discussion)
+
+Sentiment tracking and persuasion analysis
+
+Final deal outcome
+
+Users
+
+Primary: Early-career professionals
+
+Secondary: Training institutions
+
+User Flow
+
+User selects a negotiation scenario.
+
+edmap sets up a guided simulation.
+
+AI agent negotiates in real-time.
+
+User makes decisions (offers, counters, tone).
+
+Simulation ends with result and feedback.
+
+User gets a negotiation strategy report.
+
+Metrics
+
+Scenario completion
+
+Persuasion effectiveness rating
+
+Offer value difference over iterations
+
+3. Workspace Simulator (Core Product)
+
+Goal
+
+Accelerate onboarding by simulating the company’s real work environment including teams, tools, tasks, and workflows using AI agents.
+
+Key Features
+
+Company-specific simulation builder (roles, tools, processes)
+
+AI agents simulating teammates, managers, clients
+
+Collaborative project tasks with AI support
+
+Feedback engine tracking user behavior and performance
+
+Custom dashboards for employers
+
+Users
+
+Primary: IT Companies with frequent hires
+
+Secondary: Talent development teams, L&D departments
+
+Company Onboarding Flow
+
+Company defines onboarding goals and hires.
+
+Uses admin dashboard to create a simulation (define role, tasks, tools, AI agent roles).
+
+Assigns simulator to new hires.
+
+Tracks progress and gets analytics.
+
+New Hire User Flow
+
+Receives invite from company.
+
+Enters simulator (with guided onboarding).
+
+Collaborates with AI teammates.
+
+Completes milestone-based tasks.
+
+Receives ongoing and final feedback.
+
+Company reviews performance.
+
+AI Agent Customization
+
+Personality (e.g. helpful, strict, collaborative)
+
+Role in simulation (teammate, client, lead dev, PM)
+
+Communication mode (Slack-style, Email-style, Meetings)
+
+Admin Dashboard Features
+
+User onboarding status
+
+Task completion insights
+
+Behavioral signals (collaboration, communication)
+
+Exportable performance reports
+
+Metrics
+
+Average time to complete onboarding
+
+First-week productivity score
+
+Behavioral alignment with company values
+
+Drop-off rates and task bottlenecks
+
+Tech Stack Considerations (for Replit build)
+
+Frontend: Preact + Tailwind CSS
+
+Backend: Django (REST API)
+
+AI Agents: OpenAI GPT-4 or Meta Llama
+
+Database: PostgreSQL
+
+Deployment: Replit environment, containerized backend
+
+Future Roadmap
+
+LMS integration for universities
+
+Simulator marketplace with plug-and-play onboarding flows
+
+Support for multiple languages
+
+Voice-based AI agent interaction
+
+Summary
+
+edmap empowers organizations to streamline onboarding with immersive simulations while giving learners the opportunity to experience real work settings. By simulating the workplace, we help employees deliver value faster and ensure cultural and operational alignment from day one.
+
