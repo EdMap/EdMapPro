@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Mic, HelpCircle, Lightbulb, Bus, User, X } from "lucide-react";
+import { Send, Mic, MicOff, HelpCircle, Lightbulb, Bus, User, X } from "lucide-react";
 
 interface Message {
   id: string;
@@ -30,6 +30,8 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
   const [timeRemaining, setTimeRemaining] = useState(session.configuration.duration * 60);
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const generateQuestionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -123,6 +125,62 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       });
     }
   }, []);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            transcript += event.results[i][0].transcript;
+          }
+        }
+        if (transcript) {
+          setCurrentResponse(prev => prev + transcript);
+        }
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
+        toast({
+          title: "Recording Error",
+          description: "Could not access microphone. Please check permissions.",
+          variant: "destructive"
+        });
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      toast({
+        title: "Voice Recording Not Supported",
+        description: "Your browser doesn't support voice recording.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      recognitionRef.current.start();
+      setIsRecording(true);
+    }
+  };
 
   const handleSendResponse = async () => {
     if (!currentResponse.trim() || !currentQuestion || isLoading) return;
@@ -365,10 +423,12 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                 <Button 
                   variant="outline" 
                   size="lg"
-                  disabled
-                  title="Voice Response (Coming Soon)"
+                  onClick={toggleRecording}
+                  disabled={isLoading || generateQuestionMutation.isPending}
+                  className={isRecording ? "bg-red-100 border-red-300 text-red-700" : ""}
+                  title={isRecording ? "Stop Recording" : "Start Voice Recording"}
                 >
-                  <Mic className="h-4 w-4" />
+                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
