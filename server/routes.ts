@@ -1,0 +1,217 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { openaiService } from "./services/openai";
+import { insertSimulationSessionSchema } from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // User authentication (simplified for MVP)
+  app.get("/api/user", async (req, res) => {
+    try {
+      // For MVP, return the default user
+      const user = await storage.getUser(1);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  // Get user progress
+  app.get("/api/user/:userId/progress", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const progress = await storage.getUserProgress(userId);
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user progress" });
+    }
+  });
+
+  // Get simulation sessions
+  app.get("/api/user/:userId/sessions", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const type = req.query.type as string;
+      const sessions = await storage.getUserSimulationSessions(userId, type);
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get sessions" });
+    }
+  });
+
+  // Create simulation session
+  app.post("/api/sessions", async (req, res) => {
+    try {
+      const sessionData = insertSimulationSessionSchema.parse(req.body);
+      const session = await storage.createSimulationSession(sessionData);
+      
+      // Update user progress
+      let progress = await storage.getUserProgressByType(session.userId, session.type);
+      if (!progress) {
+        progress = await storage.createUserProgress({
+          userId: session.userId,
+          simulationType: session.type,
+          totalSessions: 1,
+          completedSessions: 0,
+          totalTime: 0
+        });
+      } else {
+        await storage.updateUserProgress(session.userId, session.type, {
+          totalSessions: progress.totalSessions + 1,
+          lastSessionAt: new Date()
+        });
+      }
+      
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+
+  // Update simulation session
+  app.patch("/api/sessions/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const updates = req.body;
+      const session = await storage.updateSimulationSession(sessionId, updates);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update session" });
+    }
+  });
+
+  // Generate interview question
+  app.post("/api/interview/question", async (req, res) => {
+    try {
+      const { profession, interviewType, difficulty, jobPosting, previousQuestions } = req.body;
+      
+      const question = await openaiService.generateInterviewQuestion(
+        profession,
+        interviewType,
+        difficulty,
+        jobPosting,
+        previousQuestions
+      );
+      
+      res.json(question);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate question: " + (error as Error).message });
+    }
+  });
+
+  // Evaluate interview answer
+  app.post("/api/interview/evaluate", async (req, res) => {
+    try {
+      const { question, answer, profession, difficulty } = req.body;
+      
+      const evaluation = await openaiService.evaluateInterviewAnswer(
+        question,
+        answer,
+        profession,
+        difficulty
+      );
+      
+      res.json(evaluation);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to evaluate answer: " + (error as Error).message });
+    }
+  });
+
+  // Generate negotiation response
+  app.post("/api/negotiation/respond", async (req, res) => {
+    try {
+      const { scenario, userMessage, negotiationHistory, counterpartStyle } = req.body;
+      
+      const response = await openaiService.generateNegotiationResponse(
+        scenario,
+        userMessage,
+        negotiationHistory,
+        counterpartStyle
+      );
+      
+      res.json(response);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate response: " + (error as Error).message });
+    }
+  });
+
+  // Generate workspace team message
+  app.post("/api/workspace/message", async (req, res) => {
+    try {
+      const { teamMember, context, userAction } = req.body;
+      
+      const message = await openaiService.generateWorkspaceMessage(
+        teamMember,
+        context,
+        userAction
+      );
+      
+      res.json(message);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate message: " + (error as Error).message });
+    }
+  });
+
+  // Generate session feedback
+  app.post("/api/sessions/:sessionId/feedback", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const session = await storage.getSimulationSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      const feedback = await openaiService.generateSessionFeedback(
+        session.type,
+        session.messages as any[],
+        session.configuration as any
+      );
+      
+      // Update session with feedback and mark as completed
+      const duration = session.completedAt 
+        ? Math.floor((session.completedAt.getTime() - session.startedAt.getTime()) / 1000)
+        : 0;
+        
+      await storage.updateSimulationSession(sessionId, {
+        status: 'completed',
+        score: feedback.score,
+        feedback: feedback,
+        completedAt: new Date(),
+        duration
+      });
+      
+      // Update user progress
+      const progress = await storage.getUserProgressByType(session.userId, session.type);
+      if (progress) {
+        const newCompletedSessions = progress.completedSessions + 1;
+        const newAverageScore = progress.averageScore 
+          ? Math.round((progress.averageScore * progress.completedSessions + feedback.score) / newCompletedSessions)
+          : feedback.score;
+          
+        await storage.updateUserProgress(session.userId, session.type, {
+          completedSessions: newCompletedSessions,
+          averageScore: newAverageScore,
+          totalTime: progress.totalTime + duration,
+          lastSessionAt: new Date()
+        });
+      }
+      
+      res.json(feedback);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate feedback: " + (error as Error).message });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
