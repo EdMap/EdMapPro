@@ -773,21 +773,29 @@ export class GroqService {
       return this.getFallbackCustomerMessage(stage, persona, problem, true, 0);
     }
 
-    // Generate contextual responses based on agent's message
+    // Analyze agent message to provide realistic customer responses
     if (agentMessage) {
       const agentLower = agentMessage.toLowerCase();
+      const messageLength = agentMessage.length;
       
-      // Analyze agent's response and generate appropriate customer reply
+      // React to very short responses (like "In 1 minute")
+      if (messageLength < 20) {
+        return this.generateShortResponseReaction(personaKey, agentMessage, conversationCount);
+      }
+      
+      // React to different types of agent responses
       if (agentLower.includes('sorry') || agentLower.includes('apologize')) {
         return this.generateApologyResponse(personaKey, conversationCount);
-      } else if (agentLower.includes('try') || agentLower.includes('can you')) {
+      } else if (agentLower.includes('try') || agentLower.includes('can you') || agentLower.includes('please')) {
         return this.generateActionResponse(personaKey, conversationCount);
-      } else if (agentLower.includes('understand') || agentLower.includes('let me')) {
+      } else if (agentLower.includes('understand') || agentLower.includes('let me') || agentLower.includes('see')) {
         return this.generateUnderstandingResponse(personaKey, conversationCount);
-      } else if (agentLower.includes('help') || agentLower.includes('assist')) {
+      } else if (agentLower.includes('help') || agentLower.includes('assist') || agentLower.includes('resolve')) {
         return this.generateHelpResponse(personaKey, conversationCount);
-      } else if (agentLower.includes('?')) {
+      } else if (agentMessage.includes('?')) {
         return this.generateQuestionResponse(personaKey, problem, conversationCount);
+      } else if (agentLower.includes('minute') || agentLower.includes('time') || agentLower.includes('wait')) {
+        return this.generateTimeResponse(personaKey, agentMessage, conversationCount);
       }
     }
 
@@ -976,6 +984,81 @@ export class GroqService {
     const messageIndex = Math.min(conversationCount, messages.length - 1);
     const sentiment = personaKey === 'angry' ? 'irritated' : 
                      personaKey === 'urgent' ? 'stressed' : 'explanatory';
+    
+    return { message: messages[messageIndex], sentiment };
+  }
+
+  private generateShortResponseReaction(personaKey: string, agentMessage: string, conversationCount: number): { message: string; sentiment: string } {
+    const responses = {
+      angry: [
+        `"${agentMessage}"? That's it? I need more than that! What exactly are you doing to fix this?`,
+        `Seriously? "${agentMessage}" is all you can tell me? I've been waiting and need real help!`,
+        `That's not an answer! "${agentMessage}" doesn't tell me anything useful. I need details!`
+      ],
+      polite: [
+        `I appreciate the update, but could you please provide more details about what "${agentMessage}" means for my situation?`,
+        `Thank you, but I'd like to understand more about "${agentMessage}" - what exactly does that involve?`,
+        `I see you mentioned "${agentMessage}", but could you help me understand what happens next?`
+      ],
+      confused: [
+        `I'm sorry, but I don't understand what "${agentMessage}" means. Could you explain that more clearly?`,
+        `"${agentMessage}"? I'm not sure what that means for my problem. Can you help me understand?`,
+        `I'm lost. When you say "${agentMessage}", what exactly should I expect?`
+      ],
+      elderly: [
+        `I'm sorry dear, but "${agentMessage}" doesn't really help me understand. Could you explain it differently?`,
+        `"${agentMessage}"? I'm afraid I need more explanation than that. What does this mean exactly?`,
+        `I don't quite follow. When you say "${agentMessage}", what am I supposed to do?`
+      ],
+      urgent: [
+        `"${agentMessage}"? I need more than that! Time is critical here - what's the full plan?`,
+        `That's too vague! "${agentMessage}" doesn't help when I'm under pressure. Give me specifics!`,
+        `I can't work with "${agentMessage}" - I need detailed steps because this is urgent!`
+      ]
+    };
+
+    const messages = responses[personaKey as keyof typeof responses] || responses.polite;
+    const messageIndex = Math.min(conversationCount, messages.length - 1);
+    const sentiment = personaKey === 'angry' ? 'frustrated' : 
+                     personaKey === 'urgent' ? 'impatient' : 
+                     personaKey === 'polite' ? 'confused' : 'confused';
+    
+    return { message: messages[messageIndex], sentiment };
+  }
+
+  private generateTimeResponse(personaKey: string, agentMessage: string, conversationCount: number): { message: string; sentiment: string } {
+    const responses = {
+      angry: [
+        "How long is this going to take? I've already wasted too much time on this!",
+        "Another delay? This is ridiculous! When will this actually be resolved?",
+        "I don't have time to keep waiting. Give me a real timeline!"
+      ],
+      polite: [
+        "I understand these things take time. Could you give me an estimate of when this might be resolved?",
+        "Thank you for the update. Do you have a rough idea of how long this process usually takes?",
+        "I appreciate your help. When might I expect to hear back from you?"
+      ],
+      confused: [
+        "I'm not sure I understand the timeline. How long should I expect this to take?",
+        "When you say it will take time, what does that mean exactly?",
+        "I'm confused about the timing. Could you be more specific?"
+      ],
+      elderly: [
+        "I'm not good with timing these technical things. How long should I plan to wait?",
+        "Could you help me understand when I might hear back? I like to know what to expect.",
+        "I'm patient, but it would help to know roughly how long these things usually take."
+      ],
+      urgent: [
+        "Time is really critical here! Can you give me a more specific timeline?",
+        "I need this resolved quickly. What's the fastest this can be done?",
+        "Every minute counts! How can we speed this up?"
+      ]
+    };
+
+    const messages = responses[personaKey as keyof typeof responses] || responses.polite;
+    const messageIndex = Math.min(conversationCount, messages.length - 1);
+    const sentiment = personaKey === 'angry' ? 'frustrated' : 
+                     personaKey === 'urgent' ? 'stressed' : 'inquisitive';
     
     return { message: messages[messageIndex], sentiment };
   }
