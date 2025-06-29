@@ -75,8 +75,12 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
         return updated;
       });
 
+      // Debug logging to see what we're getting
+      console.log('Evaluation result:', evaluation);
+      
       // Only show follow-up if it exists, otherwise generate next question
-      if (evaluation.followUp) {
+      if (evaluation.followUp && evaluation.followUp.trim()) {
+        console.log('Showing follow-up question:', evaluation.followUp);
         setTimeout(() => {
           const followUpMessage: Message = {
             id: Date.now().toString(),
@@ -87,6 +91,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
           setMessages(prev => [...prev, followUpMessage]);
         }, 1500);
       } else {
+        console.log('Generating next question - no follow-up available');
         // Generate next question only if no follow-up
         setTimeout(() => {
           const previousQuestions = messages
@@ -111,10 +116,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       return response.json();
     },
     onSuccess: (feedback) => {
-      toast({
-        title: "Interview Complete!",
-        description: `Your final score: ${feedback.score}/100`,
-      });
+      console.log('Interview feedback received:', feedback);
       onComplete();
     }
   });
@@ -243,11 +245,6 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       updateAudioLevel();
     } catch (error) {
       console.error('Failed to start recording:', error);
-      toast({
-        title: "Recording Failed",
-        description: "Unable to access microphone. Please check permissions and try again.",
-        variant: "destructive"
-      });
     }
   };
 
