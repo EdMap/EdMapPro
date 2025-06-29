@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Mic, MicOff, HelpCircle, Lightbulb, Bus, User, X } from "lucide-react";
+import { Send, Mic, MicOff, HelpCircle, Lightbulb, Bus, User, X, Check } from "lucide-react";
 
 interface Message {
   id: string;
@@ -33,8 +33,12 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
   const [isRecording, setIsRecording] = useState(false);
   const [audioSupported, setAudioSupported] = useState(false);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [audioLevel, setAudioLevel] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   const generateQuestionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -199,6 +203,27 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
+      // Set up audio context for wave visualization
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      analyserRef.current.fftSize = 256;
+      source.connect(analyserRef.current);
+
+      // Start audio level monitoring
+      const updateAudioLevel = () => {
+        if (analyserRef.current && isRecording) {
+          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(dataArray);
+          
+          // Calculate average volume level
+          const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+          setAudioLevel(average / 255); // Normalize to 0-1
+          
+          animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+        }
+      };
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
       });
@@ -213,23 +238,13 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        if (audioBlob.size > 0) {
-          transcribeAudioMutation.mutate(audioBlob);
-        }
-        
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
-          streamRef.current = null;
-        }
-      };
-
       mediaRecorder.start();
       setIsRecording(true);
+      updateAudioLevel();
+      
       toast({
         title: "Recording Started",
-        description: "Speak now. Click the microphone again to stop recording.",
+        description: "Speak clearly. Use the checkmark to submit or X to cancel.",
       });
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -241,23 +256,58 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
     }
   };
 
-  const stopRecording = () => {
+  const submitRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        if (audioBlob.size > 0) {
+          transcribeAudioMutation.mutate(audioBlob);
+        }
+        cleanupRecording();
+      };
+      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       toast({
-        title: "Recording Stopped",
-        description: "Processing your speech...",
+        title: "Processing Recording",
+        description: "Converting your speech to text...",
       });
     }
   };
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.onstop = () => {
+        cleanupRecording();
+      };
+      
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setAudioChunks([]);
+      toast({
+        title: "Recording Cancelled",
+        description: "Audio recording discarded.",
+      });
     }
+  };
+
+  const cleanupRecording = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    setAudioLevel(0);
   };
 
   const handleSendResponse = async () => {
@@ -467,18 +517,47 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
               )}
             </div>
 
-            {/* Recording Status */}
+            {/* Recording Status with Voice Wave */}
             {isRecording && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-pulse bg-red-500 rounded-full h-3 w-3"></div>
-                  <span className="text-red-800 font-medium">Recording... Speak clearly</span>
-                  <button 
-                    onClick={stopRecording}
-                    className="ml-auto text-red-600 hover:text-red-800 underline text-sm"
-                  >
-                    Stop Recording
-                  </button>
+              <div className="mb-3 p-4 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-pulse bg-red-500 rounded-full h-3 w-3"></div>
+                    <span className="text-red-800 font-medium">Recording in progress...</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelRecording}
+                      className="text-red-600 border-red-300 hover:bg-red-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={submitRecording}
+                      className="text-green-600 border-green-300 hover:bg-green-100"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Voice Wave Visualization */}
+                <div className="flex items-center justify-center space-x-1 h-8">
+                  {Array.from({ length: 20 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="bg-red-400 rounded-full transition-all duration-150"
+                      style={{
+                        width: '3px',
+                        height: `${Math.max(4, audioLevel * 30 + Math.random() * 10)}px`,
+                        opacity: audioLevel > 0.1 ? 0.8 : 0.3,
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -548,16 +627,16 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                 >
                   <Send className="h-4 w-4" />
                 </Button>
-                {audioSupported && (
+                {audioSupported && !isRecording && (
                   <Button 
                     variant="outline" 
                     size="lg"
-                    onClick={toggleRecording}
+                    onClick={startRecording}
                     disabled={isLoading || generateQuestionMutation.isPending || transcribeAudioMutation.isPending}
-                    className={isRecording ? "bg-red-100 border-red-300 text-red-700 animate-pulse" : "hover:bg-blue-50"}
-                    title={isRecording ? "Stop Recording" : "Start Voice Recording"}
+                    className="hover:bg-blue-50"
+                    title="Start Voice Recording"
                   >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    <Mic className="h-4 w-4" />
                   </Button>
                 )}
               </div>
