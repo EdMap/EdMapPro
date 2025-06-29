@@ -31,6 +31,9 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [networkRetries, setNetworkRetries] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const recognitionRef = useRef<any>(null);
 
   const generateQuestionMutation = useMutation({
@@ -178,28 +181,40 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
           console.error('Speech recognition error:', event.error);
           setIsRecording(false);
           
+          if (event.error === 'network') {
+            setNetworkRetries(prev => prev + 1);
+            // Don't show error for first few network failures, they're common
+            if (networkRetries < 3) {
+              console.log('Network error, will retry automatically');
+              return;
+            }
+            
+            toast({
+              title: "Network Connection Issue",
+              description: "Speech recognition requires a stable internet connection. Please check your connection and try again, or continue typing.",
+              variant: "destructive"
+            });
+            return;
+          }
+          
           let errorMessage = "Speech recognition failed. Please try typing instead.";
           let title = "Voice Input Failed";
           
           switch (event.error) {
-            case 'network':
-              errorMessage = "Internet connection required for voice recognition. Please check your connection or type your response.";
-              break;
             case 'not-allowed':
               title = "Microphone Access Denied";
-              errorMessage = "Please allow microphone access in your browser settings and try again.";
+              errorMessage = "Please allow microphone access in your browser settings and refresh the page.";
               break;
             case 'no-speech':
-              title = "No Speech Detected";
-              errorMessage = "No speech was detected. Please try speaking again or use typing.";
-              break;
+              // Don't show error for no speech, it's normal
+              return;
             case 'audio-capture':
               title = "Audio Capture Failed";
               errorMessage = "Unable to capture audio. Please check your microphone and try again.";
               break;
             case 'service-not-allowed':
               title = "Service Not Available";
-              errorMessage = "Speech recognition service is not available. Please use typing instead.";
+              errorMessage = "Speech recognition service is not available in your browser. Please use typing instead.";
               break;
           }
           
@@ -212,6 +227,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
 
         recognitionRef.current.onstart = () => {
           setIsRecording(true);
+          setNetworkRetries(0); // Reset retry count on successful start
           console.log('Speech recognition started');
         };
 
@@ -228,8 +244,11 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
           console.log('Speech ended');
         };
 
+        setSpeechSupported(true);
+
       } catch (error) {
         console.error('Failed to initialize speech recognition:', error);
+        setSpeechSupported(false);
         if (error instanceof DOMException && error.name === 'NotAllowedError') {
           toast({
             title: "Microphone Permission Required",
@@ -241,6 +260,18 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
     };
 
     initializeSpeechRecognition();
+
+    // Monitor network connectivity
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const toggleRecording = async () => {
@@ -248,6 +279,16 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       toast({
         title: "Voice Input Not Available",
         description: "Speech recognition requires Chrome, Edge, or Safari with internet access. Please type your response instead.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check network connectivity first
+    if (!isOnline) {
+      toast({
+        title: "No Internet Connection",
+        description: "Voice recognition requires an internet connection. Please check your connection and try again.",
         variant: "destructive"
       });
       return;
@@ -271,30 +312,39 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
         return;
       }
 
+      // Test microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop()); // Stop the test stream
+
       recognitionRef.current.start();
       toast({
         title: "Listening...",
-        description: "Speak now. Click the microphone again to stop recording.",
+        description: "Speak clearly. The microphone will automatically stop when you finish speaking.",
       });
     } catch (error) {
       console.error('Failed to start recording:', error);
       setIsRecording(false);
       
-      // Try to request permission if it's not granted
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        // If permission granted, try again
-        recognitionRef.current.start();
-        toast({
-          title: "Listening...",
-          description: "Speak now. Click the microphone again to stop recording.",
-        });
-      } catch (permissionError) {
-        toast({
-          title: "Microphone Permission Required",
-          description: "Please allow microphone access when prompted, then try again.",
-          variant: "destructive"
-        });
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          toast({
+            title: "Microphone Permission Denied",
+            description: "Please allow microphone access in your browser and try again.",
+            variant: "destructive"
+          });
+        } else if (error.name === 'NotFoundError') {
+          toast({
+            title: "No Microphone Found",
+            description: "Please connect a microphone and try again.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Microphone Error",
+            description: "Unable to access microphone. Please check your device settings.",
+            variant: "destructive"
+          });
+        }
       }
     }
   };
@@ -517,13 +567,59 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
               <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center space-x-2">
                   <div className="animate-pulse bg-red-500 rounded-full h-3 w-3"></div>
-                  <span className="text-red-800 font-medium">Recording... Speak now</span>
+                  <span className="text-red-800 font-medium">Recording... Speak clearly</span>
                   <button 
                     onClick={toggleRecording}
                     className="ml-auto text-red-600 hover:text-red-800 underline text-sm"
                   >
                     Stop Recording
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Network Status Warning */}
+            {!isOnline && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <X className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="text-red-800 font-medium">No Internet Connection</p>
+                    <p className="text-red-700 text-sm mt-1">
+                      Voice recognition requires a stable internet connection. Please check your connection and refresh the page.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Speech Recognition Help */}
+            {isOnline && !speechSupported && (
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <HelpCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <p className="text-yellow-800 font-medium">Voice Input Setup Required</p>
+                    <p className="text-yellow-700 text-sm mt-1">
+                      Voice recognition requires Chrome, Edge, or Safari with microphone permissions. 
+                      If you're using a supported browser, please allow microphone access when prompted.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Speech Recognition Available */}
+            {isOnline && speechSupported && (
+              <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <Mic className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <p className="text-green-800 font-medium">Voice Input Ready</p>
+                    <p className="text-green-700 text-sm mt-1">
+                      Click the microphone button to start voice recording, or continue typing below.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -553,16 +649,18 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                 >
                   <Send className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={toggleRecording}
-                  disabled={isLoading || generateQuestionMutation.isPending}
-                  className={isRecording ? "bg-red-100 border-red-300 text-red-700 animate-pulse" : "hover:bg-blue-50"}
-                  title={isRecording ? "Stop Recording" : "Start Voice Recording"}
-                >
-                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </Button>
+                {speechSupported && (
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={toggleRecording}
+                    disabled={isLoading || generateQuestionMutation.isPending}
+                    className={isRecording ? "bg-red-100 border-red-300 text-red-700 animate-pulse" : "hover:bg-blue-50"}
+                    title={isRecording ? "Stop Recording" : "Start Voice Recording"}
+                  >
+                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </Button>
+                )}
               </div>
             </div>
 
