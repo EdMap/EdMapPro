@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { groqService } from "./services/groq";
+import { openaiService } from "./services/openai";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -170,9 +171,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { teamMember, context, userAction } = req.body;
       
       const message = await groqService.generateWorkspaceMessage(
-        teamMember,
         context,
-        userAction
+        userAction,
+        teamMember,
+        'message'
       );
       
       res.json(message);

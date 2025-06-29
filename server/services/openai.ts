@@ -1,8 +1,8 @@
-import Groq from "groq-sdk";
+import OpenAI from "openai";
 
-// Using Groq for fast AI inference with llama models
-const groq = new Groq({ 
-  apiKey: process.env.GROQ_API_KEY
+// Using OpenAI for AI inference
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 export interface InterviewQuestion {
