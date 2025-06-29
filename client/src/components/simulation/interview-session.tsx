@@ -34,7 +34,10 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
   const [speechSupported, setSpeechSupported] = useState(false);
   const [networkRetries, setNetworkRetries] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isListening, setIsListening] = useState(false);
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const generateQuestionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -610,27 +613,33 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
               </div>
             )}
 
-            {/* Speech Recognition Available */}
-            {isOnline && speechSupported && (
-              <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-start space-x-2">
-                  <Mic className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="text-green-800 font-medium">Voice Input Ready</p>
-                    <p className="text-green-700 text-sm mt-1">
-                      Click the microphone button to start voice recording, or continue typing below.
-                    </p>
-                  </div>
+            {/* Voice Input Instructions */}
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start space-x-2">
+                <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-blue-800 font-medium">Voice Input Solution</p>
+                  <p className="text-blue-700 text-sm mt-1">
+                    For the best voice input experience, use your device's built-in dictation:
+                    <br />
+                    <strong>• iPhone/iPad:</strong> Tap the microphone icon on your keyboard
+                    <br />
+                    <strong>• Android:</strong> Tap the microphone icon on your keyboard
+                    <br />
+                    <strong>• Mac:</strong> Press Fn key twice or use Edit → Start Dictation
+                    <br />
+                    <strong>• Windows:</strong> Press Windows + H for voice typing
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Response Input */}
             <div className="flex space-x-3">
               <Textarea
-                className="flex-1 resize-none"
-                rows={3}
-                placeholder={isRecording ? "Voice recording in progress..." : speechSupported ? "Type your response or use the microphone..." : "Type your response here... (Tip: Use your device's voice-to-text feature)"}
+                className="flex-1 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={4}
+                placeholder="Type your response here... (For voice input: use your device's built-in voice typing - tap the microphone on your keyboard or use voice commands)"
                 value={currentResponse}
                 onChange={(e) => setCurrentResponse(e.target.value)}
                 onKeyDown={(e) => {
@@ -640,6 +649,9 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                   }
                 }}
                 disabled={isLoading || generateQuestionMutation.isPending}
+                aria-label="Interview response input"
+                autoComplete="off"
+                spellCheck="true"
               />
               <div className="flex flex-col space-y-2">
                 <Button 
@@ -650,18 +662,21 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                 >
                   <Send className="h-4 w-4" />
                 </Button>
-                {speechSupported && (
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    onClick={toggleRecording}
-                    disabled={isLoading || generateQuestionMutation.isPending}
-                    className={isRecording ? "bg-red-100 border-red-300 text-red-700 animate-pulse" : "hover:bg-blue-50"}
-                    title={isRecording ? "Stop Recording" : "Start Voice Recording"}
-                  >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </Button>
-                )}
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  onClick={() => {
+                    toast({
+                      title: "Voice Input Tip",
+                      description: "Use your device's built-in voice typing feature in the text box below for reliable voice input.",
+                    });
+                  }}
+                  disabled={isLoading || generateQuestionMutation.isPending}
+                  className="hover:bg-blue-50"
+                  title="Voice Input Help"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
