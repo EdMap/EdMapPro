@@ -24,7 +24,6 @@ interface InterviewSessionProps {
 }
 
 export default function InterviewSession({ session, onComplete }: InterviewSessionProps) {
-  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentResponse, setCurrentResponse] = useState("");
   const [timeRemaining, setTimeRemaining] = useState(session.configuration.duration * 60);
