@@ -1,8 +1,8 @@
-import OpenAI from "openai";
+import Groq from "groq-sdk";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key"
+// Using Groq for fast AI inference with llama models
+const groq = new Groq({ 
+  apiKey: process.env.GROQ_API_KEY
 });
 
 export interface InterviewQuestion {

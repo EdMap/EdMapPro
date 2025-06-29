@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { openaiService } from "./services/openai";
+import { groqService } from "./services/groq";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -94,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { profession, interviewType, difficulty, jobPosting, previousQuestions } = req.body;
       
-      const question = await openaiService.generateInterviewQuestion(
+      const question = await groqService.generateInterviewQuestion(
         profession,
         interviewType,
         difficulty,
@@ -122,10 +122,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { question, answer, profession, difficulty } = req.body;
       
-      const evaluation = await openaiService.evaluateInterviewAnswer(
+      const evaluation = await groqService.evaluateInterviewAnswer(
         question,
         answer,
-        profession,
         difficulty
       );
       
@@ -152,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { scenario, userMessage, negotiationHistory, counterpartStyle } = req.body;
       
-      const response = await openaiService.generateNegotiationResponse(
+      const response = await groqService.generateNegotiationResponse(
         scenario,
         userMessage,
         negotiationHistory,
@@ -170,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { teamMember, context, userAction } = req.body;
       
-      const message = await openaiService.generateWorkspaceMessage(
+      const message = await groqService.generateWorkspaceMessage(
         teamMember,
         context,
         userAction
