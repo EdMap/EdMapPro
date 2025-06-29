@@ -126,25 +126,10 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
           const newText = prev ? prev + ' ' + result.text.trim() : result.text.trim();
           return newText;
         });
-        toast({
-          title: "Voice Recognized",
-          description: "Your speech has been converted to text successfully!",
-        });
-      } else {
-        toast({
-          title: "No Speech Detected",
-          description: "Please try speaking more clearly or check your microphone.",
-          variant: "destructive"
-        });
       }
     },
     onError: (error) => {
       console.error('Transcription error:', error);
-      toast({
-        title: "Transcription Failed",
-        description: "Unable to convert speech to text. Please try again or type your response.",
-        variant: "destructive"
-      });
     }
   });
 
@@ -241,11 +226,6 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       mediaRecorder.start();
       setIsRecording(true);
       updateAudioLevel();
-      
-      toast({
-        title: "Recording Started",
-        description: "Speak clearly. Use the checkmark to submit or X to cancel.",
-      });
     } catch (error) {
       console.error('Failed to start recording:', error);
       toast({
@@ -268,10 +248,6 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      toast({
-        title: "Processing Recording",
-        description: "Converting your speech to text...",
-      });
     }
   };
 
@@ -284,10 +260,6 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setAudioChunks([]);
-      toast({
-        title: "Recording Cancelled",
-        description: "Audio recording discarded.",
-      });
     }
   };
 
@@ -517,60 +489,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
               )}
             </div>
 
-            {/* Recording Status with Voice Wave */}
-            {isRecording && (
-              <div className="mb-3 p-4 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-pulse bg-red-500 rounded-full h-3 w-3"></div>
-                    <span className="text-red-800 font-medium">Recording in progress...</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={cancelRecording}
-                      className="text-red-600 border-red-300 hover:bg-red-100"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={submitRecording}
-                      className="text-green-600 border-green-300 hover:bg-green-100"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Voice Wave Visualization */}
-                <div className="flex items-center justify-center space-x-1 h-8">
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div
-                      key={i}
-                      className="bg-red-400 rounded-full transition-all duration-150"
-                      style={{
-                        width: '3px',
-                        height: `${Math.max(4, audioLevel * 30 + Math.random() * 10)}px`,
-                        opacity: audioLevel > 0.1 ? 0.8 : 0.3,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Processing Status */}
-            {transcribeAudioMutation.isPending && (
-              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                  <span className="text-blue-800 font-medium">Converting speech to text...</span>
-                </div>
-              </div>
-            )}
 
             {/* Voice Input Status */}
             {audioSupported ? (
@@ -601,23 +520,81 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
 
             {/* Response Input */}
             <div className="flex space-x-3">
-              <Textarea
-                className="flex-1 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                rows={4}
-                placeholder={isRecording ? "Recording in progress..." : "Type your response here..."}
-                value={currentResponse}
-                onChange={(e) => setCurrentResponse(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendResponse();
-                  }
-                }}
-                disabled={isLoading || generateQuestionMutation.isPending || isRecording}
-                aria-label="Interview response input"
-                autoComplete="off"
-                spellCheck="true"
-              />
+              <div className="flex-1 relative">
+                <Textarea
+                  className="resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-3 pb-16"
+                  rows={4}
+                  placeholder={isRecording ? "Recording in progress..." : "Type your response here..."}
+                  value={currentResponse}
+                  onChange={(e) => setCurrentResponse(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendResponse();
+                    }
+                  }}
+                  disabled={isLoading || generateQuestionMutation.isPending || isRecording}
+                  aria-label="Interview response input"
+                  autoComplete="off"
+                  spellCheck="true"
+                />
+                
+                {/* Integrated Recording Interface */}
+                {isRecording && (
+                  <div className="absolute bottom-2 left-2 right-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-pulse bg-red-500 rounded-full h-2 w-2"></div>
+                        <span className="text-red-800 text-xs font-medium">Recording...</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={cancelRecording}
+                          className="text-red-600 border-red-300 hover:bg-red-100 h-6 w-6 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={submitRecording}
+                          className="text-green-600 border-green-300 hover:bg-green-100 h-6 w-6 p-0"
+                        >
+                          <Check className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Voice Wave Visualization */}
+                    <div className="flex items-center justify-center space-x-0.5 h-6">
+                      {Array.from({ length: 25 }, (_, i) => (
+                        <div
+                          key={i}
+                          className="bg-red-400 rounded-full transition-all duration-150"
+                          style={{
+                            width: '2px',
+                            height: `${Math.max(3, audioLevel * 20 + Math.random() * 8)}px`,
+                            opacity: audioLevel > 0.05 ? 0.8 : 0.3,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Processing Status */}
+                {transcribeAudioMutation.isPending && (
+                  <div className="absolute bottom-2 left-2 right-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                      <span className="text-blue-800 text-xs font-medium">Converting speech to text...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div className="flex flex-col space-y-2">
                 <Button 
                   size="lg"
