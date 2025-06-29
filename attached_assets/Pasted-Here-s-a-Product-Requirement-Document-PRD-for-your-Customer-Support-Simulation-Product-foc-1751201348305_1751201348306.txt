@@ -1,0 +1,165 @@
+Here’s a **Product Requirement Document (PRD)** for your **Customer Support Simulation Product**—focused on onboarding and training **chat/call support agents**. This will be tailored to be executable on **Replit**, so everything will be modular and focused on building blocks.
+
+---
+
+# 🧩 Product Requirement Document (PRD)
+
+**Product Name:** Customer Support Simulator
+**Product Owner:** Arsen Asatryan
+**Platform:** Web-based simulation product (Replit-hosted MVP)
+**Target Users:** Aspiring and junior customer support agents
+**Primary Goal:** Help users gain realistic experience by simulating conversations (chat or voice) with AI-driven clients in different stages of customer support
+
+---
+
+## 🧭 1. Problem Statement
+
+Many aspiring or new customer support agents struggle with real-world readiness. They lack exposure to real customer scenarios, emotional responses, pressure situations, and the structured nature of support workflows. Existing training is either theoretical or outdated.
+
+---
+
+## 🎯 2. Objectives
+
+* Let users practice real-time conversations with simulated clients (chat or voice).
+* Provide stage-based training (e.g., greeting, issue resolution, escalation).
+* Offer customizable personas for clients (e.g., angry, confused, elderly).
+* Track and analyze performance to improve soft and problem-solving skills.
+
+---
+
+## 🧑‍💻 3. Core Features
+
+### A. Simulation Launcher
+
+* **Flow:**
+
+  1. User lands on homepage.
+  2. Selects:
+
+     * **Support channel:** `Chat` or `Call`
+     * **Stage of support:** `Greeting`, `Problem Diagnosis`, `Resolution`, `Escalation`, `Closing`
+     * **Client persona:** Predefined personas (`Angry customer`, `Polite customer`, `Elderly`, `Confused`, etc.) or custom persona prompt.
+  3. Clicks **"Start Simulation"**
+
+### B. Client Persona Builder
+
+* Users can choose from:
+
+  * Predefined personas
+  * Input their own persona description (e.g., "a sarcastic, impatient 40-year-old who lost access to their email")
+
+### C. AI-Driven Client Simulation
+
+* **Chat Mode:**
+
+  * Real-time chat interface
+  * Messages appear with human-like delay
+* **Call Mode (MVP):**
+
+  * Text-to-speech and speech-to-text integration (e.g., using Web APIs or Replicate’s Whisper & TTS models)
+  * Simulate real call experience in-browser
+
+### D. Feedback & Analytics
+
+* After each simulation:
+
+  * Breakdown by:
+
+    * Empathy score
+    * Clarity
+    * Resolution attempt quality
+    * Escalation judgment
+  * LLM-generated feedback with quotes from the session
+  * Optional replay of chat/call
+
+### E. User Dashboard
+
+* Session history
+* Progress tracker per stage (e.g., novice → intermediate → advanced)
+* Badges or scores per persona or difficulty
+
+---
+
+## 🧪 4. User Flows
+
+### 🟢 First-Time User Flow
+
+1. Enters the simulator → clicks "Try Now"
+2. Selects:
+
+   * Chat or Call
+   * Stage of the support flow
+   * Persona (or creates one)
+3. Simulation begins
+4. Ends session
+5. Views feedback and analytics
+6. Optionally creates account to save progress
+
+### 🔁 Returning User Flow
+
+1. Logs in
+2. Views dashboard
+3. Selects new scenario or continues previous session
+4. Practices again with harder scenarios or different personas
+
+---
+
+## 🛠️ 5. Tech Stack (for Replit MVP)
+
+| Feature                 | Stack / Tool                                         |
+| ----------------------- | ---------------------------------------------------- |
+| Frontend                | HTML/CSS + JavaScript or Preact                      |
+| Backend                 | Flask or FastAPI                                     |
+| AI Client               | OpenAI GPT-4o or GPT-3.5 for conversation simulation |
+| Voice Simulation (Call) | Web Speech API / Replicate API for TTS & STT         |
+| Persona Builder         | GPT prompt templating with persona injection         |
+| Storage                 | Replit DB or Firebase for session history            |
+| Analytics & Feedback    | LLM-based evaluation after each session              |
+
+---
+
+## 📦 6. Simulation Scenarios (Phase Examples)
+
+| Phase             | Description                                                                  |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Greeting          | Practice professional, empathetic greetings                                  |
+| Problem Diagnosis | User needs to identify the core issue based on fragmented or emotional input |
+| Resolution        | Provide step-by-step support instructions                                    |
+| Escalation        | Judge when and how to escalate to another agent or manager                   |
+| Closing           | End the conversation positively with clear follow-up or confirmation         |
+
+---
+
+## 🧠 7. AI Prompt Examples
+
+### Chat Simulation Prompt (system)
+
+> You are a customer who fits this persona: {{persona\_description}}. You're chatting with a customer support agent. Your problem is: {{problem\_description}}. Be expressive and realistic. Wait for their messages and reply in a human tone.
+
+### Feedback Prompt (after simulation)
+
+> Analyze this interaction as a senior customer support coach. Highlight 3 strengths and 3 areas of improvement. Rate them on empathy, clarity, and accuracy (1-10 scale).
+
+---
+
+## 🎯 8. Success Metrics
+
+| Metric                            | Goal                                             |
+| --------------------------------- | ------------------------------------------------ |
+| Session Completion Rate           | >80% sessions completed to end                   |
+| Feedback Satisfaction             | >70% of users find feedback helpful              |
+| Re-engagement Rate (after 3 days) | >40% returning users                             |
+| Persona Diversity in Use          | Users test with 3+ different personas on average |
+
+---
+
+## 🧪 9. Stretch Features (Post-MVP)
+
+* Leaderboards and gamification
+* Integration with Zendesk / Intercom logs for real-case training
+* Certification for completing modules
+* Multiplayer roleplay (peer-to-peer training)
+
+---
+
+Let me know if you'd like this exported into a `.md` file or structured for immediate development on Replit with code scaffold templates.

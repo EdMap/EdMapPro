@@ -485,6 +485,210 @@ export class GroqService {
       };
     }
   }
+
+  async generateCustomerSupportMessage(
+    stage: string,
+    persona: string,
+    problem: string,
+    agentMessage?: string,
+    conversationHistory?: any[],
+    isInitial?: boolean,
+    stageTransition?: boolean
+  ): Promise<{ message: string; sentiment: string }> {
+    let prompt;
+    
+    if (isInitial) {
+      prompt = `You are a customer with this persona: ${persona}. Your problem is: ${problem}
+      
+      This is the beginning of a customer support ${stage.toLowerCase()} interaction. Send your initial message expressing your issue.
+      Be realistic and match your persona's communication style.`;
+    } else if (stageTransition) {
+      prompt = `You are a customer with this persona: ${persona}. Your problem is: ${problem}
+      
+      The support conversation has moved to the ${stage.toLowerCase()} stage. Respond appropriately for this stage.
+      Match your persona's communication style.`;
+    } else {
+      prompt = `You are a customer with this persona: ${persona}. Your problem is: ${problem}
+      
+      The support agent just said: "${agentMessage}"
+      
+      Respond as the customer. Consider the conversation history and current stage: ${stage}.
+      Be realistic and match your persona's communication style.`;
+    }
+
+    try {
+      if (!process.env.GROQ_API_KEY) {
+        throw new Error('Invalid API key');
+      }
+
+      const response = await groq.chat.completions.create({
+        model: "llama-3.1-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: "You are roleplaying as a customer in a support interaction. Be realistic and stay in character."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+      });
+
+      const message = response.choices[0].message.content || "I need help with my issue.";
+      const sentiment = this.detectSentiment(message, persona);
+
+      return { message, sentiment };
+    } catch (error) {
+      console.log('Using fallback customer message due to API error');
+      return this.getFallbackCustomerMessage(stage, persona, problem, isInitial);
+    }
+  }
+
+  async evaluateCustomerSupportResponse(
+    stage: string,
+    agentMessage: string,
+    customerPersona: string,
+    problem: string,
+    conversationHistory: any[]
+  ): Promise<{ empathyScore: number; clarityScore: number; feedback: string }> {
+    const prompt = `Evaluate this customer support agent's response:
+    
+    Stage: ${stage}
+    Customer Persona: ${customerPersona}
+    Problem: ${problem}
+    Agent Message: "${agentMessage}"
+    
+    Rate the response on:
+    1. Empathy (1-10): How well does the agent show understanding and care?
+    2. Clarity (1-10): How clear and easy to understand is the response?
+    
+    Provide brief feedback on strengths and areas for improvement.
+    
+    Format as JSON:
+    {
+      "empathyScore": number,
+      "clarityScore": number,
+      "feedback": "brief constructive feedback"
+    }`;
+
+    try {
+      if (!process.env.GROQ_API_KEY) {
+        throw new Error('Invalid API key');
+      }
+
+      const response = await groq.chat.completions.create({
+        model: "llama-3.1-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert customer support trainer providing feedback on agent performance."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      return {
+        empathyScore: result.empathyScore || 7,
+        clarityScore: result.clarityScore || 7,
+        feedback: result.feedback || "Good response overall."
+      };
+    } catch (error) {
+      console.log('Using fallback evaluation due to API error');
+      return this.getFallbackSupportEvaluation(agentMessage, stage);
+    }
+  }
+
+  private detectSentiment(message: string, persona: string): string {
+    const lowerMessage = message.toLowerCase();
+    
+    if (persona.includes('angry') || lowerMessage.includes('frustrated') || lowerMessage.includes('angry')) {
+      return 'angry';
+    } else if (lowerMessage.includes('thank') || lowerMessage.includes('great') || lowerMessage.includes('perfect')) {
+      return 'happy';
+    } else if (lowerMessage.includes('confused') || lowerMessage.includes('understand') || lowerMessage.includes('what')) {
+      return 'confused';
+    } else {
+      return 'neutral';
+    }
+  }
+
+  private getFallbackCustomerMessage(stage: string, persona: string, problem: string, isInitial?: boolean): { message: string; sentiment: string } {
+    const messages = {
+      angry: {
+        initial: "This is absolutely ridiculous! I've been trying to resolve this for hours and nothing works!",
+        greeting: "Finally! I've been waiting forever. Can you actually help me this time?",
+        diagnosis: "I already told you what the problem is! Why do I have to repeat everything?",
+        resolution: "That better work because I'm losing my patience here.",
+        escalation: "I want to speak to your manager. This is unacceptable.",
+        closing: "It's about time! This should never have taken this long."
+      },
+      polite: {
+        initial: "Hello, I'm having an issue that I was hoping you could help me with.",
+        greeting: "Hi there! Thank you for your time. I have a question about my account.",
+        diagnosis: "I understand. Let me provide you with the details you need.",
+        resolution: "Thank you so much for walking me through that. I really appreciate your help.",
+        escalation: "I appreciate your help, but I think I might need to speak with someone else about this.",
+        closing: "Perfect! Thank you again for all your assistance today."
+      },
+      confused: {
+        initial: "Um, hi... I'm not really sure what's going on but something isn't working right.",
+        greeting: "Hello, I'm having some kind of problem but I'm not sure how to explain it.",
+        diagnosis: "I'm sorry, I don't really understand what you mean. Could you explain that differently?",
+        resolution: "Okay... I think I follow but I'm still a bit confused about some steps.",
+        escalation: "I'm really lost here. Is there someone who can help explain this more simply?",
+        closing: "I think I get it now. Thank you for being so patient with me."
+      }
+    };
+
+    const personaKey = persona.includes('angry') ? 'angry' : 
+                     persona.includes('polite') ? 'polite' : 'confused';
+    const stageKey = stage.toLowerCase().replace(' ', '') as keyof typeof messages.angry;
+    
+    const message = messages[personaKey][stageKey] || messages[personaKey].initial;
+    const sentiment = personaKey === 'angry' ? 'angry' : 
+                     personaKey === 'polite' ? 'happy' : 'confused';
+
+    return { message, sentiment };
+  }
+
+  private getFallbackSupportEvaluation(agentMessage: string, stage: string): { empathyScore: number; clarityScore: number; feedback: string } {
+    const messageLength = agentMessage.length;
+    let empathyScore = 6;
+    let clarityScore = 6;
+    
+    // Basic scoring based on message characteristics
+    if (agentMessage.toLowerCase().includes('sorry') || agentMessage.toLowerCase().includes('understand')) {
+      empathyScore += 2;
+    }
+    if (agentMessage.length > 50 && messageLength < 200) {
+      clarityScore += 2;
+    }
+    if (agentMessage.includes('?')) {
+      empathyScore += 1;
+    }
+    
+    empathyScore = Math.min(10, Math.max(1, empathyScore));
+    clarityScore = Math.min(10, Math.max(1, clarityScore));
+    
+    const feedbackOptions = [
+      "Good response with appropriate tone for customer support.",
+      "Shows empathy and provides clear information. Consider adding more specific next steps.",
+      "Professional response. Try to acknowledge the customer's feelings more explicitly.",
+      "Clear communication. Consider asking follow-up questions to better understand the issue."
+    ];
+    
+    return {
+      empathyScore,
+      clarityScore,
+      feedback: feedbackOptions[Math.floor(Math.random() * feedbackOptions.length)]
+    };
+  }
 }
 
 export const groqService = new GroqService();

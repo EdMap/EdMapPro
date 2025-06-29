@@ -8,15 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getInitials } from "@/lib/utils";
+import CustomerSupportSession from "@/components/simulation/customer-support-session";
 import { 
   Play, 
   Users, 
   Video, 
   MessageCircle,
+  Phone,
   Clock,
   CheckCircle2,
   AlertCircle
@@ -26,14 +29,16 @@ const companyTypes = [
   "Tech Startup",
   "Enterprise Software", 
   "Consulting Firm",
-  "Financial Services"
+  "Financial Services",
+  "Customer Support"
 ];
 
 const roles = [
   "Junior Software Engineer",
   "Product Manager",
   "Data Analyst", 
-  "UX Designer"
+  "UX Designer",
+  "Customer Support Specialist"
 ];
 
 const mockTeamMembers = [
@@ -102,6 +107,34 @@ const mockMeetings = [
   }
 ];
 
+const supportChannels = ["Chat", "Call"];
+
+const supportStages = [
+  "Greeting",
+  "Problem Diagnosis", 
+  "Resolution",
+  "Escalation",
+  "Closing"
+];
+
+const customerPersonas = [
+  { id: "angry", name: "Angry Customer", description: "Frustrated and impatient, wants immediate resolution" },
+  { id: "polite", name: "Polite Customer", description: "Courteous and understanding, follows instructions well" },
+  { id: "confused", name: "Confused Customer", description: "Unclear about their problem, needs guidance" },
+  { id: "elderly", name: "Elderly Customer", description: "Not tech-savvy, needs patient explanation" },
+  { id: "urgent", name: "Urgent Customer", description: "Has a time-sensitive issue, stressed about deadline" },
+  { id: "skeptical", name: "Skeptical Customer", description: "Doubtful about solutions, needs convincing" }
+];
+
+const commonProblems = [
+  "Unable to access account - forgot password and email not working",
+  "Billing issue - charged twice for the same service",
+  "Technical problem - app crashes when trying to upload files",
+  "Service outage - website has been down for 2 hours",
+  "Feature request - wants to cancel subscription but can't find the option",
+  "Delivery issue - package was supposed to arrive yesterday but didn't"
+];
+
 export default function WorkspaceSimulator() {
   const { toast } = useToast();
   const [currentSession, setCurrentSession] = useState<any>(null);
@@ -109,6 +142,13 @@ export default function WorkspaceSimulator() {
   const [userRole, setUserRole] = useState("Junior Software Engineer");
   const [chatMessage, setChatMessage] = useState("");
   const [tasks, setTasks] = useState(mockTasks);
+  
+  // Customer Support specific state
+  const [supportChannel, setSupportChannel] = useState("Chat");
+  const [supportStage, setSupportStage] = useState("Greeting");
+  const [selectedPersona, setSelectedPersona] = useState("polite");
+  const [customerProblem, setCustomerProblem] = useState("");
+  const [duration, setDuration] = useState("15");
 
   const { data: user } = useQuery({
     queryKey: ["/api/user"],
@@ -146,16 +186,30 @@ export default function WorkspaceSimulator() {
   const handleStartSimulation = async () => {
     if (!user) return;
 
-    const configuration = {
-      companyType,
-      userRole,
-      teamMembers: mockTeamMembers,
-      project: {
-        name: "E-commerce Platform Redesign",
-        description: "Redesign the checkout flow to improve conversion rates. You'll be working on the frontend implementation while collaborating with the design and backend teams.",
-        tasks: mockTasks
-      }
-    };
+    let configuration;
+    
+    if (companyType === "Customer Support") {
+      configuration = {
+        companyType,
+        userRole,
+        channel: supportChannel,
+        stage: supportStage,
+        persona: selectedPersona,
+        problem: customerProblem || commonProblems[Math.floor(Math.random() * commonProblems.length)],
+        duration: parseInt(duration)
+      };
+    } else {
+      configuration = {
+        companyType,
+        userRole,
+        teamMembers: mockTeamMembers,
+        project: {
+          name: "E-commerce Platform Redesign",
+          description: "Redesign the checkout flow to improve conversion rates. You'll be working on the frontend implementation while collaborating with the design and backend teams.",
+          tasks: mockTasks
+        }
+      };
+    }
 
     createSessionMutation.mutate({
       userId: user.id,
@@ -185,6 +239,12 @@ export default function WorkspaceSimulator() {
   };
 
   if (currentSession) {
+    // Render Customer Support Simulation
+    if (currentSession.configuration.companyType === "Customer Support") {
+      return <CustomerSupportSession session={currentSession} onComplete={() => setCurrentSession(null)} />;
+    }
+
+    // Render regular workspace simulation
     return (
       <div className="p-8">
         <div className="max-w-6xl mx-auto">
@@ -386,53 +446,173 @@ export default function WorkspaceSimulator() {
               </div>
             </div>
 
-            {/* Team Members Preview */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {mockTeamMembers.map((member) => (
-                  <div key={member.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-blue-100 text-blue-700">
-                          {member.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold text-gray-900">{member.name}</p>
-                        <p className="text-sm text-gray-600">{member.role}</p>
-                      </div>
+            {/* Customer Support Configuration */}
+            {companyType === "Customer Support" ? (
+              <>
+                {/* Support Channel & Stage */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Support Settings</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2">Channel</Label>
+                      <Select value={supportChannel} onValueChange={setSupportChannel}>
+                        <SelectTrigger className="mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {supportChannels.map((channel) => (
+                            <SelectItem key={channel} value={channel}>
+                              <div className="flex items-center space-x-2">
+                                {channel === 'Chat' ? <MessageCircle className="h-4 w-4" /> : <Phone className="h-4 w-4" />}
+                                <span>{channel}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      <p className="mb-1">Personality: {member.personality}</p>
-                      <p>Communication: {member.communication}</p>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2">Starting Stage</Label>
+                      <Select value={supportStage} onValueChange={setSupportStage}>
+                        <SelectTrigger className="mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {supportStages.map((stage) => (
+                            <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2">Duration (minutes)</Label>
+                      <Select value={duration} onValueChange={setDuration}>
+                        <SelectTrigger className="mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10 minutes</SelectItem>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="20">20 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Current Project Preview */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Project</h3>
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-2">E-commerce Platform Redesign</h4>
-                <p className="text-gray-700 mb-4">
-                  Redesign the checkout flow to improve conversion rates. You'll be working on the frontend implementation while collaborating with the design and backend teams.
-                </p>
-                
-                <h5 className="font-medium text-gray-900 mb-3">Your Tasks:</h5>
-                <div className="space-y-2">
-                  {mockTasks.map((task) => (
-                    <div key={task.id} className="flex items-center space-x-3">
-                      <Checkbox disabled />
-                      <span className="text-gray-700">{task.title}</span>
-                      <Badge variant="secondary">{task.status}</Badge>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            </div>
+
+                {/* Customer Persona */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Persona</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {customerPersonas.map((persona) => (
+                      <div 
+                        key={persona.id} 
+                        className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                          selectedPersona === persona.id 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => setSelectedPersona(persona.id)}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className={`w-4 h-4 rounded-full border-2 mt-1 ${
+                            selectedPersona === persona.id 
+                              ? 'border-blue-500 bg-blue-500' 
+                              : 'border-gray-300'
+                          }`} />
+                          <div>
+                            <h4 className="font-medium text-gray-900">{persona.name}</h4>
+                            <p className="text-sm text-gray-600">{persona.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Problem */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Issue</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Describe the customer's problem (optional)</Label>
+                      <Textarea
+                        className="mt-2"
+                        rows={3}
+                        placeholder="Leave blank for a random problem, or describe a specific issue the customer is facing..."
+                        value={customerProblem}
+                        onChange={(e) => setCustomerProblem(e.target.value)}
+                      />
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-900 mb-2">Example Problems:</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {commonProblems.slice(0, 4).map((problem, index) => (
+                          <button
+                            key={index}
+                            className="text-left text-sm text-gray-600 hover:text-blue-600 hover:underline"
+                            onClick={() => setCustomerProblem(problem)}
+                          >
+                            {problem}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Team Members Preview */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {mockTeamMembers.map((member) => (
+                      <div key={member.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <Avatar>
+                            <AvatarFallback className="bg-blue-100 text-blue-700">
+                              {member.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold text-gray-900">{member.name}</p>
+                            <p className="text-sm text-gray-600">{member.role}</p>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          <p className="mb-1">Personality: {member.personality}</p>
+                          <p>Communication: {member.communication}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Current Project Preview */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Project</h3>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h4 className="font-semibold text-gray-900 mb-2">E-commerce Platform Redesign</h4>
+                    <p className="text-gray-700 mb-4">
+                      Redesign the checkout flow to improve conversion rates. You'll be working on the frontend implementation while collaborating with the design and backend teams.
+                    </p>
+                    
+                    <h5 className="font-medium text-gray-900 mb-3">Your Tasks:</h5>
+                    <div className="space-y-2">
+                      {mockTasks.map((task) => (
+                        <div key={task.id} className="flex items-center space-x-3">
+                          <Checkbox disabled />
+                          <span className="text-gray-700">{task.title}</span>
+                          <Badge variant="secondary">{task.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Start Simulation */}
             <div className="flex justify-center">

@@ -218,6 +218,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Support API endpoints
+  app.post("/api/customer-support/message", async (req, res) => {
+    try {
+      const { stage, persona, problem, agentMessage, conversationHistory, isInitial, stageTransition } = req.body;
+      
+      const response = await groqService.generateCustomerSupportMessage(
+        stage,
+        persona,
+        problem,
+        agentMessage,
+        conversationHistory,
+        isInitial,
+        stageTransition
+      );
+      
+      res.json(response);
+    } catch (error) {
+      console.error('Customer support message generation error:', error);
+      res.status(500).json({ message: "Failed to generate customer message" });
+    }
+  });
+
+  app.post("/api/customer-support/evaluate", async (req, res) => {
+    try {
+      const { stage, agentMessage, customerPersona, problem, conversationHistory } = req.body;
+      
+      const evaluation = await groqService.evaluateCustomerSupportResponse(
+        stage,
+        agentMessage,
+        customerPersona,
+        problem,
+        conversationHistory
+      );
+      
+      res.json(evaluation);
+    } catch (error) {
+      console.error('Customer support evaluation error:', error);
+      res.status(500).json({ message: "Failed to evaluate response" });
+    }
+  });
+
   // Generate session feedback
   app.post("/api/sessions/:sessionId/feedback", async (req, res) => {
     try {
