@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+
 import { Send, Mic, MicOff, HelpCircle, Lightbulb, Bus, User, X, Check } from "lucide-react";
 
 interface Message {
@@ -76,6 +76,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
         return updated;
       });
 
+      // Only show follow-up if it exists, otherwise generate next question
       if (evaluation.followUp) {
         setTimeout(() => {
           const followUpMessage: Message = {
@@ -85,7 +86,22 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
             timestamp: new Date()
           };
           setMessages(prev => [...prev, followUpMessage]);
-        }, 1000);
+        }, 1500);
+      } else {
+        // Generate next question only if no follow-up
+        setTimeout(() => {
+          const previousQuestions = messages
+            .filter(m => m.role === 'interviewer')
+            .map(m => m.content);
+          
+          generateQuestionMutation.mutate({
+            profession: session.configuration.profession,
+            interviewType: session.configuration.interviewType,
+            difficulty: session.configuration.difficulty,
+            jobPosting: session.configuration.jobPosting,
+            previousQuestions
+          });
+        }, 2000);
       }
     }
   });
@@ -305,26 +321,9 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
         profession: session.configuration.profession,
         difficulty: session.configuration.difficulty
       });
-
-      setTimeout(() => {
-        const previousQuestions = messages
-          .filter(m => m.role === 'interviewer')
-          .map(m => m.content);
-        
-        generateQuestionMutation.mutate({
-          profession: session.configuration.profession,
-          interviewType: session.configuration.interviewType,
-          difficulty: session.configuration.difficulty,
-          jobPosting: session.configuration.jobPosting,
-          previousQuestions
-        });
-      }, 2000);
+      // Question generation is now handled in the evaluation success handler
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to process your response",
-        variant: "destructive",
-      });
+      console.error('Failed to process response:', error);
     }
     
     setIsLoading(false);
