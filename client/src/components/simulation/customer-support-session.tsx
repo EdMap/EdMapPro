@@ -18,6 +18,8 @@ interface Message {
   sentiment?: string;
   empathyScore?: number;
   clarityScore?: number;
+  feedback?: string;
+  suggestedResponse?: string;
 }
 
 interface CustomerSupportSessionProps {
@@ -89,7 +91,9 @@ export default function CustomerSupportSession({ session, onComplete }: Customer
           updated[lastAgentMessageIndex] = {
             ...updated[lastAgentMessageIndex],
             empathyScore: evaluation.empathyScore,
-            clarityScore: evaluation.clarityScore
+            clarityScore: evaluation.clarityScore,
+            feedback: evaluation.feedback,
+            suggestedResponse: evaluation.suggestedResponse
           };
         }
         return updated;
@@ -458,16 +462,38 @@ export default function CustomerSupportSession({ session, onComplete }: Customer
                             )}
                           </div>
                           {message.role === 'agent' && (message.empathyScore || message.clarityScore) && (
-                            <div className="flex space-x-2 mt-1">
-                              {message.empathyScore && (
-                                <span className={`text-xs ${getScoreColor(message.empathyScore)}`}>
-                                  Empathy: {message.empathyScore}/10
-                                </span>
-                              )}
-                              {message.clarityScore && (
-                                <span className={`text-xs ${getScoreColor(message.clarityScore)}`}>
-                                  Clarity: {message.clarityScore}/10
-                                </span>
+                            <div className="mt-2 space-y-2">
+                              <div className="flex space-x-2">
+                                {message.empathyScore && (
+                                  <span className={`text-xs ${getScoreColor(message.empathyScore)}`}>
+                                    Empathy: {message.empathyScore}/10
+                                  </span>
+                                )}
+                                {message.clarityScore && (
+                                  <span className={`text-xs ${getScoreColor(message.clarityScore)}`}>
+                                    Clarity: {message.clarityScore}/10
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Show feedback and suggestions for poor responses */}
+                              {((message.empathyScore && message.empathyScore < 6) || (message.clarityScore && message.clarityScore < 6)) && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
+                                  <div className="font-medium text-yellow-800 mb-1">💡 Improvement Suggestion:</div>
+                                  {message.feedback && (
+                                    <div className="text-yellow-700 mb-2">
+                                      {message.feedback}
+                                    </div>
+                                  )}
+                                  {message.suggestedResponse && (
+                                    <div className="bg-white border border-yellow-300 rounded p-2">
+                                      <div className="font-medium text-yellow-800 mb-1">Better response example:</div>
+                                      <div className="text-gray-700 text-xs italic">
+                                        "{message.suggestedResponse}"
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           )}

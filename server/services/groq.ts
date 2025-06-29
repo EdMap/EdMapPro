@@ -677,37 +677,81 @@ export class GroqService {
     return { message, sentiment };
   }
 
-  private getFallbackSupportEvaluation(agentMessage: string, stage: string): { empathyScore: number; clarityScore: number; feedback: string } {
+  private getFallbackSupportEvaluation(agentMessage: string, stage: string): { empathyScore: number; clarityScore: number; feedback: string; suggestedResponse?: string } {
     const messageLength = agentMessage.length;
-    let empathyScore = 6;
-    let clarityScore = 6;
-    
-    // Basic scoring based on message characteristics
-    if (agentMessage.toLowerCase().includes('sorry') || agentMessage.toLowerCase().includes('understand')) {
-      empathyScore += 2;
-    }
-    if (agentMessage.length > 50 && messageLength < 200) {
-      clarityScore += 2;
-    }
-    if (agentMessage.includes('?')) {
-      empathyScore += 1;
+    const agentLower = agentMessage.toLowerCase();
+    let empathyScore = 5;
+    let clarityScore = 5;
+    let feedback = "Try to be more helpful and specific.";
+    let suggestedResponse = "";
+
+    // Analyze response quality and provide specific feedback
+    if (messageLength < 20) {
+      empathyScore = Math.floor(Math.random() * 3) + 3; // 3-5 for very short responses
+      clarityScore = Math.floor(Math.random() * 3) + 3;
+      feedback = "⚠️ Response too brief. Customers need detailed explanations, acknowledgment of their frustration, and clear next steps.";
+      suggestedResponse = this.generateBetterAgentResponse(agentMessage, stage, 'brief');
+    } else if (messageLength < 50) {
+      empathyScore = Math.floor(Math.random() * 3) + 4; // 4-6 for short responses
+      clarityScore = Math.floor(Math.random() * 3) + 4;
+      feedback = "Response lacks detail. Add empathy, acknowledge the customer's concern, and provide specific solutions.";
+      suggestedResponse = this.generateBetterAgentResponse(agentMessage, stage, 'short');
+    } else {
+      // Longer responses get better base scores
+      empathyScore = 6;
+      clarityScore = 6;
+      
+      // Bonus points for empathetic language
+      if (agentLower.includes('sorry') || agentLower.includes('apologize') || agentLower.includes('understand')) {
+        empathyScore += 2;
+        feedback = "Good empathetic language. ";
+      }
+      
+      // Bonus for helpful content
+      if (agentLower.includes('help') || agentLower.includes('resolve') || agentLower.includes('solution')) {
+        clarityScore += 2;
+        feedback += "Shows commitment to helping. ";
+      }
+      
+      // Bonus for asking questions
+      if (agentMessage.includes('?')) {
+        empathyScore += 1;
+        feedback += "Good use of questions to understand the issue better.";
+      }
+      
+      if (feedback === "Try to be more helpful and specific.") {
+        feedback = "Professional response. Consider adding more empathy and specific action steps.";
+      }
     }
     
     empathyScore = Math.min(10, Math.max(1, empathyScore));
     clarityScore = Math.min(10, Math.max(1, clarityScore));
     
-    const feedbackOptions = [
-      "Good response with appropriate tone for customer support.",
-      "Shows empathy and provides clear information. Consider adding more specific next steps.",
-      "Professional response. Try to acknowledge the customer's feelings more explicitly.",
-      "Clear communication. Consider asking follow-up questions to better understand the issue."
-    ];
-    
     return {
       empathyScore,
       clarityScore,
-      feedback: feedbackOptions[Math.floor(Math.random() * feedbackOptions.length)]
+      feedback,
+      suggestedResponse
     };
+  }
+
+  private generateBetterAgentResponse(originalMessage: string, stage: string, issueType: string): string {
+    const responses = {
+      brief: [
+        "I sincerely apologize for the frustration this has caused you. I understand you've already explained this issue twice, and I want to make sure we resolve it properly this time. Let me review your case and provide you with a clear timeline and solution. I'll personally ensure this gets the attention it deserves.",
+        "I completely understand your frustration, and I apologize that you've had to repeat this information. This is clearly taking longer than it should, and that's not acceptable. Let me take immediate action to resolve this for you. Here's exactly what I'm going to do and when you can expect results.",
+        "Thank you for your patience, and I'm sorry this hasn't been resolved yet. I can see why you're frustrated - no one should have to explain the same issue multiple times. I'm going to prioritize your case right now and walk you through the exact steps to get this fixed today."
+      ],
+      short: [
+        "I understand this situation is frustrating, especially having to repeat the same information. Let me assure you that I'm committed to resolving this properly. Based on what you've shared, here's the specific action plan I'm implementing to fix this issue permanently.",
+        "I appreciate your patience and I can see why this delay is concerning. You deserve a clear answer about timing and next steps. Let me provide you with specific details about the resolution process and realistic timeframes for when this will be completely resolved.",
+        "Thank you for bringing this to my attention again. I want to make sure we address not just the immediate issue, but also why this has taken multiple contacts to resolve. Here's my plan to fix both the problem and prevent this from happening again."
+      ]
+    };
+
+    const responseType = issueType as keyof typeof responses;
+    const options = responses[responseType] || responses.brief;
+    return options[Math.floor(Math.random() * options.length)];
   }
 
   private getContextualCustomerMessage(
