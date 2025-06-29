@@ -59,6 +59,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
       return response.json();
     },
     onSuccess: (evaluation) => {
+      // Update the last user message with score and feedback
       setMessages(prev => {
         const updated = [...prev];
         const lastUserMessageIndex = updated.map(m => m.role).lastIndexOf('candidate');
@@ -72,6 +73,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
         return updated;
       });
 
+      // Generate follow-up question if provided
       if (evaluation.followUp) {
         setTimeout(() => {
           const followUpMessage: Message = {
@@ -171,92 +173,223 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
     }
   }, []);
 
-  // Initialize audio recording capabilities
+  // Initialize speech recognition
   useEffect(() => {
-    const initializeAudioRecording = async () => {
-      try {
-        if (!navigator.mediaDevices || !window.MediaRecorder) {
-          console.log('Audio recording not supported');
-          return;
-        }
+    const initializeSpeechRecognition = async () => {
+      // Check if browser supports speech recognition
+      const hasSpeechRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+      
+      if (!hasSpeechRecognition) {
+        console.log('Speech recognition not supported');
+        return;
+      }
 
+      try {
+        // Request microphone permission first
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop());
-        
-        setAudioSupported(true);
-        console.log('Audio recording initialized successfully');
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = true; // Enable interim results for better UX
+        recognitionRef.current.lang = 'en-US';
+        recognitionRef.current.maxAlternatives = 1;
+
+        recognitionRef.current.onresult = (event: any) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          if (finalTranscript) {
+            setCurrentResponse(prev => {
+              const newText = prev ? prev + ' ' + finalTranscript : finalTranscript;
+              return newText;
+            });
+            toast({
+              title: "Speech Recognized",
+              description: "Voice input added to your response.",
+            });
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          
+          if (event.error === 'network') {
+            setNetworkRetries(prev => prev + 1);
+            console.log('Network error, will retry automatically');
+            
+            // After 3 network failures, disable speech recognition
+            if (networkRetries >= 2) {
+              setSpeechSupported(false);
+              toast({
+                title: "Voice Input Temporarily Unavailable",
+                description: "Unable to connect to speech recognition service. Please continue with typing - your responses work just as well!",
+                variant: "destructive"
+              });
+            }
+            return;
+          }
+          
+          let errorMessage = "Speech recognition failed. Please try typing instead.";
+          let title = "Voice Input Failed";
+          
+          switch (event.error) {
+            case 'not-allowed':
+              title = "Microphone Access Denied";
+              errorMessage = "Please allow microphone access in your browser settings and refresh the page.";
+              break;
+            case 'no-speech':
+              // Don't show error for no speech, it's normal
+              return;
+            case 'audio-capture':
+              title = "Audio Capture Failed";
+              errorMessage = "Unable to capture audio. Please check your microphone and try again.";
+              break;
+            case 'service-not-allowed':
+              title = "Service Not Available";
+              errorMessage = "Speech recognition service is not available in your browser. Please use typing instead.";
+              break;
+          }
+          
+          toast({
+            title,
+            description: errorMessage,
+            variant: "destructive"
+          });
+        };
+
+        recognitionRef.current.onstart = () => {
+          setIsRecording(true);
+          setNetworkRetries(0); // Reset retry count on successful start
+          console.log('Speech recognition started');
+        };
+
+        recognitionRef.current.onend = () => {
+          setIsRecording(false);
+          console.log('Speech recognition ended');
+        };
+
+        recognitionRef.current.onspeechstart = () => {
+          console.log('Speech detected');
+        };
+
+        recognitionRef.current.onspeechend = () => {
+          console.log('Speech ended');
+        };
+
+        setSpeechSupported(true);
+
       } catch (error) {
-        console.error('Failed to initialize audio recording:', error);
-        setAudioSupported(false);
+        console.error('Failed to initialize speech recognition:', error);
+        setSpeechSupported(false);
+        if (error instanceof DOMException && error.name === 'NotAllowedError') {
+          toast({
+            title: "Microphone Permission Required",
+            description: "Please allow microphone access to use voice input, or continue with typing.",
+            variant: "destructive"
+          });
+        }
       }
     };
 
-    initializeAudioRecording();
+    initializeSpeechRecognition();
+
+    // Monitor network connectivity
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
-      mediaRecorderRef.current = mediaRecorder;
-
-      const chunks: Blob[] = [];
-      setAudioChunks(chunks);
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        if (audioBlob.size > 0) {
-          transcribeAudioMutation.mutate(audioBlob);
-        }
-        
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
-          streamRef.current = null;
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
+  const toggleRecording = async () => {
+    if (!recognitionRef.current) {
       toast({
-        title: "Recording Started",
-        description: "Speak now. Click the microphone again to stop recording.",
+        title: "Voice Input Not Available",
+        description: "Speech recognition requires Chrome, Edge, or Safari with internet access. Please type your response instead.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check network connectivity first
+    if (!isOnline) {
+      toast({
+        title: "No Internet Connection",
+        description: "Voice recognition requires an internet connection. Please check your connection and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    try {
+      // Check microphone permission before starting
+      const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      
+      if (permission.state === 'denied') {
+        toast({
+          title: "Microphone Access Denied",
+          description: "Please enable microphone access in your browser settings and refresh the page.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Test microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop()); // Stop the test stream
+
+      recognitionRef.current.start();
+      toast({
+        title: "Listening...",
+        description: "Speak clearly. The microphone will automatically stop when you finish speaking.",
       });
     } catch (error) {
       console.error('Failed to start recording:', error);
-      toast({
-        title: "Recording Failed",
-        description: "Unable to access microphone. Please check permissions and try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
       setIsRecording(false);
-      toast({
-        title: "Recording Stopped",
-        description: "Processing your speech...",
-      });
-    }
-  };
-
-  const toggleRecording = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
+      
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          toast({
+            title: "Microphone Permission Denied",
+            description: "Please allow microphone access in your browser and try again.",
+            variant: "destructive"
+          });
+        } else if (error.name === 'NotFoundError') {
+          toast({
+            title: "No Microphone Found",
+            description: "Please connect a microphone and try again.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Microphone Error",
+            description: "Unable to access microphone. Please check your device settings.",
+            variant: "destructive"
+          });
+        }
+      }
     }
   };
 
@@ -265,6 +398,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
 
     setIsLoading(true);
     
+    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'candidate',
@@ -273,10 +407,12 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
     };
     setMessages(prev => [...prev, userMessage]);
     
+    // Clear input
     const response = currentResponse;
     setCurrentResponse("");
 
     try {
+      // Evaluate the answer
       await evaluateAnswerMutation.mutateAsync({
         question: currentQuestion.question,
         answer: response,
@@ -284,6 +420,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
         difficulty: session.configuration.difficulty
       });
 
+      // Generate next question after a delay
       setTimeout(() => {
         const previousQuestions = messages
           .filter(m => m.role === 'interviewer')
@@ -309,12 +446,14 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
   };
 
   const handleEndInterview = async () => {
+    // Update session with messages
     await apiRequest("PATCH", `/api/sessions/${session.id}`, {
       messages: messages,
       status: 'completed',
       completedAt: new Date()
     });
 
+    // Generate final feedback
     generateFeedbackMutation.mutate();
   };
 
@@ -474,7 +613,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                   <div className="animate-pulse bg-red-500 rounded-full h-3 w-3"></div>
                   <span className="text-red-800 font-medium">Recording... Speak clearly</span>
                   <button 
-                    onClick={stopRecording}
+                    onClick={toggleRecording}
                     className="ml-auto text-red-600 hover:text-red-800 underline text-sm"
                   >
                     Stop Recording
@@ -483,49 +622,65 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
               </div>
             )}
 
-            {/* Processing Status */}
-            {transcribeAudioMutation.isPending && (
-              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                  <span className="text-blue-800 font-medium">Converting speech to text...</span>
+            {/* Network Status Warning */}
+            {!isOnline && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <X className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="text-red-800 font-medium">No Internet Connection</p>
+                    <p className="text-red-700 text-sm mt-1">
+                      Voice recognition requires a stable internet connection. Please check your connection and refresh the page.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Voice Input Status */}
-            {audioSupported ? (
-              <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            {/* Speech Recognition Help */}
+            {isOnline && !speechSupported && (
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start space-x-2">
-                  <Mic className="h-5 w-5 text-green-600 mt-0.5" />
+                  <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div>
-                    <p className="text-green-800 font-medium">Voice Input Ready</p>
-                    <p className="text-green-700 text-sm mt-1">
-                      Click the microphone button to record your voice, or type your response below.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start space-x-2">
-                  <HelpCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <p className="text-yellow-800 font-medium">Voice Input Unavailable</p>
-                    <p className="text-yellow-700 text-sm mt-1">
-                      Microphone access required for voice input. Please allow permissions when prompted.
+                    <p className="text-blue-800 font-medium">Voice Input Alternative</p>
+                    <p className="text-blue-700 text-sm mt-1">
+                      Voice recognition is temporarily unavailable due to network connectivity. 
+                      <strong>Tip:</strong> Use your device's built-in voice-to-text feature (like iPhone's dictation or Android's voice typing) 
+                      in the text area below for a similar experience!
                     </p>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* Voice Input Instructions */}
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start space-x-2">
+                <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-blue-800 font-medium">Voice Input Solution</p>
+                  <p className="text-blue-700 text-sm mt-1">
+                    For the best voice input experience, use your device's built-in dictation:
+                    <br />
+                    <strong>• iPhone/iPad:</strong> Tap the microphone icon on your keyboard
+                    <br />
+                    <strong>• Android:</strong> Tap the microphone icon on your keyboard
+                    <br />
+                    <strong>• Mac:</strong> Press Fn key twice or use Edit → Start Dictation
+                    <br />
+                    <strong>• Windows:</strong> Press Windows + H for voice typing
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Response Input */}
             <div className="flex space-x-3">
               <Textarea
                 className="flex-1 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={4}
-                placeholder={isRecording ? "Recording in progress..." : "Type your response here..."}
+                placeholder="Type your response here... (For voice input: use your device's built-in voice typing - tap the microphone on your keyboard or use voice commands)"
                 value={currentResponse}
                 onChange={(e) => setCurrentResponse(e.target.value)}
                 onKeyDown={(e) => {
@@ -534,7 +689,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                     handleSendResponse();
                   }
                 }}
-                disabled={isLoading || generateQuestionMutation.isPending || isRecording}
+                disabled={isLoading || generateQuestionMutation.isPending}
                 aria-label="Interview response input"
                 autoComplete="off"
                 spellCheck="true"
@@ -543,24 +698,49 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
                 <Button 
                   size="lg"
                   onClick={handleSendResponse}
-                  disabled={!currentResponse.trim() || isLoading || generateQuestionMutation.isPending || isRecording}
+                  disabled={!currentResponse.trim() || isLoading || generateQuestionMutation.isPending}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
-                {audioSupported && (
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    onClick={toggleRecording}
-                    disabled={isLoading || generateQuestionMutation.isPending || transcribeAudioMutation.isPending}
-                    className={isRecording ? "bg-red-100 border-red-300 text-red-700 animate-pulse" : "hover:bg-blue-50"}
-                    title={isRecording ? "Stop Recording" : "Start Voice Recording"}
-                  >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </Button>
-                )}
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  onClick={() => {
+                    toast({
+                      title: "Voice Input Tip",
+                      description: "Use your device's built-in voice typing feature in the text box below for reliable voice input.",
+                    });
+                  }}
+                  disabled={isLoading || generateQuestionMutation.isPending}
+                  className="hover:bg-blue-50"
+                  title="Voice Input Help"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex space-x-2 mt-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled
+                className="text-sm"
+              >
+                <HelpCircle className="h-3 w-3 mr-1" />
+                Ask for clarification
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled
+                className="text-sm"
+              >
+                <Lightbulb className="h-3 w-3 mr-1" />
+                Request a hint
+              </Button>
             </div>
           </CardContent>
         </Card>

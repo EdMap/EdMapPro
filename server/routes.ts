@@ -1,10 +1,27 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
 import { storage } from "./storage";
 import { groqService } from "./services/groq";
 import { openaiService } from "./services/openai";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
+
+// Configure multer for audio file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept audio files
+    if (file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only audio files are allowed'));
+    }
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // User authentication (simplified for MVP)
@@ -180,6 +197,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(message);
     } catch (error) {
       res.status(500).json({ message: "Failed to generate message: " + (error as Error).message });
+    }
+  });
+
+  // Transcribe audio using Whisper
+  app.post("/api/transcribe", upload.single('audio'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No audio file provided" });
+      }
+
+      const audioBuffer = req.file.buffer;
+      const mimeType = req.file.mimetype;
+
+      const result = await groqService.transcribeAudio(audioBuffer, mimeType);
+      res.json(result);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      res.status(500).json({ message: "Failed to transcribe audio: " + (error as Error).message });
     }
   });
 

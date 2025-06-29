@@ -369,6 +369,45 @@ export class GroqService {
     }
   }
 
+  async transcribeAudio(audioBuffer: Buffer, mimeType: string = 'audio/webm'): Promise<{ text: string }> {
+    try {
+      if (!process.env.GROQ_API_KEY) {
+        throw new Error('GROQ_API_KEY not configured');
+      }
+
+      // Import FormData for Node.js
+      const { FormData } = await import('formdata-node');
+      const { Blob } = await import('formdata-node');
+
+      const formData = new FormData();
+      formData.append('file', new Blob([audioBuffer], { type: mimeType }), 'recording.webm');
+      formData.append('model', 'whisper-large-v3');
+      formData.append('response_format', 'json');
+      formData.append('language', 'en');
+
+      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        },
+        body: formData as any
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Groq API error response:', errorText);
+        throw new Error(`Groq API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('Groq transcription result:', result);
+      return { text: result.text || '' };
+    } catch (error) {
+      console.error('Groq transcription error:', error);
+      throw new Error('Failed to transcribe audio: ' + (error as Error).message);
+    }
+  }
+
   async generateSessionFeedback(
     sessionType: string,
     messages: any[],
