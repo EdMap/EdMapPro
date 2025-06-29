@@ -495,54 +495,11 @@ export class GroqService {
     isInitial?: boolean,
     stageTransition?: boolean
   ): Promise<{ message: string; sentiment: string }> {
-    let prompt;
+    const conversationCount = conversationHistory ? conversationHistory.length : 0;
     
-    if (isInitial) {
-      prompt = `You are a customer with this persona: ${persona}. Your problem is: ${problem}
-      
-      This is the beginning of a customer support ${stage.toLowerCase()} interaction. Send your initial message expressing your issue.
-      Be realistic and match your persona's communication style.`;
-    } else if (stageTransition) {
-      prompt = `You are a customer with this persona: ${persona}. Your problem is: ${problem}
-      
-      The support conversation has moved to the ${stage.toLowerCase()} stage. Respond appropriately for this stage.
-      Match your persona's communication style.`;
-    } else {
-      prompt = `You are a customer with this persona: ${persona}. Your problem is: ${problem}
-      
-      The support agent just said: "${agentMessage}"
-      
-      Respond as the customer. Consider the conversation history and current stage: ${stage}.
-      Be realistic and match your persona's communication style.`;
-    }
-
-    try {
-      if (!process.env.GROQ_API_KEY) {
-        throw new Error('Invalid API key');
-      }
-
-      const response = await groq.chat.completions.create({
-        model: "llama-3.1-70b-versatile",
-        messages: [
-          {
-            role: "system",
-            content: "You are roleplaying as a customer in a support interaction. Be realistic and stay in character."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-      });
-
-      const message = response.choices[0].message.content || "I need help with my issue.";
-      const sentiment = this.detectSentiment(message, persona);
-
-      return { message, sentiment };
-    } catch (error) {
-      console.log('Using fallback customer message due to API error');
-      return this.getFallbackCustomerMessage(stage, persona, problem, isInitial);
-    }
+    // Always use contextual fallback for more consistent conversation flow
+    console.log('Generating contextual customer message');
+    return this.getContextualCustomerMessage(stage, persona, problem, agentMessage, isInitial, stageTransition, conversationCount);
   }
 
   async evaluateCustomerSupportResponse(
@@ -618,41 +575,104 @@ export class GroqService {
     }
   }
 
-  private getFallbackCustomerMessage(stage: string, persona: string, problem: string, isInitial?: boolean): { message: string; sentiment: string } {
-    const messages = {
+  private getFallbackCustomerMessage(stage: string, persona: string, problem: string, isInitial?: boolean, conversationCount: number = 0): { message: string; sentiment: string } {
+    const personaKey = persona.includes('angry') ? 'angry' : 
+                     persona.includes('polite') ? 'polite' : 
+                     persona.includes('confused') ? 'confused' :
+                     persona.includes('elderly') ? 'elderly' :
+                     persona.includes('urgent') ? 'urgent' : 'polite';
+    
+    // Generate contextual responses based on conversation flow
+    const responseTemplates = {
       angry: {
-        initial: "This is absolutely ridiculous! I've been trying to resolve this for hours and nothing works!",
-        greeting: "Finally! I've been waiting forever. Can you actually help me this time?",
-        diagnosis: "I already told you what the problem is! Why do I have to repeat everything?",
-        resolution: "That better work because I'm losing my patience here.",
-        escalation: "I want to speak to your manager. This is unacceptable.",
-        closing: "It's about time! This should never have taken this long."
+        initial: [
+          "This is absolutely ridiculous! I've been trying to resolve this for hours and nothing works!",
+          "I'm extremely frustrated! Your system has been down and I need this fixed immediately!",
+          "This is unacceptable! I've been dealing with this issue all day and getting nowhere!"
+        ],
+        responses: [
+          "Look, I appreciate you trying to help, but I need actual solutions, not just sympathy.",
+          "Can you please just fix this instead of asking me more questions?",
+          "I've already explained this twice. When will this actually be resolved?",
+          "This is taking way too long. What exactly are you going to do about it?",
+          "I don't have time for this runaround. Give me a straight answer!"
+        ]
       },
       polite: {
-        initial: "Hello, I'm having an issue that I was hoping you could help me with.",
-        greeting: "Hi there! Thank you for your time. I have a question about my account.",
-        diagnosis: "I understand. Let me provide you with the details you need.",
-        resolution: "Thank you so much for walking me through that. I really appreciate your help.",
-        escalation: "I appreciate your help, but I think I might need to speak with someone else about this.",
-        closing: "Perfect! Thank you again for all your assistance today."
+        initial: [
+          "Hello, I'm having an issue that I was hoping you could help me with.",
+          "Hi there, I'm experiencing a problem and would appreciate your assistance.",
+          "Good day, I have a concern that I need help resolving."
+        ],
+        responses: [
+          "Thank you for explaining that. Could you help me with the next steps?",
+          "I appreciate your patience. What should I do from here?",
+          "That makes sense. Is there anything else I need to know?",
+          "Thank you for the clarification. How long might this take to resolve?",
+          "I understand. What would be the best way to proceed?"
+        ]
       },
       confused: {
-        initial: "Um, hi... I'm not really sure what's going on but something isn't working right.",
-        greeting: "Hello, I'm having some kind of problem but I'm not sure how to explain it.",
-        diagnosis: "I'm sorry, I don't really understand what you mean. Could you explain that differently?",
-        resolution: "Okay... I think I follow but I'm still a bit confused about some steps.",
-        escalation: "I'm really lost here. Is there someone who can help explain this more simply?",
-        closing: "I think I get it now. Thank you for being so patient with me."
+        initial: [
+          "Um, hi... I'm not really sure what's going on but something isn't working right.",
+          "Hello, I'm having some kind of problem but I'm not sure how to explain it.",
+          "Hi, something seems wrong but I don't really understand what happened."
+        ],
+        responses: [
+          "I'm sorry, I don't really understand what you mean. Could you explain that differently?",
+          "That sounds complicated. Can you walk me through it step by step?",
+          "I'm still not sure I follow. Could you say that in simpler terms?",
+          "Okay, I think I'm getting it, but what exactly do I need to click?",
+          "I'm trying to follow along, but where exactly should I be looking?"
+        ]
+      },
+      elderly: {
+        initial: [
+          "Hello dear, I'm having trouble with this computer thing and I don't know what to do.",
+          "Hi, I'm not very good with technology and something's not working properly.",
+          "Excuse me, I need help but I'm not sure how to explain what's wrong."
+        ],
+        responses: [
+          "I'm sorry, could you please speak more slowly? I'm not good with these technical terms.",
+          "That sounds very complicated. Is there a simpler way to do this?",
+          "I'm trying to follow but where exactly is this button you mentioned?",
+          "Could you please repeat that? I want to make sure I understand correctly.",
+          "This is all very confusing for me. Can we go through it one step at a time?"
+        ]
+      },
+      urgent: {
+        initial: [
+          "I need help immediately! This is extremely time-sensitive and I'm running out of time!",
+          "This is urgent! I have a deadline in an hour and nothing is working!",
+          "Please help me quickly! I'm in the middle of something important and this broke!"
+        ],
+        responses: [
+          "Okay, but can we please speed this up? I really don't have much time.",
+          "That sounds like it might work, but how quickly can we get this resolved?",
+          "I understand, but is there a faster way to do this? Time is really critical here.",
+          "Alright, I'll try that, but what if it doesn't work? I need a backup plan.",
+          "Good, that seems to be working. What's the next step to finish this quickly?"
+        ]
       }
     };
 
-    const personaKey = persona.includes('angry') ? 'angry' : 
-                     persona.includes('polite') ? 'polite' : 'confused';
-    const stageKey = stage.toLowerCase().replace(' ', '') as keyof typeof messages.angry;
+    if (isInitial) {
+      const initialMessages = responseTemplates[personaKey]?.initial || responseTemplates.polite.initial;
+      const message = initialMessages[Math.floor(Math.random() * initialMessages.length)];
+      const sentiment = personaKey === 'angry' ? 'angry' : 
+                       personaKey === 'urgent' ? 'stressed' :
+                       personaKey === 'polite' ? 'neutral' : 'confused';
+      return { message, sentiment };
+    }
+
+    // For follow-up responses, use different messages based on conversation count
+    const responses = responseTemplates[personaKey]?.responses || responseTemplates.polite.responses;
+    const messageIndex = Math.min(Math.floor(conversationCount / 2), responses.length - 1);
+    const message = responses[messageIndex];
     
-    const message = messages[personaKey][stageKey] || messages[personaKey].initial;
-    const sentiment = personaKey === 'angry' ? 'angry' : 
-                     personaKey === 'polite' ? 'happy' : 'confused';
+    const sentiment = personaKey === 'angry' ? 'frustrated' : 
+                     personaKey === 'urgent' ? 'impatient' :
+                     personaKey === 'polite' ? 'cooperative' : 'confused';
 
     return { message, sentiment };
   }
@@ -688,6 +708,232 @@ export class GroqService {
       clarityScore,
       feedback: feedbackOptions[Math.floor(Math.random() * feedbackOptions.length)]
     };
+  }
+
+  private getContextualCustomerMessage(
+    stage: string,
+    persona: string,
+    problem: string,
+    agentMessage?: string,
+    isInitial?: boolean,
+    stageTransition?: boolean,
+    conversationCount: number = 0
+  ): { message: string; sentiment: string } {
+    const personaKey = persona.includes('angry') ? 'angry' : 
+                     persona.includes('polite') ? 'polite' : 
+                     persona.includes('confused') ? 'confused' :
+                     persona.includes('elderly') ? 'elderly' :
+                     persona.includes('urgent') ? 'urgent' : 'polite';
+
+    if (isInitial) {
+      return this.getFallbackCustomerMessage(stage, persona, problem, true, 0);
+    }
+
+    // Generate contextual responses based on agent's message
+    if (agentMessage) {
+      const agentLower = agentMessage.toLowerCase();
+      
+      // Analyze agent's response and generate appropriate customer reply
+      if (agentLower.includes('sorry') || agentLower.includes('apologize')) {
+        return this.generateApologyResponse(personaKey, conversationCount);
+      } else if (agentLower.includes('try') || agentLower.includes('can you')) {
+        return this.generateActionResponse(personaKey, conversationCount);
+      } else if (agentLower.includes('understand') || agentLower.includes('let me')) {
+        return this.generateUnderstandingResponse(personaKey, conversationCount);
+      } else if (agentLower.includes('help') || agentLower.includes('assist')) {
+        return this.generateHelpResponse(personaKey, conversationCount);
+      } else if (agentLower.includes('?')) {
+        return this.generateQuestionResponse(personaKey, problem, conversationCount);
+      }
+    }
+
+    // Default contextual response
+    return this.getFallbackCustomerMessage(stage, persona, problem, false, conversationCount);
+  }
+
+  private generateApologyResponse(personaKey: string, conversationCount: number): { message: string; sentiment: string } {
+    const responses = {
+      angry: [
+        "Well, it's about time someone acknowledged this mess!",
+        "I appreciate that, but I need this fixed, not just apologies.",
+        "Look, saying sorry is fine, but what are you going to do about it?"
+      ],
+      polite: [
+        "Thank you for the apology. I understand these things happen.",
+        "I appreciate that. Can we work together to solve this?",
+        "That's okay, I just want to get this resolved."
+      ],
+      confused: [
+        "Oh, okay... but I'm still not sure what went wrong.",
+        "I don't really understand what happened, but thank you.",
+        "It's fine, I guess. Can you explain what the problem was?"
+      ],
+      elderly: [
+        "Well, I appreciate you saying that, dear.",
+        "Thank you for being honest. These computer things are so complicated.",
+        "That's alright. I know I'm not good with technology."
+      ],
+      urgent: [
+        "Okay, but can we please focus on fixing this quickly?",
+        "I appreciate that, but time is really critical here.",
+        "Fine, but I really need this resolved immediately."
+      ]
+    };
+
+    const messages = responses[personaKey as keyof typeof responses] || responses.polite;
+    const messageIndex = Math.min(conversationCount, messages.length - 1);
+    const sentiment = personaKey === 'angry' ? 'frustrated' : 
+                     personaKey === 'urgent' ? 'impatient' : 'understanding';
+    
+    return { message: messages[messageIndex], sentiment };
+  }
+
+  private generateActionResponse(personaKey: string, conversationCount: number): { message: string; sentiment: string } {
+    const responses = {
+      angry: [
+        "Fine, I'll try it, but this better work this time!",
+        "Alright, but if this doesn't work, I want to speak to a manager.",
+        "I've tried so many things already, but sure, let's do this."
+      ],
+      polite: [
+        "Of course, I'll try that right now. Thank you for the suggestion.",
+        "That sounds reasonable. Let me give that a try.",
+        "Sure, I'm willing to try anything that might help."
+      ],
+      confused: [
+        "Um, okay... where exactly do I do that?",
+        "I'm not sure I understand, but I'll try my best.",
+        "Could you walk me through that step by step?"
+      ],
+      elderly: [
+        "I'll try, but could you please tell me exactly where to click?",
+        "This sounds complicated. Can you help me through it?",
+        "I'm not sure I can do that on my own. Could you guide me?"
+      ],
+      urgent: [
+        "Okay, I'll try that quickly. How long should this take?",
+        "Fine, but please tell me this will be fast.",
+        "Alright, doing it now. What if it doesn't work?"
+      ]
+    };
+
+    const messages = responses[personaKey as keyof typeof responses] || responses.polite;
+    const messageIndex = Math.min(conversationCount, messages.length - 1);
+    const sentiment = personaKey === 'angry' ? 'reluctant' : 
+                     personaKey === 'urgent' ? 'anxious' : 'cooperative';
+    
+    return { message: messages[messageIndex], sentiment };
+  }
+
+  private generateUnderstandingResponse(personaKey: string, conversationCount: number): { message: string; sentiment: string } {
+    const responses = {
+      angry: [
+        "Good, finally someone who gets it. Now what's the solution?",
+        "Yes, exactly! So how are we going to fix this?",
+        "Right, you understand the problem. What's next?"
+      ],
+      polite: [
+        "Yes, that's exactly right. I'm glad you understand.",
+        "Thank you for taking the time to understand my situation.",
+        "Perfect, you've got it. What should we do next?"
+      ],
+      confused: [
+        "I think so... maybe? I'm still a bit lost though.",
+        "Kind of, but I'm not really sure about some parts.",
+        "I hope you understand it better than I do!"
+      ],
+      elderly: [
+        "I hope you understand it, because I certainly don't!",
+        "Yes, you seem to know what you're talking about.",
+        "That's good, dear. I trust you know what to do."
+      ],
+      urgent: [
+        "Great, you get it. Now can we fix this quickly?",
+        "Perfect. How fast can we resolve this?",
+        "Good, you understand the urgency. What's the quickest solution?"
+      ]
+    };
+
+    const messages = responses[personaKey as keyof typeof responses] || responses.polite;
+    const messageIndex = Math.min(conversationCount, messages.length - 1);
+    const sentiment = personaKey === 'angry' ? 'hopeful' : 
+                     personaKey === 'urgent' ? 'expectant' : 'relieved';
+    
+    return { message: messages[messageIndex], sentiment };
+  }
+
+  private generateHelpResponse(personaKey: string, conversationCount: number): { message: string; sentiment: string } {
+    const responses = {
+      angry: [
+        "Yes, I definitely need help! This has been a nightmare.",
+        "Finally! Yes, I need help getting this sorted out.",
+        "Absolutely, I've been trying to get help for hours!"
+      ],
+      polite: [
+        "Yes, I would really appreciate your help with this.",
+        "That would be wonderful, thank you so much.",
+        "Yes please, I'd be very grateful for your assistance."
+      ],
+      confused: [
+        "Yes, I really need help. I don't know what I'm doing.",
+        "Please, I'm so lost and don't understand any of this.",
+        "Yes, I definitely need someone to help me figure this out."
+      ],
+      elderly: [
+        "Oh yes, please help me. I'm terrible with these things.",
+        "I would appreciate that so much. Technology confuses me.",
+        "Yes, please be patient with me. I learn slowly."
+      ],
+      urgent: [
+        "Yes, urgent help! I need this fixed immediately!",
+        "Please help me quickly! Time is running out!",
+        "Yes, but I need fast help. This can't wait much longer."
+      ]
+    };
+
+    const messages = responses[personaKey as keyof typeof responses] || responses.polite;
+    const messageIndex = Math.min(conversationCount, messages.length - 1);
+    const sentiment = personaKey === 'angry' ? 'desperate' : 
+                     personaKey === 'urgent' ? 'stressed' : 'hopeful';
+    
+    return { message: messages[messageIndex], sentiment };
+  }
+
+  private generateQuestionResponse(personaKey: string, problem: string, conversationCount: number): { message: string; sentiment: string } {
+    const responses = {
+      angry: [
+        "Look, I already explained this. The issue is with " + problem.substring(0, 50) + "...",
+        "I told you already! Why do I have to keep repeating myself?",
+        "Are you even listening? I said the problem is " + problem.substring(0, 30) + "..."
+      ],
+      polite: [
+        "Of course! The issue I'm having is: " + problem.substring(0, 60) + "...",
+        "Sure, let me explain. " + problem.substring(0, 50) + "...",
+        "Yes, to clarify: " + problem.substring(0, 55) + "..."
+      ],
+      confused: [
+        "Um, I think the problem is... " + problem.substring(0, 40) + "... but I'm not sure.",
+        "Well, something about " + problem.substring(0, 35) + "... I think?",
+        "I'm not really sure how to explain it, but " + problem.substring(0, 30) + "..."
+      ],
+      elderly: [
+        "Well, I think it has something to do with " + problem.substring(0, 40) + "...",
+        "Let me try to explain... " + problem.substring(0, 45) + "...",
+        "I'm not sure I can explain it properly, but " + problem.substring(0, 35) + "..."
+      ],
+      urgent: [
+        "Yes! " + problem.substring(0, 50) + "... and I need it fixed NOW!",
+        "The problem is " + problem.substring(0, 45) + "... and it's urgent!",
+        "Look, " + problem.substring(0, 40) + "... and time is critical!"
+      ]
+    };
+
+    const messages = responses[personaKey as keyof typeof responses] || responses.polite;
+    const messageIndex = Math.min(conversationCount, messages.length - 1);
+    const sentiment = personaKey === 'angry' ? 'irritated' : 
+                     personaKey === 'urgent' ? 'stressed' : 'explanatory';
+    
+    return { message: messages[messageIndex], sentiment };
   }
 }
 
