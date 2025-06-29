@@ -183,17 +183,17 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
           
           if (event.error === 'network') {
             setNetworkRetries(prev => prev + 1);
-            // Don't show error for first few network failures, they're common
-            if (networkRetries < 3) {
-              console.log('Network error, will retry automatically');
-              return;
-            }
+            console.log('Network error, will retry automatically');
             
-            toast({
-              title: "Network Connection Issue",
-              description: "Speech recognition requires a stable internet connection. Please check your connection and try again, or continue typing.",
-              variant: "destructive"
-            });
+            // After 3 network failures, disable speech recognition
+            if (networkRetries >= 2) {
+              setSpeechSupported(false);
+              toast({
+                title: "Voice Input Temporarily Unavailable",
+                description: "Unable to connect to speech recognition service. Please continue with typing - your responses work just as well!",
+                variant: "destructive"
+              });
+            }
             return;
           }
           
@@ -595,14 +595,15 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
 
             {/* Speech Recognition Help */}
             {isOnline && !speechSupported && (
-              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start space-x-2">
-                  <HelpCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div>
-                    <p className="text-yellow-800 font-medium">Voice Input Setup Required</p>
-                    <p className="text-yellow-700 text-sm mt-1">
-                      Voice recognition requires Chrome, Edge, or Safari with microphone permissions. 
-                      If you're using a supported browser, please allow microphone access when prompted.
+                    <p className="text-blue-800 font-medium">Voice Input Alternative</p>
+                    <p className="text-blue-700 text-sm mt-1">
+                      Voice recognition is temporarily unavailable due to network connectivity. 
+                      <strong>Tip:</strong> Use your device's built-in voice-to-text feature (like iPhone's dictation or Android's voice typing) 
+                      in the text area below for a similar experience!
                     </p>
                   </div>
                 </div>
@@ -629,7 +630,7 @@ export default function InterviewSession({ session, onComplete }: InterviewSessi
               <Textarea
                 className="flex-1 resize-none"
                 rows={3}
-                placeholder={isRecording ? "Voice recording in progress..." : "Type your response or use the microphone..."}
+                placeholder={isRecording ? "Voice recording in progress..." : speechSupported ? "Type your response or use the microphone..." : "Type your response here... (Tip: Use your device's voice-to-text feature)"}
                 value={currentResponse}
                 onChange={(e) => setCurrentResponse(e.target.value)}
                 onKeyDown={(e) => {
