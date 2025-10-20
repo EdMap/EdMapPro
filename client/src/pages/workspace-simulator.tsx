@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Briefcase, Users, Target, Clock, Code, Palette, TestTube, Server, Wrench } from "lucide-react";
+import WorkspaceSession from "@/components/simulation/workspace-session";
 
 export default function WorkspaceSimulator() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -82,30 +83,7 @@ export default function WorkspaceSimulator() {
   };
 
   if (activeSession) {
-    return (
-      <div className="p-8">
-        <div className="max-w-6xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Workspace Session Active</CardTitle>
-              <CardDescription>
-                You're now in a workspace simulation. This is a placeholder - full session UI coming soon!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p><strong>Project:</strong> {activeSession.configuration.projectName}</p>
-                <p><strong>Your Role:</strong> {activeSession.configuration.activeRole}</p>
-                <p><strong>Phase:</strong> {activeSession.configuration.sprintPhase}</p>
-                <Button onClick={handleSessionComplete} className="mt-4">
-                  End Session
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+    return <WorkspaceSession session={activeSession} onComplete={handleSessionComplete} />;
   }
 
   return (
