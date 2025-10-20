@@ -334,29 +334,140 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
   }
 
   private getFallbackResponse(member: TeamMember, userMessage: string, channel: string): { content: string; metadata: any } {
-    const responses: Record<string, string[]> = {
-      chat: [
-        "Good question! Let me think about that and get back to you shortly.",
-        "Thanks for bringing this up. I'll take a look and share my thoughts.",
-        "Interesting point. Let's discuss this with the team.",
-        "I appreciate you asking. Let me check on that for you."
-      ],
-      email: [
-        "Thank you for your email. I'll review this and respond with details soon.",
-        "I've received your message and will get back to you with a comprehensive response.",
-        "Thanks for reaching out. I'm looking into this and will update you shortly."
-      ],
-      standup: [
-        "Making progress on assigned tasks. Will update on completion.",
-        "Working through the current sprint goals. No blockers at the moment.",
-        "On track with planned work. Will coordinate with team as needed."
-      ]
+    // Generate contextual response based on message content and member role
+    const message = userMessage.toLowerCase();
+    
+    // Greeting responses
+    if (message.match(/^(hi|hello|hey)/)) {
+      const greetings = [
+        `Hey! Great to have you on the team. I'm ${member.name}, the ${member.role}. ${this.getRoleIntro(member.role)}`,
+        `Hi there! Welcome aboard. Looking forward to working together on this project!`,
+        `Hello! I'm ${member.name}. ${this.getRoleIntro(member.role)} Let me know how I can help!`
+      ];
+      return { content: greetings[Math.floor(Math.random() * greetings.length)], metadata: { sentiment: 'positive' } };
+    }
+
+    // Task/priority questions
+    if (message.includes('task') || message.includes('priority') || message.includes('start')) {
+      return { 
+        content: this.getTaskAdvice(member.role), 
+        metadata: { sentiment: 'helpful' } 
+      };
+    }
+
+    // Technical questions
+    if (message.includes('how') || message.includes('implement') || message.includes('approach')) {
+      return { 
+        content: this.getTechnicalAdvice(member.role, userMessage), 
+        metadata: { sentiment: 'helpful' } 
+      };
+    }
+
+    // Review/feedback requests
+    if (message.includes('review') || message.includes('feedback') || message.includes('thoughts')) {
+      return { 
+        content: this.getReviewResponse(member.role), 
+        metadata: { sentiment: 'collaborative' } 
+      };
+    }
+
+    // Status questions
+    if (message.includes('status') || message.includes('progress') || message.includes('update')) {
+      return { 
+        content: this.getStatusUpdate(member.role), 
+        metadata: { sentiment: 'informative' } 
+      };
+    }
+
+    // Generic but contextual fallback
+    return { 
+      content: `${this.getGenericResponse(member.role, userMessage)} Feel free to ping me if you need anything specific about ${member.expertise.slice(0, 2).join(' or ')}.`, 
+      metadata: { sentiment: 'neutral' } 
     };
+  }
 
-    const channelResponses = responses[channel] || responses.chat;
-    const content = channelResponses[Math.floor(Math.random() * channelResponses.length)];
+  private getRoleIntro(role: string): string {
+    const intros: Record<string, string> = {
+      'Developer': "I'll be handling most of the implementation work.",
+      'Product Manager': "I'm coordinating the project roadmap and priorities.",
+      'Designer': "I'm working on the UX/UI design for this project.",
+      'QA Engineer': "I'll be ensuring quality through testing and validation.",
+      'DevOps Engineer': "I'm managing the deployment and infrastructure."
+    };
+    return intros[role] || "Excited to collaborate on this project.";
+  }
 
-    return { content, metadata: { sentiment: 'neutral' } };
+  private getTaskAdvice(role: string): string {
+    const advice: Record<string, string> = {
+      'Developer': "I'd suggest starting with the authentication flow - it's foundational for everything else. After that, we can tackle the main features. Want me to create some initial tickets?",
+      'Product Manager': "Let's prioritize the MVP features first. I'd recommend focusing on user authentication, core CRUD operations, and basic UI. We can iterate from there based on feedback.",
+      'Designer': "From a design perspective, I'd start with the user flow mapping and wireframes. Once we align on that, I can create high-fidelity mockups for the key screens.",
+      'QA Engineer': "I recommend setting up the testing framework early - it pays off later. We should also define acceptance criteria for each feature as we plan them.",
+      'DevOps Engineer': "Let's get the CI/CD pipeline set up first so we can deploy frequently. I'll also configure staging and production environments."
+    };
+    return advice[role] || "Let me check the backlog and get back to you with specific recommendations based on our sprint goals.";
+  }
+
+  private getTechnicalAdvice(role: string, question: string): string {
+    const message = question.toLowerCase();
+    
+    if (message.includes('auth') || message.includes('login')) {
+      if (role === 'Developer') {
+        return "For authentication, I'd recommend using JWT tokens with refresh token rotation. We can implement OAuth2 for third-party logins. Want me to draft an architecture diagram?";
+      } else if (role === 'Product Manager') {
+        return "From a product standpoint, we should support email/password login and social auth (Google, GitHub). Two-factor authentication can be a phase 2 feature.";
+      }
+    }
+
+    if (message.includes('api') || message.includes('backend')) {
+      if (role === 'Developer') {
+        return "I'd suggest a RESTful API with proper error handling and validation. We should also add rate limiting and caching for performance. Happy to pair on this!";
+      } else if (role === 'DevOps Engineer') {
+        return "For the API, let's containerize it with Docker and use auto-scaling. I'll set up monitoring and logging so we can catch issues early.";
+      }
+    }
+
+    if (message.includes('design') || message.includes('ui')) {
+      if (role === 'Designer') {
+        return "Let's follow a mobile-first approach. I'm thinking clean, minimal UI with good use of white space. I can create a design system to keep everything consistent.";
+      } else if (role === 'Developer') {
+        return "From an implementation perspective, we should use a component library like Material UI or Tailwind for faster development. What's your preference?";
+      }
+    }
+
+    return "That's a great question. Based on my experience, I'd approach it systematically - break it into smaller parts, validate assumptions early, and keep the team in the loop. Want to hop on a quick call to discuss details?";
+  }
+
+  private getReviewResponse(role: string): string {
+    const responses: Record<string, string> = {
+      'Developer': "I'd be happy to review! Send over the PR or code snippet and I'll take a look. Generally I focus on code quality, performance, and whether it follows our team conventions.",
+      'Product Manager': "Sure, I can provide feedback from a product perspective. I'll check if it aligns with user needs and our roadmap. Share what you've got!",
+      'Designer': "I'd love to give feedback! From a UX standpoint, I'll look at usability, accessibility, and visual consistency with our design system.",
+      'QA Engineer': "Absolutely! I'll review it from a testing perspective - checking edge cases, error handling, and making sure it's testable. When can I see it?",
+      'DevOps Engineer': "Happy to review! I'll check for security issues, scalability considerations, and deployment implications. Fire away!"
+    };
+    return responses[role] || "I'd be glad to provide feedback. Share what you need reviewed and I'll get back to you with thoughtful comments.";
+  }
+
+  private getStatusUpdate(role: string): string {
+    const updates: Record<string, string> = {
+      'Developer': "Making good progress on the core features. Authentication module is about 80% complete, working on the API integration next. Should have something demo-able by end of week.",
+      'Product Manager': "Sprint is on track! We've completed 60% of planned stories. There's some scope creep we need to discuss, but overall timeline looks good. Stakeholders are happy with progress.",
+      'Designer': "Design phase is going well. Completed wireframes for all main flows, now working on high-fidelity screens. Will have designs ready for dev handoff in 2-3 days.",
+      'QA Engineer': "Testing is progressing smoothly. Found and reported 5 bugs so far, 3 are already fixed. Setting up automated tests for the new features. Coverage is at 75%.",
+      'DevOps Engineer': "Infrastructure is stable. Deployment pipeline is working great - we're doing 3-4 deployments per day with zero downtime. Monitoring shows all systems green."
+    };
+    return updates[role] || "Everything is moving forward nicely. I'll have a detailed update ready for the next standup. No major blockers on my end.";
+  }
+
+  private getGenericResponse(role: string, message: string): string {
+    const responses = [
+      "Good point! Let me think through this and provide a thoughtful response.",
+      "That's worth exploring. Based on my experience with similar projects, we have a few good options here.",
+      "Interesting question. I'll do some research and get back to you with concrete recommendations.",
+      "Thanks for bringing this up. Let's make sure we're aligned with the team on this approach."
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
 
   private getFallbackCodeReview(reviewer: TeamMember): { content: string; approved: boolean; suggestions: string[] } {
