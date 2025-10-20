@@ -73,7 +73,7 @@ export class WorkspaceOrchestrator {
       const content = response.choices[0].message.content || '';
       return { content, metadata: { sentiment: 'neutral' } };
     } catch (error) {
-      console.log('Using fallback team member response due to API error');
+      console.error('Groq API Error:', error instanceof Error ? error.message : error);
       return this.getFallbackResponse(teamMember, userMessage, channel);
     }
   }
@@ -350,43 +350,105 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
       return { content: greetings[Math.floor(Math.random() * greetings.length)], metadata: { sentiment: 'positive' } };
     }
 
-    // Task/priority questions
-    if (message.includes('task') || message.includes('priority') || message.includes('start')) {
+    // Extract key topic from user message
+    const topic = this.extractTopic(userMessage);
+
+    // Task/priority questions - reference the actual topic
+    if (message.includes('task') || message.includes('priority') || message.includes('start') || message.includes('begin')) {
+      const advice = this.getTaskAdvice(member.role);
       return { 
-        content: this.getTaskAdvice(member.role), 
+        content: topic ? `Regarding ${topic}, ${advice.charAt(0).toLowerCase() + advice.slice(1)}` : advice,
         metadata: { sentiment: 'helpful' } 
       };
     }
 
-    // Technical questions
-    if (message.includes('how') || message.includes('implement') || message.includes('approach')) {
+    // Technical questions - be specific about what they're asking
+    if (message.includes('how') || message.includes('implement') || message.includes('approach') || message.includes('should we')) {
+      const technicalAdvice = this.getTechnicalAdvice(member.role, userMessage);
+      if (topic && !technicalAdvice.includes(topic)) {
+        return {
+          content: `Good question about ${topic}. ${technicalAdvice}`,
+          metadata: { sentiment: 'helpful' }
+        };
+      }
       return { 
-        content: this.getTechnicalAdvice(member.role, userMessage), 
+        content: technicalAdvice, 
         metadata: { sentiment: 'helpful' } 
       };
     }
 
-    // Review/feedback requests
-    if (message.includes('review') || message.includes('feedback') || message.includes('thoughts')) {
+    // Review/feedback requests - acknowledge what they want reviewed
+    if (message.includes('review') || message.includes('feedback') || message.includes('thoughts') || message.includes('opinion')) {
+      const reviewResponse = this.getReviewResponse(member.role);
       return { 
-        content: this.getReviewResponse(member.role), 
+        content: topic ? `I can definitely review ${topic}. ${reviewResponse}` : reviewResponse,
         metadata: { sentiment: 'collaborative' } 
       };
     }
 
-    // Status questions
-    if (message.includes('status') || message.includes('progress') || message.includes('update')) {
+    // Status questions - be specific
+    if (message.includes('status') || message.includes('progress') || message.includes('update') || message.includes('how is')) {
+      const statusUpdate = this.getStatusUpdate(member.role);
       return { 
-        content: this.getStatusUpdate(member.role), 
+        content: topic ? `For ${topic}, ${statusUpdate.charAt(0).toLowerCase() + statusUpdate.slice(1)}` : statusUpdate,
         metadata: { sentiment: 'informative' } 
       };
     }
 
-    // Generic but contextual fallback
+    // Generic but contextual fallback - reference what they said
+    const genericResponse = this.getGenericResponse(member.role, userMessage);
+    if (topic) {
+      return {
+        content: `Re: ${topic} - ${genericResponse} I can share some thoughts from my ${member.role} perspective if that would help.`,
+        metadata: { sentiment: 'neutral' }
+      };
+    }
+    
     return { 
-      content: `${this.getGenericResponse(member.role, userMessage)} Feel free to ping me if you need anything specific about ${member.expertise.slice(0, 2).join(' or ')}.`, 
+      content: `${genericResponse} Feel free to ping me if you need anything specific about ${member.expertise.slice(0, 2).join(' or ')}.`, 
       metadata: { sentiment: 'neutral' } 
     };
+  }
+
+  private extractTopic(userMessage: string): string {
+    const message = userMessage.toLowerCase();
+    
+    // Extract specific technical topics
+    const topics = [
+      'authentication', 'auth', 'login', 'signup', 'user management',
+      'database', 'api', 'backend', 'frontend', 'ui', 'ux', 'design',
+      'testing', 'deployment', 'ci/cd', 'infrastructure', 'security',
+      'performance', 'caching', 'validation', 'error handling',
+      'documentation', 'code review', 'refactoring', 'architecture'
+    ];
+    
+    for (const topic of topics) {
+      if (message.includes(topic)) {
+        return topic;
+      }
+    }
+    
+    // Extract quoted phrases or key nouns
+    const quotedMatch = userMessage.match(/"([^"]+)"/);
+    if (quotedMatch) {
+      return quotedMatch[1];
+    }
+    
+    // Extract question subjects
+    const questionPatterns = [
+      /(?:about|regarding|concerning) (\w+(?:\s+\w+)?)/i,
+      /(\w+(?:\s+\w+)?)\?/,
+      /(?:the|our|my) (\w+(?:\s+\w+)?)/i
+    ];
+    
+    for (const pattern of questionPatterns) {
+      const match = userMessage.match(pattern);
+      if (match && match[1] && match[1].length > 3) {
+        return match[1];
+      }
+    }
+    
+    return '';
   }
 
   private getRoleIntro(role: string): string {
