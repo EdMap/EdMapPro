@@ -4,6 +4,7 @@ import multer from "multer";
 import { storage } from "./storage";
 import { groqService } from "./services/groq";
 import { openaiService } from "./services/openai";
+import { workspaceOrchestrator } from "./services/workspace-orchestrator";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -256,6 +257,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Customer support evaluation error:', error);
       res.status(500).json({ message: "Failed to evaluate response" });
+    }
+  });
+
+  // Workspace Simulator API endpoints
+  
+  // Get all workspace projects
+  app.get("/api/workspace/projects", async (req, res) => {
+    try {
+      const projects = await storage.getWorkspaceProjects();
+      res.json(projects);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get projects: " + (error as Error).message });
+    }
+  });
+
+  // Get specific workspace project
+  app.get("/api/workspace/projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getWorkspaceProject(id);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get project: " + (error as Error).message });
+    }
+  });
+
+  // Get workspace roles
+  app.get("/api/workspace/roles", async (req, res) => {
+    try {
+      const roles = await storage.getWorkspaceRoles();
+      res.json(roles);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get roles: " + (error as Error).message });
+    }
+  });
+
+  // Get session tasks
+  app.get("/api/workspace/:sessionId/tasks", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const tasks = await storage.getWorkspaceTasks(sessionId);
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get tasks: " + (error as Error).message });
+    }
+  });
+
+  // Update task
+  app.patch("/api/workspace/tasks/:taskId", async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      const updates = req.body;
+      const task = await storage.updateWorkspaceTask(taskId, updates);
+      
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update task: " + (error as Error).message });
+    }
+  });
+
+  // Get session artifacts
+  app.get("/api/workspace/:sessionId/artifacts", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const artifacts = await storage.getWorkspaceArtifacts(sessionId);
+      res.json(artifacts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get artifacts: " + (error as Error).message });
+    }
+  });
+
+  // Create artifact
+  app.post("/api/workspace/:sessionId/artifacts", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const artifactData = { ...req.body, sessionId };
+      const artifact = await storage.createWorkspaceArtifact(artifactData);
+      res.json(artifact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create artifact: " + (error as Error).message });
+    }
+  });
+
+  // Get session interactions
+  app.get("/api/workspace/:sessionId/interactions", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const channel = req.query.channel as string | undefined;
+      const interactions = await storage.getWorkspaceInteractions(sessionId, channel);
+      res.json(interactions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get interactions: " + (error as Error).message });
+    }
+  });
+
+  // Handle user action (main orchestration endpoint)
+  app.post("/api/workspace/:sessionId/action", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { type, channel, data } = req.body;
+      
+      const session = await storage.getSimulationSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      const config = session.configuration as any;
+      const project = await storage.getWorkspaceProject(config.projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Store user interaction
+      await storage.createWorkspaceInteraction({
+        sessionId,
+        channel,
+        sender: 'User',
+        senderRole: config.activeRole,
+        content: data.content || JSON.stringify(data),
+        metadata: { actionType: type }
+      });
+
+      // Build context for orchestrator
+      const context = {
+        projectName: project.name,
+        projectDescription: project.description,
+        currentSprint: config.sprintPhase || 'sprint',
+        teamMembers: project.teamStructure as any[],
+        userRole: config.activeRole,
+        phase: config.sprintPhase || 'sprint'
+      };
+
+      // Evaluate user action
+      const evaluation = await workspaceOrchestrator.evaluateAction(
+        { type, channel, data },
+        context
+      );
+
+      // Orchestrate team member responses
+      let responses: any[] = [];
+      if (type === 'send-message') {
+        responses = await workspaceOrchestrator.orchestrateConversation(
+          data.content,
+          channel,
+          context,
+          sessionId
+        );
+
+        // Store AI responses
+        for (const response of responses) {
+          await storage.createWorkspaceInteraction({
+            sessionId,
+            channel,
+            sender: response.sender,
+            senderRole: response.senderRole,
+            content: response.content
+          });
+        }
+      }
+
+      res.json({
+        evaluation,
+        responses,
+        success: true
+      });
+    } catch (error) {
+      console.error('Workspace action error:', error);
+      res.status(500).json({ message: "Failed to process action: " + (error as Error).message });
+    }
+  });
+
+  // Get session evaluation
+  app.get("/api/workspace/:sessionId/evaluation", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const evaluations = await storage.getWorkspaceEvaluations(sessionId);
+      res.json(evaluations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get evaluation: " + (error as Error).message });
+    }
+  });
+
+  // Create evaluation
+  app.post("/api/workspace/:sessionId/evaluation", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const evaluationData = { ...req.body, sessionId };
+      const evaluation = await storage.createWorkspaceEvaluation(evaluationData);
+      res.json(evaluation);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create evaluation: " + (error as Error).message });
     }
   });
 

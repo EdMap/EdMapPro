@@ -89,6 +89,63 @@ edmap is a comprehensive B2B onboarding platform that leverages AI-powered works
 - **Migrations**: Drizzle Kit for schema management and migrations
 - **Schema Evolution**: Type-safe database schema updates
 
+## Workspace Simulator Architecture (NEW)
+
+### Overview
+The Workspace Simulator is the newest and most comprehensive simulator in the edmap platform. It creates a virtual tech team environment where users practice real-world collaboration by working on simulated projects with AI-powered teammates.
+
+### Key Features
+- **Multi-Character AI Team**: 4-6 AI teammates with distinct personalities, roles, and expertise
+- **Role-Based Practice**: Users can practice as Developer, Product Manager, Designer, QA Engineer, or DevOps Engineer
+- **Real Project Scenarios**: Three pre-configured projects (Task Management App, E-commerce API, Mobile Fitness App)
+- **Dynamic Collaboration**: Multi-channel communication (chat, standups, code reviews, email)
+- **Project Artifacts**: Tasks, tickets, code reviews, designs, documentation, test cases
+- **Performance Tracking**: Role-specific competency scoring with real-time feedback
+
+### Database Schema Extensions
+- **workspace_projects**: Project scenarios with team structure, requirements, and difficulty levels
+- **workspace_roles**: Role definitions with competencies, actions, and evaluation criteria
+- **workspace_artifacts**: Project work items (tickets, code, designs, docs) with version history
+- **workspace_tasks**: Kanban workflow with status tracking and dependencies
+- **workspace_interactions**: All team communications across channels
+- **workspace_evaluations**: Performance metrics for collaboration, delivery, and communication
+
+### Backend Components
+- **WorkspaceOrchestrator** (`server/services/workspace-orchestrator.ts`): Multi-agent AI coordination service that manages team member personas, generates contextual responses, orchestrates conversations, and evaluates user actions
+- **Workspace API Endpoints** (`server/routes.ts`):
+  - `/api/workspace/projects` - Get available project scenarios
+  - `/api/workspace/roles` - Get role definitions
+  - `/api/workspace/:sessionId/tasks` - Task management
+  - `/api/workspace/:sessionId/artifacts` - Artifact CRUD
+  - `/api/workspace/:sessionId/interactions` - Communication history
+  - `/api/workspace/:sessionId/action` - Main orchestration endpoint for user actions
+  - `/api/workspace/:sessionId/evaluation` - Performance assessment
+
+### AI Team Members
+Each project includes 3-4 AI teammates with unique characteristics:
+- **Name & Role**: e.g., "Sarah - Senior Developer"
+- **Personality**: e.g., "experienced and helpful"
+- **Expertise**: Role-specific skills (React, Node.js, API design, etc.)
+- **Availability**: Response patterns (always, usually, sometimes)
+
+### Workspace Session Flow
+1. **Project Selection**: User chooses from available project scenarios
+2. **Role Assignment**: User selects their role (Developer, PM, Designer, QA, DevOps)
+3. **Onboarding Phase**: Introduction to team, project goals, sprint objectives
+4. **Active Collaboration**: Daily standups, task work, code reviews, team discussions
+5. **Performance Evaluation**: Real-time feedback on collaboration, communication, and delivery
+
+### Technical Implementation
+- **Frontend**: React-based multi-tab interface for project/role selection with placeholder session view
+- **Backend**: Express.js REST API with Groq/OpenAI integration for AI responses
+- **Data Layer**: In-memory storage (MemStorage) with full CRUD operations for all workspace entities
+- **AI Integration**: Groq llama-3.1-70b-versatile model for dynamic team member responses with fallback mechanisms
+
+### Seed Data
+The system includes 3 pre-configured projects and 5 role templates:
+- **Projects**: Task Management App (mid), E-commerce Platform API (senior), Mobile Fitness App (junior)
+- **Roles**: Developer, Product Manager, Designer, QA Engineer, DevOps Engineer
+
 ## Changelog
 - June 27, 2025. Initial setup
 - June 27, 2025. Added voice recording functionality to interview simulator with Web Speech API integration
@@ -96,6 +153,7 @@ edmap is a comprehensive B2B onboarding platform that leverages AI-powered works
 - June 29, 2025. Implemented Whisper AI voice transcription through Groq API with integrated recording interface, real-time voice wave visualization, and seamless text area integration
 - June 29, 2025. Fixed duplicate question issue in interview simulator - hiring manager now sends only one response at a time
 - June 29, 2025. Implemented Customer Support Simulator with AI-driven customer personas, multi-stage support flow, empathy/clarity scoring, and voice support for call simulations
+- October 20, 2025. **MAJOR FEATURE**: Implemented Workspace Simulator - a comprehensive multi-agent collaboration platform with role-based practice, AI team members, project scenarios, task management, and performance evaluation
 
 ## User Preferences
 
