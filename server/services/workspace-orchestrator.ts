@@ -338,11 +338,14 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
     const message = userMessage.toLowerCase();
     
     // Greeting responses
-    if (message.match(/^(hi|hello|hey)/)) {
+    if (message.match(/^(hi|hello|hey|greetings)/)) {
       const greetings = [
         `Hey! Great to have you on the team. I'm ${member.name}, the ${member.role}. ${this.getRoleIntro(member.role)}`,
         `Hi there! Welcome aboard. Looking forward to working together on this project!`,
-        `Hello! I'm ${member.name}. ${this.getRoleIntro(member.role)} Let me know how I can help!`
+        `Hello! I'm ${member.name}. ${this.getRoleIntro(member.role)} Let me know how I can help!`,
+        `Hey there! ${member.name} here. Excited to be working with you on this! ${this.getRoleIntro(member.role)}`,
+        `Hi! Good to see you in the chat. I'm ${member.name} - I'll be your ${member.role} on this project. Feel free to reach out anytime!`,
+        `Welcome! ${member.name} checking in. ${this.getRoleIntro(member.role)} Looking forward to collaborating!`
       ];
       return { content: greetings[Math.floor(Math.random() * greetings.length)], metadata: { sentiment: 'positive' } };
     }
@@ -398,14 +401,35 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
   }
 
   private getTaskAdvice(role: string): string {
-    const advice: Record<string, string> = {
-      'Developer': "I'd suggest starting with the authentication flow - it's foundational for everything else. After that, we can tackle the main features. Want me to create some initial tickets?",
-      'Product Manager': "Let's prioritize the MVP features first. I'd recommend focusing on user authentication, core CRUD operations, and basic UI. We can iterate from there based on feedback.",
-      'Designer': "From a design perspective, I'd start with the user flow mapping and wireframes. Once we align on that, I can create high-fidelity mockups for the key screens.",
-      'QA Engineer': "I recommend setting up the testing framework early - it pays off later. We should also define acceptance criteria for each feature as we plan them.",
-      'DevOps Engineer': "Let's get the CI/CD pipeline set up first so we can deploy frequently. I'll also configure staging and production environments."
+    const advice: Record<string, string[]> = {
+      'Developer': [
+        "I'd suggest starting with the authentication flow - it's foundational for everything else. After that, we can tackle the main features. Want me to create some initial tickets?",
+        "Let's start with setting up the project structure and database models. Once that's solid, we can build out the API endpoints. I can pair with you on this if helpful!",
+        "I'd recommend beginning with the core data models and API layer. Get that working first, then we can add the UI on top. Sound good?"
+      ],
+      'Product Manager': [
+        "Let's prioritize the MVP features first. I'd recommend focusing on user authentication, core CRUD operations, and basic UI. We can iterate from there based on feedback.",
+        "I've drafted a priority list: 1) User accounts 2) Main workflow 3) Data management. Let's tackle these in order and get user feedback early.",
+        "From a product perspective, we should focus on the highest-value features first. I'm thinking user login and the core task flow. What do you think?"
+      ],
+      'Designer': [
+        "From a design perspective, I'd start with the user flow mapping and wireframes. Once we align on that, I can create high-fidelity mockups for the key screens.",
+        "I'd recommend starting with user research and sketching out the main flows. Then we can move to wireframes and visual design. Want to sync on this tomorrow?",
+        "Let's begin with low-fidelity wireframes to validate the UX flow, then I'll create the high-fidelity designs and components. Does that work for you?"
+      ],
+      'QA Engineer': [
+        "I recommend setting up the testing framework early - it pays off later. We should also define acceptance criteria for each feature as we plan them.",
+        "Let's get test automation in place from the start. I'll set up the framework and we can write tests alongside development. Much easier than retrofitting!",
+        "I'd start by defining test scenarios for the critical paths, then build out the automation framework. Happy to walk through my testing approach if that helps."
+      ],
+      'DevOps Engineer': [
+        "Let's get the CI/CD pipeline set up first so we can deploy frequently. I'll also configure staging and production environments.",
+        "I'd prioritize getting the deployment pipeline working early. That way we can push to staging regularly and catch issues fast. I'll handle the infrastructure setup.",
+        "Start with containerizing the app and setting up automated deployments. I'll configure monitoring too so we can track performance from day one."
+      ]
     };
-    return advice[role] || "Let me check the backlog and get back to you with specific recommendations based on our sprint goals.";
+    const responses = advice[role] || ["Let me check the backlog and get back to you with specific recommendations based on our sprint goals."];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
 
   private getTechnicalAdvice(role: string, question: string): string {
@@ -492,9 +516,15 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
       return context.teamMembers.filter(m => m.role === 'Developer' || m.role === 'QA').slice(0, 1);
     }
 
-    // For chat, 1-2 relevant team members respond
+    // For chat, select 1-3 varied team members
     const relevantMembers = this.findRelevantMembers(userMessage, context.teamMembers);
-    return relevantMembers.slice(0, Math.random() > 0.5 ? 1 : 2);
+    
+    // Shuffle to get variety
+    const shuffled = [...relevantMembers].sort(() => Math.random() - 0.5);
+    
+    // Return 1-3 members based on availability
+    const count = Math.floor(Math.random() * 3) + 1; // 1 to 3 members
+    return shuffled.slice(0, Math.min(count, shuffled.length));
   }
 
   private findRelevantMembers(message: string, teamMembers: TeamMember[]): TeamMember[] {
@@ -507,7 +537,13 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
              lowerMessage.includes(member.role.toLowerCase());
     });
 
-    return relevant.length > 0 ? relevant : [teamMembers[0]];
+    // If no match, return random 2-3 members instead of always the first one
+    if (relevant.length === 0) {
+      const shuffled = [...teamMembers].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, Math.floor(Math.random() * 2) + 2); // 2-3 random members
+    }
+
+    return relevant;
   }
 
   private assessActionQuality(action: WorkspaceAction, context: WorkspaceContext): { score: number; feedback: string; impact: string } {
