@@ -35,13 +35,13 @@ export default function WorkspaceSession({ session, onComplete }: WorkspaceSessi
 
   // Fetch tasks
   const { data: tasks = [], refetch: refetchTasks } = useQuery({
-    queryKey: ['/api/workspace', session.id, 'tasks'],
+    queryKey: [`/api/workspace/${session.id}/tasks`],
     enabled: !!session.id,
   });
 
   // Fetch interactions (chat messages)
   const { data: interactions = [], refetch: refetchInteractions } = useQuery({
-    queryKey: ['/api/workspace', session.id, 'interactions'],
+    queryKey: [`/api/workspace/${session.id}/interactions`],
     enabled: !!session.id,
   });
 
@@ -344,7 +344,9 @@ export default function WorkspaceSession({ session, onComplete }: WorkspaceSessi
                                 <span className="font-semibold text-sm">{interaction.sender}</span>
                                 <span className="text-xs text-gray-500">{interaction.senderRole}</span>
                                 <span className="text-xs text-gray-400">
-                                  {new Date(interaction.timestamp).toLocaleTimeString()}
+                                  {interaction.timestamp 
+                                    ? new Date(interaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    : 'just now'}
                                 </span>
                               </div>
                               <p className="text-sm text-gray-700 mt-1">{interaction.content}</p>
