@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Briefcase, Users, Target, Clock, Code, Palette, TestTube, Server, Wrench } from "lucide-react";
 import WorkspaceSession from "@/components/simulation/workspace-session";
+import WorkspaceDashboard from "@/components/simulation/workspace-dashboard";
 
 export default function WorkspaceSimulator() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -96,16 +97,28 @@ export default function WorkspaceSimulator() {
           </p>
         </div>
 
-        <Tabs defaultValue="select-project" className="space-y-6">
+        <Tabs defaultValue="dashboard" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="select-project" data-testid="tab-select-project">1. Select Project</TabsTrigger>
+            <TabsTrigger value="dashboard" data-testid="tab-dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="select-project" data-testid="tab-select-project">Select Project</TabsTrigger>
             <TabsTrigger value="select-role" disabled={!selectedProject} data-testid="tab-select-role">
-              2. Choose Role
+              Choose Role
             </TabsTrigger>
             <TabsTrigger value="review" disabled={!selectedProject || !selectedRole} data-testid="tab-review">
-              3. Review & Start
+              Review & Start
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard">
+            <WorkspaceDashboard
+              userId={(user as any)?.id || 1}
+              onResumeSession={(session) => setActiveSession(session)}
+              onStartNew={() => {
+                const tabsList = document.querySelector('[value="select-project"]') as HTMLElement;
+                tabsList?.click();
+              }}
+            />
+          </TabsContent>
 
           <TabsContent value="select-project">
             {projectsLoading ? (
