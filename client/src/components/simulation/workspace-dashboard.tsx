@@ -34,10 +34,13 @@ export default function WorkspaceDashboard({ userId, onResumeSession, onStartNew
     queryKey: ['/api/user', userId, 'progress'],
   });
 
-  const workspaceSessions = (sessions as any[])?.filter(s => s.type === 'workspace') || [];
-  const activeSessions = workspaceSessions.filter(s => s.status === 'active');
-  const completedSessions = workspaceSessions.filter(s => s.status === 'completed');
-  const workspaceProgress = (progress as any[])?.find(p => p.simulationType === 'workspace');
+  const sessionsArray = Array.isArray(sessions) ? sessions : [];
+  const progressArray = Array.isArray(progress) ? progress : [];
+  
+  const workspaceSessions = sessionsArray.filter((s: any) => s.type === 'workspace');
+  const activeSessions = workspaceSessions.filter((s: any) => s.status === 'active');
+  const completedSessions = workspaceSessions.filter((s: any) => s.status === 'completed');
+  const workspaceProgress = progressArray.find((p: any) => p.simulationType === 'workspace');
 
   const getRoleIcon = (roleName: string) => {
     const icons: Record<string, any> = {
