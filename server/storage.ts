@@ -473,12 +473,12 @@ export class MemStorage implements IStorage {
             onboarding: [
               { from: 'Claire', time: 1, message: 'Welcome to PulseOps IQ! Excited to have you on the team. We\'re building the Executive Heatmap feature - it\'s a high-priority request from our enterprise customers.' },
               { from: 'Ravi', time: 2, message: 'Hey! I can give you a quick tour of the codebase. We use a monorepo structure - client/ for React frontend, server/ for Express backend, shared/ for types.' },
-              { from: 'Maya', time: 3, message: 'From a design perspective, we have an established design system in client/src/components. The heatmap should follow our existing chart patterns.' }
+              { from: 'Maya', time: 3, message: 'From a design perspective, we have an established design system in client/src/components. The heatmap should follow our existing chart patterns.' },
+              { from: 'Claire', time: 4, message: 'Just to clarify - you\'re taking the lead on this feature. I\'ll be here to help with onboarding and then step back to a standby role. Feel free to @mention me anytime you need guidance or get stuck!' }
             ],
             planning: [
-              { from: 'Claire', time: 1, message: 'Let\'s break this feature down. We need: 1) Backend API for aggregation, 2) Frontend visualization, 3) Forecasting integration. What do you think?' },
-              { from: 'Jon', time: 2, message: 'For forecasting, I can provide a statistical model API you can call. We\'ll use exponential smoothing for trend prediction.' },
-              { from: 'Elena', time: 3, message: 'Make sure we have test coverage for the new endpoints and regression tests for existing dashboards. I\'ll help with test strategy.' }
+              { from: 'Jon', time: 1, message: 'For forecasting, I can provide a statistical model API you can call. We\'ll use exponential smoothing for trend prediction.' },
+              { from: 'Elena', time: 2, message: 'Make sure we have test coverage for the new endpoints and regression tests for existing dashboards. I\'ll help with test strategy.' }
             ],
             implementation: [
               { from: 'Ravi', time: 10, message: 'How\'s the implementation going? Let me know if you hit any roadblocks with the aggregation logic.' },

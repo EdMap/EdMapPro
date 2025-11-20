@@ -575,13 +575,19 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
   }
 
   private selectRespondingMembers(userMessage: string, channel: string, context: WorkspaceContext): TeamMember[] {
+    // Identify "standby" members - those with same role as user (senior helping junior)
+    // They're active during onboarding but step back afterwards
+    const isOnboarding = context.phase === 'onboarding';
+    const activeMembers = context.teamMembers.filter(m => m.role !== context.userRole || isOnboarding);
+    
     // Simple selection logic - can be enhanced with more sophisticated rules
     if (channel === 'standup') {
-      return context.teamMembers; // Everyone responds in standup
+      // In standup, everyone responds except standby members (unless onboarding)
+      return activeMembers;
     }
 
     if (channel === 'code-review' && context.userRole === 'Developer') {
-      return context.teamMembers.filter(m => m.role === 'Developer' || m.role === 'QA').slice(0, 1);
+      return activeMembers.filter(m => m.role === 'Developer' || m.role === 'QA').slice(0, 1);
     }
 
     // Check for direct mentions (@name or name in text)
@@ -589,6 +595,7 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
     
     if (mentionedMembers.length > 0) {
       // Filter by availability - 'always' responds 100%, 'usually' 80%, 'sometimes' 40%
+      // Important: Standby members CAN respond to @mentions even after onboarding
       const responding = mentionedMembers.filter(member => {
         if (member.availability === 'always') return true;
         if (member.availability === 'usually') return Math.random() > 0.2;
@@ -598,15 +605,15 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
       
       // If mentioned person is not available, someone else picks it up 50% of the time
       if (responding.length === 0 && Math.random() > 0.5) {
-        const others = context.teamMembers.filter(m => !mentionedMembers.includes(m));
+        const others = activeMembers.filter(m => !mentionedMembers.includes(m));
         return others.slice(0, 1);
       }
       
       return responding;
     }
-
-    // For chat, select 1-3 varied team members
-    const relevantMembers = this.findRelevantMembers(userMessage, context.teamMembers);
+    
+    // For chat, select relevant team members (excluding standby after onboarding)
+    const relevantMembers = this.findRelevantMembers(userMessage, activeMembers);
     
     // Shuffle to get variety
     const shuffled = [...relevantMembers].sort(() => Math.random() - 0.5);
