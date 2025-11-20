@@ -33,9 +33,12 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
   const [mentionCursorPos, setMentionCursorPos] = useState(0);
+  const [typingIndicator, setTypingIndicator] = useState<string | null>(null);
+  const [userIsTyping, setUserIsTyping] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const requirements = project.requirements || {};
   const phases = requirements.phases || [];
@@ -58,6 +61,11 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (userMessage: string) => {
+      // Show typing indicator for the responding AI teammate
+      const teamMembers = project.teamStructure || [];
+      const randomMember = teamMembers[Math.floor(Math.random() * teamMembers.length)];
+      setTypingIndicator(randomMember?.name || "Teammate");
+      
       const response = await apiRequest("POST", `/api/workspace/${session.id}/action`, {
         type: 'send-message',
         channel: getChannelForPhase(currentPhase),
@@ -66,9 +74,13 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
       return response.json();
     },
     onSuccess: () => {
+      setTypingIndicator(null);
       queryClient.invalidateQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
       setMessage("");
     },
+    onError: () => {
+      setTypingIndicator(null);
+    }
   });
 
   // Auto-trigger phase events when phase changes
@@ -139,12 +151,42 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [interactions]);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
+
   // Handle message input changes and detect @ mentions
   function handleMessageChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const value = e.target.value;
     const cursorPos = e.target.selectionStart;
     
     setMessage(value);
+    
+    // User typing detection - hide typing indicator when user starts typing
+    if (value.length > 0 && !userIsTyping) {
+      setUserIsTyping(true);
+      setTypingIndicator(null); // Hide typing indicator when user starts typing
+    }
+    
+    // User stopped typing or cleared input
+    if (value.length === 0) {
+      setUserIsTyping(false);
+    }
+    
+    // Clear typing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set user as not typing after 2 seconds of inactivity
+    if (value.length > 0) {
+      typingTimeoutRef.current = setTimeout(() => {
+        setUserIsTyping(false);
+      }, 2000);
+    }
     
     // Check if we're typing an @ mention
     const textBeforeCursor = value.substring(0, cursorPos);
@@ -397,6 +439,30 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                                 </div>
                               );
                             })}
+                            
+                            {/* Typing indicator */}
+                            {typingIndicator && (
+                              <div className="flex gap-3" data-testid="typing-indicator">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-sm font-medium text-blue-600">
+                                    {typingIndicator.charAt(0)}
+                                  </span>
+                                </div>
+                                <div className="flex-1 max-w-lg">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-sm font-medium text-gray-900">{typingIndicator}</span>
+                                  </div>
+                                  <div className="inline-block rounded-lg px-4 py-2 bg-gray-100">
+                                    <div className="flex gap-1">
+                                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
                             <div ref={messagesEndRef} />
                           </>
                         )}
