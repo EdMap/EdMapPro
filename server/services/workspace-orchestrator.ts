@@ -272,16 +272,26 @@ Format as JSON:
       timestamp: new Date()
     });
 
-    // Add realistic initial delay (2-5 seconds) before first response
-    const initialDelay = 2000 + Math.random() * 3000; // 2-5 seconds
-    await new Promise(resolve => setTimeout(resolve, initialDelay));
-
     // Determine which team members should respond
     const respondingMembers = this.selectRespondingMembers(userMessage, channel, context);
 
     for (const member of respondingMembers) {
       const history = this.getMemory(sessionId, channel);
       const response = await this.generateTeamMemberResponse(member, context, userMessage, channel, history);
+      
+      // Simulate realistic typing speed: 190-200 characters per minute
+      // 190 CPM = 315.8 ms/char, 200 CPM = 300 ms/char
+      const charsPerMinute = 190 + Math.random() * 10; // Random between 190-200
+      const msPerChar = 60000 / charsPerMinute; // Convert to milliseconds per character
+      const typingDelay = response.content.length * msPerChar;
+      
+      // Add small thinking delay (1-2 seconds) before typing starts
+      const thinkingDelay = 1000 + Math.random() * 1000;
+      const totalDelay = thinkingDelay + typingDelay;
+      
+      console.log(`[Typing] ${member.name} typing ${response.content.length} chars at ${Math.round(charsPerMinute)} CPM = ${Math.round(totalDelay)}ms total (${Math.round(thinkingDelay)}ms thinking + ${Math.round(typingDelay)}ms typing)`);
+      
+      await new Promise(resolve => setTimeout(resolve, totalDelay));
       
       const message: ChannelMessage = {
         sender: member.name,
@@ -293,9 +303,9 @@ Format as JSON:
       this.addToMemory(sessionId, channel, message);
       responses.push(message);
 
-      // Add delay between multiple responses (1-3 seconds)
+      // Add brief pause between multiple responses (500ms-1s)
       if (respondingMembers.length > 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
       }
     }
 
