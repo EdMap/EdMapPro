@@ -41,6 +41,12 @@ export default function WorkspaceSimulator() {
   const handleStartSession = async () => {
     if (!selectedProject || !selectedRole || !user) return;
 
+    // Filter out the AI teammate with the same role as the user
+    // The user IS the PM/Developer/etc, not an additional one
+    const filteredTeam = selectedProject.teamStructure.filter(
+      (member: any) => member.role !== selectedRole
+    );
+
     await createSessionMutation.mutateAsync({
       userId: (user as any).id,
       type: 'workspace',
@@ -50,7 +56,7 @@ export default function WorkspaceSimulator() {
         projectName: selectedProject.name,
         activeRole: selectedRole,
         sprintPhase: 'onboarding',
-        teamMembers: selectedProject.teamStructure,
+        teamMembers: filteredTeam,
         duration: selectedProject.estimatedDuration
       },
       messages: []
