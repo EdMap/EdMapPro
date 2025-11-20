@@ -35,6 +35,7 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   const [mentionCursorPos, setMentionCursorPos] = useState(0);
   const [typingIndicator, setTypingIndicator] = useState<string | null>(null);
   const [userIsTyping, setUserIsTyping] = useState(false);
+  const [completedObjectives, setCompletedObjectives] = useState<Record<string, boolean[]>>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -50,6 +51,64 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   const currentPhaseData = phases.find((p: any) => p.name === currentPhase) || phases[0];
   const currentPhaseIndex = phases.findIndex((p: any) => p.name === currentPhase);
   const progressPercentage = ((currentPhaseIndex + 1) / phases.length) * 100;
+  
+  // Phase guidance for different roles
+  const phaseGuidance: Record<string, { description: string; tips: string[] }> = {
+    onboarding: {
+      description: "Welcome! Get familiar with the team, codebase, and feature requirements.",
+      tips: [
+        "Review the feature requirements and acceptance criteria in the Requirements tab",
+        "Explore the codebase structure in the Codebase tab to understand the architecture",
+        "Chat with your teammates to ask questions and introduce yourself",
+        "Check off objectives as you complete them to track your progress"
+      ]
+    },
+    planning: {
+      description: "Break down the feature into concrete tasks and align with the team.",
+      tips: [
+        "Discuss the technical approach with Ravi (Backend Lead) and Maya (Frontend)",
+        "Ask about potential risks, dependencies, or architectural decisions",
+        "For PMs: Define milestones and coordinate the sprint plan",
+        "For Developers: Identify which files need changes and what APIs to create",
+        "Check off objectives once you've discussed them with the team"
+      ]
+    },
+    implementation: {
+      description: "Build the feature by collaborating with your team.",
+      tips: [
+        "For Developers: Discuss code implementation details with technical teammates",
+        "For PMs: Check in on progress, unblock dependencies, and coordinate with stakeholders",
+        "Share your work-in-progress and ask for feedback",
+        "Document key decisions and update the team on your progress",
+        "This phase typically takes the longest - work through each objective systematically"
+      ]
+    },
+    review: {
+      description: "Get feedback from teammates and refine your work.",
+      tips: [
+        "Share your completed work with the team for review",
+        "For Developers: Ask Elena (QA) about testing and Ravi about code review",
+        "For PMs: Coordinate final sign-offs and ensure acceptance criteria are met",
+        "Address any feedback or questions from teammates",
+        "Ensure all deliverables are ready before moving to release"
+      ]
+    },
+    release: {
+      description: "Deploy the feature and wrap up the sprint.",
+      tips: [
+        "Coordinate with Luis (DevOps) on deployment process",
+        "Participate in sprint retrospective to reflect on what went well",
+        "Share key learnings and celebrate the team's success",
+        "You'll receive a performance evaluation based on your collaboration and communication"
+      ]
+    }
+  };
+  
+  const currentGuidance = phaseGuidance[currentPhase] || phaseGuidance.onboarding;
+  const phaseObjectives = completedObjectives[currentPhase] || [];
+  const objectivesCompleted = phaseObjectives.filter(Boolean).length;
+  const totalObjectives = currentPhaseData?.objectives?.length || 0;
+  const canAdvancePhase = objectivesCompleted >= Math.ceil(totalObjectives * 0.5); // At least 50% complete
 
   // Fetch interactions for current session
   const { data: interactions, isLoading: interactionsLoading } = useQuery({
@@ -219,6 +278,26 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
     textareaRef.current?.focus();
   }
 
+  // Toggle objective completion
+  function toggleObjective(index: number) {
+    setCompletedObjectives(prev => {
+      const phaseObjs = prev[currentPhase] || Array(totalObjectives).fill(false);
+      const updated = [...phaseObjs];
+      updated[index] = !updated[index];
+      return { ...prev, [currentPhase]: updated };
+    });
+  }
+  
+  // Initialize phase objectives when phase changes
+  useEffect(() => {
+    if (!completedObjectives[currentPhase] && totalObjectives > 0) {
+      setCompletedObjectives(prev => ({
+        ...prev,
+        [currentPhase]: Array(totalObjectives).fill(false)
+      }));
+    }
+  }, [currentPhase, totalObjectives]);
+
   // Filter team members for mention autocomplete
   const teamMembers = project.teamStructure || [];
   const filteredMembers = showMentionMenu
@@ -290,20 +369,66 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
           <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Sidebar - Phase Info & Team */}
             <div className="lg:col-span-1 space-y-4 overflow-y-auto">
-              <Card data-testid="card-phase-objectives">
+              {/* Phase Guidance */}
+              <Card data-testid="card-phase-guidance" className="bg-blue-50 border-blue-200">
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="text-lg flex items-center gap-2 text-blue-900">
                     <Target className="h-5 w-5" />
-                    Phase Objectives
+                    What to Do Now
                   </CardTitle>
+                  <CardDescription className="text-blue-700">
+                    {currentGuidance.description}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <ul className="space-y-2">
+                    {currentGuidance.tips.map((tip: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-blue-900">
+                        <span className="text-blue-600 font-bold mt-0.5">•</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+              
+              {/* Phase Objectives with Checkboxes */}
+              <Card data-testid="card-phase-objectives">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5" />
+                      Objectives ({objectivesCompleted}/{totalObjectives})
+                    </CardTitle>
+                    {objectivesCompleted > 0 && (
+                      <span className="text-xs font-medium text-green-600">
+                        {Math.round((objectivesCompleted / totalObjectives) * 100)}% complete
+                      </span>
+                    )}
+                  </div>
+                  <CardDescription>
+                    Check off objectives as you complete them
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
                     {currentPhaseData?.objectives?.map((obj: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-700">{obj}</span>
-                      </div>
+                      <label
+                        key={idx}
+                        className="flex items-start gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                        data-testid={`objective-${idx}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={phaseObjectives[idx] || false}
+                          onChange={() => toggleObjective(idx)}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          data-testid={`checkbox-objective-${idx}`}
+                        />
+                        <span className={`text-sm flex-1 ${phaseObjectives[idx] ? 'text-gray-500 line-through' : 'text-gray-700'}`}>
+                          {obj}
+                        </span>
+                      </label>
                     ))}
                   </div>
                   <div className="mt-4 pt-4 border-t">
@@ -353,15 +478,40 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                 </CardContent>
               </Card>
 
-              {currentPhase !== 'onboarding' && currentPhase !== 'release' && (
-                <Button
-                  onClick={advancePhase}
-                  className="w-full"
-                  data-testid="button-next-phase"
-                >
-                  Complete Phase & Continue
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
+              {currentPhase !== 'release' && (
+                <Card data-testid="card-phase-progression">
+                  <CardContent className="pt-6">
+                    {canAdvancePhase ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span className="font-medium">Ready to advance!</span>
+                        </div>
+                        <Button
+                          onClick={advancePhase}
+                          className="w-full"
+                          data-testid="button-next-phase"
+                        >
+                          Complete {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)} & Continue
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-sm text-gray-600 text-center">
+                          Complete at least {Math.ceil(totalObjectives * 0.5)} objectives to continue
+                        </div>
+                        <Button
+                          disabled
+                          className="w-full"
+                          data-testid="button-next-phase-disabled"
+                        >
+                          Continue to Next Phase
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
             </div>
 
