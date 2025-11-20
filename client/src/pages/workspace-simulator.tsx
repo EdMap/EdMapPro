@@ -8,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Briefcase, Users, Target, Clock, Code, Palette, TestTube, Server, Wrench } from "lucide-react";
 import WorkspaceSession from "@/components/simulation/workspace-session";
 import WorkspaceDashboard from "@/components/simulation/workspace-dashboard";
+import EnterpriseFeatureSession from "@/components/simulation/enterprise-feature-session";
 
 export default function WorkspaceSimulator() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -84,6 +85,19 @@ export default function WorkspaceSimulator() {
   };
 
   if (activeSession) {
+    // Check if this is an enterprise feature scenario
+    const isEnterpriseFeature = activeSession.configuration?.projectName?.includes('PulseOps IQ');
+    
+    if (isEnterpriseFeature && selectedProject) {
+      return (
+        <EnterpriseFeatureSession
+          session={activeSession}
+          project={selectedProject}
+          onComplete={handleSessionComplete}
+        />
+      );
+    }
+    
     return <WorkspaceSession session={activeSession} onComplete={handleSessionComplete} />;
   }
 

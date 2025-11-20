@@ -295,6 +295,200 @@ export class MemStorage implements IStorage {
         scenarioScript: null,
         difficulty: 'junior',
         estimatedDuration: 40
+      },
+      {
+        name: 'PulseOps IQ - Executive Heatmap Feature',
+        description: 'Enterprise incident analytics platform - Add executive incident heatmap and forecasting module',
+        category: 'enterprise-feature',
+        teamStructure: [
+          {
+            name: 'Claire',
+            role: 'Product Manager',
+            personality: 'strategic and stakeholder-focused',
+            expertise: ['enterprise-products', 'analytics', 'SLA-management', 'roadmap-planning'],
+            availability: 'usually'
+          },
+          {
+            name: 'Ravi',
+            role: 'Developer',
+            personality: 'architectural and thorough',
+            expertise: ['TypeScript', 'API-design', 'data-aggregation', 'PostgreSQL', 'performance-optimization'],
+            availability: 'always'
+          },
+          {
+            name: 'Maya',
+            role: 'Designer',
+            personality: 'design-conscious and detail-oriented',
+            expertise: ['data-visualization', 'design-systems', 'enterprise-UI', 'accessibility'],
+            availability: 'usually'
+          },
+          {
+            name: 'Jon',
+            role: 'Data Scientist',
+            personality: 'analytical and collaborative',
+            expertise: ['forecasting-algorithms', 'statistical-analysis', 'trend-detection', 'data-validation'],
+            availability: 'sometimes'
+          },
+          {
+            name: 'Elena',
+            role: 'QA Engineer',
+            personality: 'methodical and regression-aware',
+            expertise: ['test-automation', 'regression-testing', 'data-validation', 'integration-testing'],
+            availability: 'always'
+          },
+          {
+            name: 'Luis',
+            role: 'DevOps Engineer',
+            personality: 'reliability-focused and automation-minded',
+            expertise: ['CI-CD', 'monitoring', 'deployment-automation', 'performance-testing'],
+            availability: 'usually'
+          }
+        ],
+        requirements: {
+          scenario: 'enterprise-existing-codebase',
+          existingProduct: {
+            name: 'PulseOps IQ',
+            description: 'Enterprise incident & service analytics SaaS for ITSM teams',
+            existingFeatures: [
+              'Incident ingestion dashboard',
+              'SLA reporting',
+              'Automation playbooks',
+              'Stakeholder reporting',
+              'Alert management'
+            ],
+            techStack: ['React', 'Vite', 'TypeScript', 'Express', 'PostgreSQL', 'TailwindCSS'],
+            codebaseSize: '~15,000 LOC',
+            architecture: 'Monorepo with client/, server/, shared/ structure'
+          },
+          featureRequest: {
+            title: 'Executive Incident Heatmap & Forecasting',
+            businessContext: 'Enterprise customers need proactive SLA management - visibility into incident patterns and prediction of future hotspots',
+            requirements: [
+              'New API endpoint: /api/analytics/heatmap - aggregates incidents by service & business unit',
+              'Frontend heatmap visualization with color intensity = incident volume',
+              'Trend forecasts (7-day, 30-day) with statistical confidence',
+              'Alert threshold configuration for hotspot detection',
+              'Export functionality (CSV, PDF) for executive reports',
+              'Permission checks - executive role required',
+              'Performance: <2s page load, handle 10k+ incidents'
+            ],
+            acceptanceCriteria: [
+              'Heatmap displays accurate incident counts per service/unit',
+              'Forecasting algorithm validated with historical test data (±10% accuracy)',
+              'UI matches existing design system and component patterns',
+              'All existing dashboard tests continue to pass (regression)',
+              'New feature has ≥80% test coverage',
+              'Documentation updated (API reference, user guide)'
+            ]
+          },
+          phases: [
+            {
+              name: 'onboarding',
+              duration: 5,
+              objectives: [
+                'Welcome to PulseOps IQ team',
+                'Review product overview and architecture',
+                'Explore existing codebase structure',
+                'Understand feature requirements and business context'
+              ],
+              deliverables: ['Understanding of codebase', 'Questions answered by team']
+            },
+            {
+              name: 'planning',
+              duration: 5,
+              objectives: [
+                'Break down feature into implementation tasks',
+                'Discuss technical approach with team',
+                'Identify dependencies and potential risks',
+                'Define timeline and milestones'
+              ],
+              deliverables: ['Task breakdown', 'Technical design decisions', 'Sprint plan']
+            },
+            {
+              name: 'implementation',
+              duration: 30,
+              objectives: [
+                'Implement backend aggregation API',
+                'Build frontend heatmap visualization',
+                'Add forecasting algorithm integration',
+                'Write unit and integration tests',
+                'Update documentation'
+              ],
+              deliverables: ['Working code', 'Tests passing', 'PR ready for review']
+            },
+            {
+              name: 'review',
+              duration: 10,
+              objectives: [
+                'Submit PR for team review',
+                'Address code review feedback',
+                'Ensure all tests pass',
+                'Verify no regression on existing features'
+              ],
+              deliverables: ['PR approved', 'All feedback addressed', 'CI passing']
+            },
+            {
+              name: 'release',
+              duration: 5,
+              objectives: [
+                'Merge feature to main branch',
+                'Deploy to staging environment',
+                'Sprint retrospective with team',
+                'Receive performance evaluation'
+              ],
+              deliverables: ['Feature deployed', 'Release notes', 'Team feedback']
+            }
+          ],
+          simulatedCodebase: {
+            structure: {
+              'client/src/pages/dashboard': ['incident-dashboard.tsx', 'sla-reports.tsx', 'automation-playbooks.tsx'],
+              'client/src/pages/analytics': ['overview.tsx', 'service-health.tsx'],
+              'client/src/components/charts': ['line-chart.tsx', 'bar-chart.tsx', 'pie-chart.tsx'],
+              'server/routes': ['incidents.ts', 'reports.ts', 'analytics.ts', 'playbooks.ts'],
+              'server/services': ['incident-service.ts', 'sla-calculator.ts', 'analytics-engine.ts'],
+              'shared': ['schema.ts', 'types.ts', 'validation.ts'],
+              'docs': ['README.md', 'ARCHITECTURE.md', 'API_REFERENCE.md']
+            },
+            keyFiles: [
+              {
+                path: 'server/routes/analytics.ts',
+                description: 'Analytics API endpoints - you\'ll add heatmap endpoint here',
+                snippet: 'export async function analyticsRoutes(app: Express) {\n  app.get("/api/analytics/overview", ...);\n  app.get("/api/analytics/service-health", ...);\n  // Add heatmap endpoint here\n}'
+              },
+              {
+                path: 'client/src/pages/analytics/overview.tsx',
+                description: 'Analytics dashboard page - good reference for adding heatmap',
+                snippet: 'export default function AnalyticsOverview() {\n  const { data: metrics } = useQuery({ queryKey: [\'/api/analytics/overview\'] });\n  return <div>...</div>;\n}'
+              },
+              {
+                path: 'shared/schema.ts',
+                description: 'Data models and types - check incident schema',
+                snippet: 'export const incidents = pgTable("incidents", {\n  id: serial("id"),\n  serviceId: integer("service_id"),\n  severity: text("severity"),\n  status: text("status"),\n  ...\n});'
+              }
+            ]
+          }
+        },
+        scenarioScript: {
+          phases: {
+            onboarding: [
+              { from: 'Claire', time: 1, message: 'Welcome to PulseOps IQ! Excited to have you on the team. We\'re building the Executive Heatmap feature - it\'s a high-priority request from our enterprise customers.' },
+              { from: 'Ravi', time: 2, message: 'Hey! I can give you a quick tour of the codebase. We use a monorepo structure - client/ for React frontend, server/ for Express backend, shared/ for types.' },
+              { from: 'Maya', time: 3, message: 'From a design perspective, we have an established design system in client/src/components. The heatmap should follow our existing chart patterns.' }
+            ],
+            planning: [
+              { from: 'Claire', time: 1, message: 'Let\'s break this feature down. We need: 1) Backend API for aggregation, 2) Frontend visualization, 3) Forecasting integration. What do you think?' },
+              { from: 'Jon', time: 2, message: 'For forecasting, I can provide a statistical model API you can call. We\'ll use exponential smoothing for trend prediction.' },
+              { from: 'Elena', time: 3, message: 'Make sure we have test coverage for the new endpoints and regression tests for existing dashboards. I\'ll help with test strategy.' }
+            ],
+            implementation: [
+              { from: 'Ravi', time: 10, message: 'How\'s the implementation going? Let me know if you hit any roadblocks with the aggregation logic.' },
+              { from: 'Maya', time: 15, message: 'I\'d love to review the heatmap UI once you have something visual. Make sure it\'s responsive and accessible!' },
+              { from: 'Luis', time: 20, message: 'FYI - deployment process is automated via GitHub Actions. Just make sure your tests pass locally first.' }
+            ]
+          }
+        },
+        difficulty: 'senior',
+        estimatedDuration: 55
       }
     ];
 
