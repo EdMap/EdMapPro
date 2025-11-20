@@ -287,9 +287,13 @@ Format as JSON:
       
       // Add small thinking delay (1-2 seconds) before typing starts
       const thinkingDelay = 1000 + Math.random() * 1000;
-      const totalDelay = thinkingDelay + typingDelay;
       
-      console.log(`[Typing] ${member.name} typing ${response.content.length} chars at ${Math.round(charsPerMinute)} CPM = ${Math.round(totalDelay)}ms total (${Math.round(thinkingDelay)}ms thinking + ${Math.round(typingDelay)}ms typing)`);
+      // Cap maximum delay at 8-12 seconds for better UX
+      const maxDelay = 8000 + Math.random() * 4000; // 8-12 seconds max
+      const calculatedDelay = thinkingDelay + typingDelay;
+      const totalDelay = Math.min(calculatedDelay, maxDelay);
+      
+      console.log(`[Typing] ${member.name} typing ${response.content.length} chars at ${Math.round(charsPerMinute)} CPM = ${Math.round(totalDelay)}ms total (calculated: ${Math.round(calculatedDelay)}ms, capped: ${totalDelay < calculatedDelay})`);
       
       await new Promise(resolve => setTimeout(resolve, totalDelay));
       
