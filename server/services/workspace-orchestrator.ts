@@ -575,6 +575,13 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
   }
 
   private selectRespondingMembers(userMessage: string, channel: string, context: WorkspaceContext): TeamMember[] {
+    // Handle DM channels - only the specific member responds
+    if (channel.startsWith('dm-')) {
+      const memberName = channel.replace('dm-', '');
+      const member = context.teamMembers.find(m => m.name === memberName);
+      return member ? [member] : [];
+    }
+    
     // Identify "standby" members - those with same role as user (senior helping junior)
     // They're active during onboarding but step back afterwards
     const isOnboarding = context.phase === 'onboarding';

@@ -36,6 +36,8 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   const [typingIndicator, setTypingIndicator] = useState<string | null>(null);
   const [userIsTyping, setUserIsTyping] = useState(false);
   const [completedObjectives, setCompletedObjectives] = useState<Record<string, boolean[]>>({});
+  const [activeChannel, setActiveChannel] = useState<string>("team-chat");
+  const [openDMs, setOpenDMs] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -122,12 +124,19 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
     mutationFn: async (userMessage: string) => {
       // Show typing indicator for the responding AI teammate
       const teamMembers = project.teamStructure || [];
-      const randomMember = teamMembers[Math.floor(Math.random() * teamMembers.length)];
-      setTypingIndicator(randomMember?.name || "Teammate");
+      
+      // For DMs, show typing for specific member
+      if (activeChannel.startsWith('dm-')) {
+        const memberName = activeChannel.replace('dm-', '');
+        setTypingIndicator(memberName);
+      } else {
+        const randomMember = teamMembers[Math.floor(Math.random() * teamMembers.length)];
+        setTypingIndicator(randomMember?.name || "Teammate");
+      }
       
       const response = await apiRequest("POST", `/api/workspace/${session.id}/action`, {
         type: 'send-message',
-        channel: getChannelForPhase(currentPhase),
+        channel: activeChannel === 'team-chat' ? getChannelForPhase(currentPhase) : activeChannel,
         data: { content: userMessage }
       });
       return response.json();
@@ -203,6 +212,15 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
       // Simulation complete
       onComplete();
     }
+  }
+
+  // Start or switch to DM with a team member
+  function startDM(memberName: string) {
+    const dmChannel = `dm-${memberName}`;
+    if (!openDMs.includes(dmChannel)) {
+      setOpenDMs([...openDMs, dmChannel]);
+    }
+    setActiveChannel(dmChannel);
   }
 
   // Auto-scroll to bottom when new messages arrive
@@ -306,9 +324,18 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
       )
     : [];
 
-  const currentChannel = getChannelForPhase(currentPhase);
+  // Filter interactions by active channel
   const channelInteractions = Array.isArray(interactions)
-    ? interactions.filter((i: any) => i.channel === currentChannel)
+    ? interactions.filter((i: any) => {
+        if (activeChannel === 'team-chat') {
+          // For team chat, show messages from the current phase channel
+          const phaseChannel = getChannelForPhase(currentPhase);
+          return i.channel === phaseChannel;
+        } else {
+          // For DMs, show messages from that specific DM channel
+          return i.channel === activeChannel;
+        }
+      })
     : [];
 
   return (
@@ -451,17 +478,25 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                     <Users className="h-5 w-5" />
                     Your Team
                   </CardTitle>
+                  <CardDescription className="text-xs">Click to start a direct message</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {project.teamStructure?.map((member: any, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3">
+                      <button
+                        key={idx}
+                        onClick={() => startDM(member.name)}
+                        className={`w-full flex items-start gap-3 p-2 rounded-lg transition-colors hover:bg-blue-50 ${
+                          activeChannel === `dm-${member.name}` ? 'bg-blue-100 border border-blue-300' : ''
+                        }`}
+                        data-testid={`member-${idx}`}
+                      >
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <span className="text-sm font-medium text-blue-600">
                             {member.name.charAt(0)}
                           </span>
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 text-left">
                           <p className="text-sm font-medium text-gray-900">{member.name}</p>
                           <p className="text-xs text-gray-600">{member.role}</p>
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -472,7 +507,7 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                             ))}
                           </div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </CardContent>
@@ -536,8 +571,38 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                 <TabsContent value="chat" className="flex-1 flex flex-col mt-4 overflow-hidden">
                   <Card className="flex-1 flex flex-col overflow-hidden">
                     <CardHeader className="flex-shrink-0">
-                      <CardTitle className="text-lg">Team Chat - {currentChannel.replace('-', ' ')}</CardTitle>
-                      <CardDescription>Collaborate with your AI teammates</CardDescription>
+                      <div className="flex items-center gap-2 mb-3 overflow-x-auto">
+                        <Button
+                          variant={activeChannel === 'team-chat' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setActiveChannel('team-chat')}
+                          data-testid="button-team-chat"
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Team Chat
+                        </Button>
+                        {openDMs.map((dmChannel) => {
+                          const memberName = dmChannel.replace('dm-', '');
+                          return (
+                            <Button
+                              key={dmChannel}
+                              variant={activeChannel === dmChannel ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setActiveChannel(dmChannel)}
+                              data-testid={`button-dm-${memberName}`}
+                            >
+                              <AtSign className="h-3 w-3 mr-1" />
+                              {memberName}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <CardTitle className="text-lg">
+                        {activeChannel === 'team-chat' ? 'Team Chat' : `DM with ${activeChannel.replace('dm-', '')}`}
+                      </CardTitle>
+                      <CardDescription>
+                        {activeChannel === 'team-chat' ? 'Collaborate with your AI teammates' : 'Private conversation'}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
                       <div className="flex-1 overflow-y-auto p-6 space-y-4" data-testid="chat-messages">
