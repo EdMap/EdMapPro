@@ -181,6 +181,7 @@ The system includes 4 pre-configured projects and 5 role templates:
 - November 20, 2025. **TYPING INDICATOR**: Implemented real-time typing indicator with animated dots that shows when AI teammates are generating responses and automatically hides when user starts typing
 - November 20, 2025. **PHASE GUIDANCE SYSTEM**: Added interactive guidance panel with "What to Do Now" tips, objectives checklist with progress tracking (X/Y completed, percentage badge), and smart phase progression that requires ≥50% objective completion before advancing to next phase
 - November 20, 2025. **STANDBY ROLE BEHAVIOR**: Implemented intelligent role-based mentorship where AI teammates with the same role as the user (e.g., Claire the PM when user is PM) actively help during onboarding phase, then transition to standby mode where they only respond to @mentions, creating a realistic experience where the user leads their role while having a safety net for guidance
+- November 20, 2025. **DIRECT MESSAGING (DM) FEATURE**: Implemented 1-on-1 private conversations with individual AI teammates. Users can click any team member to open a private DM, with conversation tabs for switching between teammates, message isolation per channel, and case-insensitive member matching for robust routing
 
 ## User Preferences
 
