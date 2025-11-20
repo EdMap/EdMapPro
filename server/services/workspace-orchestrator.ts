@@ -577,9 +577,19 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
   private selectRespondingMembers(userMessage: string, channel: string, context: WorkspaceContext): TeamMember[] {
     // Handle DM channels - only the specific member responds
     if (channel.startsWith('dm-')) {
-      const memberName = channel.replace('dm-', '');
-      const member = context.teamMembers.find(m => m.name === memberName);
-      return member ? [member] : [];
+      const memberName = channel.replace('dm-', '').trim();
+      
+      // Case-insensitive and trimmed comparison for robust member matching
+      const member = context.teamMembers.find(m => 
+        m.name.trim().toLowerCase() === memberName.toLowerCase()
+      );
+      
+      if (!member) {
+        console.error(`[DM] Could not find member "${memberName}" for channel "${channel}"`);
+        return [];
+      }
+      
+      return [member];
     }
     
     // Identify "standby" members - those with same role as user (senior helping junior)
