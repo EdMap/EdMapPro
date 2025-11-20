@@ -156,8 +156,9 @@ A specialized simulation for practicing adding features to existing enterprise c
 - **Team**: 6 AI teammates (Claire-PM, Ravi-Backend, Maya-Frontend, Jon-DataScience, Elena-QA, Luis-DevOps)
 - **Workflow**: Multi-phase progression (Onboarding → Planning → Implementation → Review → Release)
 - **Simulated Codebase**: File structure explorer with key files, code snippets, and product context
-- **Phase-Based Events**: Auto-triggered welcome messages and contextual guidance per phase
-- **Real Collaboration**: Team chat, requirements view, codebase exploration, AI responses
+- **Phase-Based Events**: Auto-triggered welcome messages with staggered delays (3-8 seconds apart) and contextual guidance per phase
+- **Real Collaboration**: Team chat with @mention tagging, smart message routing, requirements view, codebase exploration, and AI responses with realistic delays (2-5 seconds)
+- **Chat Features**: @mention autocomplete dropdown, case-insensitive name detection ("hey Claire" or "@Ravi"), availability-based response routing, auto-scroll to latest messages
 
 ### Seed Data
 The system includes 4 pre-configured projects and 5 role templates:
@@ -175,6 +176,7 @@ The system includes 4 pre-configured projects and 5 role templates:
 - October 20, 2025. Enhanced AI teammate responses with topic extraction and contextual references to user questions
 - November 4, 2025. Added Workspace Simulator Dashboard with hero metrics, active sessions, completion tracking, performance visualizations, and quick access to resume simulations
 - November 20, 2025. **ENTERPRISE FEATURE**: Implemented PulseOps IQ Enterprise Feature scenario with multi-phase simulation (onboarding → planning → implementation → review → release), simulated codebase explorer, 6 AI teammates, phase-based auto-messages, and complete feature development workflow
+- November 20, 2025. **CHAT ENHANCEMENTS**: Added @mention autocomplete, smart message routing (detects @mentions and name mentions like "hey Claire"), staggered auto-message delays (3-8s apart), realistic AI response delays (2-5s), and auto-scroll to latest messages
 
 ## User Preferences
 
