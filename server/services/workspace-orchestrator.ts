@@ -272,6 +272,10 @@ Format as JSON:
       timestamp: new Date()
     });
 
+    // Add realistic initial delay (2-5 seconds) before first response
+    const initialDelay = 2000 + Math.random() * 3000; // 2-5 seconds
+    await new Promise(resolve => setTimeout(resolve, initialDelay));
+
     // Determine which team members should respond
     const respondingMembers = this.selectRespondingMembers(userMessage, channel, context);
 
@@ -289,8 +293,10 @@ Format as JSON:
       this.addToMemory(sessionId, channel, message);
       responses.push(message);
 
-      // Add slight delay between responses for realism
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Add delay between multiple responses (1-3 seconds)
+      if (respondingMembers.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      }
     }
 
     return responses;
@@ -578,15 +584,75 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
       return context.teamMembers.filter(m => m.role === 'Developer' || m.role === 'QA').slice(0, 1);
     }
 
+    // Check for direct mentions (@name or name in text)
+    const mentionedMembers = this.extractMentionedMembers(userMessage, context.teamMembers);
+    
+    if (mentionedMembers.length > 0) {
+      // Filter by availability - 'always' responds 100%, 'usually' 80%, 'sometimes' 40%
+      const responding = mentionedMembers.filter(member => {
+        if (member.availability === 'always') return true;
+        if (member.availability === 'usually') return Math.random() > 0.2;
+        if (member.availability === 'sometimes') return Math.random() > 0.6;
+        return true;
+      });
+      
+      // If mentioned person is not available, someone else picks it up 50% of the time
+      if (responding.length === 0 && Math.random() > 0.5) {
+        const others = context.teamMembers.filter(m => !mentionedMembers.includes(m));
+        return others.slice(0, 1);
+      }
+      
+      return responding;
+    }
+
     // For chat, select 1-3 varied team members
     const relevantMembers = this.findRelevantMembers(userMessage, context.teamMembers);
     
     // Shuffle to get variety
     const shuffled = [...relevantMembers].sort(() => Math.random() - 0.5);
     
-    // Return 1-3 members based on availability
-    const count = Math.floor(Math.random() * 3) + 1; // 1 to 3 members
+    // Return 1-2 members (reduced from 1-3 for more realistic conversations)
+    const count = Math.floor(Math.random() * 2) + 1; // 1 to 2 members
     return shuffled.slice(0, Math.min(count, shuffled.length));
+  }
+
+  /**
+   * Extract team members mentioned in the message (via @mention or name in text)
+   * Case-insensitive to handle both "@Claire" and "@claire"
+   */
+  private extractMentionedMembers(message: string, teamMembers: TeamMember[]): TeamMember[] {
+    const mentioned: TeamMember[] = [];
+    const lowerMessage = message.toLowerCase();
+    
+    for (const member of teamMembers) {
+      const firstName = member.name.split(' ')[0].toLowerCase();
+      const fullName = member.name.toLowerCase();
+      
+      // Check for @mentions (e.g., @Claire, @Ravi, @claire)
+      // Case-insensitive comparison
+      if (lowerMessage.includes(`@${firstName}`) || lowerMessage.includes(`@${fullName}`)) {
+        mentioned.push(member);
+        continue;
+      }
+      
+      // Check for name mentions in text (e.g., "hey Claire", "ask Ravi", "Louise can you")
+      const namePatterns = [
+        `hey ${firstName}`,
+        `hi ${firstName}`,
+        `ask ${firstName}`,
+        `${firstName} can`,
+        `${firstName} could`,
+        `${firstName},`,
+        ` ${firstName} `,
+        `${firstName}?`
+      ];
+      
+      if (namePatterns.some(pattern => lowerMessage.includes(pattern))) {
+        mentioned.push(member);
+      }
+    }
+    
+    return mentioned;
   }
 
   private findRelevantMembers(message: string, teamMembers: TeamMember[]): TeamMember[] {
@@ -599,10 +665,10 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
              lowerMessage.includes(member.role.toLowerCase());
     });
 
-    // If no match, return random 2-3 members instead of always the first one
+    // If no match, return random 1-2 members instead of always the first one
     if (relevant.length === 0) {
       const shuffled = [...teamMembers].sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, Math.floor(Math.random() * 2) + 2); // 2-3 random members
+      return shuffled.slice(0, Math.floor(Math.random() * 2) + 1); // 1-2 random members
     }
 
     return relevant;
