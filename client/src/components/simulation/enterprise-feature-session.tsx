@@ -47,6 +47,7 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   const phases = requirements.phases || [];
   const existingProduct = requirements.existingProduct || {};
   const featureRequest = requirements.featureRequest || {};
+  const productDocumentation = requirements.productDocumentation || {};
   const simulatedCodebase = requirements.simulatedCodebase || { structure: {}, keyFiles: [] };
   const scenarioScript = project.scenarioScript || {};
 
@@ -743,42 +744,395 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                 </TabsContent>
 
                 <TabsContent value="requirements" className="flex-1 mt-4 overflow-y-auto">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Feature Requirements</CardTitle>
-                      <CardDescription>{featureRequest.title}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Business Context</h4>
-                        <p className="text-sm text-gray-700">{featureRequest.businessContext}</p>
-                      </div>
+                  <div className="space-y-6">
+                    {/* Executive Summary */}
+                    {productDocumentation.executiveSummary && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Target className="h-5 w-5 text-blue-600" />
+                            Executive Summary
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-700 leading-relaxed">{productDocumentation.executiveSummary}</p>
+                        </CardContent>
+                      </Card>
+                    )}
 
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Requirements</h4>
-                        <ul className="space-y-2">
-                          {featureRequest.requirements?.map((req: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-gray-700">{req}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                    {/* Feature Requirements */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Feature Requirements</CardTitle>
+                        <CardDescription>{featureRequest.title}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-2">Business Context</h4>
+                          <p className="text-sm text-gray-700">{featureRequest.businessContext}</p>
+                        </div>
 
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Acceptance Criteria</h4>
-                        <ul className="space-y-2">
-                          {featureRequest.acceptanceCriteria?.map((criteria: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <div className="h-4 w-4 rounded border-2 border-gray-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-gray-700">{criteria}</span>
-                            </li>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-2">Technical Requirements</h4>
+                          <ul className="space-y-2">
+                            {featureRequest.requirements?.map((req: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm text-gray-700">{req}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-2">Acceptance Criteria</h4>
+                          <ul className="space-y-2">
+                            {featureRequest.acceptanceCriteria?.map((criteria: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <div className="h-4 w-4 rounded border-2 border-gray-400 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm text-gray-700">{criteria}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Stakeholder Analysis */}
+                    {productDocumentation.stakeholders && productDocumentation.stakeholders.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-purple-600" />
+                            Stakeholder Analysis
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {productDocumentation.stakeholders.map((stakeholder: any, idx: number) => (
+                            <div key={idx} className="border-l-4 border-purple-300 pl-4 py-2">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h5 className="font-semibold text-gray-900">{stakeholder.name}</h5>
+                                  <p className="text-sm text-gray-600">{stakeholder.title}</p>
+                                </div>
+                                <Badge variant="outline" className="text-xs">{stakeholder.priority}</Badge>
+                              </div>
+                              <div className="space-y-2 text-sm">
+                                <div>
+                                  <span className="font-medium text-gray-700">Concerns:</span>
+                                  <ul className="list-disc list-inside ml-2 text-gray-600">
+                                    {stakeholder.concerns.map((concern: string, i: number) => (
+                                      <li key={i}>{concern}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-700">Success Metrics:</span>
+                                  <ul className="list-disc list-inside ml-2 text-gray-600">
+                                    {stakeholder.successMetrics.map((metric: string, i: number) => (
+                                      <li key={i}>{metric}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
                           ))}
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* User Stories */}
+                    {productDocumentation.userStories && productDocumentation.userStories.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>User Stories & Personas</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {productDocumentation.userStories.map((story: any, idx: number) => (
+                            <div key={idx} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <div className="flex items-start gap-3 mb-3">
+                                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-white font-semibold text-lg">{story.persona.charAt(0)}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <h5 className="font-semibold text-gray-900">{story.persona}</h5>
+                                  <p className="text-sm text-blue-700 font-medium">{story.goal}</p>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-700 italic mb-2">{story.story}</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex gap-2">
+                                  <span className="font-medium text-gray-700">Pain Point:</span>
+                                  <span className="text-gray-600">{story.painPoint}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <span className="font-medium text-gray-700">Key Jobs:</span>
+                                  <span className="text-gray-600">{story.jobs.join(', ')}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Success Metrics */}
+                    {productDocumentation.successMetrics && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Target className="h-5 w-5 text-green-600" />
+                            Success Metrics & KPIs
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {productDocumentation.successMetrics.primary && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <Badge className="bg-green-600">Primary</Badge>
+                              </h4>
+                              <ul className="space-y-1">
+                                {productDocumentation.successMetrics.primary.map((metric: string, idx: number) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm text-gray-700">{metric}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {productDocumentation.successMetrics.secondary && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <Badge variant="outline">Secondary</Badge>
+                              </h4>
+                              <ul className="space-y-1">
+                                {productDocumentation.successMetrics.secondary.map((metric: string, idx: number) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    <ChevronRight className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm text-gray-600">{metric}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {productDocumentation.successMetrics.technical && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <Badge variant="outline" className="bg-gray-100">Technical</Badge>
+                              </h4>
+                              <ul className="space-y-1">
+                                {productDocumentation.successMetrics.technical.map((metric: string, idx: number) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    <FileCode className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm text-gray-600">{metric}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Roadmap Context */}
+                    {productDocumentation.roadmapContext && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Clock className="h-5 w-5 text-orange-600" />
+                            Roadmap Context
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                            <h4 className="font-semibold text-gray-900 mb-1">{productDocumentation.roadmapContext.quarterlyTheme}</h4>
+                            <p className="text-sm text-gray-700">{productDocumentation.roadmapContext.positioning}</p>
+                          </div>
+                          
+                          {productDocumentation.roadmapContext.dependencies && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2">Dependencies</h4>
+                              <ul className="space-y-1">
+                                {productDocumentation.roadmapContext.dependencies.map((dep: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                    <ChevronRight className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                                    {dep}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {productDocumentation.roadmapContext.futureEnhancements && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2">Future Enhancements</h4>
+                              <ul className="space-y-1">
+                                {productDocumentation.roadmapContext.futureEnhancements.map((enhancement: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+                                    <ChevronRight className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    {enhancement}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Competitive Analysis */}
+                    {productDocumentation.competitiveAnalysis && productDocumentation.competitiveAnalysis.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Competitive Analysis</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {productDocumentation.competitiveAnalysis.map((comp: any, idx: number) => (
+                            <div key={idx} className="border rounded-lg p-3 space-y-2">
+                              <h5 className="font-semibold text-gray-900">{comp.competitor}</h5>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                <div className="bg-gray-50 rounded p-2">
+                                  <span className="font-medium text-gray-700">Their Capability:</span>
+                                  <p className="text-gray-600 mt-1">{comp.theirCapability}</p>
+                                </div>
+                                <div className="bg-green-50 rounded p-2">
+                                  <span className="font-medium text-green-800">Our Differentiator:</span>
+                                  <p className="text-green-700 mt-1">{comp.ourDifferentiator}</p>
+                                </div>
+                              </div>
+                              <div className="bg-blue-50 border-l-4 border-blue-400 p-2">
+                                <span className="font-medium text-blue-800 text-sm">Gap: </span>
+                                <span className="text-blue-700 text-sm">{comp.gap}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Go-to-Market Strategy */}
+                    {productDocumentation.goToMarketStrategy && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Go-to-Market Strategy</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <h5 className="font-semibold text-gray-900 mb-1 text-sm">Launch Date</h5>
+                              <p className="text-sm text-gray-700">{productDocumentation.goToMarketStrategy.launchDate}</p>
+                            </div>
+                            <div>
+                              <h5 className="font-semibold text-gray-900 mb-1 text-sm">Pricing</h5>
+                              <p className="text-sm text-gray-700">{productDocumentation.goToMarketStrategy.pricing}</p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <h5 className="font-semibold text-gray-900 mb-2 text-sm">Target Segment</h5>
+                            <p className="text-sm text-gray-700">{productDocumentation.goToMarketStrategy.targetSegment}</p>
+                          </div>
+
+                          {productDocumentation.goToMarketStrategy.messagingPillars && (
+                            <div>
+                              <h5 className="font-semibold text-gray-900 mb-2 text-sm">Messaging Pillars</h5>
+                              <ul className="space-y-1">
+                                {productDocumentation.goToMarketStrategy.messagingPillars.map((pillar: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    {pillar}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {productDocumentation.goToMarketStrategy.launchActivities && (
+                            <div>
+                              <h5 className="font-semibold text-gray-900 mb-2 text-sm">Launch Activities</h5>
+                              <ul className="space-y-1">
+                                {productDocumentation.goToMarketStrategy.launchActivities.map((activity: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+                                    <ChevronRight className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    {activity}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Risk Assessment */}
+                    {productDocumentation.riskAssessment && productDocumentation.riskAssessment.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Risk Assessment</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {productDocumentation.riskAssessment.map((risk: any, idx: number) => (
+                            <div key={idx} className="border-l-4 border-red-300 pl-4 py-2">
+                              <div className="flex items-start justify-between mb-2">
+                                <h5 className="font-semibold text-gray-900">{risk.risk}</h5>
+                                <div className="flex gap-2">
+                                  <Badge variant="outline" className="text-xs">P: {risk.probability}</Badge>
+                                  <Badge variant="outline" className="text-xs">I: {risk.impact}</Badge>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-700 mb-1"><span className="font-medium">Mitigation:</span> {risk.mitigation}</p>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Resource Planning */}
+                    {productDocumentation.resourcePlanning && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Resource Planning</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {productDocumentation.resourcePlanning.teamAllocation && (
+                            <div>
+                              <h5 className="font-semibold text-gray-900 mb-2 text-sm">Team Allocation</h5>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                {Object.entries(productDocumentation.resourcePlanning.teamAllocation).map(([role, allocation]: [string, any]) => (
+                                  <div key={role} className="bg-gray-50 rounded p-2">
+                                    <span className="font-medium text-gray-700 capitalize">{role}:</span>
+                                    <span className="text-gray-600 ml-2">{allocation}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {productDocumentation.resourcePlanning.timeline && (
+                            <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                              <h5 className="font-semibold text-gray-900 mb-1 text-sm">Timeline</h5>
+                              <p className="text-sm text-gray-700">{productDocumentation.resourcePlanning.timeline}</p>
+                            </div>
+                          )}
+
+                          {productDocumentation.resourcePlanning.budget && (
+                            <div>
+                              <h5 className="font-semibold text-gray-900 mb-2 text-sm">Budget</h5>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                {Object.entries(productDocumentation.resourcePlanning.budget).map(([item, cost]: [string, any]) => (
+                                  <div key={item} className="flex justify-between bg-gray-50 rounded p-2">
+                                    <span className="font-medium text-gray-700 capitalize">{item}:</span>
+                                    <span className="text-gray-900 font-semibold">{cost}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>
