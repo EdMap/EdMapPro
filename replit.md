@@ -159,6 +159,7 @@ A specialized simulation for practicing adding features to existing enterprise c
 - **Phase-Based Events**: Auto-triggered welcome messages with staggered delays (3-8 seconds apart) and contextual guidance per phase
 - **Real Collaboration**: Team chat with @mention tagging, smart message routing, requirements view, codebase exploration, and AI responses with realistic delays (2-5 seconds)
 - **Chat Features**: @mention autocomplete dropdown, case-insensitive name detection ("hey Claire" or "@Ravi"), availability-based response routing, auto-scroll to latest messages
+- **Phase Guidance System**: Interactive "What to Do Now" panel with role-specific tips, objectives checklist with progress tracking, and smart phase progression that enables when ≥50% objectives complete
 
 ### Seed Data
 The system includes 4 pre-configured projects and 5 role templates:
@@ -178,6 +179,7 @@ The system includes 4 pre-configured projects and 5 role templates:
 - November 20, 2025. **ENTERPRISE FEATURE**: Implemented PulseOps IQ Enterprise Feature scenario with multi-phase simulation (onboarding → planning → implementation → review → release), simulated codebase explorer, 6 AI teammates, phase-based auto-messages, and complete feature development workflow
 - November 20, 2025. **CHAT ENHANCEMENTS**: Added @mention autocomplete, smart message routing (detects @mentions and name mentions like "hey Claire"), staggered auto-message delays (3-8s apart), realistic AI response delays (2-5s), and auto-scroll to latest messages
 - November 20, 2025. **TYPING INDICATOR**: Implemented real-time typing indicator with animated dots that shows when AI teammates are generating responses and automatically hides when user starts typing
+- November 20, 2025. **PHASE GUIDANCE SYSTEM**: Added interactive guidance panel with "What to Do Now" tips, objectives checklist with progress tracking (X/Y completed, percentage badge), and smart phase progression that requires ≥50% objective completion before advancing to next phase
 
 ## User Preferences
 
