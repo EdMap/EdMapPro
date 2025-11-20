@@ -44,6 +44,7 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   // Fetch interactions for current session
   const { data: interactions, isLoading: interactionsLoading } = useQuery({
     queryKey: ['/api/workspace', session.id, 'interactions'],
+    queryFn: () => fetch(`/api/workspace/${session.id}/interactions`).then(res => res.json()),
     refetchInterval: 2000
   });
 
@@ -51,10 +52,9 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
   const sendMessageMutation = useMutation({
     mutationFn: async (userMessage: string) => {
       const response = await apiRequest("POST", `/api/workspace/${session.id}/action`, {
-        type: 'message',
+        type: 'send-message',
         channel: getChannelForPhase(currentPhase),
-        message: userMessage,
-        context: { phase: currentPhase }
+        data: { content: userMessage }
       });
       return response.json();
     },
@@ -64,7 +64,7 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
     },
   });
 
-  // Auto-trigger phase events
+  // Auto-trigger phase events when phase changes
   useEffect(() => {
     const phaseScript = scenarioScript.phases?.[currentPhase];
     if (!phaseScript || !Array.isArray(phaseScript)) return;
@@ -73,8 +73,19 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
     
     phaseScript.forEach((event: any) => {
       const delay = event.time * 1000; // Convert seconds to ms
-      const timer = setTimeout(() => {
-        sendMessageMutation.mutate(`[Auto] ${event.from}: ${event.message}`);
+      const timer = setTimeout(async () => {
+        try {
+          await apiRequest("POST", `/api/workspace/${session.id}/interactions`, {
+            sessionId: session.id,
+            channel: getChannelForPhase(currentPhase),
+            sender: event.from,
+            senderRole: project.teamStructure?.find((m: any) => m.name === event.from)?.role || 'Team Member',
+            content: event.message
+          });
+          queryClient.invalidateQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
+        } catch (error) {
+          console.error('Failed to send auto message:', error);
+        }
       }, delay);
       timers.push(timer);
     });
@@ -283,42 +294,45 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                             <p>No messages yet. Start the conversation!</p>
                           </div>
                         ) : (
-                          channelInteractions.map((interaction: any) => (
-                            <div
-                              key={interaction.id}
-                              className={`flex gap-3 ${
-                                interaction.sender === 'user' ? 'flex-row-reverse' : ''
-                              }`}
-                              data-testid={`message-${interaction.id}`}
-                            >
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-sm font-medium text-blue-600">
-                                  {interaction.sender === 'user' ? 'U' : interaction.sender.charAt(0)}
-                                </span>
-                              </div>
+                          channelInteractions.map((interaction: any) => {
+                            const isUser = interaction.sender === 'User' || interaction.sender === 'user';
+                            return (
                               <div
-                                className={`flex-1 max-w-lg ${
-                                  interaction.sender === 'user' ? 'text-right' : ''
+                                key={interaction.id}
+                                className={`flex gap-3 ${
+                                  isUser ? 'flex-row-reverse' : ''
                                 }`}
+                                data-testid={`message-${interaction.id}`}
                               >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {interaction.sender === 'user' ? 'You' : interaction.sender}
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-sm font-medium text-blue-600">
+                                    {isUser ? 'U' : interaction.sender.charAt(0)}
                                   </span>
-                                  <span className="text-xs text-gray-500">{interaction.senderRole}</span>
                                 </div>
                                 <div
-                                  className={`inline-block rounded-lg px-4 py-2 ${
-                                    interaction.sender === 'user'
-                                      ? 'bg-blue-600 text-white'
-                                      : 'bg-gray-100 text-gray-900'
+                                  className={`flex-1 max-w-lg ${
+                                    isUser ? 'text-right' : ''
                                   }`}
                                 >
-                                  <p className="text-sm whitespace-pre-wrap">{interaction.content}</p>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {isUser ? 'You' : interaction.sender}
+                                    </span>
+                                    <span className="text-xs text-gray-500">{interaction.senderRole}</span>
+                                  </div>
+                                  <div
+                                    className={`inline-block rounded-lg px-4 py-2 ${
+                                      isUser
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-100 text-gray-900'
+                                    }`}
+                                  >
+                                    <p className="text-sm whitespace-pre-wrap">{interaction.content}</p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                       <div className="flex-shrink-0 border-t p-4">

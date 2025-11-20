@@ -150,9 +150,18 @@ The Dashboard provides users with a comprehensive overview of their workspace si
 - **Performance Metrics**: Progress bars for collaboration, communication, delivery, and technical skills
 - **Quick Stats**: Active projects count, total completions, and current streak
 
+### Enterprise Feature Scenario (NEW)
+A specialized simulation for practicing adding features to existing enterprise codebases:
+- **Scenario**: PulseOps IQ - Executive Incident Heatmap & Forecasting feature
+- **Team**: 6 AI teammates (Claire-PM, Ravi-Backend, Maya-Frontend, Jon-DataScience, Elena-QA, Luis-DevOps)
+- **Workflow**: Multi-phase progression (Onboarding → Planning → Implementation → Review → Release)
+- **Simulated Codebase**: File structure explorer with key files, code snippets, and product context
+- **Phase-Based Events**: Auto-triggered welcome messages and contextual guidance per phase
+- **Real Collaboration**: Team chat, requirements view, codebase exploration, AI responses
+
 ### Seed Data
-The system includes 3 pre-configured projects and 5 role templates:
-- **Projects**: Task Management App (mid), E-commerce Platform API (senior), Mobile Fitness App (junior)
+The system includes 4 pre-configured projects and 5 role templates:
+- **Projects**: Task Management App (mid), E-commerce Platform API (senior), Mobile Fitness App (junior), PulseOps IQ Enterprise Feature (senior)
 - **Roles**: Developer, Product Manager, Designer, QA Engineer, DevOps Engineer
 
 ## Changelog
@@ -165,6 +174,7 @@ The system includes 3 pre-configured projects and 5 role templates:
 - October 20, 2025. **MAJOR FEATURE**: Implemented Workspace Simulator - a comprehensive multi-agent collaboration platform with role-based practice, AI team members, project scenarios, task management, and performance evaluation
 - October 20, 2025. Enhanced AI teammate responses with topic extraction and contextual references to user questions
 - November 4, 2025. Added Workspace Simulator Dashboard with hero metrics, active sessions, completion tracking, performance visualizations, and quick access to resume simulations
+- November 20, 2025. **ENTERPRISE FEATURE**: Implemented PulseOps IQ Enterprise Feature scenario with multi-phase simulation (onboarding → planning → implementation → review → release), simulated codebase explorer, 6 AI teammates, phase-based auto-messages, and complete feature development workflow
 
 ## User Preferences
 

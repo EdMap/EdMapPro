@@ -361,6 +361,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create interaction (for auto-messages and direct messages)
+  app.post("/api/workspace/:sessionId/interactions", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const interactionData = { ...req.body, sessionId };
+      const interaction = await storage.createWorkspaceInteraction(interactionData);
+      res.json(interaction);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create interaction: " + (error as Error).message });
+    }
+  });
+
   // Handle user action (main orchestration endpoint)
   app.post("/api/workspace/:sessionId/action", async (req, res) => {
     try {
