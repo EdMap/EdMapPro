@@ -744,7 +744,173 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
                 </TabsContent>
 
                 <TabsContent value="requirements" className="flex-1 mt-4 overflow-y-auto">
-                  <div className="space-y-6">
+                  <div className="mb-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileCode className="h-5 w-5" />
+                          Product Documentation
+                        </CardTitle>
+                        <CardDescription>
+                          Click any document to open it in a new tab for easy reading
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <a
+                            href={`/workspace/${session.id}/document/executive-summary`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
+                            data-testid="doc-executive-summary"
+                          >
+                            <Target className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-blue-600">Executive Summary</div>
+                              <div className="text-xs text-gray-500">Strategic overview</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/feature-requirements`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
+                            data-testid="doc-feature-requirements"
+                          >
+                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-blue-600">Feature Requirements</div>
+                              <div className="text-xs text-gray-500">Technical specs & criteria</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/stakeholder-analysis`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-purple-300 transition-colors group"
+                            data-testid="doc-stakeholder-analysis"
+                          >
+                            <Users className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-purple-600">Stakeholder Analysis</div>
+                              <div className="text-xs text-gray-500">Key stakeholders & priorities</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-purple-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/user-stories`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
+                            data-testid="doc-user-stories"
+                          >
+                            <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-blue-600">User Stories & Personas</div>
+                              <div className="text-xs text-gray-500">Target users & goals</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/success-metrics`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-green-300 transition-colors group"
+                            data-testid="doc-success-metrics"
+                          >
+                            <Target className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-green-600">Success Metrics & KPIs</div>
+                              <div className="text-xs text-gray-500">Measurable outcomes</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-green-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/roadmap-context`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-orange-300 transition-colors group"
+                            data-testid="doc-roadmap-context"
+                          >
+                            <Clock className="h-5 w-5 text-orange-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-orange-600">Roadmap Context</div>
+                              <div className="text-xs text-gray-500">Strategic timeline</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-orange-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/competitive-analysis`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
+                            data-testid="doc-competitive-analysis"
+                          >
+                            <FileCode className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-blue-600">Competitive Analysis</div>
+                              <div className="text-xs text-gray-500">Market positioning</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/gtm-strategy`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
+                            data-testid="doc-gtm-strategy"
+                          >
+                            <Target className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-blue-600">Go-to-Market Strategy</div>
+                              <div className="text-xs text-gray-500">Launch plan</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/risk-assessment`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-red-300 transition-colors group"
+                            data-testid="doc-risk-assessment"
+                          >
+                            <MessageSquare className="h-5 w-5 text-red-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-red-600">Risk Assessment</div>
+                              <div className="text-xs text-gray-500">Risks & mitigation</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-red-600" />
+                          </a>
+
+                          <a
+                            href={`/workspace/${session.id}/document/resource-planning`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors group"
+                            data-testid="doc-resource-planning"
+                          >
+                            <Users className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 group-hover:text-blue-600">Resource Planning</div>
+                              <div className="text-xs text-gray-500">Team & budget</div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                          </a>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  <div className="space-y-6 hidden">
                     {/* Executive Summary */}
                     {productDocumentation.executiveSummary && (
                       <Card>

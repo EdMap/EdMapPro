@@ -7,6 +7,7 @@ import Dashboard from "@/pages/dashboard";
 import InterviewSimulator from "@/pages/interview-simulator";
 import NegotiationSimulator from "@/pages/negotiation-simulator";
 import WorkspaceSimulator from "@/pages/workspace-simulator";
+import DocumentViewer from "@/pages/document-viewer";
 import Progress from "@/pages/progress";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -42,9 +43,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <AppLayout>
-          <Router />
-        </AppLayout>
+        <Switch>
+          <Route path="/workspace/:sessionId/document/:docType">
+            <DocumentViewer />
+          </Route>
+          <Route>
+            <AppLayout>
+              <Router />
+            </AppLayout>
+          </Route>
+        </Switch>
       </TooltipProvider>
     </QueryClientProvider>
   );

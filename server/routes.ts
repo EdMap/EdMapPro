@@ -91,6 +91,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single simulation session
+  app.get("/api/sessions/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const session = await storage.getSimulationSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get session" });
+    }
+  });
+
   // Update simulation session
   app.patch("/api/sessions/:sessionId", async (req, res) => {
     try {
