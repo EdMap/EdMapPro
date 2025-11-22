@@ -43,6 +43,7 @@ Preferred communication style: Simple, everyday language.
     - **Chat Enhancements**: `@mention` autocomplete, smart message routing, realistic AI response delays, auto-scroll, and real-time typing indicators.
     - **Phase Guidance System**: Interactive "What to Do Now" panel with objectives checklist and smart phase progression.
     - **Direct Messaging (DM) Feature**: 1-on-1 private conversations with individual AI teammates.
+    - **Document Viewer System**: PM documentation opens in new browser tabs for focused reading. Requirements tab displays a document explorer with 10 clickable document cards (Executive Summary, Feature Requirements, Stakeholder Analysis, User Stories, Success Metrics, Roadmap Context, Competitive Analysis, Go-to-Market Strategy, Risk Assessment, Resource Planning). Clean, distraction-free viewing experience without sidebar/header.
 
 ### UI/UX Decisions
 - Fixed sidebar navigation with responsive header.
