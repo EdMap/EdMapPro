@@ -1,4 +1,4 @@
-import sanitizeHtml from 'sanitize-html'
+import DOMPurify from 'dompurify'
 import useAuth from '../../auth/use-auth'
 import useNegotiationFeedback from '../_store/use-interview-feedback'
 import styles from './index.module.css'
@@ -24,7 +24,7 @@ const Offer = () => {
                             class={styles.card}
                             space="var(--s-5)"
                             dangerouslySetInnerHTML={{
-                                __html: sanitizeHtml(offer!),
+                                __html: DOMPurify.sanitize(offer!),
                             }}
                         />
                     </stack-l>

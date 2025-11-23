@@ -2,7 +2,7 @@ import { FunctionComponent } from 'preact'
 import { useRouter } from 'preact-router'
 import { useCallback, useEffect } from 'preact/hooks'
 import { useDispatch } from 'react-redux'
-import sanitizeHtml from 'sanitize-html'
+import DOMPurify from 'dompurify'
 import SimulationHeader from '../../components/simulation-header'
 import { isNullish } from '../../utils'
 import { isNone } from '../../utils/is-none'
@@ -132,7 +132,7 @@ const InterviewFeedback = () => {
                                             <div
                                                 class={styles.feedback}
                                                 dangerouslySetInnerHTML={{
-                                                    __html: sanitizeHtml(
+                                                    __html: DOMPurify.sanitize(
                                                         feedback!,
                                                     ),
                                                 }}
@@ -149,7 +149,7 @@ const InterviewFeedback = () => {
                                             <div
                                                 class={styles.feedback}
                                                 dangerouslySetInnerHTML={{
-                                                    __html: sanitizeHtml(
+                                                    __html: DOMPurify.sanitize(
                                                         areas_for_improvement!,
                                                     ),
                                                 }}

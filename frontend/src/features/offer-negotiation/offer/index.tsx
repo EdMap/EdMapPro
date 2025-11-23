@@ -1,6 +1,6 @@
 import { useCallback } from 'preact/hooks'
 import { useDispatch } from 'react-redux'
-import sanitizeHtml from 'sanitize-html'
+import DOMPurify from 'dompurify'
 import { RootDispatch } from '../../app/_store'
 import { Status } from '../../app/_store/state'
 import useAuth from '../../auth/use-auth'
@@ -39,7 +39,7 @@ const Offer = () => {
                             class={styles.card}
                             space="var(--s-5)"
                             dangerouslySetInnerHTML={{
-                                __html: sanitizeHtml(offer! ?? initial_offer!),
+                                __html: DOMPurify.sanitize(offer! ?? initial_offer!),
                             }}
                         />
                     </stack-l>
