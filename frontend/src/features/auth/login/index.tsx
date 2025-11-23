@@ -26,10 +26,8 @@ const LoginPage: FC = () => {
 
     // Clear any stale auth state when landing on login page
     useEffect(() => {
-        if (isNullish(token) && status !== Status.PENDING) {
-            dispatch(logout())
-        }
-    }, [])
+        dispatch(logout())
+    }, [dispatch])
 
     const isPending = status === Status.PENDING
 
