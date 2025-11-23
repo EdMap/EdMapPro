@@ -1,0 +1,22 @@
+.wrapper {
+    cursor: pointer;
+    border-radius: var(--sl-border-radius-small);
+}
+
+.wrapper:hover {
+    outline: 2px solid var(--sl-color-neutral-500);
+    outline-offset: 5px;
+}
+
+.wrapper::part(header) {
+    background-color: var(--sl-color-neutral-300);
+}
+
+.footer {
+    border: none;
+    padding: var(--sl-spacing-small);
+}
+
+.status {
+    text-transform: capitalize;
+}

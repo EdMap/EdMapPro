@@ -1,0 +1,124 @@
+.sl-theme-light {
+    --sl-color-primary-50: hsl(220, 71.43%, 95.88%);
+    --sl-color-primary-100: hsl(220, 75%, 92.16%);
+    --sl-color-primary-200: hsl(219.13, 74.19%, 87.84%);
+    --sl-color-primary-300: hsl(220.26, 74.51%, 80%);
+    --sl-color-primary-400: hsl(219.81, 74.83%, 71.96%);
+    --sl-color-primary-500: hsl(220, 75.46%, 68.04%);
+    --sl-color-primary-600: hsl(220.13, 75.49%, 60%);
+    --sl-color-primary-700: hsl(220, 74.69%, 51.96%);
+    --sl-color-primary-800: hsl(220, 74.69%, 48.04%);
+    --sl-color-primary-900: hsl(219.72, 75.13%, 37.84%);
+    --sl-color-primary-950: hsl(217.78, 68.35%, 30.98%);
+
+    --sl-color-success-50: hsl(142.5, 80%, 98.04%);
+    --sl-color-success-100: hsl(144.71, 80.95%, 95.88%);
+    --sl-color-success-200: hsl(140.49, 80.39%, 90%);
+    --sl-color-success-300: hsl(143.85, 78%, 80.39%);
+    --sl-color-success-400: hsl(147.84, 73.96%, 66.86%);
+    --sl-color-success-500: hsl(149.82, 65.99%, 51.57%);
+    --sl-color-success-600: hsl(152, 82.09%, 39.41%);
+    --sl-color-success-700: hsl(153.02, 96.13%, 30.39%);
+    --sl-color-success-800: hsl(155, 96.77%, 24.31%);
+    --sl-color-success-900: hsl(154.95, 90.1%, 19.8%);
+    --sl-color-success-950: hsl(155.68, 88.1%, 16.47%);
+
+    --sl-color-warning-50: hsl(42, 100%, 98.04%);
+    --sl-color-warning-100: hsl(45, 100%, 96.08%);
+    --sl-color-warning-200: hsl(44.73, 96.49%, 88.82%);
+    --sl-color-warning-300: hsl(44.1, 98.32%, 76.67%);
+    --sl-color-warning-400: hsl(41.9, 98.9%, 64.51%);
+    --sl-color-warning-500: hsl(38.9, 98.21%, 56.27%);
+    --sl-color-warning-600: hsl(34.03, 93.7%, 50.2%);
+    --sl-color-warning-700: hsl(27.93, 97.31%, 43.73%);
+    --sl-color-warning-800: hsl(21.85, 91.53%, 37.06%);
+    --sl-color-warning-900: hsl(18.81, 83.75%, 31.37%);
+    --sl-color-warning-950: hsl(17.78, 79.41%, 26.67%);
+
+    --sl-color-danger-50: hsl(12, 100%, 99.02%);
+    --sl-color-danger-100: hsl(5, 85.71%, 97.25%);
+    --sl-color-danger-200: hsl(4.29, 93.33%, 94.12%);
+    --sl-color-danger-300: hsl(3.46, 96.3%, 89.41%);
+    --sl-color-danger-400: hsl(4.29, 96.08%, 80%);
+    --sl-color-danger-500: hsl(4.08, 92.45%, 68.82%);
+    --sl-color-danger-600: hsl(3.91, 85.98%, 58.04%);
+    --sl-color-danger-700: hsl(4.22, 74.3%, 48.82%);
+    --sl-color-danger-800: hsl(4.23, 76.47%, 40%);
+    --sl-color-danger-900: hsl(3.97, 71.6%, 33.14%);
+    --sl-color-danger-950: hsl(8.13, 64.86%, 29.02%);
+
+    --sl-color-neutral-50: hsl(240, 20%, 99.02%);
+    --sl-color-neutral-100: hsl(210, 20%, 98.04%);
+    --sl-color-neutral-200: hsl(216, 23.81%, 95.88%);
+    --sl-color-neutral-300: hsl(220, 16.67%, 92.94%);
+    --sl-color-neutral-400: hsl(216.92, 16.05%, 84.12%);
+    --sl-color-neutral-500: hsl(217.78, 15.08%, 64.9%);
+    --sl-color-neutral-600: hsl(220.65, 13.19%, 46.08%);
+    --sl-color-neutral-700: hsl(215.63, 18.39%, 34.12%);
+    --sl-color-neutral-800: hsl(217.5, 23.53%, 26.67%);
+    --sl-color-neutral-900: hsl(214.29, 32.56%, 16.86%);
+    --sl-color-neutral-950: hsl(220, 42.86%, 10.98%);
+}
+
+.sl-theme-dark {
+    --sl-color-primary-50: hsl(217.78, 68.35%, 30.98%);
+    --sl-color-primary-100: hsl(219.72, 75.13%, 37.84%);
+    --sl-color-primary-200: hsl(220, 74.69%, 48.04%);
+    --sl-color-primary-300: hsl(220, 74.69%, 51.96%);
+    --sl-color-primary-400: hsl(220.13, 75.49%, 60%);
+    --sl-color-primary-500: hsl(220, 75.46%, 68.04%);
+    --sl-color-primary-600: hsl(219.81, 74.83%, 71.96%);
+    --sl-color-primary-700: hsl(220.26, 74.51%, 80%);
+    --sl-color-primary-800: hsl(219.13, 74.19%, 87.84%);
+    --sl-color-primary-900: hsl(220, 75%, 92.16%);
+    --sl-color-primary-950: hsl(220, 71.43%, 95.88%);
+
+    --sl-color-success-50: hsl(155.68, 88.1%, 16.47%);
+    --sl-color-success-100: hsl(154.95, 90.1%, 19.8%);
+    --sl-color-success-200: hsl(155, 96.77%, 24.31%);
+    --sl-color-success-300: hsl(153.02, 96.13%, 30.39%);
+    --sl-color-success-400: hsl(152, 82.09%, 39.41%);
+    --sl-color-success-500: hsl(149.82, 65.99%, 51.57%);
+    --sl-color-success-600: hsl(147.84, 73.96%, 66.86%);
+    --sl-color-success-700: hsl(143.85, 78%, 80.39%);
+    --sl-color-success-800: hsl(140.49, 80.39%, 90%);
+    --sl-color-success-900: hsl(144.71, 80.95%, 95.88%);
+    --sl-color-success-950: hsl(142.5, 80%, 98.04%);
+
+    --sl-color-warning-50: hsl(17.78, 79.41%, 26.67%);
+    --sl-color-warning-100: hsl(18.81, 83.75%, 31.37%);
+    --sl-color-warning-200: hsl(21.85, 91.53%, 37.06%);
+    --sl-color-warning-300: hsl(27.93, 97.31%, 43.73%);
+    --sl-color-warning-400: hsl(34.03, 93.7%, 50.2%);
+    --sl-color-warning-500: hsl(38.9, 98.21%, 56.27%);
+    --sl-color-warning-600: hsl(41.9, 98.9%, 64.51%);
+    --sl-color-warning-700: hsl(44.1, 98.32%, 76.67%);
+    --sl-color-warning-800: hsl(44.73, 96.49%, 88.82%);
+    --sl-color-warning-900: hsl(45, 100%, 96.08%);
+    --sl-color-warning-950: hsl(42, 100%, 98.04%);
+
+    --sl-color-danger-50: hsl(8.13, 64.86%, 29.02%);
+    --sl-color-danger-100: hsl(3.97, 71.6%, 33.14%);
+    --sl-color-danger-200: hsl(4.23, 76.47%, 40%);
+    --sl-color-danger-300: hsl(4.22, 74.3%, 48.82%);
+    --sl-color-danger-400: hsl(3.91, 85.98%, 58.04%);
+    --sl-color-danger-500: hsl(4.08, 92.45%, 68.82%);
+    /* --sl-color-danger-600: hsl(4.29, 96.08%, 80%); */
+    --sl-color-danger-600: hsl(2.29, 100%, 74.31%);
+    --sl-color-danger-700: hsl(3.46, 96.3%, 89.41%);
+    --sl-color-danger-800: hsl(4.29, 93.33%, 94.12%);
+    --sl-color-danger-900: hsl(5, 85.71%, 97.25%);
+    --sl-color-danger-950: hsl(12, 100%, 99.02%);
+
+    --sl-color-neutral-50: hsl(220, 42.86%, 10.98%);
+    --sl-color-neutral-100: hsl(214.29, 32.56%, 16.86%);
+    --sl-color-neutral-200: hsl(217.5, 23.53%, 26.67%);
+    --sl-color-neutral-300: hsl(215.63, 18.39%, 34.12%);
+    --sl-color-neutral-400: hsl(220.65, 13.19%, 46.08%);
+    --sl-color-neutral-500: hsl(217.78, 15.08%, 64.9%);
+    --sl-color-neutral-600: hsl(216.92, 16.05%, 84.12%);
+    --sl-color-neutral-700: hsl(220, 16.67%, 92.94%);
+    --sl-color-neutral-800: hsl(216, 23.81%, 95.88%);
+    --sl-color-neutral-900: hsl(210, 20%, 98.04%);
+    --sl-color-neutral-950: hsl(240, 20%, 99.02%);
+}

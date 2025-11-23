@@ -1,0 +1,16 @@
+.header {
+    padding: var(--s-1) var(--s-5);
+    overflow: hidden;
+}
+
+.header::before {
+    border-bottom: 1px solid var(--sl-color-neutral-300);
+    bottom: 0;
+    box-shadow: var(--sl-shadow-x-large);
+    content: '';
+    height: calc(var(--s5) + var(--s-2));
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}

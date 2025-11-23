@@ -1,0 +1,6 @@
+.field sl-button[slot='prefix'] {
+    margin-inline-start: var(--sl-spacing-small);
+}
+.field sl-button[slot='suffix'] {
+    margin-inline-end: var(--sl-spacing-x-small);
+}

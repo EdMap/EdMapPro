@@ -1,0 +1,8 @@
+cover-l.wrapper {
+    position: relative;
+    padding-top: 0;
+}
+
+.title {
+    text-transform: capitalize;
+}

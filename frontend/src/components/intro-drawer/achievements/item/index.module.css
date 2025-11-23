@@ -1,0 +1,14 @@
+.achievement {
+    border-radius: var(--sl-border-radius-large);
+    border: 1px solid var(--sl-color-neutral-300);
+    padding: var(--s0);
+
+    h4 {
+        font-size: var(--s0);
+    }
+
+    p {
+        font-size: var(--sl-font-size-small);
+        color: var(--sl-color-neutral-600);
+    }
+}

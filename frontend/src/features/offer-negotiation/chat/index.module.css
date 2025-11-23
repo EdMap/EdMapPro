@@ -1,0 +1,11 @@
+sl-alert::part(base) {
+    position: sticky;
+    top: 500px;
+    z-index: var(--sl-z-index-tooltip);
+}
+
+.messages {
+    justify-content: flex-end;
+    min-height: calc(var(--measure) * var(--r0));
+    padding-bottom: var(--sl-spacing-x-large);
+}

@@ -1,0 +1,34 @@
+:global(.sl-theme-dark) .logo {
+    --logo-color: var(--sl-color-primary-900);
+}
+
+.logo {
+    --logo-color: var(--sl-color-primary-900);
+    --logo-size: calc(var(--measure) / var(--r4));
+
+    color: var(--logo-color);
+    display: grid;
+    height: var(--sl-spacing-4x-large);
+    overflow: hidden;
+    place-items: center;
+    transition: color var(--sl-transition-medium);
+    width: var(--logo-size, 100px);
+    z-index: 1;
+    cursor: pointer;
+}
+
+.logo sl-icon,
+.logo sl-icon::part(svg) {
+    color: inherit;
+    contain: none;
+    height: auto;
+    width: inherit;
+}
+
+.large {
+    --logo-size: calc(var(--measure) / var(--r2));
+}
+
+.small {
+    --logo-size: calc(var(--measure) / var(--r4));
+}

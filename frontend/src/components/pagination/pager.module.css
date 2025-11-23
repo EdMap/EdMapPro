@@ -1,0 +1,3 @@
+.pager {
+    filter: drop-shadow(var(--sl-shadow-x-large));
+}

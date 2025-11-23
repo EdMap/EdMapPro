@@ -1,0 +1,45 @@
+cluster-l.progress {
+    --border-color: var(--sl-color-neutral-500);
+    border-radius: var(--sl-border-radius-x-large);
+    border: 1px solid var(--border-color);
+    flex-wrap: nowrap;
+    height: calc(var(--sl-input-height-medium) / 2);
+    margin: auto var(--sl-spacing-small);
+    position: relative;
+    width: 100%;
+
+    sl-button[slot='anchor'] {
+        transform: translate(-25%, -25%);
+    }
+}
+
+stack-l.mobileMap {
+    --border-color: var(--sl-color-neutral-500);
+    border-radius: var(--sl-border-radius-x-large);
+    border: 1px solid var(--border-color);
+    height: var(--measure);
+    justify-content: space-between;
+    position: relative;
+    width: calc(var(--sl-input-height-medium) / 2);
+
+    sl-button[slot='anchor'] {
+        transform: translate(-30%, -50%);
+    }
+}
+
+.wrapper sl-button[slot='anchor'] {
+    width: var(--s3);
+    height: var(--s3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.wrapper sl-button[slot='anchor']::part(base) {
+    border-color: var(--border-color);
+}
+
+.wrapper sl-button[slot='anchor'][disabled]::part(base) {
+    --border-color: var(--sl-color-neutral-400);
+    opacity: 1;
+    color: var(--border-color);
+}

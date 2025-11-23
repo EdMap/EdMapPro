@@ -1,0 +1,73 @@
+:root {
+    --sl-font-size-base: 0.333vw;
+}
+
+body {
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    font-weight: var(--sl-font-weight-normal);
+    font-family: var(--sl-font-sans);
+    font-size: calc(var(--sl-font-size-base) + var(--sl-font-size-x-small));
+    line-height: var(--sl-line-height-dense);
+    overflow-wrap: break-word;
+}
+
+*,
+::after,
+::before {
+    box-sizing: border-box;
+    color: inherit;
+    font-family: inherit;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root {
+        scroll-behavior: smooth;
+    }
+}
+
+*:focus,
+*::part(base):focus {
+    outline-color: var(--sl-focus-ring-color);
+}
+
+:focus-visible,
+a:focus,
+mg-button::part(base):focus-within {
+    outline-offset: 0;
+    outline: var(--sl-input-border-width) solid var(--sl-focus-ring-color);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+    margin: 0;
+}
+
+h1 {
+    font-size: var(--sl-font-size-3x-large);
+}
+
+h2 {
+    font-size: var(--sl-font-size-2x-large);
+}
+
+h3 {
+    font-size: var(--sl-font-size-x-large);
+}
+
+h4 {
+    font-size: var(--sl-font-size-medium);
+}
+
+h5 {
+    font-size: var(--sl-font-size-x-small);
+}
+
+h6 {
+    font-size: var(--sl-font-size-2x-small);
+}

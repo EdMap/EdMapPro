@@ -1,0 +1,13 @@
+env/**
+**vscode/
+**/__pycache__/**
+**/migrations/**
+**/media/**
+db.sqlite**
+**/static/**
+**/_assets/**
+!**/__init__.py
+.env
+.env.prod
+.env.local
+.penv

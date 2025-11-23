@@ -1,0 +1,13 @@
+.item {
+    width: calc(var(--measure) / var(--r2));
+    text-align: left;
+}
+
+.title {
+    text-transform: capitalize;
+    width: 90%;
+}
+
+.title ~ p {
+    width: 80%;
+}

@@ -1,0 +1,3 @@
+.wrapper sl-radio-button::part(label) {
+    text-transform: capitalize;
+}

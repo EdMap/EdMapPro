@@ -1,0 +1,11 @@
+sl-button.trigger::part(base) {
+    border-radius: 0;
+}
+
+.menu::part(base) {
+    padding: 0;
+}
+
+.menu sl-menu-item::part(base) {
+    border-radius: 0;
+}

@@ -1,0 +1,9 @@
+@import '@shoelace-style/shoelace/dist/themes/light.css';
+@import '@shoelace-style/shoelace/dist/themes/dark.css';
+
+@import './_normalize.css';
+@import './_reset.css';
+@import './_colors.css';
+@import './_variables.css';
+@import './_styles.css';
+@import '../components/index.css';

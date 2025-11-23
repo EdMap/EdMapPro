@@ -1,0 +1,8 @@
+<% const { config } = it; %> <% /* NOTE (hom): This is what I had added */ %>
+import { ContentType, HttpClient, RequestParams } from
+'../features/api/models' <% /* NOTE (hom): This is the deleted part from this
+template
+https://github.com/acacode/swagger-typescript-api/blob/master/templates/base/http-client.ejs
+*/ %> <% /* <%~
+includeFile(`@base/http-clients/${config.httpClientType}-http-client`, it) %> */
+%>

@@ -1,0 +1,21 @@
+.dialog {
+    --width: var(--measure);
+    --header-spacing: var(--sl-spacing-x-large) var(--sl-spacing-x-large)
+        var(--sl-spacing-x-small);
+    --body-spacing: var(--sl-spacing-small) var(--sl-spacing-x-large)
+        var(--sl-spacing-x-large);
+}
+
+.dialog sl-input {
+    width: 48%;
+}
+
+.dialog::part(overlay) {
+    pointer-events: none;
+    --sl-overlay-background-color: var(--sl-color-neutral-50);
+}
+
+.dialog::part(close-button) {
+    display: none;
+    pointer-events: none;
+}

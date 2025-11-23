@@ -1,0 +1,20 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.2.8",
+    "django-cors-headers>=4.9.0",
+    "djangorestframework>=3.16.1",
+    "djangorestframework-simplejwt>=5.5.1",
+    "drf-spectacular>=0.29.0",
+    "drf-spectacular-sidecar>=2025.10.1",
+    "groq>=0.36.0",
+    "langchain-core>=1.1.0",
+    "langchain-groq>=1.0.1",
+    "langgraph>=1.0.3",
+    "psycopg2-binary>=2.9.11",
+    "python-decouple>=3.8",
+    "spacy>=3.8.11",
+]

@@ -1,0 +1,22 @@
+.greeter {
+    background-color: var(--sl-color-primary-700);
+    border-radius: var(--sl-border-radius-large);
+    color: var(--sl-color-primary-100);
+    padding: var(--s3) var(--s5);
+    text-align: left;
+}
+
+.avatar {
+    --size: calc(var(--measure) / (var(--r5) * var(--r2)));
+    color: inherit;
+}
+
+.message stack-l {
+    font-size: var(--sl-font-size-large);
+    max-width: calc(var(--measure) / var(--r1));
+}
+
+.message h2 {
+    font-size: var(--sl-font-size-2x-large);
+    font-weight: var(--sl-font-weight-bold);
+}

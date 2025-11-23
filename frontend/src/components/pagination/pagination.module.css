@@ -1,0 +1,8 @@
+.pagination {
+    bottom: 5%;
+    position: sticky;
+}
+
+.pagination sl-icon {
+    --icon-size: var(--s-1);
+}
