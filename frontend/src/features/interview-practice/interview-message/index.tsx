@@ -1,4 +1,4 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import {
     MessageOwnerTypeEnum,
     type InterviewMessage,
@@ -9,7 +9,7 @@ import { isNone } from '../../../utils/is-none'
 import { PENDING_MESSAGE } from '../_store/reducer'
 import styles from './index.module.css'
 
-const InterviewMessage: FunctionComponent<{
+const InterviewMessage: FC<{
     message: InterviewMessage
     showQuestionReason: boolean
     isPending: boolean

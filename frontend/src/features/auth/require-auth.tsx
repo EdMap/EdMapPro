@@ -1,7 +1,7 @@
 import { jwtDecode, JwtPayload } from 'jwt-decode'
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { route } from 'preact-router'
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { isNone, isNullish } from '../../utils'
 import { RootDispatch } from '../app/_store'
@@ -16,7 +16,7 @@ type DecodePayload = JwtPayload & {
     token_type: 'refresh' | 'access'
 }
 
-export const RequireAuth: FunctionComponent = ({ children }) => {
+export const RequireAuth: FC = ({ children }) => {
     const dispatch = useDispatch<RootDispatch>()
     const { status, error, token, refresh } = useAuth()
     const [isAuthenticated, setIsAuthenticated] = useState(false)

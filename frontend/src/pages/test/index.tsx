@@ -1,7 +1,7 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { RequireAuth } from '../../features/auth/require-auth'
 
-const TestPage: FunctionComponent = () => {
+const TestPage: FC = () => {
     return (
         <RequireAuth>
             <cover-l

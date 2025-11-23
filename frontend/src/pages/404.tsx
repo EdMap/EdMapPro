@@ -1,7 +1,7 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import navigation from '../features/app/navigation'
 
-const PageNotFound: FunctionComponent = () => (
+const PageNotFound: FC = () => (
     <center-l andText style={{ marginTop: 'var(--s5)' }}>
         <stack-l>
             <sl-icon

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'preact/hooks'
+import { useCallback, useRef } from 'react'
 import { useDispatch } from 'react-redux'
 import { SessionStatusEnum } from '../../../__generated__/api'
 import SimulationChat from '../../../components/simulation-chat'

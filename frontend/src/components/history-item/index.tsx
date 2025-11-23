@@ -1,5 +1,5 @@
-import { FunctionComponent } from 'preact'
-import { useCallback } from 'preact/hooks'
+import { FC } from 'react'
+import { useCallback } from 'react'
 import {
     SessionDto,
     SessionStatusEnum,
@@ -20,7 +20,7 @@ const toSessionStatusIcon = {
     [SessionStatusEnum.Done]: 'check-circle-fill',
 }
 
-const HistoryItem: FunctionComponent<{
+const HistoryItem: FC<{
     data: SimulationSessions
     prefix?: string
     onNavigation: (s: SessionDto['session_id']) => void

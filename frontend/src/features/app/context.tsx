@@ -1,5 +1,5 @@
-import { ComponentChildren, createContext } from 'preact'
-import { MutableRef, useRef } from 'preact/hooks'
+import { ComponentChildren, createContext } from 'react'
+import { MutableRef, useRef } from 'react'
 
 export const rootContainer = document.querySelector('html') as HTMLElement
 export const appContainer = document.getElementById('app') as HTMLDivElement

@@ -1,4 +1,4 @@
-import { FunctionComponent, VNode } from 'preact'
+import { FC, VNode } from 'react'
 import Achievements from './achievements'
 import DrawerHeader from './drawer-header'
 import styles from './index.module.css'
@@ -14,7 +14,7 @@ export interface IntroDrawerProps {
 
 export type IntroDrawerHeaderProps = Omit<IntroDrawerProps, 'footer' | 'open'>
 
-const IntroDrawer: FunctionComponent<IntroDrawerProps> = ({
+const IntroDrawer: FC<IntroDrawerProps> = ({
     open,
     footer,
     ...props

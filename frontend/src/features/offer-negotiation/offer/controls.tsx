@@ -1,7 +1,7 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import styles from './index.module.css'
 
-const Controls: FunctionComponent<{
+const Controls: FC<{
     disabled: boolean
     onNegotiation: () => void
 }> = ({ disabled, onNegotiation }) => {

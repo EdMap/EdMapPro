@@ -1,11 +1,11 @@
 import { SlRadioGroup } from '@shoelace-style/shoelace'
-import { FunctionComponent } from 'preact'
-import { useEffect, useRef } from 'preact/hooks'
+import { FC } from 'react'
+import { useEffect, useRef } from 'react'
 import { CareerEnum, UserProfileUpdateDto } from '../../../../__generated__/api'
 import { CareerEnumString, toCareerChoice } from '../../../../utils/models'
 import { FORM_NAMES } from '../models'
 
-const Career: FunctionComponent<{
+const Career: FC<{
     formData?: UserProfileUpdateDto | null
     handleChange: (e: CustomEvent) => void
 }> = ({ formData, handleChange }) => {

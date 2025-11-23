@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'preact/hooks'
+import { useCallback, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { UserProfileUpdateDto } from '../../../__generated__/api'
 import InputField from '../../../components/field'

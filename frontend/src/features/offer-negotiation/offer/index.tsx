@@ -1,4 +1,4 @@
-import { useCallback } from 'preact/hooks'
+import { useCallback } from 'react'
 import { useDispatch } from 'react-redux'
 import DOMPurify from 'dompurify'
 import { RootDispatch } from '../../app/_store'

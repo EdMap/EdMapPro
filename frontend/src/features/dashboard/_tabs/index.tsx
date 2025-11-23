@@ -4,7 +4,7 @@ import {
     useContext,
     useLayoutEffect,
     useState,
-} from 'preact/hooks'
+} from 'react'
 import { isNullish } from '../../../utils'
 import { DEVICE_SIZE } from '../../../utils/device-sizes'
 import { useResizeObserver } from '../../../utils/use-resize-observer'

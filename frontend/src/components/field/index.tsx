@@ -1,8 +1,8 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { SlInputProps } from '../../ui/shoelace/shoelace'
 import styles from './index.module.css'
 
-const InputField: FunctionComponent<SlInputProps> = ({
+const InputField: FC<SlInputProps> = ({
     children,
     class: className,
     ...props

@@ -1,8 +1,8 @@
-import { FunctionComponent } from 'preact'
-import { useCallback } from 'preact/hooks'
+import { FC } from 'react'
+import { useCallback } from 'react'
 import styles from './index.module.css'
 
-const SimulationItem: FunctionComponent<{
+const SimulationItem: FC<{
     title: string
     description: string
     onClick: () => void

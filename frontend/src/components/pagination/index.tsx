@@ -1,4 +1,4 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { PAGINATION_LIMITS } from '../../features/app/_store/constants'
 import { type PaginationControls } from '../../features/app/_store/state'
 import Limiter from './limiter'
@@ -13,7 +13,7 @@ interface PaginationControlsProps {
     ) => void
 }
 
-const Pagination: FunctionComponent<PaginationControlsProps> = ({
+const Pagination: FC<PaginationControlsProps> = ({
     count,
     pagination,
     onPaginationChange,

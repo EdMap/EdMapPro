@@ -1,8 +1,8 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import CircleIcon from '../../../circle-icon'
 import styles from './index.module.css'
 
-const AchievementItem: FunctionComponent<{
+const AchievementItem: FC<{
     title: string
     description: string
 }> = ({ title, description }) => {

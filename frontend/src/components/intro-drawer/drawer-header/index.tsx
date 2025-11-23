@@ -1,9 +1,9 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { IntroDrawerHeaderProps } from '..'
 import CircleIcon from '../../circle-icon'
 import styles from './index.module.css'
 
-const DrawerHeader: FunctionComponent<IntroDrawerHeaderProps> = ({
+const DrawerHeader: FC<IntroDrawerHeaderProps> = ({
     title,
     description,
     icon,

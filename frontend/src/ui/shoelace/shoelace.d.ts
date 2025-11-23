@@ -5,8 +5,8 @@ import { SlCheckbox } from '@shoelace-style/shoelace/dist/react/checkbox'
 import { SlDialog } from '@shoelace-style/shoelace/dist/react/dialog'
 import { SlSkeleton } from '@shoelace-style/shoelace/dist/react/skeleton'
 import { SlTooltip } from '@shoelace-style/shoelace/dist/react/tooltip'
-import { ComponentChildren } from 'preact'
-import { Ref } from 'preact/hooks'
+import { ComponentChildren } from 'react'
+import { Ref } from 'react'
 import { JSXInternal } from 'preact/src/jsx'
 
 type WebComponentAttributes = JSX.IntrinsicAttributes &

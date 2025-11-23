@@ -1,7 +1,7 @@
 import { SlDialog } from '@shoelace-style/shoelace'
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { useRouter } from 'preact-router'
-import { useCallback, useEffect, useRef } from 'preact/hooks'
+import { useCallback, useEffect, useRef } from 'react'
 import { useDispatch } from 'react-redux'
 import IntroDrawer, {
     IntroDrawerHeaderProps,
@@ -25,7 +25,7 @@ const INTRO_DRAWER_CONTENT: IntroDrawerHeaderProps = {
     icon: SIMULATION_ICONS.INTERVIEW_PRACTICE,
 }
 
-export const InterviewPractice: FunctionComponent = () => {
+export const InterviewPractice: FC = () => {
     const [{ matches }] = useRouter()
     const routeSessionId = matches?.sessionId || null
     const { sessionId } = useInterviewSimulation()

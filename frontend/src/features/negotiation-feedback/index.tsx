@@ -1,6 +1,6 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { useRouter } from 'preact-router'
-import { useCallback, useEffect } from 'preact/hooks'
+import { useCallback, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import DOMPurify from 'dompurify'
 import SimulationHeader from '../../components/simulation-header'
@@ -40,7 +40,7 @@ const Skeleton = () => {
     )
 }
 
-const Controls: FunctionComponent<{
+const Controls: FC<{
     disabled: boolean
     onRetake: () => void
     onDone: () => void

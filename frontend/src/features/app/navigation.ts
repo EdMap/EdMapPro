@@ -1,30 +1,35 @@
-import { route } from 'preact-router'
 import { isNullish, setSearchParams, SetSearchParamsOptions } from '../../utils'
 import { APP_ROUTES } from './routes'
 
-const goToHome = () => route(APP_ROUTES.DASHBOARD)
-const goToInterviewPracticePage = () => route(APP_ROUTES.INTERVIEW_PRACTICE)
-const goToJobSearchPage = () => route(APP_ROUTES.JOB_SEARCH)
-const goToLoginPage = () => route(APP_ROUTES.LOGIN)
-const goToRegistrationPage = () => route(APP_ROUTES.REGISTER)
-const goToTestPage = () => route(APP_ROUTES.TEST_PAGE)
-const goToWorkPage = () => route(APP_ROUTES.WORK)
-const goToOfferNegotiation = () => route(APP_ROUTES.OFFER_NEGOTIATION)
+let navigateFunction: ((to: string) => void) | null = null
+
+export const setNavigate = (navigate: (to: string) => void) => {
+    navigateFunction = navigate
+}
+
+const goToHome = () => navigateFunction?.(APP_ROUTES.DASHBOARD)
+const goToInterviewPracticePage = () => navigateFunction?.(APP_ROUTES.INTERVIEW_PRACTICE)
+const goToJobSearchPage = () => navigateFunction?.(APP_ROUTES.JOB_SEARCH)
+const goToLoginPage = () => navigateFunction?.(APP_ROUTES.LOGIN)
+const goToRegistrationPage = () => navigateFunction?.(APP_ROUTES.REGISTER)
+const goToTestPage = () => navigateFunction?.(APP_ROUTES.TEST_PAGE)
+const goToWorkPage = () => navigateFunction?.(APP_ROUTES.WORK)
+const goToOfferNegotiation = () => navigateFunction?.(APP_ROUTES.OFFER_NEGOTIATION)
 
 const goToInterviewDetailsPage = (id: number | string) => {
-    route(`${APP_ROUTES.INTERVIEW_PRACTICE}/?sessionId=${id}`)
+    navigateFunction?.(`${APP_ROUTES.INTERVIEW_PRACTICE}/?sessionId=${id}`)
 }
 
 const goToInterviewFeedbackPage = (id: string) => {
-    route(`${APP_ROUTES.INTERVIEW_FEEDBACK}/?sessionId=${id}`)
+    navigateFunction?.(`${APP_ROUTES.INTERVIEW_FEEDBACK}/?sessionId=${id}`)
 }
 
 const goToNegotiationFeedbackPage = (id: string) => {
-    route(`${APP_ROUTES.NEGOTIATION_FEEDBACK}/?sessionId=${id}`)
+    navigateFunction?.(`${APP_ROUTES.NEGOTIATION_FEEDBACK}/?sessionId=${id}`)
 }
 
 const goToNegotiationDetailsPage = (id: number | string) => {
-    route(`${APP_ROUTES.OFFER_NEGOTIATION}/?sessionId=${id}`)
+    navigateFunction?.(`${APP_ROUTES.OFFER_NEGOTIATION}/?sessionId=${id}`)
 }
 
 const goToSearchParams = (
@@ -34,7 +39,7 @@ const goToSearchParams = (
 ) => {
     url = (!isNullish(url) ? url : new URL(globalThis.location.href)) as URL
     const next = setSearchParams(url, params, options)
-    route(next.pathname + next.search)
+    navigateFunction?.(next.pathname + next.search)
 }
 
 const navigation = {

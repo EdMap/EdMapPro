@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { EffectCallback, useEffect } from 'preact/hooks'
+import { EffectCallback, useEffect } from 'react'
 
 /**
  * Custom hook that executes an effect callback only once.

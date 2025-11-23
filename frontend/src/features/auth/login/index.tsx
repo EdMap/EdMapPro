@@ -1,6 +1,6 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { route } from 'preact-router'
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import InputField from '../../../components/field'
 import Logo from '../../../components/logo'
@@ -17,7 +17,7 @@ const CONTENT = {
     CTA: "Don't have an account?",
 }
 
-const LoginPage: FunctionComponent = () => {
+const LoginPage: FC = () => {
     const dispatch = useDispatch<RootDispatch>()
     const formRef = useRef<HTMLFormElement | null>(null)
     const { status, token } = useAuth()

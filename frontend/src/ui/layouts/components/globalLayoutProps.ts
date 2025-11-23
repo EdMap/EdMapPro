@@ -1,4 +1,4 @@
-import { Ref } from 'preact'
+import { Ref } from 'react'
 import { CSSProperties } from 'preact/compat'
 export interface GlobalLayoutProps {
     class?: string

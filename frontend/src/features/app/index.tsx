@@ -1,5 +1,5 @@
-import { FunctionComponent } from 'preact'
-import Router from 'preact-router'
+import { FC, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { Provider as StoreProvider } from 'react-redux'
 import { ScrollToTop } from '../../components/scroll-to-top'
 import PageNotFound from '../../pages/404'
@@ -15,20 +15,31 @@ import { store } from './_store/index'
 import { AppContextProvider } from './context'
 import { APP_ROUTES } from './routes'
 import { AppConfigProvider } from './use-config'
+import { setNavigate } from './navigation'
 
-const AppRouter: FunctionComponent = () => {
+const NavigateProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
+    const navigate = useNavigate()
+    
+    useEffect(() => {
+        setNavigate(navigate)
+    }, [navigate])
+    
+    return <>{children}</>
+}
+
+const AppRouter: FC = () => {
     return (
-        <Router>
-            <LoginPage path={APP_ROUTES.LOGIN} />
-            <RegistrationPage path={APP_ROUTES.REGISTER} />
-            <TestPage path={APP_ROUTES.TEST_PAGE} />
-            <DashboardPage path={APP_ROUTES.DASHBOARD} />
-            <InterviewPracticePage path={APP_ROUTES.INTERVIEW_PRACTICE} />
-            <InterviewFeedbackPage path={APP_ROUTES.INTERVIEW_FEEDBACK} />
-            <OfferNegotiationPage path={APP_ROUTES.OFFER_NEGOTIATION} />
-            <NegotiationFeedbackPage path={APP_ROUTES.NEGOTIATION_FEEDBACK} />
-            <PageNotFound default />
-        </Router>
+        <Routes>
+            <Route path={APP_ROUTES.LOGIN} element={<LoginPage />} />
+            <Route path={APP_ROUTES.REGISTER} element={<RegistrationPage />} />
+            <Route path={APP_ROUTES.TEST_PAGE} element={<TestPage />} />
+            <Route path={APP_ROUTES.DASHBOARD} element={<DashboardPage />} />
+            <Route path={APP_ROUTES.INTERVIEW_PRACTICE} element={<InterviewPracticePage />} />
+            <Route path={APP_ROUTES.INTERVIEW_FEEDBACK} element={<InterviewFeedbackPage />} />
+            <Route path={APP_ROUTES.OFFER_NEGOTIATION} element={<OfferNegotiationPage />} />
+            <Route path={APP_ROUTES.NEGOTIATION_FEEDBACK} element={<NegotiationFeedbackPage />} />
+            <Route path="*" element={<PageNotFound />} />
+        </Routes>
     )
 }
 
@@ -37,8 +48,12 @@ const App = () => {
         <AppContextProvider>
             <AppConfigProvider>
                 <StoreProvider store={store}>
-                    <ScrollToTop />
-                    <AppRouter />
+                    <BrowserRouter>
+                        <NavigateProvider>
+                            <ScrollToTop />
+                            <AppRouter />
+                        </NavigateProvider>
+                    </BrowserRouter>
                 </StoreProvider>
             </AppConfigProvider>
         </AppContextProvider>

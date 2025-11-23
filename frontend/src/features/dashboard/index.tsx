@@ -1,4 +1,4 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { ScrollToTop } from '../../components/scroll-to-top'
 import { isNone } from '../../utils/is-none'
 import useAuth from '../auth/use-auth'
@@ -8,7 +8,7 @@ import Greeter from './greeter'
 import Header from './header'
 import styles from './index.module.css'
 
-const Dashboard: FunctionComponent = () => {
+const Dashboard: FC = () => {
     const { user } = useAuth()
     // TODO (hom): Add new user
     const isNewUser = isNone(user?.get_full_name)

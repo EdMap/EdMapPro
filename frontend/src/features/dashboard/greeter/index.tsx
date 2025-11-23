@@ -1,4 +1,4 @@
-import { useMemo } from 'preact/hooks'
+import { useMemo } from 'react'
 import { isNone } from '../../../utils/is-none'
 import { getInitials } from '../../../utils/string'
 import useAuth from '../../auth/use-auth'

@@ -1,5 +1,5 @@
 import { useRouter } from 'preact-router'
-import { useCallback, useEffect } from 'preact/hooks'
+import { useCallback, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import IntroDrawer, {
     IntroDrawerHeaderProps,

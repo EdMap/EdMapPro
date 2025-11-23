@@ -1,13 +1,13 @@
 import { SlRadioGroup } from '@shoelace-style/shoelace'
-import { FunctionComponent } from 'preact'
-import { useEffect, useRef } from 'preact/hooks'
+import { FC } from 'react'
+import { useEffect, useRef } from 'react'
 import { GenderEnum, UserProfileUpdateDto } from '../../../../__generated__/api'
 import { FORM_NAMES } from '../models'
 import styles from './index.module.css'
 
 export type GenderEnumString = keyof typeof GenderEnum
 
-const Gender: FunctionComponent<{
+const Gender: FC<{
     formData?: UserProfileUpdateDto | null
     handleChange: (e: CustomEvent) => void
 }> = ({ formData, handleChange }) => {

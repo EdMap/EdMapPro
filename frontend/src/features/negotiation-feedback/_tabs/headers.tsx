@@ -1,4 +1,4 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { keyify } from '../../../utils/string'
 
 export enum NegotiationFeedbackTabs {
@@ -9,7 +9,7 @@ export enum NegotiationFeedbackTabs {
 
 export type NegotiationFeedbackTabsString = keyof typeof NegotiationFeedbackTabs
 
-const TabHeaders: FunctionComponent<{
+const TabHeaders: FC<{
     isPending: boolean
 }> = ({ isPending }) => {
     return (

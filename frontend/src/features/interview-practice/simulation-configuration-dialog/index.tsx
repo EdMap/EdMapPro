@@ -1,6 +1,6 @@
 import { SlDialog } from '@shoelace-style/shoelace'
-import { FunctionComponent } from 'preact'
-import { MutableRef, useCallback, useRef, useState } from 'preact/hooks'
+import { FC } from 'react'
+import { MutableRef, useCallback, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { CareerEnum, SeniorityLevelEnum } from '../../../__generated__/api'
 import {
@@ -14,7 +14,7 @@ import { SimConfiguration } from '../_store/state'
 import useInterviewSimulation from '../_store/use-interview-details'
 import styles from './index.module.css'
 
-const SimulationConfigurationDialog: FunctionComponent<{
+const SimulationConfigurationDialog: FC<{
     dialogRef: MutableRef<SlDialog | null>
 }> = ({ dialogRef }) => {
     const formRef = useRef<HTMLFormElement | null>(null)

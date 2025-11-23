@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect } from 'preact/hooks'
+import { useCallback, useLayoutEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { SessionStatusEnum } from '../../__generated__/api'
 import HistoryItem from '../../components/history-item'

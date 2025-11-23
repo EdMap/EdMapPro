@@ -1,4 +1,4 @@
-import { ComponentChildren } from 'preact'
+import { ComponentChildren } from 'react'
 import { PaginationControls } from '../../features/app/_store/state'
 import styles from './pager.module.css'
 

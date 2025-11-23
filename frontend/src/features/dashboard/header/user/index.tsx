@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'preact/hooks'
+import { useCallback, useMemo } from 'react'
 import { useDispatch } from 'react-redux'
 import { isNone } from '../../../../utils/is-none'
 import { getInitials } from '../../../../utils/string'

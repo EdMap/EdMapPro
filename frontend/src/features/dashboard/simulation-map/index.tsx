@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useState } from 'preact/hooks'
+import { useContext, useLayoutEffect, useState } from 'react'
 import {
     DropdownPlacement,
     SlDropDownProps,

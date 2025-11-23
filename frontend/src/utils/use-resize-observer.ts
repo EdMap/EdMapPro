@@ -1,5 +1,5 @@
-import { RefObject } from 'preact'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { RefObject } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * Custom hook that uses the ResizeObserver API to track changes in the size of an element.

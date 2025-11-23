@@ -1,4 +1,4 @@
-import { VNode } from 'preact'
+import { VNode } from 'react'
 import InterviewSessions from '../../interview-sessions'
 import NegotiationSessions from '../../negotiation-sessions'
 import { DashboardTabs } from '../models'

@@ -1,5 +1,5 @@
-import { FunctionComponent } from 'preact'
-import { Ref, useCallback, useEffect, useState } from 'preact/hooks'
+import { FC } from 'react'
+import { Ref, useCallback, useEffect, useState } from 'react'
 import { InterviewMessage } from '../../../__generated__/api'
 import { isNone } from '../../../utils/is-none'
 import styles from './index.module.css'
@@ -9,7 +9,7 @@ const MESSAGES = {
     SEND_TOOLTIP: 'Use Enter to send',
 }
 
-const ChatControls: FunctionComponent<{
+const ChatControls: FC<{
     messages: InterviewMessage[]
     onSend: (input: string) => void
     disabled: boolean

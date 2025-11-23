@@ -1,13 +1,12 @@
-import { useRouter } from 'preact-router'
-import { useEffect } from 'preact/hooks'
+import { useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 
 export const ScrollToTop = () => {
-    const [{ path, matches, ...rest }] = useRouter()
-    const offset = matches?.offset
+    const location = useLocation()
 
     useEffect(() => {
         globalThis.scrollTo(0, 0)
-    }, [path, offset, rest])
+    }, [location.pathname, location.search])
 
     return null
 }

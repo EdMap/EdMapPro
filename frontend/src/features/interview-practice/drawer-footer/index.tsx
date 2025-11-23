@@ -1,6 +1,6 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 
-const InterviewDrawerFooter: FunctionComponent<{
+const InterviewDrawerFooter: FC<{
     onConfigureSimulation: () => void
     onStart: () => void
 }> = ({ onConfigureSimulation, onStart }) => {

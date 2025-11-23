@@ -1,4 +1,4 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { Variant } from '../../ui/shoelace/shoelace'
 import styles from './index.module.css'
 
@@ -26,7 +26,7 @@ const ICON_VARIANT_MAP = {
     },
 }
 
-const HelpText: FunctionComponent<{
+const HelpText: FC<{
     variant?: Variant | null
     text: string
     tooltip?: string

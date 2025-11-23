@@ -1,6 +1,6 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 
-const NegotiationDrawerFooter: FunctionComponent<{
+const NegotiationDrawerFooter: FC<{
     onStart: () => void
 }> = ({ onStart }) => {
     return (

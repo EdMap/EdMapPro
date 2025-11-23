@@ -1,9 +1,9 @@
-import { FunctionComponent } from 'preact'
-import { useCallback } from 'preact/hooks'
+import { FC } from 'react'
+import { useCallback } from 'react'
 import CircleIcon from '../circle-icon'
 import styles from './index.module.css'
 
-const SimulationHeader: FunctionComponent<{
+const SimulationHeader: FC<{
     title: string
     icon: string
     onExit: () => void

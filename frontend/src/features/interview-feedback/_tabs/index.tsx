@@ -1,7 +1,7 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import TabHeaders from './headers'
 
-const Tabs: FunctionComponent<{
+const Tabs: FC<{
     isPending: boolean
 }> = ({ isPending, children }) => {
     return (

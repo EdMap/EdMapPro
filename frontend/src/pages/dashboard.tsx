@@ -1,8 +1,8 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { RequireAuth } from '../features/auth/require-auth'
 import Dashboard from '../features/dashboard'
 
-const DashboardPage: FunctionComponent = () => {
+const DashboardPage: FC = () => {
     return (
         <RequireAuth>
             <Dashboard />

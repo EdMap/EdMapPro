@@ -1,8 +1,8 @@
-import { FunctionComponent } from 'preact'
+import { FC } from 'react'
 import { SlButtonProps } from '../../ui/shoelace/shoelace'
 import styles from './index.module.css'
 
-const CircleIcon: FunctionComponent<
+const CircleIcon: FC<
     {
         icon: string
         class?: string

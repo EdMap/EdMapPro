@@ -1,7 +1,7 @@
-import { FunctionComponent, VNode } from 'preact'
+import { FC, VNode } from 'react'
 import styles from './index.module.css'
 
-const SimulationChat: FunctionComponent<{
+const SimulationChat: FC<{
     messages: VNode
     controls?: VNode | null
 }> = ({ messages, controls }) => {
