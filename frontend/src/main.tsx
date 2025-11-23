@@ -1,10 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './features/app'
+
+// Import Shoelace components and setup FIRST
+import './ui/index'
+
+// Then import global styles
 import './ui/styles/index.css'
 
+import App from './features/app'
 import { appContainer } from './features/app/context'
-import './ui/index'
 
 if (appContainer) {
     const root = createRoot(appContainer)
