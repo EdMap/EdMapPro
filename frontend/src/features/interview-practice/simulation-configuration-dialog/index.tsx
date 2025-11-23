@@ -1,6 +1,5 @@
 import { SlDialog } from '@shoelace-style/shoelace'
-import { FC } from 'react'
-import { MutableRef, useCallback, useRef, useState } from 'react'
+import { FC, useCallback, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { CareerEnum, SeniorityLevelEnum } from '../../../__generated__/api'
 import {
@@ -15,7 +14,7 @@ import useInterviewSimulation from '../_store/use-interview-details'
 import styles from './index.module.css'
 
 const SimulationConfigurationDialog: FC<{
-    dialogRef: MutableRef<SlDialog | null>
+    dialogRef: React.MutableRefObject<SlDialog | null>
 }> = ({ dialogRef }) => {
     const formRef = useRef<HTMLFormElement | null>(null)
     const { configuration } = useInterviewSimulation()
@@ -49,10 +48,10 @@ const SimulationConfigurationDialog: FC<{
         <sl-dialog
             ref={dialogRef}
             label="Configure simulation"
-            class={styles.dialog}
+            className={styles.dialog}
         >
             <form ref={formRef}>
-                <stack-l space="var(--s-1)" class={styles.body}>
+                <stack-l space="var(--s-1)" className={styles.body}>
                     <sl-input
                         label="Company name"
                         name="company"

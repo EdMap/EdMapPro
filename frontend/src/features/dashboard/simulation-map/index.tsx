@@ -58,7 +58,7 @@ const DesktopMap = () => {
     return (
         <cluster-l
             space="calc(var(--measure) / (var(--r3)))"
-            class={styles.progress}
+            className={styles.progress}
         >
             {SIMULATIONS.map((simulation) => {
                 return (
@@ -99,7 +99,7 @@ const MobileMap = () => {
     return (
         <center-l>
             <stack-l
-                class={styles.mobileMap}
+                className={styles.mobileMap}
                 space="calc(var(--measure) / (var(--r3)))"
             >
                 {SIMULATIONS.map((simulation) => {
@@ -156,7 +156,7 @@ const SimulationsMap = () => {
         <cover-l
             centered="cluster-l"
             minHeight="calc(var(--measure) / var(--r2))"
-            class={styles.wrapper}
+            className={styles.wrapper}
         >
             {isDesktop ? <DesktopMap /> : <MobileMap />}
         </cover-l>

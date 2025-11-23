@@ -22,9 +22,9 @@ const Greeter = () => {
     )
 
     return (
-        <cluster-l class={styles.greeter} align="flex-start">
-            <sl-avatar initials={initials} class={styles.avatar} />
-            <stack-l space="var(--s-4)" class={styles.message}>
+        <cluster-l className={styles.greeter} align="flex-start">
+            <sl-avatar initials={initials} className={styles.avatar} />
+            <stack-l space="var(--s-4)" className={styles.message}>
                 <h2>
                     {MESSAGES.GREETER_HEADER}, {name}
                 </h2>

@@ -17,11 +17,11 @@ const Limiter = ({
 
     return (
         <sl-dropdown placement="top">
-            <sl-button slot="trigger" class={styles.trigger} variant="default">
+            <sl-button slot="trigger" className={styles.trigger} variant="default">
                 <sl-icon slot="suffix" name="chevron-down"></sl-icon>
                 {itemFrom} - {itemTo}
             </sl-button>
-            <sl-menu class={styles.menu}>
+            <sl-menu className={styles.menu}>
                 <sl-menu-label>Items per page</sl-menu-label>
                 {limits.map((l) => (
                     <sl-menu-item

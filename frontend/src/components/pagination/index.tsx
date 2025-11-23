@@ -23,7 +23,7 @@ const Pagination: FC<PaginationControlsProps> = ({
     if (count < 1) return null
 
     return (
-        <center-l andText class={styles.pagination} data-landmark>
+        <center-l andText className={styles.pagination} data-landmark>
             <Pager
                 count={count}
                 hasMore={hasMore}

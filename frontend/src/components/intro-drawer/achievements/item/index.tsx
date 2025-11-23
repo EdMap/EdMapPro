@@ -11,7 +11,7 @@ const AchievementItem: FC<{
             align="flex-start"
             justify="flex-start"
             space="var(--s-1)"
-            class={styles.achievement}
+            className={styles.achievement}
         >
             <CircleIcon icon="file-earmark-text" variant="warning" />
             <stack-l space="0">

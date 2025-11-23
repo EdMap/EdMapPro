@@ -1,12 +1,11 @@
-import { createContext, FC, PreactContext } from 'react'
-import { useContext } from 'react'
+import { createContext, FC, ReactNode, useContext } from 'react'
 import { AppConfig, config as appConfig } from './config'
 
 export type AppConfigContext = AppConfig
-const AppConfigContext: PreactContext<AppConfigContext> =
+const AppConfigContext: React.Context<AppConfigContext> =
     createContext(appConfig)
 
-export const AppConfigProvider: FC = ({ children }) => {
+export const AppConfigProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return (
         <AppConfigContext.Provider value={appConfig}>
             {children}

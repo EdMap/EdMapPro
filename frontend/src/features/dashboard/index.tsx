@@ -14,7 +14,7 @@ const Dashboard: FC = () => {
     const isNewUser = isNone(user?.get_full_name)
 
     return (
-        <cover-l class={styles.dashboard}>
+        <cover-l className={styles.dashboard}>
             <ScrollToTop />
             {isNewUser ? (
                 <AccountForm />

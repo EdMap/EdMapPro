@@ -36,7 +36,7 @@ const InterviewMessages = () => {
     }, [sessionId])
 
     return (
-        <stack-l class={styles.messages} space="var(--s-2)">
+        <stack-l className={styles.messages} space="var(--s-2)">
             {messages.map((message) => {
                 return (
                     <InterviewMessage

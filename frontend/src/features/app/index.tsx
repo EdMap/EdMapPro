@@ -49,8 +49,8 @@ const App = () => {
             <AppConfigProvider>
                 <StoreProvider store={store}>
                     <BrowserRouter>
+                        <ScrollToTop />
                         <NavigateProvider>
-                            <ScrollToTop />
                             <AppRouter />
                         </NavigateProvider>
                     </BrowserRouter>

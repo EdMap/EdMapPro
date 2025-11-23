@@ -9,7 +9,7 @@ const CircleIcon: FC<
     } & SlButtonProps
 > = ({ icon, ...props }) => {
     return (
-        <sl-button {...props} circle class={styles.circleIcon}>
+        <sl-button {...props} circle className={styles.circleIcon}>
             <sl-icon name={icon}></sl-icon>
         </sl-button>
     )

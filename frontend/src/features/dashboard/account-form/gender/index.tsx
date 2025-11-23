@@ -20,7 +20,7 @@ const Gender: FC<{
     }, [handleChange])
 
     return (
-        <stack-l space="var(--s-2)" class={styles.wrapper}>
+        <stack-l space="var(--s-2)" className={styles.wrapper}>
             <sl-radio-group
                 ref={radioRef}
                 name={FORM_NAMES.GENDER}

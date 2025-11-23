@@ -56,7 +56,7 @@ const TabGroup = () => {
         <sl-tab-group
             placement={isDesktop ? 'start' : 'top'}
             activation="auto"
-            class={styles.wrapper}
+            className={styles.wrapper}
             onsl-tab-show={handleTabChange}
         >
             <TabHeaders />

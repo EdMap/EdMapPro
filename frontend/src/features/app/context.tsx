@@ -1,16 +1,15 @@
-import { ComponentChildren, createContext } from 'react'
-import { MutableRef, useRef } from 'react'
+import { createContext, useRef, ReactNode } from 'react'
 
 export const rootContainer = document.querySelector('html') as HTMLElement
 export const appContainer = document.getElementById('app') as HTMLDivElement
 
 export interface AppContext {
-    containerElRef: MutableRef<HTMLElement>
+    containerElRef: React.React.MutableRefObjectObject<HTMLElement>
 }
 export const AppContext = createContext<AppContext>({} as AppContext)
 
 export type AppContextProviderProps = {
-    children: ComponentChildren
+    children: ReactNode
 }
 
 export const AppContextProvider = ({

@@ -28,7 +28,7 @@ const User = () => {
     }, [dispatch])
 
     return (
-        <sl-dropdown placement="bottom-end" class={styles.user}>
+        <sl-dropdown placement="bottom-end" className={styles.user}>
             <sl-button slot="trigger" caret size="large">
                 <sl-avatar slot="prefix" initials={initials} />
                 {name}

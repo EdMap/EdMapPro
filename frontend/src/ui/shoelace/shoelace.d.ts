@@ -5,7 +5,7 @@ import { SlCheckbox } from '@shoelace-style/shoelace/dist/react/checkbox'
 import { SlDialog } from '@shoelace-style/shoelace/dist/react/dialog'
 import { SlSkeleton } from '@shoelace-style/shoelace/dist/react/skeleton'
 import { SlTooltip } from '@shoelace-style/shoelace/dist/react/tooltip'
-import { ComponentChildren } from 'react'
+import { ReactNode } from 'react'
 import { Ref } from 'react'
 import { JSXInternal } from 'preact/src/jsx'
 
@@ -289,7 +289,7 @@ interface SlSelectProps
     'sl-focus'?: (e: JSXInternal.TargetedEvent<HTMLSelectElement>) => void
     'sl-input'?: (e: JSXInternal.TargetedEvent<HTMLSelectElement>) => void
     'value'?: string | Array<string>
-    'children'?: ComponentChildren
+    'children'?: ReactNode
 }
 
 interface SlSkeletonProps {

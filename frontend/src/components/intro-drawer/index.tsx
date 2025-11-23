@@ -20,7 +20,7 @@ const IntroDrawer: FC<IntroDrawerProps> = ({
     ...props
 }) => {
     return (
-        <sl-drawer open={open} class={styles.drawer} placement="start">
+        <sl-drawer open={open} className={styles.drawer} placement="start">
             <DrawerHeader {...props} />
             <stack-l space="var(--s3)">
                 <Instructions />

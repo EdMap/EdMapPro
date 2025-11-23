@@ -6,7 +6,7 @@ const Controls: FC<{
     onNegotiation: () => void
 }> = ({ disabled, onNegotiation }) => {
     return (
-        <cluster-l justify="flex-end" class={styles.footer}>
+        <cluster-l justify="flex-end" className={styles.footer}>
             <sl-button
                 variant="primary"
                 outline

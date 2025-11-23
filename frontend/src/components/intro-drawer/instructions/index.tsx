@@ -2,7 +2,7 @@ import styles from './index.module.css'
 
 const Instructions = () => {
     return (
-        <stack-l class={styles.instructions} space="var(--s-2)">
+        <stack-l className={styles.instructions} space="var(--s-2)">
             <h3>Instructions</h3>
             <ul>
                 <li>

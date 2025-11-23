@@ -46,7 +46,7 @@ const Controls: FC<{
     onDone: () => void
 }> = ({ disabled, onDone, onRetake }) => {
     return (
-        <cluster-l justify="flex-end" class={styles.footer}>
+        <cluster-l justify="flex-end" className={styles.footer}>
             <cluster-l space="var(--s-2)">
                 <sl-button onClick={onRetake} disabled={disabled}>
                     <sl-icon name="arrow-repeat" slot="prefix" />
@@ -115,7 +115,7 @@ const InterviewFeedback = () => {
                 title="Offer Negotiation"
                 onExit={handleDone}
             />
-            <stack-l space="0" class={styles.tabWrapper}>
+            <stack-l space="0" className={styles.tabWrapper}>
                 <Tabs isPending={isPending}>
                     <sl-tab-panel
                         name={NegotiationFeedbackTabs.FEEDBACK}
@@ -129,12 +129,12 @@ const InterviewFeedback = () => {
                                     {!isNone(feedback) ? (
                                         <stack-l
                                             space="var(--s-3)"
-                                            class={styles.feedback}
+                                            className={styles.feedback}
                                         >
                                             <h1>Negotiation Feedback</h1>
 
                                             <div
-                                                class={styles.feedback}
+                                                className={styles.feedback}
                                                 dangerouslySetInnerHTML={{
                                                     __html: DOMPurify.sanitize(
                                                         feedback!,
@@ -147,11 +147,11 @@ const InterviewFeedback = () => {
                                     {!isNone(areas_for_improvement) ? (
                                         <stack-l
                                             space="var(--s-3)"
-                                            class={styles.feedback}
+                                            className={styles.feedback}
                                         >
                                             <h3>Areas for Improvement</h3>
                                             <div
-                                                class={styles.feedback}
+                                                className={styles.feedback}
                                                 dangerouslySetInnerHTML={{
                                                     __html: DOMPurify.sanitize(
                                                         areas_for_improvement!,

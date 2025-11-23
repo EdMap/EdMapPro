@@ -1,4 +1,4 @@
-import { ComponentChildren } from 'react'
+import { ReactNode } from 'react'
 import { PaginationControls } from '../../features/app/_store/state'
 import styles from './pager.module.css'
 
@@ -11,13 +11,13 @@ const Pager = ({
 }: PaginationControls & {
     count: number
     onOffsetChange: (offset: number) => void
-    children: ComponentChildren
+    children: ReactNode
 }) => {
     const prevDisabled = offset! <= 0
     const nextDisabled = !hasMore
 
     return (
-        <sl-button-group class={styles.pager}>
+        <sl-button-group className={styles.pager}>
             <sl-button
                 disabled={prevDisabled}
                 variant="default"

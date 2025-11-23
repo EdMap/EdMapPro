@@ -41,18 +41,18 @@ const HelpText: FC<{
             slot={slot}
             content={tooltip ?? text}
             placement="bottom-start"
-            class={styles.tooltip}
+            className={styles.tooltip}
         >
             {children}
             <cluster-l
-                class={`${styles.helpText} ${styles[variant ?? 'neutral']}`}
+                className={`${styles.helpText} ${styles[variant ?? 'neutral']}`}
                 align="center"
                 space="var(--s-3)"
                 ref={ref}
                 {...props}
             >
                 <sl-icon name={iconType.name} />
-                <span class="ellipsis">{shortText}</span>
+                <span className="ellipsis">{shortText}</span>
             </cluster-l>
         </sl-tooltip>
     )

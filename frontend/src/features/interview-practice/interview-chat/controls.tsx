@@ -73,7 +73,7 @@ const ChatControls: FC<{
             onSubmit={handleSubmit}
             onReset={handleReset}
             disabled={disabled}
-            class={styles.controls}
+            className={styles.controls}
             ref={formRef}
         >
             <cluster-l align="center" justify="center" space="var(--s1)">
@@ -90,7 +90,7 @@ const ChatControls: FC<{
                 <sl-tooltip placement="right-end" disabled={disabled}>
                     <span slot="content">{MESSAGES.SEND_TOOLTIP}</span>
                     <sl-button
-                        class={styles.send}
+                        className={styles.send}
                         variant="primary"
                         type="submit"
                         disabled={disabled}

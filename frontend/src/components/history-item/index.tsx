@@ -37,7 +37,7 @@ const HistoryItem: FC<{
         [onNavigation, data],
     )
     return (
-        <sl-card class={styles.wrapper}>
+        <sl-card className={styles.wrapper}>
             <div slot="header">
                 <i>{data?.session_id?.slice(0, 10)}</i>
             </div>
@@ -56,9 +56,9 @@ const HistoryItem: FC<{
                     </cluster-l>
                 </stack-l>
 
-                <cluster-l justify="flex-end" class={styles.footer}>
+                <cluster-l justify="flex-end" className={styles.footer}>
                     <cluster-l
-                        class={styles.status}
+                        className={styles.status}
                         space="var(--s-3)"
                         align="center"
                     >

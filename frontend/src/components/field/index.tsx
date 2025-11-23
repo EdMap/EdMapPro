@@ -10,7 +10,7 @@ const InputField: FC<SlInputProps> = ({
     const inputCls = `${styles.field} ${className}`
 
     return (
-        <sl-input {...props} class={inputCls}>
+        <sl-input {...props} className={inputCls}>
             {children}
         </sl-input>
     )

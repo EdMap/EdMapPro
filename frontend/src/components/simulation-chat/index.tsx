@@ -6,7 +6,7 @@ const SimulationChat: FC<{
     controls?: VNode | null
 }> = ({ messages, controls }) => {
     return (
-        <cover-l space="0" class={styles.wrapper}>
+        <cover-l space="0" className={styles.wrapper}>
             <stack-l space="var(--s-2)">
                 {messages}
                 {controls}

@@ -26,12 +26,12 @@ const InterviewMessage: FC<{
     const showTooltip = !isNoQuestionReason && showQuestionReason
 
     return (
-        <cluster-l class={wrapperCls}>
+        <cluster-l className={wrapperCls}>
             <stack-l space="var(--s-2)">
                 <cluster-l
                     align="flex-start"
                     space="var(--s-2)"
-                    class={styles.name}
+                    className={styles.name}
                 >
                     <CircleIcon icon="person" variant="primary" size="small" />
                     {owner}
@@ -40,7 +40,7 @@ const InterviewMessage: FC<{
                     disabled={!showTooltip}
                     placement="top-end"
                     trigger={showTooltip ? 'click' : ''}
-                    class={`${styles.tooltip} ${!showTooltip ? styles.hidden : ''}`}
+                    className={`${styles.tooltip} ${!showTooltip ? styles.hidden : ''}`}
                     skidding={200}
                     distance={20}
                     hoist
@@ -48,7 +48,7 @@ const InterviewMessage: FC<{
                     {showTooltip ? (
                         <stack-l slot="content" space="var(--s1)">
                             <cluster-l
-                                class={styles.header}
+                                className={styles.header}
                                 align="center"
                                 justify="space-between"
                             >
@@ -71,7 +71,7 @@ const InterviewMessage: FC<{
                         </stack-l>
                     ) : null}
 
-                    <div class={styles.text}>
+                    <div className={styles.text}>
                         {isMessageLoading ? <TypingDots /> : message.text}
                     </div>
                 </sl-tooltip>

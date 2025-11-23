@@ -22,11 +22,11 @@ const Offer = () => {
     }, [dispatch])
 
     return offer || initial_offer ? (
-        <stack-l space="0" class={styles.wrapper}>
+        <stack-l space="0" className={styles.wrapper}>
             <cover-l minHeight="100vh">
                 <center-l>
                     <stack-l space="var(--s-1)">
-                        <stack-l class={styles.card}>
+                        <stack-l className={styles.card}>
                             <stack-l space="var(--s-3)">
                                 <h4>Job Offer</h4>
 
@@ -36,7 +36,7 @@ const Offer = () => {
                         </stack-l>
 
                         <stack-l
-                            class={styles.card}
+                            className={styles.card}
                             space="var(--s-5)"
                             dangerouslySetInnerHTML={{
                                 __html: DOMPurify.sanitize(offer! ?? initial_offer!),

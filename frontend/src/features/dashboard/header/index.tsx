@@ -4,7 +4,7 @@ import User from './user'
 
 const Header = () => {
     return (
-        <cluster-l justify="space-between" class={styles.header} align="center">
+        <cluster-l justify="space-between" className={styles.header} align="center">
             <Logo />
             <User />
         </cluster-l>

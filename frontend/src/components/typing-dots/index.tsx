@@ -1,7 +1,7 @@
 import styles from './index.module.css'
 
 const TypingDots = () => {
-    return <div class={styles.typing}></div>
+    return <div className={styles.typing}></div>
 }
 
 export default TypingDots

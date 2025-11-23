@@ -45,7 +45,7 @@ const AccountForm = () => {
     )
 
     return (
-        <sl-dialog open label="Setup your profile" class={styles.dialog}>
+        <sl-dialog open label="Setup your profile" className={styles.dialog}>
             <form ref={formRef} onSubmit={handleSubmit}>
                 <stack-l space="var(--s1)">
                     <cluster-l space="var(--s-1)">

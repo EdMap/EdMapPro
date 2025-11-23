@@ -13,9 +13,9 @@ const SimulationHeader: FC<{
     }, [onExit])
 
     return (
-        <cluster-l justify="space-between" class={styles.header} align="center">
+        <cluster-l justify="space-between" className={styles.header} align="center">
             <cluster-l space="var(--s-1)" align="center">
-                <CircleIcon class={styles.icon} variant="primary" icon={icon} />
+                <CircleIcon className={styles.icon} variant="primary" icon={icon} />
                 <h3>{title}</h3>
             </cluster-l>
 

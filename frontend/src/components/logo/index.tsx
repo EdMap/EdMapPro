@@ -5,7 +5,7 @@ interface LogoProps {
 }
 
 const Logo = ({ size = 'small' }: LogoProps) => (
-    <div class={`${styles.logo} ${styles[size]}`}>
+    <div className={`${styles.logo} ${styles[size]}`}>
         <sl-icon slot="prefix" name="_app:logo" />
     </div>
 )

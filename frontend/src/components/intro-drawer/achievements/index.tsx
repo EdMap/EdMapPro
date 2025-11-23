@@ -18,7 +18,7 @@ const CONTENT = {
 
 const Achievements = () => {
     return (
-        <stack-l space="var(--s-2)" class={styles.achievements}>
+        <stack-l space="var(--s-2)" className={styles.achievements}>
             <h3>{CONTENT.TITLE}</h3>
             {CONTENT.ITEMS.map((item) => {
                 return (

@@ -13,8 +13,8 @@ const SimulationItem: FC<{
     }, [onClick])
 
     return (
-        <stack-l space="var(--s-2)" class={styles.item} disabled={disabled}>
-            <h4 class={styles.title}>{title}</h4>
+        <stack-l space="var(--s-2)" className={styles.item} disabled={disabled}>
+            <h4 className={styles.title}>{title}</h4>
             <p>{description}</p>
             <cluster-l justify="flex-start">
                 <sl-button outline onClick={handleClick} disabled={disabled}>
