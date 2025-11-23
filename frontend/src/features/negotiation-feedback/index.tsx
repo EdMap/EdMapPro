@@ -1,5 +1,4 @@
 import { FC } from 'react'
-import { useRouter } from 'preact-router'
 import { useCallback, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import DOMPurify from 'dompurify'

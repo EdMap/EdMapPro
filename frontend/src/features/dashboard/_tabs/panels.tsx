@@ -1,4 +1,3 @@
-import { useRouter } from 'preact-router'
 import { keyify } from '../../../utils/string'
 import { DashboardTabs, DashboardTabsString } from '../models'
 import {

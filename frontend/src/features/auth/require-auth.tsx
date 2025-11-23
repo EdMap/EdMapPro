@@ -1,12 +1,10 @@
 import { jwtDecode, JwtPayload } from 'jwt-decode'
-import { FC } from 'react'
-import { route } from 'preact-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { isNone, isNullish } from '../../utils'
 import { RootDispatch } from '../app/_store'
 import { Status } from '../app/_store/state'
-import { APP_ROUTES } from '../app/routes'
+import navigation from '../app/navigation'
 import { profile, refreshToken } from './_store/effects'
 import { logout } from './_store/reducer'
 import { ACCESS_TOKEN } from './_store/state'
@@ -75,7 +73,7 @@ export const RequireAuth: FC = ({ children }) => {
         } catch (err) {
             setIsAuthenticated(false)
             dispatch(logout())
-            route(APP_ROUTES.LOGIN)
+            navigation.goToLoginPage()
         }
 
         return () => {

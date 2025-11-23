@@ -1,6 +1,5 @@
 import { SlDialog } from '@shoelace-style/shoelace'
 import { FC } from 'react'
-import { useRouter } from 'preact-router'
 import { useCallback, useEffect, useRef } from 'react'
 import { useDispatch } from 'react-redux'
 import IntroDrawer, {

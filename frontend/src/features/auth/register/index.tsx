@@ -1,6 +1,4 @@
-import { FC } from 'react'
-import { route } from 'preact-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import InputField from '../../../components/field'
 import Logo from '../../../components/logo'
@@ -8,7 +6,6 @@ import { isNullish } from '../../../utils'
 import { RootDispatch } from '../../app/_store'
 import { Status } from '../../app/_store/state'
 import navigation from '../../app/navigation'
-import { APP_ROUTES } from '../../app/routes'
 import { register } from '../_store/effects'
 import useAuth from '../use-auth'
 
@@ -53,7 +50,7 @@ const RegistrationPage: FC = () => {
 
     useEffect(() => {
         if (!isNullish(token)) {
-            route(APP_ROUTES.DASHBOARD)
+            navigation.goToHome()
         }
     }, [token])
 

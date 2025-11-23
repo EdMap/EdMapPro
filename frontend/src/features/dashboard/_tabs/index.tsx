@@ -1,10 +1,10 @@
-import { useRouter } from 'preact-router'
 import {
     useCallback,
     useContext,
     useLayoutEffect,
     useState,
 } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { isNullish } from '../../../utils'
 import { DEVICE_SIZE } from '../../../utils/device-sizes'
 import { useResizeObserver } from '../../../utils/use-resize-observer'
@@ -19,8 +19,8 @@ const isValidTab = (tab: string) =>
     Object.values(DashboardTabs).includes(tab as DashboardTabs)
 
 const TabGroup = () => {
-    const [{ matches }] = useRouter()
-    const activeTab = matches?.tab ?? null
+    const [searchParams] = useSearchParams()
+    const activeTab = searchParams.get('tab')
 
     const [isDesktop, setIsDesktop] = useState(true)
     const { containerElRef } = useContext(AppContext)

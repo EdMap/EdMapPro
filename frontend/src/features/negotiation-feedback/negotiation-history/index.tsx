@@ -1,4 +1,3 @@
-import { useRouter } from 'preact-router'
 import { useDispatch } from 'react-redux'
 import SimulationChat from '../../../components/simulation-chat'
 import { isNullish } from '../../../utils'
