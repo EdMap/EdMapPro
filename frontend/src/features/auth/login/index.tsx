@@ -1,5 +1,6 @@
 import { FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
+import InputField from '../../../components/field'
 import Logo from '../../../components/logo'
 import { isNullish } from '../../../utils'
 import { RootDispatch } from '../../app/_store'
@@ -8,7 +9,6 @@ import navigation from '../../app/navigation'
 import { login } from '../_store/effects'
 import { logout } from '../_store/reducer'
 import useAuth from '../use-auth'
-import styles from './index.module.css'
 
 const CONTENT = {
     TITLE: 'LOGIN',
@@ -31,8 +31,8 @@ const LoginPage: FC = () => {
 
     const isPending = status === Status.PENDING
 
-    const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        const target = event.target
+    const handleChange = useCallback((event: Event) => {
+        const target = event.target as any
 
         setCredentials((prevState) => {
             return {
@@ -43,7 +43,7 @@ const LoginPage: FC = () => {
     }, [])
 
     const handleSubmit = useCallback(
-        (e: React.FormEvent<HTMLFormElement>) => {
+        (e: SubmitEvent) => {
             e.preventDefault()
 
             if (formRef.current?.checkValidity()) {
@@ -60,63 +60,87 @@ const LoginPage: FC = () => {
     }, [token])
 
     return (
-        <div className={styles.container}>
-            <div className={styles.content}>
-                <div className={styles.logoWrapper}>
-                    <Logo size="large" />
-                </div>
-                <h2 className={styles.title}>{CONTENT.TITLE}</h2>
+        <stack-l space="0">
+            <cover-l space="0" minHeight="80vh" centered="stack-l">
+                <stack-l space="var(--s0)">
+                    <center-l justify="center">
+                        <Logo size="large" />
+                    </center-l>
+                    <center-l>
+                        <h2>{CONTENT.TITLE}</h2>
+                    </center-l>
 
-                <form onSubmit={handleSubmit} ref={formRef} className={styles.form}>
-                    <div className={styles.fieldGroup}>
-                        <label htmlFor="username" className={styles.label}>Username</label>
-                        <input
-                            id="username"
-                            name="username"
-                            type="text"
-                            placeholder="Enter your username"
-                            required
-                            value={credentials.username}
-                            onChange={handleChange}
-                            className={styles.input}
-                        />
-                    </div>
+                    <center-l>
+                        <form onSubmit={handleSubmit as any} ref={formRef}>
+                            <stack-l space="var(--s1)">
+                                <stack-l space="var(--s-2)">
+                                    <InputField
+                                        id="username"
+                                        label="Username"
+                                        name="username"
+                                        placeholder="Enter your username"
+                                        required
+                                        size="large"
+                                        type="text"
+                                        value={credentials.username}
+                                        onsl-input={handleChange}
+                                    >
+                                        <sl-icon
+                                            name="person-fill"
+                                            slot="prefix"
+                                        />
+                                    </InputField>
 
-                    <div className={styles.fieldGroup}>
-                        <label htmlFor="password" className={styles.label}>Password</label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            placeholder="Enter your password"
-                            required
-                            value={credentials.password}
-                            onChange={handleChange}
-                            className={styles.input}
-                        />
-                    </div>
+                                    <InputField
+                                        id="password"
+                                        label="Password"
+                                        name="password"
+                                        placeholder="Enter your password"
+                                        required
+                                        size="large"
+                                        type="password"
+                                        value={credentials.password}
+                                        onsl-input={handleChange}
+                                    >
+                                        <sl-icon
+                                            name="key-fill"
+                                            slot="prefix"
+                                        />
+                                    </InputField>
+                                </stack-l>
 
-                    <button 
-                        type="submit" 
-                        className={styles.submitBtn}
-                        disabled={isPending}
-                    >
-                        {isPending ? 'Logging in...' : 'Login'}
-                    </button>
-
-                    <div className={styles.registerSection}>
-                        <span>{CONTENT.CTA}</span>
-                        <button
-                            type="button"
-                            className={styles.registerBtn}
-                            onClick={navigation.goToRegistrationPage}
-                        >
-                            Register
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                                <center-l andText>
+                                    <sl-button
+                                        type="submit"
+                                        variant="primary"
+                                        size="large"
+                                        loading={isPending || undefined}
+                                        disabled={isPending || undefined}
+                                    >
+                                        Login
+                                    </sl-button>
+                                </center-l>
+                                <center-l andText>
+                                    <stack-l space="var(--s-1)">
+                                        <span>{CONTENT.CTA}</span>
+                                        <center-l>
+                                            <sl-button
+                                                variant="default"
+                                                onClick={
+                                                    navigation.goToRegistrationPage as any
+                                                }
+                                            >
+                                                Register
+                                            </sl-button>
+                                        </center-l>
+                                    </stack-l>
+                                </center-l>
+                            </stack-l>
+                        </form>
+                    </center-l>
+                </stack-l>
+            </cover-l>
+        </stack-l>
     )
 }
 

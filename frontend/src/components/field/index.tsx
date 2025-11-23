@@ -13,8 +13,11 @@ const InputField: FC<InputFieldProps> = ({
 }) => {
     const inputCls = `${styles.field} ${className}`
 
+    // Use 'any' to bypass TypeScript restrictions on web component event handlers
+    const webComponentProps = props as any
+
     return (
-        <sl-input {...props} className={inputCls}>
+        <sl-input {...webComponentProps} className={inputCls}>
             {children}
         </sl-input>
     )
