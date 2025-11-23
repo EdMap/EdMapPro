@@ -1,8 +1,12 @@
-import { FC } from 'react'
+import { FC, ReactNode } from 'react'
 import { SlInputProps } from '../../ui/shoelace/shoelace'
 import styles from './index.module.css'
 
-const InputField: FC<SlInputProps> = ({
+interface InputFieldProps extends SlInputProps {
+    children?: ReactNode
+}
+
+const InputField: FC<InputFieldProps> = ({
     children,
     class: className,
     ...props
