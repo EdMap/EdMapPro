@@ -391,6 +391,47 @@ export default function EnterpriseFeatureSession({ session, project, onComplete 
         </div>
       </div>
 
+      {/* Status Ribbon - Only show for sessions with phase data */}
+      {phases.length > 0 && currentPhaseData && (
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 shadow-md">
+          <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4" />
+                <span className="font-semibold">Current Phase:</span>
+                <Badge variant="secondary" className="bg-white text-blue-700 hover:bg-white">
+                  {currentPhaseData.name}
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <span className="text-sm">
+                  <span className="font-semibold">{objectivesCompleted}</span>/{totalObjectives} objectives
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
+              <Target className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                {totalObjectives === 0
+                  ? 'Review objectives panel for guidance'
+                  : objectivesCompleted === 0 && currentPhase === 'onboarding' && session.configuration?.activeRole === 'Product Manager'
+                  ? 'Start by reviewing PM documentation in the Requirements tab'
+                  : objectivesCompleted === 0 && (session.configuration?.activeRole === 'Developer' || session.configuration?.activeRole === 'Designer')
+                  ? 'Explore the Codebase tab to understand the project structure'
+                  : objectivesCompleted < totalObjectives
+                  ? `Complete ${Math.max(1, Math.ceil(totalObjectives * 0.5) - objectivesCompleted)} more objective${Math.ceil(totalObjectives * 0.5) - objectivesCompleted !== 1 ? 's' : ''} to advance`
+                  : canAdvancePhase && currentPhaseIndex < phases.length - 1
+                  ? 'Ready to advance to next phase!'
+                  : currentPhaseIndex === phases.length - 1
+                  ? 'Final phase - complete objectives to finish simulation'
+                  : 'Keep working on current objectives'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-screen-2xl mx-auto px-6 py-6">
