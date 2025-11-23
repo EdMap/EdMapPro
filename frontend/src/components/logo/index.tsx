@@ -6,7 +6,7 @@ interface LogoProps {
 
 const Logo = ({ size = 'small' }: LogoProps) => (
     <div className={`${styles.logo} ${styles[size]}`}>
-        <sl-icon slot="prefix" name="star-fill" />
+        <img src="/assets/icons/_app:logo.svg" alt="EdMap Logo" />
     </div>
 )
 
