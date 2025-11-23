@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom'
 import { keyify } from '../../../utils/string'
 import { DashboardTabs, DashboardTabsString } from '../models'
 import {
@@ -6,8 +7,8 @@ import {
 } from './to-dashboard-content'
 
 const TabPanels = () => {
-    const [{ matches }] = useRouter()
-    const activeTab = matches?.tab
+    const [searchParams] = useSearchParams()
+    const activeTab = searchParams.get('tab')
 
     return (
         <>
