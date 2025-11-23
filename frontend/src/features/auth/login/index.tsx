@@ -7,6 +7,7 @@ import { RootDispatch } from '../../app/_store'
 import { Status } from '../../app/_store/state'
 import navigation from '../../app/navigation'
 import { login } from '../_store/effects'
+import { logout } from '../_store/reducer'
 import useAuth from '../use-auth'
 
 const CONTENT = {
@@ -22,6 +23,13 @@ const LoginPage: FC = () => {
         username: '',
         password: '',
     })
+
+    // Clear any stale auth state when landing on login page
+    useEffect(() => {
+        if (isNullish(token) && status !== Status.PENDING) {
+            dispatch(logout())
+        }
+    }, [])
 
     const isPending = status === Status.PENDING
 

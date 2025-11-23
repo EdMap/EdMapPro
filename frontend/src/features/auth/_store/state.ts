@@ -11,8 +11,17 @@ export type AuthState = {
     token?: string | null
 } & Omit<UserTokenDto, 'access'>
 
+const getUserFromStorage = () => {
+    try {
+        const stored = globalThis.localStorage.getItem(USER)
+        return stored ? JSON.parse(stored) : null
+    } catch {
+        return null
+    }
+}
+
 export const initialState: AuthState = {
-    user: JSON.parse(globalThis.localStorage.getItem(USER)!) ?? null,
+    user: getUserFromStorage(),
     token: globalThis.localStorage.getItem(ACCESS_TOKEN) ?? null,
     refresh: globalThis.localStorage.getItem(REFRESH_TOKEN) ?? null,
     error: null,
