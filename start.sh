@@ -7,7 +7,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   Starting EdMap Django/Preact App    ║${NC}"
+echo -e "${BLUE}║   Starting EdMap Django/React App     ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -30,7 +30,7 @@ echo ""
 cd ..
 
 # Start Vite frontend on port 5175 (configured in package.json)
-echo -e "${YELLOW}[3/3] Starting Preact + Vite frontend on port 5175...${NC}"
+echo -e "${YELLOW}[3/3] Starting React + Vite frontend on port 5175...${NC}"
 cd frontend && npm run dev &
 FRONTEND_PID=$!
 echo -e "${GREEN}✓ Vite frontend started (PID: $FRONTEND_PID)${NC}"

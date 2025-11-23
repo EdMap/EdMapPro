@@ -25,18 +25,18 @@ Preferred communication style: Simple, everyday language.
 - **API Documentation**: drf-spectacular (Swagger/OpenAPI)
 - **CORS**: django-cors-headers
 
-### Frontend (Preact)
-- **Framework**: Preact 10.19.6 (lightweight React alternative)
-- **Build Tool**: Vite 5.2.0
+### Frontend (React)
+- **Framework**: React 18.3.1 with TypeScript
+- **Build Tool**: Vite 5.4.21
 - **UI Components**: Shoelace (web components)
 - **State Management**: Redux Toolkit
-- **Routing**: preact-router
+- **Routing**: React Router DOM v6
 - **HTTP Client**: Axios
 - **Authentication**: JWT with jwt-decode
 
 ### Monorepo Structure
 - `backend/`: Django REST API backend (primary)
-- `frontend/`: Preact/TypeScript frontend (primary)
+- `frontend/`: React/TypeScript frontend (primary)
 - `server/`: Legacy Express.js backend (deprecated)
 - `client/`: Legacy React frontend (deprecated)
 - `shared/`: Legacy shared types (deprecated)
@@ -199,11 +199,11 @@ npm run update-api-client  # Regenerates from Django OpenAPI schema
 - Real-time streaming for AI responses
 - JWT authentication with refresh tokens
 
-#### Frontend (Preact + Shoelace)
+#### Frontend (React + Shoelace)
 - Component-based architecture
 - Web components via Shoelace
 - Redux for global state management
-- Preact Router for navigation
+- React Router DOM v6 for navigation
 - Axios for API calls
 - Type-safe API client (auto-generated)
 
@@ -235,6 +235,19 @@ npm run update-api-client  # Regenerates from Django OpenAPI schema
 - ✅ Created demo user account (username: demo, password: demo123)
 - ✅ Verified end-to-end login flow working successfully
 
+**React Migration (Nov 23, 2025):**
+- ✅ Migrated frontend from Preact 10.19.6 to React 18.3.1
+- ✅ Updated all package dependencies (react, react-dom, react-router-dom v6)
+- ✅ Replaced Preact imports with React imports across entire codebase
+- ✅ Converted preact-router to react-router-dom with BrowserRouter and Routes
+- ✅ Updated all JSX syntax: replaced `class=` with `className=`
+- ✅ Fixed import syntax errors (MutableRefObject)
+- ✅ Updated vite.config.ts to use @vitejs/plugin-react instead of @preact/preset-vite
+- ✅ Updated tsconfig.json to remove Preact-specific configurations
+- ✅ Verified successful compilation with no React errors
+- ✅ Confirmed no runtime errors in browser console
+- **Reason for migration**: Better ecosystem support, easier team scaling, comprehensive app scope
+
 ### Current Configuration
 
 **Environment Variables (Development):**
@@ -253,8 +266,9 @@ DJANGO_APP_DEBUG=True
 ### Known Issues/Notes
 1. **HMR Disabled**: Hot module reload is disabled for stability in Replit's HTTPS environment. After making code changes, manually refresh the browser to see updates.
 2. **LSP Warnings**: Python import warnings are cosmetic (path configuration issue)
-3. **Old Code**: `client/`, `server/`, `shared/` directories contain deprecated Express/React code
+3. **Old Code**: `client/`, `server/`, `shared/` directories contain deprecated Express/React code (legacy codebase)
 4. **Browser Compatibility**: Using DOMPurify instead of sanitize-html for HTML sanitization
+5. **Tech Stack**: Now using React 18 instead of Preact (migrated Nov 23, 2025)
 
 ### Application Status
 ✅ **Fully Functional** - Application is running and accessible in Replit environment
