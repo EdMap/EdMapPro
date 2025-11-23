@@ -1,4 +1,4 @@
-import { render } from 'preact'
+import { createRoot } from 'react-dom/client'
 import App from './features/app'
 import './ui/styles/index.css'
 
@@ -6,5 +6,5 @@ import { appContainer } from './features/app/context'
 import './ui/index'
 
 if (appContainer) {
-    render(<App />, appContainer)
+    createRoot(appContainer).render(<App />)
 }
