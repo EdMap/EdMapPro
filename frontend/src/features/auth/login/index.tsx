@@ -45,14 +45,9 @@ const LoginPage: FC = () => {
     const handleSubmit = useCallback(
         (e: SubmitEvent) => {
             e.preventDefault()
-            console.log('Form submitted with credentials:', credentials)
-            console.log('Form valid?', formRef.current?.checkValidity())
 
             if (formRef.current?.checkValidity()) {
-                console.log('Dispatching login action...')
                 dispatch(login(credentials))
-            } else {
-                console.log('Form validation failed')
             }
         },
         [credentials, dispatch, formRef],
