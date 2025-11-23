@@ -252,7 +252,7 @@ npm run update-api-client  # Regenerates from Django OpenAPI schema
 
 **Environment Variables (Development):**
 ```
-VITE_API_URL=https://{replit-domain}:8000
+VITE_API_URL=http://localhost:8000
 DJANGO_APP_GROQ_API_KEY={from-secrets}
 DJANGO_APP_MODE=local
 DJANGO_APP_DEBUG=True
@@ -269,6 +269,7 @@ DJANGO_APP_DEBUG=True
 3. **Old Code**: `client/`, `server/`, `shared/` directories contain deprecated Express/React code (legacy codebase)
 4. **Browser Compatibility**: Using DOMPurify instead of sanitize-html for HTML sanitization
 5. **Tech Stack**: Now using React 18 instead of Preact (migrated Nov 23, 2025)
+6. **API URL**: VITE_API_URL uses `http://localhost:8000` for local development (fixed Nov 23, 2025)
 
 ### Application Status
 ✅ **Fully Functional** - Application is running and accessible in Replit environment
