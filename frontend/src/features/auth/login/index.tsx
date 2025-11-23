@@ -83,7 +83,7 @@ const LoginPage: FC = () => {
                                         size="large"
                                         type="text"
                                         value={credentials.username}
-                                        onsl-input={handleChange}
+                                        onInput={handleChange}
                                     >
                                         <sl-icon
                                             name="person-fill"
@@ -100,7 +100,7 @@ const LoginPage: FC = () => {
                                         size="large"
                                         type="password"
                                         value={credentials.password}
-                                        onsl-input={handleChange}
+                                        onInput={handleChange}
                                     >
                                         <sl-icon
                                             name="key-fill"
