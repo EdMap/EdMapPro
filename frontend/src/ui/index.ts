@@ -24,4 +24,5 @@ import '@shoelace-style/shoelace/dist/components/radio-button/radio-button.js'
 
 import './layouts'
 
-setBasePath('/node_modules/@shoelace-style/shoelace/dist')
+// Use CDN for Shoelace assets (icons, etc.)
+setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.1/cdn/')
