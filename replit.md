@@ -44,11 +44,17 @@ Preferred communication style: Simple, everyday language.
     - **Phase Guidance System**: Interactive "What to Do Now" panel with objectives checklist and smart phase progression.
     - **Direct Messaging (DM) Feature**: 1-on-1 private conversations with individual AI teammates.
     - **Document Viewer System**: PM documentation opens in new browser tabs for focused reading. Requirements tab displays a document explorer with 10 clickable document cards (Executive Summary, Feature Requirements, Stakeholder Analysis, User Stories, Success Metrics, Roadmap Context, Competitive Analysis, Go-to-Market Strategy, Risk Assessment, Resource Planning). Clean, distraction-free viewing experience without sidebar/header.
+    - **Guided Onboarding Flow**: Multi-step wizard for project and role selection with visual progress indicator (Choose Project → Select Role → Confirm & Start). Expandable project cards show full team roster, expertise, and features. Expandable role cards display key tasks, sample scenarios, skills to practice, and estimated time.
+    - **Welcome Modal**: First-session onboarding modal appears after starting simulation, showing project overview, role-specific tips (Requirements tab for PM, Codebase for Developer/Designer), and "What to Do Now" guidance.
+    - **Status Ribbon**: Always-visible gradient banner at top of active sessions showing current phase badge, objectives progress (X/Y completed), and context-aware recommended next steps based on role and progress.
 
 ### UI/UX Decisions
 - Fixed sidebar navigation with responsive header.
 - Dedicated interfaces for each simulator type.
 - Interactive chat interfaces with message persistence.
+- Guided wizard flow for intuitive project and role selection.
+- Context-aware onboarding with role-specific guidance.
+- Always-visible status indicators to reduce confusion about next steps.
 
 ## External Dependencies
 
