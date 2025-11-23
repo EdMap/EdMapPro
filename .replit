@@ -15,6 +15,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 5175
+externalPort = 6800
+
+[[ports]]
 localPort = 33531
 externalPort = 5000
 
@@ -66,3 +70,12 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.development]
+DJANGO_APP_MODE = "local"
+DJANGO_APP_DEBUG = "True"
+DJANGO_APP_ALLOWED_HOSTS = "localhost,127.0.0.1,.replit.dev"
+DJANGO_APP_CORS_ORIGINS = "http://localhost:5175,https://*.replit.dev"
+DJANGO_APP_GROQ_API_KEY = ""
