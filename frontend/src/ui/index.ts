@@ -32,4 +32,4 @@ import '@shoelace-style/shoelace/dist/components/tooltip/tooltip.js'
 import './layouts'
 
 // Use CDN for Shoelace assets (icons, etc.)
-setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.1/cdn/')
+setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.1/dist/')

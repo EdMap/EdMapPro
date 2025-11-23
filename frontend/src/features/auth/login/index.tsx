@@ -75,6 +75,7 @@ const LoginPage: FC = () => {
                             <stack-l space="var(--s1)">
                                 <stack-l space="var(--s-2)">
                                     <InputField
+                                        id="username"
                                         label="Username"
                                         name="username"
                                         placeholder="Enter your username"
@@ -91,6 +92,7 @@ const LoginPage: FC = () => {
                                     </InputField>
 
                                     <InputField
+                                        id="password"
                                         label="Password"
                                         name="password"
                                         placeholder="Enter your password"
