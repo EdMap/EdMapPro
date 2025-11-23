@@ -215,6 +215,8 @@ npm run update-api-client  # Regenerates from Django OpenAPI schema
 - **Django Admin**: Database management at `/admin/`
 
 ### Recent Changes (November 2025)
+
+**Initial Setup:**
 - Migrated from Express.js/React to Django/Preact architecture
 - Cloned forked repositories from GitHub
 - Installed all dependencies (Python + Node.js)
@@ -223,19 +225,43 @@ npm run update-api-client  # Regenerates from Django OpenAPI schema
 - Configured environment variables for local development
 - Created startup script for running both servers
 
-### Known Issues/Notes
-1. **LSP Warnings**: Python import warnings are cosmetic (path configuration issue)
-2. **Old Code**: `client/`, `server/`, `shared/` directories contain deprecated Express/React code
-3. **GROQ_API_KEY**: Connected from Replit secrets, ensure it's set
-4. **Model Configuration**: May need to specify AI models in environment variables
+**Replit Environment Configuration (Nov 23, 2025):**
+- ✅ Fixed Vite server to bind to 0.0.0.0 for external access
+- ✅ Configured allowedHosts for Replit domains (.replit.dev, .repl.co)
+- ✅ Disabled HMR (hot module reload) for HTTPS stability - manual browser refresh required after code changes
+- ✅ Replaced sanitize-html with DOMPurify for browser compatibility
+- ✅ Fixed routing: Login at root path `/`, Dashboard at `/dashboard`
+- ✅ Configured VITE_API_URL to use Replit domain for frontend-backend communication
+- ✅ Created demo user account (username: demo, password: demo123)
+- ✅ Verified end-to-end login flow working successfully
 
-### Next Development Steps
-1. Set AI model environment variables (INTERVIEW_SIM_MODEL, OFFER_SIM_MODEL)
-2. Create Django superuser for admin panel access
-3. Test API endpoints via Swagger documentation
-4. Configure frontend to connect to Django backend
-5. Test full end-to-end flow: frontend → backend → AI agents
-6. Consider removing old Express/React code to reduce confusion
+### Current Configuration
+
+**Environment Variables (Development):**
+```
+VITE_API_URL=https://{replit-domain}:8000
+DJANGO_APP_GROQ_API_KEY={from-secrets}
+DJANGO_APP_MODE=local
+DJANGO_APP_DEBUG=True
+```
+
+**Demo User Account:**
+- Username: `demo`
+- Password: `demo123`
+- Email: `demo@edmap.com`
+
+### Known Issues/Notes
+1. **HMR Disabled**: Hot module reload is disabled for stability in Replit's HTTPS environment. After making code changes, manually refresh the browser to see updates.
+2. **LSP Warnings**: Python import warnings are cosmetic (path configuration issue)
+3. **Old Code**: `client/`, `server/`, `shared/` directories contain deprecated Express/React code
+4. **Browser Compatibility**: Using DOMPurify instead of sanitize-html for HTML sanitization
+
+### Application Status
+✅ **Fully Functional** - Application is running and accessible in Replit environment
+- Backend API: Port 8000
+- Frontend: Port 5175
+- Login and authentication working
+- Ready for simulator testing
 
 ## Production Deployment
 

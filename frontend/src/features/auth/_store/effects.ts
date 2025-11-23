@@ -28,15 +28,11 @@ export const login = createAsyncThunk(
     'auth/login',
     async (userData: UserLogin, { rejectWithValue }) => {
         try {
-            console.log('Login thunk called with:', userData)
             const api = Api()
-            console.log('Making login request to API...')
 
             const response = await api.accounts.login(userData)
-            console.log('Login response:', response)
             return response.data
         } catch (error) {
-            console.error('Login error:', error)
             const errorDto = await toErrorDto(error as any)
             return rejectWithValue(errorDto)
         }
