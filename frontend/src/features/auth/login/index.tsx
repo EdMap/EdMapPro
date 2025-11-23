@@ -112,8 +112,8 @@ const LoginPage: FC = () => {
                                         type="submit"
                                         variant="primary"
                                         size="large"
-                                        loading={isPending}
-                                        disabled={isPending}
+                                        loading={isPending || undefined}
+                                        disabled={isPending || undefined}
                                     >
                                         Login
                                     </sl-button>
