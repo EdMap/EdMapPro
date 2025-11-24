@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "postgresql-16", "python-3.11"]
+modules = ["nodejs-20", "web", "postgresql-16"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
@@ -15,14 +15,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 5175
-externalPort = 6800
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
-[[ports]]
 localPort = 33531
 externalPort = 5000
 
@@ -33,10 +25,6 @@ externalPort = 4200
 [[ports]]
 localPort = 36927
 externalPort = 3003
-
-[[ports]]
-localPort = 41367
-externalPort = 6000
 
 [[ports]]
 localPort = 41897
@@ -68,14 +56,5 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "./start.sh"
-
-[userenv]
-
-[userenv.development]
-DJANGO_APP_MODE = "local"
-DJANGO_APP_DEBUG = "True"
-DJANGO_APP_ALLOWED_HOSTS = "localhost,127.0.0.1,.replit.dev"
-DJANGO_APP_CORS_ORIGINS = "http://localhost:5175,https://*.replit.dev"
-DJANGO_APP_GROQ_API_KEY = ""
-VITE_API_URL = "https://7e38bf78-ed44-4b2f-94a3-4d0035a698db-00-1755jhqr6c371.worf.replit.dev:8000"
+args = "npm run dev"
+waitForPort = 5000

@@ -1,9 +1,0 @@
-.wrapper {
-    background-color: var(--sl-color-neutral-50);
-
-    & > * {
-        max-width: 90vw;
-        width: 100%;
-        margin: 0 auto;
-    }
-}
