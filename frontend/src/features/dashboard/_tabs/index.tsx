@@ -1,13 +1,9 @@
-import {
-    useCallback,
-    useContext,
-    useLayoutEffect,
-    useState,
-} from 'react'
+import { useCallback, useLayoutEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { isNullish } from '../../../utils'
 import { DEVICE_SIZE } from '../../../utils/device-sizes'
 import { useResizeObserver } from '../../../utils/use-resize-observer'
+import { useContext } from 'react'
 import { AppContext } from '../../app/context'
 import navigation from '../../app/navigation'
 import { DashboardTabs } from '../models'
@@ -42,10 +38,10 @@ const TabGroup = () => {
         }
     }, [activeTab])
 
-    const handleTabChange = useCallback((e: CustomEvent) => {
+    const handleTabChange = useCallback((tabName: string) => {
         navigation.goToSearchParams(
             {
-                tab: e.detail.name,
+                tab: tabName,
             },
             new URL(globalThis.location.href),
             { clearSearch: true },
@@ -53,15 +49,10 @@ const TabGroup = () => {
     }, [])
 
     return (
-        <sl-tab-group
-            placement={isDesktop ? 'start' : 'top'}
-            activation="auto"
-            className={styles.wrapper}
-            onsl-tab-show={handleTabChange}
-        >
-            <TabHeaders />
-            <TabPanels />
-        </sl-tab-group>
+        <div className={styles.wrapper}>
+            <TabHeaders activeTab={activeTab} onTabChange={handleTabChange} />
+            <TabPanels activeTab={activeTab} />
+        </div>
     )
 }
 

@@ -24,7 +24,7 @@ export const DashboardTabsContent: {
         content: <NegotiationSessions />,
     },
     [DashboardTabs.WORKPLACE_SIMULATION]: {
-        content: <stack-l>no-content</stack-l>,
+        content: <div>No content</div>,
         disabled: true,
     },
 }

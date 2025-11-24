@@ -1,4 +1,3 @@
-import { useSearchParams } from 'react-router-dom'
 import { keyify } from '../../../utils/string'
 import {
     DashboardTabs,
@@ -9,13 +8,11 @@ import {
     DashboardTabsContent,
     DashboardTabsContentDefault,
 } from './to-dashboard-content'
+import styles from './index.module.css'
 
-const TabHeaders = () => {
-    const [searchParams] = useSearchParams()
-    const activeTab = searchParams.get('tab')
-
+const TabHeaders = ({ activeTab, onTabChange }: { activeTab: string | null; onTabChange: (tab: string) => void }) => {
     return (
-        <>
+        <div className={styles.tabHeaders}>
             {(Object.keys(DashboardTabs) as DashboardTabsString[]).map(
                 (key) => {
                     const { disabled } =
@@ -23,30 +20,21 @@ const TabHeaders = () => {
                         DashboardTabsContentDefault
 
                     return (
-                        <sl-tab
+                        <button
                             key={keyify(key)}
-                            panel={DashboardTabs[key]}
-                            slot="nav"
+                            className={`${styles.tabHeader} ${activeTab === DashboardTabs[key] ? styles.active : ''} ${disabled ? styles.disabled : ''}`}
+                            onClick={() => onTabChange(DashboardTabs[key])}
                             disabled={disabled}
-                            active={activeTab === DashboardTabs[key]}
                         >
-                            <sl-menu-item disabled={disabled}>
-                                <sl-icon
-                                    name={
-                                        toDashboardTabsIcons[DashboardTabs[key]]
-                                    }
-                                    slot="prefix"
-                                />
-                                {(key.includes('_')
-                                    ? key.replace('_', ' ')
-                                    : key
-                                )?.toLowerCase()}
-                            </sl-menu-item>
-                        </sl-tab>
+                            {(key.includes('_')
+                                ? key.replace('_', ' ')
+                                : key
+                            )?.toLowerCase()}
+                        </button>
                     )
                 },
             )}
-        </>
+        </div>
     )
 }
 

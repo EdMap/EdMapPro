@@ -1,17 +1,14 @@
-import { useSearchParams } from 'react-router-dom'
 import { keyify } from '../../../utils/string'
 import { DashboardTabs, DashboardTabsString } from '../models'
 import {
     DashboardTabsContent,
     DashboardTabsContentDefault,
 } from './to-dashboard-content'
+import styles from './index.module.css'
 
-const TabPanels = () => {
-    const [searchParams] = useSearchParams()
-    const activeTab = searchParams.get('tab')
-
+const TabPanels = ({ activeTab }: { activeTab: string | null }) => {
     return (
-        <>
+        <div className={styles.tabPanels}>
             {(Object.keys(DashboardTabs) as DashboardTabsString[]).map(
                 (tab) => {
                     const { content } =
@@ -19,17 +16,17 @@ const TabPanels = () => {
                         DashboardTabsContentDefault
 
                     return (
-                        <sl-tab-panel
-                            name={DashboardTabs[tab]}
+                        <div
                             key={keyify(DashboardTabs[tab])}
-                            active={activeTab === DashboardTabs[tab]}
+                            className={styles.tabPanel}
+                            style={{ display: activeTab === DashboardTabs[tab] ? 'block' : 'none' }}
                         >
-                            {activeTab === DashboardTabs[tab] && content}
-                        </sl-tab-panel>
+                            {content}
+                        </div>
                     )
                 },
             )}
-        </>
+        </div>
     )
 }
 
