@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { isNone } from '../../../../utils/is-none'
 import { getInitials } from '../../../../utils/string'
@@ -9,6 +9,7 @@ import styles from './index.module.css'
 const User = () => {
     const { user } = useAuth()
     const dispatch = useDispatch()
+    const [isOpen, setIsOpen] = useState(false)
 
     const initials = useMemo(() => {
         const ins = !isNone(user?.get_full_name)
@@ -25,19 +26,31 @@ const User = () => {
 
     const handleLogout = useCallback(() => {
         dispatch(logout())
+        setIsOpen(false)
     }, [dispatch])
 
     return (
-        <sl-dropdown placement="bottom-end" className={styles.user}>
-            <sl-button slot="trigger" caret size="large">
-                <sl-avatar slot="prefix" initials={initials} />
-                {name}
-            </sl-button>
+        <div className={styles.user}>
+            <button
+                className={styles.trigger}
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <div className={styles.avatar}>{initials}</div>
+                <span>{name}</span>
+                <span className={styles.caret}>▼</span>
+            </button>
 
-            <sl-menu>
-                <sl-menu-item onClick={handleLogout}>Logout</sl-menu-item>
-            </sl-menu>
-        </sl-dropdown>
+            {isOpen && (
+                <div className={styles.menu}>
+                    <button
+                        className={styles.menuItem}
+                        onClick={handleLogout}
+                    >
+                        Logout
+                    </button>
+                </div>
+            )}
+        </div>
     )
 }
 
