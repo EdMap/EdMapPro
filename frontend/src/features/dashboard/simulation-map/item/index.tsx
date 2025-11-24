@@ -9,20 +9,25 @@ const SimulationItem: FC<{
     disabled: boolean
 }> = ({ title, description, onClick, disabled }) => {
     const handleClick = useCallback(() => {
-        onClick()
-    }, [onClick])
+        if (!disabled) {
+            onClick()
+        }
+    }, [onClick, disabled])
 
     return (
-        <stack-l space="var(--s-2)" className={styles.item} disabled={disabled}>
+        <div className={`${styles.item} ${disabled ? styles.disabled : ''}`}>
             <h4 className={styles.title}>{title}</h4>
-            <p>{description}</p>
-            <cluster-l justify="flex-start">
-                <sl-button outline onClick={handleClick} disabled={disabled}>
-                    Start simulation
-                    <sl-icon slot="suffix" name="box-arrow-up-right"></sl-icon>
-                </sl-button>
-            </cluster-l>
-        </stack-l>
+            <p className={styles.description}>{description}</p>
+            <div className={styles.buttonContainer}>
+                <button 
+                    className={styles.button} 
+                    onClick={handleClick} 
+                    disabled={disabled}
+                >
+                    Start simulation →
+                </button>
+            </div>
+        </div>
     )
 }
 

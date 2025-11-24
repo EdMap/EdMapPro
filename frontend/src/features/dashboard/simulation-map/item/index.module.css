@@ -1,13 +1,64 @@
 .item {
-    width: calc(var(--measure) / var(--r2));
-    text-align: left;
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s, opacity 0.2s;
+    min-width: 250px;
+    flex: 1;
+    max-width: 350px;
+}
+
+.item.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.item:hover:not(.disabled) {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
     text-transform: capitalize;
-    width: 90%;
+    text-align: left;
 }
 
-.title ~ p {
-    width: 80%;
+.description {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+    margin: 0 0 16px 0;
+    text-align: left;
+}
+
+.buttonContainer {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.button {
+    padding: 10px 16px;
+    background-color: transparent;
+    color: #2196F3;
+    border: 1px solid #2196F3;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.button:hover:not(:disabled) {
+    background-color: #2196F3;
+    color: white;
+}
+
+.button:disabled {
+    border-color: #ccc;
+    color: #ccc;
+    cursor: not-allowed;
 }
