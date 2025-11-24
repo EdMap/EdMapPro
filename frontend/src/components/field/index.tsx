@@ -1,25 +1,35 @@
-import { FC, ReactNode } from 'react'
-import { SlInputProps } from '../../ui/shoelace/shoelace'
+import { FC, InputHTMLAttributes, ReactNode } from 'react'
 import styles from './index.module.css'
 
-interface InputFieldProps extends SlInputProps {
+interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
     children?: ReactNode
+    label?: string
 }
 
 const InputField: FC<InputFieldProps> = ({
     children,
-    class: className,
+    label,
+    className,
+    id,
     ...props
 }) => {
-    const inputCls = `${styles.field} ${className}`
-
-    // Use 'any' to bypass TypeScript restrictions on web component event handlers
-    const webComponentProps = props as any
+    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
+    const inputCls = `${styles.field} ${className || ''}`
 
     return (
-        <sl-input {...webComponentProps} className={inputCls}>
+        <div className={styles.wrapper}>
+            {label && (
+                <label htmlFor={inputId} className={styles.label}>
+                    {label}
+                </label>
+            )}
+            <input
+                id={inputId}
+                {...props}
+                className={inputCls}
+            />
             {children}
-        </sl-input>
+        </div>
     )
 }
 

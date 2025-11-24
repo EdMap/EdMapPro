@@ -1,6 +1,36 @@
-.field sl-button[slot='prefix'] {
-    margin-inline-start: var(--sl-spacing-small);
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
-.field sl-button[slot='suffix'] {
-    margin-inline-end: var(--sl-spacing-x-small);
+
+.label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.field {
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.field::placeholder {
+    color: #999;
+}
+
+.field:disabled {
+    background-color: #f5f5f5;
+    color: #ccc;
+    cursor: not-allowed;
 }
