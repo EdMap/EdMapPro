@@ -1,63 +1,46 @@
-.wrapper::part(body) {
-    /* display: flex;
-    flex-wrap: nowrap;
+.wrapper {
+    display: flex;
+    flex-direction: column;
     width: 100%;
-    gap: var(--s1);
-*/
-    overflow: visible;
 }
 
-.wrapper::part(tabs) {
-    background-color: var(--sl-panel-background-color);
-    border-radius: var(--sl-border-radius-small);
-    border: 1px solid var(--sl-color-neutral-300);
-    gap: var(--sl-spacing-small);
-    height: max-content;
-    padding: var(--sl-spacing-small);
+.tabHeaders {
+    display: flex;
+    border-bottom: 1px solid #e0e0e0;
+    gap: 0;
 }
 
-.wrapper::part(active-tab-indicator) {
-    display: none;
-}
-
-.wrapper sl-tab {
-    border-radius: var(--sl-border-radius-small);
-    width: 100%;
-
-    &[active] {
-        background-color: var(--sl-color-primary-500);
-
-        sl-menu-item {
-            color: var(--sl-color-neutral-100);
-        }
-    }
-
-    &::part(base) {
-        padding: 0;
-        width: 100%;
-    }
-}
-
-.wrapper sl-menu-item {
-    border-radius: var(--sl-border-radius-small);
-    width: 100%;
+.tabHeader {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #999;
+    transition: color 0.2s, border-bottom-color 0.2s;
     text-transform: capitalize;
+}
 
-    sl-icon,
-    &::part(base) {
-        transition: color var(--sl-transition-faster);
-        color: inherit;
-    }
+.tabHeader:hover:not(.disabled) {
+    color: #333;
+}
 
-    sl-icon {
-        color: currentColor;
-    }
+.tabHeader.active {
+    color: #2196F3;
+    border-bottom-color: #2196F3;
+}
 
-    &:hover:not([disabled]) {
-        &::part(base) {
-            border-radius: inherit;
-            background-color: var(--sl-color-primary-500);
-            color: var(--sl-color-neutral-100);
-        }
-    }
+.tabHeader.disabled {
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.tabPanels {
+    padding: 20px 0;
+}
+
+.tabPanel {
+    width: 100%;
 }

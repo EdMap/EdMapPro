@@ -46,43 +46,39 @@ const NegotiationSessions = () => {
     )
 
     return (
-        <cover-l className={styles.wrapper}>
+        <div className={styles.wrapper}>
             {isPending ? (
-                <center-l andText>
-                    <sl-spinner></sl-spinner>
-                </center-l>
+                <div className={styles.spinner}>
+                    <p>Loading...</p>
+                </div>
             ) : isError ? (
-                <center-l>
-                    <stack-l space="var(--s-2)">
-                        <h2>Something went wrong</h2>
-                        <p>{error?.message}</p>
-                    </stack-l>
-                </center-l>
+                <div className={styles.error}>
+                    <h2>Something went wrong</h2>
+                    <p>{error?.message}</p>
+                </div>
             ) : (
                 <>
-                    <stack-l space="var(--s0)">
-                        <cluster-l justify="space-between">
-                            <h3 className={styles.title}>{title}</h3>
-                            <sl-badge pill variant="primary">
-                                {count}
-                            </sl-badge>
-                        </cluster-l>
-                        <stack-l space="var(--s-1)">
-                            {data?.map((d) => (
-                                <HistoryItem
-                                    key={keyify(d.session_id)}
-                                    data={d}
-                                    prefix="Offer Negotiation"
-                                    onNavigation={
-                                        d.session_status ===
-                                        SessionStatusEnum.Done
-                                            ? navigation.goToNegotiationFeedbackPage
-                                            : navigation.goToNegotiationDetailsPage
-                                    }
-                                />
-                            ))}
-                        </stack-l>
-                    </stack-l>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h3 className={styles.title}>{title}</h3>
+                        <div style={{ backgroundColor: '#2196F3', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
+                            {count}
+                        </div>
+                    </div>
+                    <div className={styles.list}>
+                        {data?.map((d) => (
+                            <HistoryItem
+                                key={keyify(d.session_id)}
+                                data={d}
+                                prefix="Offer Negotiation"
+                                onNavigation={
+                                    d.session_status ===
+                                    SessionStatusEnum.Done
+                                        ? navigation.goToNegotiationFeedbackPage
+                                        : navigation.goToNegotiationDetailsPage
+                                }
+                            />
+                        ))}
+                    </div>
                     <Pagination
                         count={count}
                         pagination={pagination}
@@ -90,7 +86,7 @@ const NegotiationSessions = () => {
                     />
                 </>
             )}
-        </cover-l>
+        </div>
     )
 }
 

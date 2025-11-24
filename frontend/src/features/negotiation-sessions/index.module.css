@@ -1,8 +1,42 @@
-cover-l.wrapper {
+.wrapper {
     position: relative;
-    padding-top: 0;
+    padding: 20px;
 }
 
 .title {
     text-transform: capitalize;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 16px 0;
+}
+
+.spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+}
+
+.error {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.error h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 8px 0;
+}
+
+.error p {
+    color: #666;
+    margin: 0;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }

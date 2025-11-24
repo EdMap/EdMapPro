@@ -40,6 +40,4 @@
 .radioItem span {
     font-size: 14px;
     color: #333;
-}wrapper sl-radio-button::part(label) {
-    text-transform: capitalize;
 }
