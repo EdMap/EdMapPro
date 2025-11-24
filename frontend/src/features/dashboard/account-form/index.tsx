@@ -20,7 +20,7 @@ const AccountForm = () => {
 
     const [formData, setFormData] = useState<UserProfileUpdateDto | null>()
 
-    const handleChange = useCallback((e: CustomEvent) => {
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const target = e.target as HTMLInputElement
 
         setFormData((prevState) => {
@@ -32,7 +32,7 @@ const AccountForm = () => {
     }, [])
 
     const handleSubmit = useCallback(
-        (e: SubmitEvent) => {
+        (e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault()
 
             const target = e.target as HTMLFormElement
@@ -45,47 +45,49 @@ const AccountForm = () => {
     )
 
     return (
-        <sl-dialog open label="Setup your profile" className={styles.dialog}>
-            <form ref={formRef} onSubmit={handleSubmit}>
-                <stack-l space="var(--s1)">
-                    <cluster-l space="var(--s-1)">
-                        <InputField
-                            required
-                            label="First Name"
-                            name={FORM_NAMES.FIRST_NAME}
-                            placeholder="Enter your first name"
-                            onInput={handleChange}
-                            value={formData?.first_name}
+        <div className={styles.modalOverlay}>
+            <div className={styles.modalContent}>
+                <div className={styles.modalHeader}>
+                    <h2 className={styles.modalTitle}>Setup your profile</h2>
+                </div>
+                
+                <form ref={formRef} onSubmit={handleSubmit} className={styles.form}>
+                    <div className={styles.formContent}>
+                        <div className={styles.formRow}>
+                            <InputField
+                                required
+                                label="First Name"
+                                name={FORM_NAMES.FIRST_NAME}
+                                placeholder="Enter your first name"
+                                onChange={handleChange}
+                                value={formData?.first_name || ''}
+                            />
+                            <InputField
+                                required
+                                label="Last Name"
+                                name={FORM_NAMES.LAST_NAME}
+                                placeholder="Enter your last name"
+                                onChange={handleChange}
+                                value={formData?.last_name || ''}
+                            />
+                        </div>
+                        <Gender formData={formData} handleChange={handleChange} />
+                        <Career formData={formData} handleChange={handleChange} />
+                        <Seniority
+                            formData={formData}
+                            handleChange={handleChange}
                         />
-                        <InputField
-                            required
-                            label="Last Name"
-                            name={FORM_NAMES.LAST_NAME}
-                            placeholder="Enter your last name"
-                            onInput={handleChange}
-                            value={formData?.last_name}
-                        />
-                    </cluster-l>
-                    <Gender formData={formData} handleChange={handleChange} />
-                    <Career formData={formData} handleChange={handleChange} />
-                    <Seniority
-                        formData={formData}
-                        handleChange={handleChange}
-                    />
-                </stack-l>
+                    </div>
 
-                <cluster-l
-                    justify={error ? 'space-between' : 'flex-end'}
-                    slot="footer"
-                >
-                    {error && <HelpText variant="danger" text={error} />}
-
-                    <sl-button variant="primary" type="submit">
-                        Update
-                    </sl-button>
-                </cluster-l>
-            </form>
-        </sl-dialog>
+                    <div className={styles.modalFooter}>
+                        {error && <HelpText variant="danger" text={error} />}
+                        <button type="submit" className={styles.submitBtn}>
+                            Update
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     )
 }
 
