@@ -1,8 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-import IntroDrawer, {
-    IntroDrawerHeaderProps,
-} from '../../components/intro-drawer'
+import { useSearchParams } from 'react-router-dom'
 import SimulationHeader from '../../components/simulation-header'
 import { isNullish } from '../../utils'
 import { useOnce } from '../../utils/use-once'
@@ -19,18 +17,11 @@ import {
 } from './_store/reducer'
 import useOfferNegotiation from './_store/use-offer-negotiation'
 import NegotiationChat from './chat'
-import NegotiationDrawerFooter from './drawer-footer'
 import InitialOffer from './offer'
 
-const INTRO_DRAWER_CONTENT: IntroDrawerHeaderProps = {
-    title: 'Offer Negotiation',
-    description: 'Practice negotiating a job offer.',
-    icon: SIMULATION_ICONS.OFFER_NEGOTIATION,
-}
-
 const OfferNegotiation = () => {
-    const [{ matches }] = useRouter()
-    const routeSessionId = matches?.sessionId || null
+    const [searchParams] = useSearchParams()
+    const routeSessionId = searchParams.get('sessionId')
     const { sessionId, showNegotiation } = useOfferNegotiation()
     const dispatch = useDispatch<RootDispatch>()
 
@@ -57,8 +48,8 @@ const OfferNegotiation = () => {
 }
 
 const OfferNegotiationFeature = () => {
-    const [{ matches }] = useRouter()
-    const routeSessionId = matches?.sessionId || null
+    const [searchParams] = useSearchParams()
+    const routeSessionId = searchParams.get('sessionId')
     const dispatch = useDispatch<RootDispatch>()
 
     const handleExit = useCallback(() => {
@@ -71,21 +62,37 @@ const OfferNegotiationFeature = () => {
     }, [dispatch])
 
     return (
-        <cover-l space="0">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <SimulationHeader
                 icon={SIMULATION_ICONS.OFFER_NEGOTIATION}
                 title="Offer Negotiation"
                 onExit={handleExit}
             />
 
-            <IntroDrawer
-                open={isNullish(routeSessionId)}
-                footer={<NegotiationDrawerFooter onStart={handleStart} />}
-                {...INTRO_DRAWER_CONTENT}
-            />
+            {isNullish(routeSessionId) && (
+                <div style={{ padding: '40px', textAlign: 'center' }}>
+                    <h2>Offer Negotiation</h2>
+                    <p>Practice negotiating a job offer.</p>
+                    <button 
+                        onClick={handleStart}
+                        style={{
+                            padding: '12px 24px',
+                            backgroundColor: '#2196F3',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Start Offer Negotiation
+                    </button>
+                </div>
+            )}
 
             <OfferNegotiation />
-        </cover-l>
+        </div>
     )
 }
 

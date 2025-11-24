@@ -1,10 +1,6 @@
-import { SlDialog } from '@shoelace-style/shoelace'
-import { FC } from 'react'
-import { useCallback, useEffect, useRef } from 'react'
+import { FC, useCallback, useEffect, useRef } from 'react'
 import { useDispatch } from 'react-redux'
-import IntroDrawer, {
-    IntroDrawerHeaderProps,
-} from '../../components/intro-drawer'
+import { useSearchParams } from 'react-router-dom'
 import SimulationHeader from '../../components/simulation-header'
 import { isNullish } from '../../utils'
 import { useOnce } from '../../utils/use-once'
@@ -14,19 +10,11 @@ import { SIMULATION_ICONS } from '../dashboard/models'
 import { getHistory, startInterviewSession } from './_store/effects'
 import { resetSimulation, setSessionId } from './_store/reducer'
 import useInterviewSimulation from './_store/use-interview-details'
-import InterviewDrawerFooter from './drawer-footer'
 import InterviewChat from './interview-chat'
-import SimulationConfigurationDialog from './simulation-configuration-dialog'
 
-const INTRO_DRAWER_CONTENT: IntroDrawerHeaderProps = {
-    title: 'Interview Practice',
-    description: 'Practice an interview and review your answers.',
-    icon: SIMULATION_ICONS.INTERVIEW_PRACTICE,
-}
-
-export const InterviewPractice: FC = () => {
-    const [{ matches }] = useRouter()
-    const routeSessionId = matches?.sessionId || null
+const InterviewPractice: FC = () => {
+    const [searchParams] = useSearchParams()
+    const routeSessionId = searchParams.get('sessionId')
     const { sessionId } = useInterviewSimulation()
     const dispatch = useDispatch<RootDispatch>()
 
@@ -53,11 +41,9 @@ export const InterviewPractice: FC = () => {
 }
 
 const InterviewPracticeFeature = () => {
-    const [{ matches }] = useRouter()
-    const routeSessionId = matches?.sessionId || null
+    const [searchParams] = useSearchParams()
+    const routeSessionId = searchParams.get('sessionId')
     const dispatch = useDispatch<RootDispatch>()
-
-    const dialogRef = useRef<SlDialog | null>(null)
 
     const handleExit = useCallback(() => {
         dispatch(resetSimulation())
@@ -68,31 +54,38 @@ const InterviewPracticeFeature = () => {
         dispatch(startInterviewSession())
     }, [dispatch])
 
-    const handleConfigure = useCallback(() => {
-        dialogRef.current?.show()
-    }, [])
-
     return (
-        <cover-l space="0">
-            <SimulationConfigurationDialog dialogRef={dialogRef} />
-
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <SimulationHeader
                 icon={SIMULATION_ICONS.INTERVIEW_PRACTICE}
                 title="Interview Practice"
                 onExit={handleExit}
             />
-            <IntroDrawer
-                open={isNullish(routeSessionId)}
-                {...INTRO_DRAWER_CONTENT}
-                footer={
-                    <InterviewDrawerFooter
-                        onStart={handleStart}
-                        onConfigureSimulation={handleConfigure}
-                    />
-                }
-            />
-            <InterviewPractice />
-        </cover-l>
+            <div style={{ flex: 1, overflow: 'auto' }}>
+                {isNullish(routeSessionId) && (
+                    <div style={{ padding: '40px', textAlign: 'center' }}>
+                        <h2>Interview Practice</h2>
+                        <p>Practice an interview and review your answers.</p>
+                        <button 
+                            onClick={handleStart}
+                            style={{
+                                padding: '12px 24px',
+                                backgroundColor: '#2196F3',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Start Interview Practice
+                        </button>
+                    </div>
+                )}
+                <InterviewPractice />
+            </div>
+        </div>
     )
 }
 
