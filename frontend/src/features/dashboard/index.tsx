@@ -3,19 +3,15 @@ import useAuth from '../auth/use-auth'
 import { getInitials } from '../../utils/string'
 import styles from './index.module.css'
 import './dashboard.css'
+import Header from './header'
+import Greeter from './greeter'
+import TabGroup from './_tabs'
+import AccountForm from './account-form'
+import { isNone } from '../../utils/is-none'
 
 const Dashboard: FC = () => {
     const { user } = useAuth()
-
-    const initials = useMemo(() => {
-        const name = user?.first_name || user?.username || ''
-        return getInitials(name)
-    }, [user])
-
-    const firstName = useMemo(
-        () => user?.first_name || user?.username || 'User',
-        [user]
-    )
+    const isNewUser = isNone(user?.get_full_name)
 
     return (
         <div className={styles.dashboard}>
@@ -47,77 +43,17 @@ const Dashboard: FC = () => {
             </aside>
 
             <main className={styles.main}>
-                <header className={styles.topHeader}>
-                    <h1 className={styles.pageTitle}>Dashboard</h1>
-                    <div className={styles.userSection}>
-                        <button className={styles.notificationBtn}>🔔</button>
-                        <div className={styles.userInfo}>
-                            <div className={styles.avatar}>{initials}</div>
-                            <span className={styles.username}>{firstName}</span>
-                            <button className={styles.dropdown}>▼</button>
+                {isNewUser ? (
+                    <AccountForm />
+                ) : (
+                    <>
+                        <Header />
+                        <div className={styles.content}>
+                            <Greeter />
+                            <TabGroup />
                         </div>
-                    </div>
-                </header>
-
-                <div className={styles.content}>
-                    <div className={styles.welcomeCard}>
-                        <div className={styles.welcomeContent}>
-                            <div className={styles.welcomeAvatar}>{initials}</div>
-                            <div className={styles.welcomeText}>
-                                <h2 className={styles.welcomeTitle}>Welcome, {firstName}</h2>
-                                <p className={styles.welcomeMessage}>
-                                    Start your journey by going through the whole process from prepping for the interview to negotiating your offer.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={styles.cardsGrid}>
-                        <div className={styles.featureCard}>
-                            <div className={styles.cardIcon} style={{ backgroundColor: '#E3F2FD', color: '#2196F3' }}>💬</div>
-                            <h3 className={styles.cardTitle}>Interview Practice</h3>
-                            <p className={styles.cardDescription}>Learn to analyze company and job info before the interview</p>
-                            <button className={styles.startBtn}>Start simulation →</button>
-                        </div>
-
-                        <div className={styles.featureCard}>
-                            <div className={styles.cardIcon} style={{ backgroundColor: '#F3E5F5', color: '#9C27B0' }}>👥</div>
-                            <h3 className={styles.cardTitle}>Workplace Simulation</h3>
-                            <p className={styles.cardDescription}>Learn to analyze company and job info before the interview</p>
-                            <button className={styles.startBtn}>Start simulation →</button>
-                        </div>
-
-                        <div className={styles.featureCard}>
-                            <div className={styles.cardIcon} style={{ backgroundColor: '#E8F5E9', color: '#4CAF50' }}>🛡️</div>
-                            <h3 className={styles.cardTitle}>Offer Negotiation</h3>
-                            <p className={styles.cardDescription}>Learn to analyze company and job info before the interview</p>
-                            <button className={styles.startBtn}>Start simulation →</button>
-                        </div>
-                    </div>
-
-                    <div className={styles.progressSection}>
-                        <h3 className={styles.progressTitle}>Your Progress</h3>
-                        <div className={styles.progressCards}>
-                            <div className={styles.progressCard}>
-                                <div className={styles.progressIcon} style={{ backgroundColor: '#E3F2FD', color: '#2196F3' }}>✓</div>
-                                <div className={styles.progressLabel}>Completed Sessions</div>
-                                <div className={styles.progressValue}>0</div>
-                            </div>
-
-                            <div className={styles.progressCard}>
-                                <div className={styles.progressIcon} style={{ backgroundColor: '#E8F5E9', color: '#4CAF50' }}>⭐</div>
-                                <div className={styles.progressLabel}>Average Score</div>
-                                <div className={styles.progressValue}>0</div>
-                            </div>
-
-                            <div className={styles.progressCard}>
-                                <div className={styles.progressIcon} style={{ backgroundColor: '#FCE4EC', color: '#E91E63' }}>🕐</div>
-                                <div className={styles.progressLabel}>Time Practiced</div>
-                                <div className={styles.progressValue}>0h</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    </>
+                )}
             </main>
         </div>
     )
