@@ -548,9 +548,15 @@ export class QuestionGeneratorChain {
     const config = context.config;
     const questionNum = context.questionIndex + 1;
     
+    // Debug logging
+    console.log("=== HR Question Generation ===");
+    console.log("CV provided:", config.candidateCv ? `${config.candidateCv.substring(0, 500)}...` : "NO CV");
+    
     const cvHighlights = config.candidateCv 
       ? extractCvHighlights(config.candidateCv)
       : "No CV provided";
+    
+    console.log("CV Highlights:", cvHighlights);
     
     const currentGoal = this.getHrQuestionGoal(questionNum);
     
