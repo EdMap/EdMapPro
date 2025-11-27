@@ -14,18 +14,19 @@ import {
   Clock,
   Play
 } from "lucide-react";
+import type { User, UserProgress, SimulationSession } from "@shared/schema";
 
 export default function Dashboard() {
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<User>({
     queryKey: ["/api/user"],
   });
 
-  const { data: progress = [] } = useQuery({
+  const { data: progress = [] } = useQuery<UserProgress[]>({
     queryKey: [`/api/user/${user?.id}/progress`],
     enabled: !!user?.id,
   });
 
-  const { data: recentSessions = [] } = useQuery({
+  const { data: recentSessions = [] } = useQuery<SimulationSession[]>({
     queryKey: [`/api/user/${user?.id}/sessions`],
     enabled: !!user?.id,
   });

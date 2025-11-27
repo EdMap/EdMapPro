@@ -168,6 +168,7 @@ function ApplicationCard({
   onStartInterview: (stage: ApplicationStage, application: JobApplication) => void;
   isMostPromising?: boolean;
 }) {
+  const [, navigate] = useLocation();
   const progressPercent = (application.currentStageIndex / application.stages.length) * 100;
   const currentStage = application.stages[application.currentStageIndex];
   const completedStages = application.stages.filter(s => s.status === 'completed').length;
@@ -323,7 +324,7 @@ function JourneyStats({ applications }: { applications: JobApplication[] }) {
     interviewing: applications.filter(a => a.status === 'interviewing' || a.status === 'submitted').length,
     offers: applications.filter(a => a.status === 'offer').length,
     interviewsCompleted: applications.reduce((acc, app) => 
-      acc + app.stages.filter(s => s.status === 'completed').length, 0
+      acc + app.stages.filter(s => s.status === 'completed' || s.status === 'passed').length, 0
     ),
   };
   

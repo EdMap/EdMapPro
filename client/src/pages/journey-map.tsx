@@ -50,7 +50,7 @@ export default function JourneyMap() {
   ).length;
   const applicationsWithOffers = applications.filter(a => a.status === "offer").length;
   const totalInterviewsCompleted = applications.reduce(
-    (acc, app) => acc + app.stages.filter(s => s.status === "completed").length,
+    (acc, app) => acc + app.stages.filter(s => s.status === "completed" || s.status === "passed").length,
     0
   );
 
@@ -64,7 +64,7 @@ export default function JourneyMap() {
   // Calculate performance insights
   const calculatePerformance = () => {
     const completedStages = applications.flatMap(app => 
-      app.stages.filter(s => s.status === "completed" && s.score !== null)
+      app.stages.filter(s => (s.status === "completed" || s.status === "passed") && s.score !== null)
     );
     
     if (completedStages.length === 0) {
