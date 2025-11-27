@@ -20,6 +20,12 @@ export interface InterviewConfig {
   targetRole: string;
   difficulty: string;
   totalQuestions: number;
+  companyName?: string;
+  companyDescription?: string;
+  jobTitle?: string;
+  jobRequirements?: string;
+  candidateCv?: string;
+  interviewerName?: string;
 }
 
 export interface QuestionContext {
@@ -58,6 +64,117 @@ export interface FinalReport {
   recommendations: string[];
   hiringDecision: string;
 }
+
+const introductionPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a friendly {interviewerRole} at {companyName}.
+
+You're about to start a {interviewType} interview with a candidate for the {jobTitle} position.
+
+COMPANY INFO:
+{companyDescription}
+
+JOB REQUIREMENTS:
+{jobRequirements}
+
+CANDIDATE'S BACKGROUND (from their CV):
+{candidateCv}
+
+Generate a warm, professional introduction that:
+1. Greets the candidate warmly and thanks them for their time
+2. Introduces yourself (your name and role at the company)
+3. Briefly describes what {companyName} does (1-2 sentences)
+4. Explains what this {interviewType} interview will cover
+5. Mentions something specific from their CV to show you've reviewed it (if CV available)
+6. Sets a comfortable tone for the conversation
+
+Keep it natural and conversational - about 4-6 sentences total. End with a transitional phrase like "So, to get started..." but DON'T ask a question yet.
+`);
+
+const hrScreeningQuestionPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a friendly HR recruiter at {companyName} conducting an initial HR screening call.
+
+COMPANY: {companyName}
+JOB TITLE: {jobTitle}
+ROLE TYPE: {targetRole}
+
+CANDIDATE'S BACKGROUND (from CV):
+{candidateCv}
+
+JOB REQUIREMENTS:
+{jobRequirements}
+
+Interview Progress:
+- Question {questionIndex} of {totalQuestions}
+- Topics covered: {previousQuestions}
+- Last answer: {lastAnswer}
+
+HR SCREENING FOCUS AREAS (pick appropriate ones based on progress):
+1. Motivation & Interest: Why they're interested in this role/company
+2. Availability & Logistics: Start date, location preferences, work authorization
+3. Salary Expectations: Compensation expectations (if appropriate later in screening)
+4. Cultural Fit: Work style, team preferences, values alignment
+5. Career Goals: Where they see themselves, why this move makes sense
+6. Basic Experience Verification: High-level confirmation of their background (NOT technical deep-dives)
+7. Questions About the Role: What they want to know about the position
+
+CRITICAL RULES FOR HR SCREENING:
+- DO NOT ask detailed technical questions (save those for technical interviews)
+- DO NOT ask coding questions or system design questions
+- DO ask about soft skills, communication, teamwork, and motivation
+- DO verify basic experience claims from their CV at a high level
+- DO make the candidate feel comfortable and excited about the opportunity
+- DO personalize questions based on their CV background
+- KEEP questions conversational, not interrogative
+
+FOR QUESTION 1: Start with something friendly about their interest in the role or company.
+FOR LATER QUESTIONS: Progress naturally through the HR focus areas above.
+
+Generate a conversational, HR-appropriate question now. Be warm and personable.
+`);
+
+const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a {interviewerRole} at {companyName} conducting a {interviewType} interview for a {targetRole} position.
+
+COMPANY: {companyName}
+JOB TITLE: {jobTitle}
+
+CANDIDATE'S BACKGROUND (from CV):
+{candidateCv}
+
+JOB REQUIREMENTS:
+{jobRequirements}
+
+Interview Progress:
+- Question {questionIndex} of {totalQuestions}
+- Topics covered: {previousQuestions}
+- Last answer: {lastAnswer}
+- Project/example they mentioned: {activeProject}
+
+INTERVIEW TYPE FOCUS:
+{interviewTypeFocus}
+
+CRITICAL RULES:
+
+1. NEVER PARROT what the candidate said. Don't say "That's interesting that you mentioned X" or "I love how you described Y".
+
+2. KEEP TRANSITIONS BRIEF. Just "Great." or move directly to the next question.
+
+3. TIE QUESTIONS TO JOB REQUIREMENTS: Reference specific skills or experiences mentioned in the job requirements.
+
+4. PERSONALIZE WITH CV: If their CV mentions relevant projects or experience, ask about those specifically.
+
+5. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
+
+6. PIVOT after 2-3 questions on the same topic. Say "Let me switch gears..." or just ask about something new.
+
+FOR QUESTION 1:
+Create a warm opener that references something specific from their CV or the job requirements.
+
+FOR QUESTIONS 2+:
+Either drill into their project or pivot with a brief transition. Be direct and tie to job requirements.
+
+Generate the question now. Be natural, specific, and relevant to the role requirements.
+`);
 
 const questionGeneratorPrompt = PromptTemplate.fromTemplate(`
 You are Sarah, a friendly hiring manager conducting a {interviewType} interview for a {targetRole} position.
@@ -184,12 +301,84 @@ Be fair, constructive, and specific in your assessment.
 Respond with ONLY valid JSON.
 `);
 
-export class QuestionGeneratorChain {
+export class IntroductionChain {
   private chain: RunnableSequence;
 
   constructor() {
     this.chain = RunnableSequence.from([
+      introductionPrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generate(config: InterviewConfig): Promise<string> {
+    const interviewerRole = this.getInterviewerRole(config.interviewType);
+    
+    const result = await this.chain.invoke({
+      interviewerName: config.interviewerName || this.getDefaultInterviewerName(config.interviewType),
+      interviewerRole,
+      companyName: config.companyName || "the company",
+      companyDescription: config.companyDescription || "A growing technology company",
+      jobTitle: config.jobTitle || `${config.targetRole} position`,
+      jobRequirements: config.jobRequirements || "Standard requirements for this role",
+      candidateCv: config.candidateCv || "CV not provided",
+      interviewType: config.interviewType,
+    });
+    return result.trim();
+  }
+
+  private getInterviewerRole(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "HR Recruiter";
+      case "technical":
+        return "Senior Engineer";
+      case "system-design":
+        return "Engineering Manager";
+      case "case-study":
+        return "Product Leader";
+      default:
+        return "Hiring Manager";
+    }
+  }
+
+  private getDefaultInterviewerName(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "Sarah";
+      case "technical":
+        return "Michael";
+      case "system-design":
+        return "David";
+      case "case-study":
+        return "Jennifer";
+      default:
+        return "Alex";
+    }
+  }
+}
+
+export class QuestionGeneratorChain {
+  private defaultChain: RunnableSequence;
+  private hrChain: RunnableSequence;
+  private technicalChain: RunnableSequence;
+
+  constructor() {
+    this.defaultChain = RunnableSequence.from([
       questionGeneratorPrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+    this.hrChain = RunnableSequence.from([
+      hrScreeningQuestionPrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+    this.technicalChain = RunnableSequence.from([
+      technicalQuestionPrompt,
       model,
       new StringOutputParser(),
     ]);
@@ -199,13 +388,28 @@ export class QuestionGeneratorChain {
     const lastAnswer = context.previousAnswers.length > 0 
       ? context.previousAnswers[context.previousAnswers.length - 1]
       : "This is the first question";
+
+    const config = context.config;
+    const hasJobContext = config.companyName || config.jobRequirements || config.candidateCv;
     
-    const result = await this.chain.invoke({
-      interviewType: context.config.interviewType,
-      targetRole: context.config.targetRole,
-      difficulty: context.config.difficulty,
+    // Use appropriate chain based on interview type and available context
+    if (hasJobContext) {
+      if (config.interviewType === "behavioral" || config.interviewType === "recruiter_call") {
+        // HR Screening - use HR-specific prompt
+        return this.generateHrQuestion(context, lastAnswer);
+      } else {
+        // Technical/Case Study - use technical prompt
+        return this.generateTechnicalQuestion(context, lastAnswer);
+      }
+    }
+    
+    // Fallback to default prompt for practice mode without job context
+    const result = await this.defaultChain.invoke({
+      interviewType: config.interviewType,
+      targetRole: config.targetRole,
+      difficulty: config.difficulty,
       questionIndex: context.questionIndex + 1,
-      totalQuestions: context.config.totalQuestions,
+      totalQuestions: config.totalQuestions,
       previousQuestions: context.previousQuestions.length > 0 
         ? context.previousQuestions.join("\n- ") 
         : "None yet - this is the first question",
@@ -213,6 +417,81 @@ export class QuestionGeneratorChain {
       activeProject: context.activeProject || "No specific project mentioned yet",
     });
     return result.trim();
+  }
+
+  private async generateHrQuestion(context: QuestionContext, lastAnswer: string): Promise<string> {
+    const config = context.config;
+    const result = await this.hrChain.invoke({
+      interviewerName: config.interviewerName || "Sarah",
+      companyName: config.companyName || "the company",
+      jobTitle: config.jobTitle || `${config.targetRole} position`,
+      targetRole: config.targetRole,
+      candidateCv: config.candidateCv || "CV not provided",
+      jobRequirements: config.jobRequirements || "Standard requirements for this role",
+      questionIndex: context.questionIndex + 1,
+      totalQuestions: config.totalQuestions,
+      previousQuestions: context.previousQuestions.length > 0 
+        ? context.previousQuestions.join("\n- ") 
+        : "None yet - this is the first question",
+      lastAnswer: lastAnswer,
+    });
+    return result.trim();
+  }
+
+  private async generateTechnicalQuestion(context: QuestionContext, lastAnswer: string): Promise<string> {
+    const config = context.config;
+    const interviewTypeFocus = this.getInterviewTypeFocus(config.interviewType);
+    
+    const result = await this.technicalChain.invoke({
+      interviewerName: config.interviewerName || this.getInterviewerName(config.interviewType),
+      interviewerRole: this.getInterviewerRole(config.interviewType),
+      companyName: config.companyName || "the company",
+      jobTitle: config.jobTitle || `${config.targetRole} position`,
+      targetRole: config.targetRole,
+      candidateCv: config.candidateCv || "CV not provided",
+      jobRequirements: config.jobRequirements || "Standard requirements for this role",
+      interviewType: config.interviewType,
+      interviewTypeFocus,
+      questionIndex: context.questionIndex + 1,
+      totalQuestions: config.totalQuestions,
+      previousQuestions: context.previousQuestions.length > 0 
+        ? context.previousQuestions.join("\n- ") 
+        : "None yet - this is the first question",
+      lastAnswer: lastAnswer,
+      activeProject: context.activeProject || "No specific project mentioned yet",
+    });
+    return result.trim();
+  }
+
+  private getInterviewTypeFocus(interviewType: string): string {
+    switch (interviewType) {
+      case "technical":
+        return "Focus on technical skills, coding practices, problem-solving approach, and hands-on experience with relevant technologies.";
+      case "system-design":
+        return "Focus on architecture decisions, scalability thinking, trade-off analysis, and system design experience.";
+      case "case-study":
+        return "Focus on analytical thinking, business acumen, structured problem-solving, and communication of complex ideas.";
+      default:
+        return "Focus on relevant skills and experience for the role.";
+    }
+  }
+
+  private getInterviewerName(interviewType: string): string {
+    switch (interviewType) {
+      case "technical": return "Michael";
+      case "system-design": return "David";
+      case "case-study": return "Jennifer";
+      default: return "Alex";
+    }
+  }
+
+  private getInterviewerRole(interviewType: string): string {
+    switch (interviewType) {
+      case "technical": return "Senior Engineer";
+      case "system-design": return "Engineering Manager";
+      case "case-study": return "Product Leader";
+      default: return "Hiring Manager";
+    }
   }
 }
 

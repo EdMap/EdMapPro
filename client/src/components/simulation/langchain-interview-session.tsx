@@ -62,6 +62,7 @@ interface FinalReport {
 interface LangchainInterviewSessionProps {
   session: InterviewSession;
   firstQuestion: InterviewQuestion;
+  introduction?: string;
   onComplete: () => void;
   mode?: "practice" | "journey";
 }
@@ -69,6 +70,7 @@ interface LangchainInterviewSessionProps {
 export default function LangchainInterviewSession({ 
   session: initialSession, 
   firstQuestion,
+  introduction,
   onComplete,
   mode = "practice"
 }: LangchainInterviewSessionProps) {
@@ -76,9 +78,15 @@ export default function LangchainInterviewSession({
   const [session, setSession] = useState(initialSession);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion>(firstQuestion);
   const [answer, setAnswer] = useState("");
-  const [messages, setMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string, evaluation?: any}>>([
-    { role: 'interviewer', content: firstQuestion.questionText }
-  ]);
+  
+  // Initialize messages with introduction if provided, then the first question
+  const initialMessages: Array<{role: 'interviewer' | 'candidate', content: string, evaluation?: any}> = [];
+  if (introduction) {
+    initialMessages.push({ role: 'interviewer', content: introduction });
+  }
+  initialMessages.push({ role: 'interviewer', content: firstQuestion.questionText });
+  
+  const [messages, setMessages] = useState(initialMessages);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [finalReport, setFinalReport] = useState<FinalReport | null>(null);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);

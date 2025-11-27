@@ -556,13 +556,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "userId, interviewType, and targetRole are required" });
       }
 
+      // Build job context if this is a Journey mode interview
+      let jobContext: {
+        companyName?: string;
+        companyDescription?: string;
+        jobTitle?: string;
+        jobRequirements?: string;
+        candidateCv?: string;
+      } | undefined;
+
+      if (applicationStageId) {
+        const stage = await storage.getApplicationStage(applicationStageId);
+        if (stage) {
+          const application = await storage.getJobApplication(stage.applicationId);
+          if (application) {
+            const jobWithCompany = await storage.getJobPostingWithCompany(application.jobPostingId);
+            if (jobWithCompany) {
+              // Build requirements string from job posting
+              const requirements = [];
+              if (jobWithCompany.requirements) {
+                requirements.push(...(jobWithCompany.requirements as string[]));
+              }
+              if (jobWithCompany.responsibilities) {
+                requirements.push(...(jobWithCompany.responsibilities as string[]).map(r => `Responsibility: ${r}`));
+              }
+              
+              jobContext = {
+                companyName: jobWithCompany.company?.name,
+                companyDescription: jobWithCompany.company?.description || `${jobWithCompany.company?.name} is a ${jobWithCompany.company?.size} ${jobWithCompany.company?.industry} company`,
+                jobTitle: jobWithCompany.title,
+                jobRequirements: requirements.length > 0 ? requirements.join('\n') : undefined,
+                candidateCv: application.cvContent || undefined,
+              };
+            }
+          }
+        }
+      }
+
       const { interviewOrchestrator } = await import("./services/interview-orchestrator");
       const result = await interviewOrchestrator.startInterview(
         userId,
         interviewType,
         targetRole,
         difficulty || "medium",
-        totalQuestions || 5
+        totalQuestions || 5,
+        jobContext
       );
       
       // If this interview is for an application stage, link them

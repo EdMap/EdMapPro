@@ -49,6 +49,7 @@ export default function InterviewSimulator() {
   const searchString = useSearch();
   const [activeSession, setActiveSession] = useState<any>(null);
   const [activeFirstQuestion, setActiveFirstQuestion] = useState<any>(null);
+  const [activeIntroduction, setActiveIntroduction] = useState<string | undefined>(undefined);
   const [applicationStageId, setApplicationStageId] = useState<number | null>(null);
   const [targetRole, setTargetRole] = useState("developer");
   const [interviewType, setInterviewType] = useState("behavioral");
@@ -94,6 +95,7 @@ export default function InterviewSimulator() {
     onSuccess: (result) => {
       setActiveSession(result.session);
       setActiveFirstQuestion(result.firstQuestion);
+      setActiveIntroduction(result.introduction);
       if (result.applicationStageId) {
         setApplicationStageId(result.applicationStageId);
       }
@@ -154,6 +156,7 @@ export default function InterviewSimulator() {
       <LangchainInterviewSession
         session={activeSession}
         firstQuestion={activeFirstQuestion}
+        introduction={activeIntroduction}
         mode={isJourneyMode ? "journey" : "practice"}
         onComplete={() => {
           setActiveSession(null);

@@ -3,6 +3,7 @@ import {
   EvaluatorChain,
   FollowUpChain,
   ScoringChain,
+  IntroductionChain,
   InterviewConfig,
   QuestionContext,
   EvaluationResult,
@@ -12,6 +13,14 @@ import {
 import { storage } from "../storage";
 import type { InterviewSession, InterviewQuestion } from "@shared/schema";
 
+export interface JobContext {
+  companyName?: string;
+  companyDescription?: string;
+  jobTitle?: string;
+  jobRequirements?: string;
+  candidateCv?: string;
+}
+
 interface ConversationMemory {
   questions: string[];
   answers: string[];
@@ -19,6 +28,7 @@ interface ConversationMemory {
   evaluations: EvaluationResult[];
   activeProject: string | null;
   projectMentionCount: number;
+  jobContext?: JobContext;
 }
 
 export class InterviewOrchestrator {
@@ -26,6 +36,7 @@ export class InterviewOrchestrator {
   private evaluator: EvaluatorChain;
   private followUp: FollowUpChain;
   private scoring: ScoringChain;
+  private introduction: IntroductionChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -33,6 +44,7 @@ export class InterviewOrchestrator {
     this.evaluator = new EvaluatorChain();
     this.followUp = new FollowUpChain();
     this.scoring = new ScoringChain();
+    this.introduction = new IntroductionChain();
     this.memory = new Map();
   }
 
@@ -50,12 +62,17 @@ export class InterviewOrchestrator {
     return this.memory.get(sessionId)!;
   }
 
-  private getConfig(session: InterviewSession): InterviewConfig {
+  private getConfig(session: InterviewSession, jobContext?: JobContext): InterviewConfig {
     return {
       interviewType: session.interviewType,
       targetRole: session.targetRole,
       difficulty: session.difficulty,
       totalQuestions: session.totalQuestions,
+      companyName: jobContext?.companyName,
+      companyDescription: jobContext?.companyDescription,
+      jobTitle: jobContext?.jobTitle,
+      jobRequirements: jobContext?.jobRequirements,
+      candidateCv: jobContext?.candidateCv,
     };
   }
 
@@ -64,8 +81,9 @@ export class InterviewOrchestrator {
     interviewType: string,
     targetRole: string,
     difficulty: string = "medium",
-    totalQuestions: number = 5
-  ): Promise<{ session: InterviewSession; firstQuestion: InterviewQuestion }> {
+    totalQuestions: number = 5,
+    jobContext?: JobContext
+  ): Promise<{ session: InterviewSession; firstQuestion: InterviewQuestion; introduction?: string }> {
     const session = await storage.createInterviewSession({
       userId,
       interviewType,
@@ -76,8 +94,19 @@ export class InterviewOrchestrator {
       currentQuestionIndex: 0,
     });
 
-    const config = this.getConfig(session);
+    const config = this.getConfig(session, jobContext);
     const memory = this.getMemory(session.id);
+    
+    // Store job context in memory for use in subsequent questions
+    if (jobContext) {
+      memory.jobContext = jobContext;
+    }
+
+    // Generate introduction if we have job context (Journey mode)
+    let introduction: string | undefined;
+    if (jobContext?.companyName) {
+      introduction = await this.introduction.generate(config);
+    }
 
     const questionText = await this.questionGenerator.generate({
       config,
@@ -97,7 +126,7 @@ export class InterviewOrchestrator {
       expectedCriteria: this.getExpectedCriteria(config, 0),
     });
 
-    return { session, firstQuestion: question };
+    return { session, firstQuestion: question, introduction };
   }
 
   async submitAnswer(
@@ -120,8 +149,8 @@ export class InterviewOrchestrator {
       throw new Error("Question not found");
     }
 
-    const config = this.getConfig(session);
     const memory = this.getMemory(sessionId);
+    const config = this.getConfig(session, memory.jobContext);
 
     const evaluation = await this.evaluator.evaluate(
       config,
@@ -220,7 +249,8 @@ export class InterviewOrchestrator {
     }
 
     const questions = await storage.getInterviewQuestions(sessionId);
-    const config = this.getConfig(session);
+    const memory = this.memory.get(sessionId);
+    const config = this.getConfig(session, memory?.jobContext);
 
     const questionsAndAnswers = questions
       .filter(q => q.candidateAnswer)
