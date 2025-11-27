@@ -68,7 +68,7 @@ function calculateTotalComp(offer: OfferDetails): {
 }
 
 export function OfferLetter({ offer, company, job, candidateName, onProceedToNegotiation }: OfferLetterProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const comp = calculateTotalComp(offer);
   
   return (
