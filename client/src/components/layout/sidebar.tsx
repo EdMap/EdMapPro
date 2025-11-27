@@ -8,7 +8,8 @@ import {
   Users, 
   TrendingUp, 
   Settings,
-  Briefcase
+  Briefcase,
+  Route
 } from "lucide-react";
 
 const navigationItems = [
@@ -22,6 +23,12 @@ const navigationItems = [
     title: "Job Board",
     href: "/jobs",
     icon: Briefcase,
+    section: "journey"
+  },
+  {
+    title: "My Journey",
+    href: "/journey",
+    icon: Route,
     section: "journey"
   },
   {
