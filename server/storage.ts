@@ -1818,18 +1818,13 @@ export class MemStorage implements IStorage {
     const dataSciPosting = allPostings.find(p => p.title === 'Senior Data Scientist' && p.role === 'data-scientist');
     
     if (dataSciPosting) {
-      // Create a demo user
-      const demoUser = await this.createUser({
-        username: 'demo',
-        email: 'demo@example.com',
-        password: 'demo123',
-        firstName: 'Alex',
-        lastName: 'Chen'
-      });
+      // Use user ID 1 (the first registered user - typically "arsen")
+      // This ensures the seeded application shows up for the logged-in user
+      const userId = 1;
 
       // Create the job application with offer status
       const application = await this.createJobApplication({
-        userId: demoUser.id,
+        userId: userId,
         jobPostingId: dataSciPosting.id,
         status: 'offer',
         cvFileName: 'alex_chen_resume.pdf',
