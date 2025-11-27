@@ -1296,12 +1296,8 @@ export class MemStorage implements IStorage {
   }
 
   async getApplicationStageByInterviewSession(interviewSessionId: number): Promise<ApplicationStage | undefined> {
-    for (const stage of this.applicationStagesMap.values()) {
-      if (stage.interviewSessionId === interviewSessionId) {
-        return stage;
-      }
-    }
-    return undefined;
+    const stages = Array.from(this.applicationStagesMap.values());
+    return stages.find(stage => stage.interviewSessionId === interviewSessionId);
   }
 
   async createApplicationStage(insertStage: InsertApplicationStage): Promise<ApplicationStage> {
@@ -1814,6 +1810,77 @@ export class MemStorage implements IStorage {
 
     for (const template of interviewTemplateSeedData) {
       await this.createInterviewTemplate(template);
+    }
+
+    // Seed a completed Data Scientist application with all stages passed
+    // Find the Data Scientist job posting at DataViz Pro
+    const allPostings = Array.from(this.jobPostingsMap.values());
+    const dataSciPosting = allPostings.find(p => p.title === 'Senior Data Scientist' && p.role === 'data-scientist');
+    
+    if (dataSciPosting) {
+      // Create a demo user
+      const demoUser = await this.createUser({
+        username: 'demo',
+        email: 'demo@example.com',
+        password: 'demo123',
+        firstName: 'Alex',
+        lastName: 'Chen'
+      });
+
+      // Create the job application with offer status
+      const application = await this.createJobApplication({
+        userId: demoUser.id,
+        jobPostingId: dataSciPosting.id,
+        status: 'offer',
+        cvFileName: 'alex_chen_resume.pdf',
+        cvContent: `ALEX CHEN - Senior Data Scientist
+Contact: alex.chen@email.com | San Francisco, CA
+
+SUMMARY
+Experienced data scientist with 7+ years leading ML initiatives at Fortune 500 companies. 
+PhD in Computer Science from Stanford. Published researcher with expertise in predictive modeling and NLP.
+
+EXPERIENCE
+Lead Data Scientist | TechCorp Inc. | 2020-Present
+- Led team of 5 data scientists building predictive models for customer churn
+- Improved prediction accuracy by 35% using ensemble methods
+- Built real-time ML pipeline processing 10M+ events daily
+
+Senior Data Scientist | DataDriven Labs | 2018-2020
+- Developed NLP models for sentiment analysis with 92% accuracy
+- Created automated reporting dashboards saving 20 hours/week
+
+EDUCATION
+PhD Computer Science - Stanford University | 2018
+BS Computer Science - MIT | 2014
+
+SKILLS
+Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
+        coverLetter: 'I am thrilled to apply for the Senior Data Scientist position at DataViz Pro. With my extensive background in machine learning and data visualization, I believe I can contribute significantly to your mission of helping enterprises make sense of complex data.',
+        currentStageIndex: 5
+      });
+
+      // Create all 5 interview stages as passed
+      const stagesData = [
+        { order: 1, name: 'Recruiter Screen', type: 'recruiter_call', score: 88, feedback: 'Excellent communication skills. Very enthusiastic about the role and company mission. Strong background evident.' },
+        { order: 2, name: 'Statistics & ML Fundamentals', type: 'technical', score: 92, feedback: 'Demonstrated deep understanding of ML algorithms. Excellent problem-solving approach. Explained complex concepts clearly.' },
+        { order: 3, name: 'ML Case Study', type: 'case_study', score: 90, feedback: 'Presented compelling approach to anomaly detection problem. Strong analytical thinking and creative solutions.' },
+        { order: 4, name: 'Experimentation & Metrics', type: 'behavioral', score: 87, feedback: 'Great understanding of A/B testing and experimentation. Solid approach to defining and tracking metrics.' },
+        { order: 5, name: 'Head of Data Science Interview', type: 'behavioral', score: 94, feedback: 'Culture fit is excellent. Strong leadership potential. Team player with clear vision for advancing data science at DataViz Pro.' }
+      ];
+
+      for (const stage of stagesData) {
+        await this.createApplicationStage({
+          applicationId: application.id,
+          stageOrder: stage.order,
+          stageName: stage.name,
+          stageType: stage.type as 'recruiter_call' | 'technical' | 'behavioral' | 'case_study' | 'portfolio' | 'onsite',
+          status: 'passed',
+          completedAt: new Date(Date.now() - (6 - stage.order) * 2 * 24 * 60 * 60 * 1000), // Stagger completion dates
+          score: stage.score,
+          feedback: stage.feedback
+        });
+      }
     }
   }
 }
