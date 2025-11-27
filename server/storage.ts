@@ -1387,6 +1387,17 @@ export class MemStorage implements IStorage {
         values: ['Developer Experience', 'Simplicity', 'Open Source', 'Community'],
         benefits: ['Remote-first', 'Unlimited PTO', 'Conference sponsorship', 'Home office budget', 'Async-friendly'],
         interviewStyle: 'casual'
+      },
+      {
+        name: 'DataViz Pro',
+        logo: '📊',
+        industry: 'tech',
+        size: 'mid-size',
+        description: 'Enterprise-grade data analytics and visualization platform helping companies turn data chaos into actionable insights. DataViz Pro connects to 100+ data sources with real-time dashboards, AI-powered anomaly detection, and predictive forecasting.',
+        culture: 'Data-driven decision making with a focus on continuous improvement. We value both individual excellence and team collaboration. Fast-moving, innovative environment where ideas matter.',
+        values: ['Empower data democratization', 'Customer obsession', 'Bias for speed', 'Continuous learning', 'Inclusive excellence'],
+        benefits: ['Competitive salary + equity', 'Unlimited PTO', 'Health insurance (medical, dental, vision)', 'Learning budget $2k/year', 'Remote work flexibility', 'Team offsites 2x/year'],
+        interviewStyle: 'balanced'
       }
     ];
 
@@ -1582,6 +1593,100 @@ export class MemStorage implements IStorage {
         ],
         highlightedTerms: ['threat detection', 'security monitoring', 'code reviews'],
         interviewStages: 4
+      },
+      // DataViz Pro - Product Manager
+      {
+        companyId: createdCompanies[5].id,
+        title: 'Senior Product Manager',
+        role: 'pm',
+        seniority: 'senior',
+        department: 'Product',
+        location: 'San Francisco, CA (Remote-friendly)',
+        salaryMin: 180000,
+        salaryMax: 250000,
+        description: 'Lead product strategy for DataViz Pro\'s core platform. Work across AI/ML-powered analytics features, connecting 100+ data sources, and real-time dashboards. Drive decisions that impact thousands of enterprise customers.',
+        responsibilities: [
+          'Own product roadmap for AI Insights v2.0 and data connector ecosystem',
+          'Conduct user research with enterprise data teams and executives',
+          'Define success metrics and track feature adoption',
+          'Lead cross-functional collaboration with engineering, data science, and design'
+        ],
+        requirements: [
+          '5+ years of product management in SaaS/enterprise',
+          'Experience with data products or analytics platforms',
+          'Strong business acumen and metrics-driven thinking',
+          'Ability to communicate complex technical concepts'
+        ],
+        niceToHave: [
+          'Experience with machine learning or data science',
+          'Background in data analytics or business intelligence',
+          'Knowledge of enterprise sales cycles'
+        ],
+        highlightedTerms: ['enterprise customers', 'AI-powered analytics', 'data-driven', 'product roadmap', 'cross-functional'],
+        interviewStages: 5
+      },
+      // DataViz Pro - Senior Backend Engineer
+      {
+        companyId: createdCompanies[5].id,
+        title: 'Senior Backend Engineer',
+        role: 'developer',
+        seniority: 'senior',
+        department: 'Engineering',
+        location: 'Remote',
+        salaryMin: 180000,
+        salaryMax: 250000,
+        description: 'Design and build scalable backend infrastructure for real-time data processing. Lead technical decisions on our data connector APIs, aggregation engine, and analytics pipeline handling 100+ concurrent customers.',
+        responsibilities: [
+          'Architect API infrastructure for 100+ data source connectors',
+          'Optimize query performance and data aggregation at scale',
+          'Lead system design decisions and technical reviews',
+          'Mentor junior engineers and establish best practices'
+        ],
+        requirements: [
+          '5+ years backend development at scale',
+          'Proficiency in TypeScript/Node.js, Go, or Python',
+          'Experience with PostgreSQL, caching layers, and distributed systems',
+          'Strong understanding of data pipeline architecture'
+        ],
+        niceToHave: [
+          'Experience building data connectors or ETL pipelines',
+          'Knowledge of analytics databases (ClickHouse, Snowflake)',
+          'Experience with Kubernetes or container orchestration'
+        ],
+        highlightedTerms: ['distributed systems', 'data pipeline', 'API architecture', 'PostgreSQL', 'system design'],
+        interviewStages: 5
+      },
+      // DataViz Pro - Data Scientist
+      {
+        companyId: createdCompanies[5].id,
+        title: 'Senior Data Scientist',
+        role: 'data-scientist',
+        seniority: 'senior',
+        department: 'Data Science',
+        location: 'Remote',
+        salaryMin: 180000,
+        salaryMax: 250000,
+        description: 'Lead development of AI/ML features for anomaly detection and predictive forecasting. Build models that help enterprises find insights in their data and predict future trends.',
+        responsibilities: [
+          'Design and train machine learning models for anomaly detection and forecasting',
+          'Collaborate with engineers to integrate models into production systems',
+          'Conduct A/B tests and measure model performance in production',
+          'Research and evaluate emerging AI/ML techniques for analytics'
+        ],
+        requirements: [
+          '5+ years experience in machine learning and data science',
+          'Strong expertise in Python, scikit-learn, TensorFlow, or PyTorch',
+          'Experience with statistical analysis and hypothesis testing',
+          'Ability to communicate findings to non-technical stakeholders'
+        ],
+        niceToHave: [
+          'Experience with time-series forecasting models',
+          'Knowledge of production ML systems and MLOps',
+          'Background in data engineering or analytics',
+          'Familiarity with real-time model serving'
+        ],
+        highlightedTerms: ['machine learning', 'anomaly detection', 'forecasting', 'A/B testing', 'model training'],
+        interviewStages: 5
       }
     ];
 
@@ -1608,7 +1713,23 @@ export class MemStorage implements IStorage {
       { term: 'technical architecture', definition: 'The structure and design of a software system, including components, their relationships, and the principles guiding its design and evolution.', category: 'engineering' },
       { term: 'product vision', definition: 'A long-term aspirational description of what a product aims to achieve and the impact it will have on users and the market.', category: 'product' },
       { term: 'C-level', definition: 'Top executives in an organization, typically including CEO (Chief Executive Officer), CTO (Chief Technology Officer), CFO (Chief Financial Officer), etc.', category: 'business' },
-      { term: 'algorithmic trading', definition: 'Using computer algorithms to automatically execute trading strategies. Involves analyzing market data and executing trades at high speeds.', category: 'fintech' }
+      { term: 'algorithmic trading', definition: 'Using computer algorithms to automatically execute trading strategies. Involves analyzing market data and executing trades at high speeds.', category: 'fintech' },
+      { term: 'enterprise customers', definition: 'Large organizations (typically 500+ employees) that use software solutions for business operations. Usually require advanced features, security, and support.', category: 'business' },
+      { term: 'AI-powered analytics', definition: 'Using artificial intelligence and machine learning to automatically analyze data, detect patterns, and provide insights without manual analysis.', category: 'engineering' },
+      { term: 'data-driven', definition: 'Making decisions based on analysis of data rather than intuition. Involves measuring results and using metrics to guide strategy.', category: 'business' },
+      { term: 'product roadmap', definition: 'A strategic timeline showing planned features, improvements, and releases. Communicates product direction to engineering, marketing, and customers.', category: 'product' },
+      { term: 'API architecture', definition: 'The design and structure of APIs (Application Programming Interfaces) that define how external systems interact with your software.', category: 'engineering' },
+      { term: 'data pipeline', definition: 'The series of processes that collect, transform, and move data from source systems to analysis tools. Core to data engineering.', category: 'engineering' },
+      { term: 'machine learning', definition: 'Branch of AI where systems learn patterns from data to make predictions or decisions without explicit programming for each case.', category: 'engineering' },
+      { term: 'anomaly detection', definition: 'Identifying unusual patterns or outliers in data that deviate significantly from normal behavior. Important for fraud detection and quality monitoring.', category: 'engineering' },
+      { term: 'forecasting', definition: 'Using historical data and statistical/ML models to predict future values or trends. Common in sales, demand planning, and financial analysis.', category: 'business' },
+      { term: 'A/B testing', definition: 'Comparing two versions of a product or feature (A and B) with different user groups to determine which performs better based on metrics.', category: 'product' },
+      { term: 'model training', definition: 'The process of teaching machine learning models to recognize patterns by feeding them historical data and adjusting parameters.', category: 'engineering' },
+      { term: 'data connector', definition: 'Software that links external data sources (databases, APIs, cloud services) to your analytics platform to enable data import.', category: 'engineering' },
+      { term: 'real-time processing', definition: 'Processing and analyzing data as it arrives, rather than in batches. Enables immediate insights and quick responses to events.', category: 'engineering' },
+      { term: 'dashboard', definition: 'A visual interface displaying key metrics, charts, and data visualizations. Helps users monitor performance and understand data at a glance.', category: 'product' },
+      { term: 'data democratization', definition: 'Making data accessible to all employees, not just analysts. Empowers teams across the organization to make data-driven decisions.', category: 'business' },
+      { term: 'SaaS', definition: 'Software as a Service - cloud-based software delivered over the internet by subscription. Users access via browser instead of installing locally.', category: 'business' }
     ];
 
     for (const term of glossaryTerms) {
@@ -1649,6 +1770,45 @@ export class MemStorage implements IStorage {
           { order: 4, type: 'behavioral', name: 'Team Fit', duration: 45, config: { interviewType: 'behavioral' } }
         ],
         totalDuration: 225
+      },
+      {
+        companyId: createdCompanies[5].id,
+        name: 'DataViz Pro - Product Manager Interview',
+        role: 'pm',
+        stages: [
+          { order: 1, type: 'recruiter_call', name: 'Recruiter Screen', duration: 30, config: { interviewType: 'behavioral' } },
+          { order: 2, type: 'behavioral', name: 'PM Case Study Round', duration: 60, config: { interviewType: 'case_study' } },
+          { order: 3, type: 'behavioral', name: 'Metrics & Analytics Round', duration: 45, config: { interviewType: 'behavioral' } },
+          { order: 4, type: 'behavioral', name: 'Cross-functional Collaboration', duration: 60, config: { interviewType: 'behavioral' } },
+          { order: 5, type: 'behavioral', name: 'VP Product Interview', duration: 45, config: { interviewType: 'behavioral' } }
+        ],
+        totalDuration: 240
+      },
+      {
+        companyId: createdCompanies[5].id,
+        name: 'DataViz Pro - Backend Engineer Interview',
+        role: 'developer',
+        stages: [
+          { order: 1, type: 'recruiter_call', name: 'Recruiter Screen', duration: 30, config: { interviewType: 'behavioral' } },
+          { order: 2, type: 'technical', name: 'Technical Screening', duration: 45, config: { interviewType: 'technical' } },
+          { order: 3, type: 'technical', name: 'Coding Interview', duration: 75, config: { interviewType: 'technical' } },
+          { order: 4, type: 'technical', name: 'System Design (Data Pipeline)', duration: 90, config: { interviewType: 'system-design' } },
+          { order: 5, type: 'behavioral', name: 'Team Fit & Leadership', duration: 60, config: { interviewType: 'behavioral' } }
+        ],
+        totalDuration: 300
+      },
+      {
+        companyId: createdCompanies[5].id,
+        name: 'DataViz Pro - Data Scientist Interview',
+        role: 'data-scientist',
+        stages: [
+          { order: 1, type: 'recruiter_call', name: 'Recruiter Screen', duration: 30, config: { interviewType: 'behavioral' } },
+          { order: 2, type: 'technical', name: 'Statistics & ML Fundamentals', duration: 60, config: { interviewType: 'technical' } },
+          { order: 3, type: 'case_study', name: 'ML Case Study', duration: 90, config: { interviewType: 'case_study' } },
+          { order: 4, type: 'behavioral', name: 'Experimentation & Metrics', duration: 60, config: { interviewType: 'behavioral' } },
+          { order: 5, type: 'behavioral', name: 'Head of Data Science Interview', duration: 45, config: { interviewType: 'behavioral' } }
+        ],
+        totalDuration: 285
       }
     ];
 
