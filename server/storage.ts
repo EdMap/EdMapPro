@@ -1876,6 +1876,17 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
           feedback: stage.feedback
         });
       }
+
+      // Seed user progress for the completed interviews
+      const avgScore = Math.round(stagesData.reduce((sum, s) => sum + s.score, 0) / stagesData.length);
+      await this.createUserProgress({
+        userId: userId,
+        simulationType: 'interview',
+        totalSessions: 5,
+        completedSessions: 5,
+        averageScore: avgScore,
+        totalTime: 285 * 60, // Total interview duration in seconds
+      });
     }
   }
 }
