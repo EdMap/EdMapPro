@@ -63,12 +63,14 @@ interface LangchainInterviewSessionProps {
   session: InterviewSession;
   firstQuestion: InterviewQuestion;
   onComplete: () => void;
+  mode?: "practice" | "journey";
 }
 
 export default function LangchainInterviewSession({ 
   session: initialSession, 
   firstQuestion,
-  onComplete 
+  onComplete,
+  mode = "practice"
 }: LangchainInterviewSessionProps) {
   const { toast } = useToast();
   const [session, setSession] = useState(initialSession);

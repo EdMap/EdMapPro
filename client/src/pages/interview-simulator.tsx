@@ -56,6 +56,9 @@ export default function InterviewSimulator() {
   const [totalQuestions, setTotalQuestions] = useState([5]);
   const [autoStarted, setAutoStarted] = useState(false);
 
+  // Determine mode based on URL params
+  const isJourneyMode = applicationStageId !== null;
+
   // Parse URL search params
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -138,6 +141,7 @@ export default function InterviewSimulator() {
       <LangchainInterviewSession
         session={activeSession}
         firstQuestion={activeFirstQuestion}
+        mode={isJourneyMode ? "journey" : "practice"}
         onComplete={() => {
           setActiveSession(null);
           setActiveFirstQuestion(null);
@@ -152,6 +156,13 @@ export default function InterviewSimulator() {
               description: "Your application has been updated. Check your journey for next steps.",
             });
             navigate('/journey');
+          } else {
+            // Practice mode: show practice results
+            toast({
+              title: "Interview Complete!",
+              description: "Great job! You can start another practice session anytime.",
+            });
+            navigate('/interview');
           }
         }}
       />
@@ -162,8 +173,17 @@ export default function InterviewSimulator() {
     <div className="p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Interview Simulator</h1>
-          <p className="text-gray-600">Practice your interview skills with AI-powered feedback</p>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900">Interview Simulator</h1>
+            <Badge className={isJourneyMode ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"}>
+              {isJourneyMode ? "Job Journey" : "Practice Mode"}
+            </Badge>
+          </div>
+          <p className="text-gray-600">
+            {isJourneyMode 
+              ? "Complete this interview to advance your job application"
+              : "Practice your interview skills with AI-powered feedback"}
+          </p>
         </div>
 
         <Card>

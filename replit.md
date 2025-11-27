@@ -41,15 +41,19 @@ Preferred communication style: Simple, everyday language.
     - **Interview Integration**: Seamless link from Journey page to Interview Simulator via URL parameters (stageId, type, role).
     - **Database Schema**: Companies, JobPostings, JobGlossary, JobApplications, InterviewTemplates, ApplicationStages.
 
-- **Interview Simulator**: AI-powered interview practice with LangChain.js architecture.
+- **Interview Simulator**: AI-powered interview practice with dual-mode architecture.
+    - **Dual-Mode System**: 
+      - **Practice Mode** (Sidebar access): Standalone interviews for skill-building. Users can practice any role/type without prerequisites. Results tracked separately.
+      - **Journey Mode** (Job Journey): Context-aware interviews tied to job applications. Auto-populated with company/role. Completion updates application progress and advances stages.
+    - **Mode Detection**: Determined by URL parameters—stageId in URL = Journey Mode, no stageId = Practice Mode.
     - **LangChain Chains**: Modular AI workflow with 5 specialized chains (Question Generator, Evaluator, Follow-up Decision, Scoring, Conversation Memory).
     - **Interview Orchestrator**: Coordinates chains, manages session state, and handles interview flow.
     - **Interview Types**: Behavioral, Technical, and Case Study interviews.
-    - **Role-Based Preparation**: Practice for Developer, Product Manager, Designer, QA Engineer, and DevOps roles.
+    - **Role-Based Preparation**: Practice for Developer, Product Manager, Designer roles.
     - **Real-time Evaluation**: Immediate feedback with scores, strengths, and improvement areas.
     - **Final Report**: Comprehensive scoring with hiring decision recommendation.
     - **AI Backend**: Powered by Groq (llama-3.3-70b-versatile) for fast, high-quality responses.
-    - **Job Journey Integration**: URL-based auto-start for application stages; completion updates stage status, score, and advances application.
+    - **Navigation**: Practice Mode returns to interview page for new sessions; Journey Mode redirects to journey page with updated application status.
 - **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work.
     - **Multi-Character AI Team**: 4-6 AI teammates with distinct roles, personalities, and expertise.
     - **Role-Based Practice**: Users can practice as Developer, Product Manager, Designer, QA Engineer, or DevOps Engineer.

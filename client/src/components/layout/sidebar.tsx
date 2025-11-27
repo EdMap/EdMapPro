@@ -32,22 +32,22 @@ const navigationItems = [
     section: "journey"
   },
   {
-    title: "Interview Sessions", 
+    title: "Interview Practice", 
     href: "/interview",
     icon: MessageCircle,
-    section: "simulations"
+    section: "practice"
   },
   {
-    title: "Negotiation Sessions",
+    title: "Negotiation Practice",
     href: "/negotiation", 
     icon: Handshake,
-    section: "simulations"
+    section: "practice"
   },
   {
-    title: "Workspace Simulation",
+    title: "Workspace Practice",
     href: "/workspace",
     icon: Users,
-    section: "simulations"
+    section: "practice"
   },
   {
     title: "Progress & Analytics",
@@ -92,7 +92,7 @@ export default function Sidebar() {
           <div key={section} className="mb-8">
             <div className="px-4 mb-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {section === "simulations" ? "Simulations" : section === "journey" ? "Job Journey" : "Account"}
+                {section === "simulations" ? "Simulations" : section === "journey" ? "Job Journey" : section === "practice" ? "Practice" : "Account"}
               </h3>
             </div>
             
