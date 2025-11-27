@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 import { storage } from "./storage";
 import { groqService } from "./services/groq";
 import { openaiService } from "./services/openai";
@@ -836,7 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Extract text content from PDF
         if (req.file.mimetype === 'application/pdf') {
           try {
-            const pdfData = await pdfParse(req.file.buffer);
+            const pdfData = await PDFParse(req.file.buffer);
             cvContent = pdfData.text.trim();
             console.log(`Extracted ${cvContent.length} characters from CV PDF`);
           } catch (pdfError) {
