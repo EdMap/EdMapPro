@@ -1,11 +1,18 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Building2, Calendar, DollarSign, Briefcase, Heart, Users, 
-  Clock, Gift, ArrowRight, CheckCircle2, Sparkles, FileText,
-  Medal, MessageSquare, X, Check
+  Clock, Gift, ArrowRight, CheckCircle2, Sparkles,
+  Medal, ChevronDown, ChevronUp, MoreHorizontal
 } from "lucide-react";
 import type { OfferDetails } from "@shared/schema";
 
@@ -67,121 +74,131 @@ function calculateTotalComp(offer: OfferDetails): {
 }
 
 export function OfferLetter({ offer, company, job, candidateName, onProceedToNegotiation }: OfferLetterProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const comp = calculateTotalComp(offer);
   
   return (
-    <div className="space-y-6">
-      {/* Sticky Action Bar */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" data-testid="badge-offer-pending">
-              <Clock className="h-3 w-3 mr-1" />
-              Pending Response
-            </Badge>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Respond by <span className="font-medium text-gray-700 dark:text-gray-300">{offer.responseDeadline}</span>
-            </span>
+    <Card className="border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Compact Summary Header - Always Visible */}
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          {/* Left: Company & Role Info */}
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xl font-bold text-primary border border-gray-200 dark:border-gray-700 flex-shrink-0">
+              {company.name.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                  {company.name}
+                </h3>
+                <Badge variant="outline" className="border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 flex-shrink-0" data-testid="badge-offer-pending">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Pending
+                </Badge>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {job.title} • {job.location}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="text-gray-600 dark:text-gray-400"
-              data-testid="button-ask-questions"
-            >
-              <MessageSquare className="h-4 w-4 mr-1" />
-              Ask Questions
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-              data-testid="button-decline"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Decline
-            </Button>
-            <Button 
-              onClick={onProceedToNegotiation}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              data-testid="button-proceed-negotiation"
-            >
-              <FileText className="h-4 w-4 mr-1" />
-              Negotiate
-            </Button>
-            <Button 
-              variant="default" 
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white"
-              data-testid="button-accept"
-            >
-              <Check className="h-4 w-4 mr-1" />
-              Accept
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      {/* Company Masthead */}
-      <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-2xl font-bold text-primary border border-gray-200 dark:border-gray-700">
-            {company.name.charAt(0)}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{company.name}</h1>
-            <p className="text-gray-500 dark:text-gray-400">Official Offer Letter • {company.industry}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Snapshot Row */}
-      <Card className="border-2 border-primary/20 bg-primary/5 dark:bg-primary/10">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-              Offer Snapshot
-            </h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {job.title} • {job.location}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div data-testid="snapshot-base-salary">
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Base Salary</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-base-salary">
+          {/* Center: Key Compensation Summary */}
+          <div className="hidden md:flex items-center gap-6 flex-shrink-0">
+            <div className="text-right">
+              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Base</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-base-salary">
                 {formatCurrency(offer.baseSalary)}
               </p>
             </div>
-            <div data-testid="snapshot-signing-bonus">
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Signing Bonus</p>
-              <p className="text-xl font-semibold text-gray-700 dark:text-gray-300" data-testid="text-signing-bonus">
-                {offer.signingBonus ? formatCurrency(offer.signingBonus) : "—"}
+            <div className="text-right">
+              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">First Year</p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400" data-testid="text-first-year-total">
+                {formatCurrency(comp.totalFirstYear)}
               </p>
             </div>
-            <div data-testid="snapshot-start-date">
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Start Date</p>
-              <p className="text-xl font-semibold text-gray-700 dark:text-gray-300" data-testid="text-start-date">
-                {offer.startDate}
-              </p>
-            </div>
-            <div data-testid="snapshot-deadline">
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Respond By</p>
-              <p className="text-xl font-semibold text-amber-600 dark:text-amber-400" data-testid="text-deadline">
+            <div className="text-right">
+              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Respond By</p>
+              <p className="text-sm font-medium text-amber-600 dark:text-amber-400" data-testid="text-deadline">
                 {offer.responseDeadline}
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Main Offer Card */}
-      <Card className="border border-gray-200 dark:border-gray-700">
-        <CardContent className="p-6 space-y-8">
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button 
+              onClick={onProceedToNegotiation}
+              className="bg-primary hover:bg-primary/90 text-white"
+              data-testid="button-proceed-negotiation"
+            >
+              Practice Negotiation
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" data-testid="button-more-actions">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="text-green-600" data-testid="menu-accept">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Accept Offer
+                </DropdownMenuItem>
+                <DropdownMenuItem data-testid="menu-ask-questions">
+                  Ask Questions
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-red-600" data-testid="menu-decline">
+                  Decline Offer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Mobile: Compensation Summary */}
+        <div className="md:hidden mt-4 grid grid-cols-3 gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Base</p>
+            <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(offer.baseSalary)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">First Year</p>
+            <p className="font-bold text-green-600 dark:text-green-400">{formatCurrency(comp.totalFirstYear)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Respond By</p>
+            <p className="font-medium text-amber-600 dark:text-amber-400 text-sm">{offer.responseDeadline}</p>
+          </div>
+        </div>
+
+        {/* Expand/Collapse Button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-4 w-full flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 py-2 border-t border-gray-200 dark:border-gray-700 transition-colors"
+          data-testid="button-toggle-details"
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="h-4 w-4" />
+              Hide Full Offer Letter
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-4 w-4" />
+              View Full Offer Letter
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Expanded Full Offer Letter */}
+      {isExpanded && (
+        <CardContent className="pt-0 pb-6 px-6 space-y-6 border-t border-gray-200 dark:border-gray-700">
           {/* Salutation */}
-          <div className="prose dark:prose-invert max-w-none">
+          <div className="prose dark:prose-invert max-w-none pt-6">
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
               Dear {candidateName},
             </p>
@@ -200,12 +217,12 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
             </h3>
             
             <div className="space-y-4">
-              {/* Total Comp Summary - Now at the top with emphasis */}
+              {/* Total Comp Summary */}
               <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-5 text-white">
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">First Year Total</p>
-                    <p className="text-3xl font-bold text-green-400" data-testid="text-first-year-total">
+                    <p className="text-3xl font-bold text-green-400">
                       {formatCurrency(comp.totalFirstYear)}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">Including signing bonus</p>
@@ -237,7 +254,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
                       <Gift className="h-4 w-4 text-purple-500" />
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Signing</span>
                     </div>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-signing-bonus">
                       {formatCurrency(offer.signingBonus)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">One-time</p>
@@ -365,29 +382,37 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
               Position Details
             </h3>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Start Date</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Start Date</p>
                 </div>
-                <p className="font-medium text-gray-900 dark:text-white">{offer.startDate}</p>
+                <p className="font-medium text-gray-900 dark:text-white text-sm" data-testid="text-start-date">{offer.startDate}</p>
               </div>
               
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <Users className="h-4 w-4 text-gray-400" />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Reports To</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Reports To</p>
                 </div>
-                <p className="font-medium text-gray-900 dark:text-white">{offer.reportingTo}</p>
+                <p className="font-medium text-gray-900 dark:text-white text-sm">{offer.reportingTo}</p>
               </div>
               
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <Building2 className="h-4 w-4 text-gray-400" />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Team Size</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Team Size</p>
                 </div>
-                <p className="font-medium text-gray-900 dark:text-white">{offer.teamSize} people</p>
+                <p className="font-medium text-gray-900 dark:text-white text-sm">{offer.teamSize} people</p>
+              </div>
+              
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Deadline</p>
+                </div>
+                <p className="font-medium text-amber-600 dark:text-amber-400 text-sm">{offer.responseDeadline}</p>
               </div>
             </div>
           </div>
@@ -408,29 +433,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
             </div>
           </div>
         </CardContent>
-      </Card>
-
-      {/* Bottom CTA for negotiation (supplementary) */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-5 border border-blue-200 dark:border-blue-800">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-              Want to negotiate this offer?
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Practice negotiation strategies with our AI simulator before responding.
-            </p>
-          </div>
-          <Button 
-            onClick={onProceedToNegotiation}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            data-testid="button-negotiate-bottom"
-          >
-            Practice Negotiation
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      </div>
-    </div>
+      )}
+    </Card>
   );
 }
