@@ -1,19 +1,20 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { OfferLetter } from "@/components/OfferLetter";
 import type { OfferDetails } from "@shared/schema";
 import { 
   Briefcase, Calendar, Check, ChevronRight, Clock, FileText, MapPin, 
-  MessageCircle, Play, Target, TrendingUp, Building2, ArrowRight,
-  Rocket, Trophy, Users, Video
+  MessageCircle, Play, Target, Users, ArrowRight, ArrowLeft,
+  Rocket, Trophy, Video, Building2
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Company {
   id: number;
@@ -92,27 +93,92 @@ function getStageTypeLabel(type: string): string {
   }
 }
 
-function StageTimeline({ stages, currentIndex }: { stages: ApplicationStage[]; currentIndex: number }) {
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+// Compact list item for the left panel
+function ApplicationListItem({ 
+  application, 
+  isSelected,
+  onClick
+}: { 
+  application: JobApplication;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const completedStages = application.stages.filter(s => s.status === 'completed' || s.status === 'passed').length;
+  const progressPercent = (completedStages / application.stages.length) * 100;
+  
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full text-left p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
+        isSelected && "bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary"
+      )}
+      data-testid={`list-item-${application.id}`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-lg font-semibold text-primary shrink-0">
+          {application.job.company.name.charAt(0)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm">
+              {application.job.title}
+            </h3>
+            <Badge className={cn(getStatusColor(application.status), "text-xs shrink-0")}>
+              {application.status === 'offer' ? '🎉 Offer' : application.status}
+            </Badge>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {application.job.company.name}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <Progress value={progressPercent} className="h-1.5 flex-1" />
+            <span className="text-xs text-gray-500 shrink-0">
+              {completedStages}/{application.stages.length}
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// Stage timeline for the detail panel
+function StageTimeline({ 
+  stages, 
+  currentIndex,
+  onStartInterview 
+}: { 
+  stages: ApplicationStage[]; 
+  currentIndex: number;
+  onStartInterview: (stage: ApplicationStage) => void;
+}) {
   return (
     <div className="relative">
       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
       
       <div className="space-y-4">
         {stages.map((stage, index) => {
-          const isCompleted = stage.status === 'completed';
-          const isCurrent = index === currentIndex && stage.status !== 'completed';
-          const isPending = index > currentIndex;
+          const isCompleted = stage.status === 'completed' || stage.status === 'passed';
+          const isCurrent = index === currentIndex && !isCompleted;
           
           return (
             <div key={stage.id} className="relative flex items-start gap-4">
               <div 
-                className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  isCompleted 
-                    ? 'bg-green-500 border-green-500 text-white' 
-                    : isCurrent 
-                    ? 'bg-primary border-primary text-white' 
-                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
-                }`}
+                className={cn(
+                  "relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2",
+                  isCompleted && "bg-green-500 border-green-500 text-white",
+                  isCurrent && "bg-primary border-primary text-white",
+                  !isCompleted && !isCurrent && "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400"
+                )}
               >
                 {isCompleted ? (
                   <Check className="h-4 w-4" />
@@ -122,11 +188,14 @@ function StageTimeline({ stages, currentIndex }: { stages: ApplicationStage[]; c
               </div>
               
               <div className="flex-1 pb-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div>
-                    <h4 className={`font-medium ${
-                      isCompleted ? 'text-green-600' : isCurrent ? 'text-gray-900 dark:text-white' : 'text-gray-400'
-                    }`}>
+                    <h4 className={cn(
+                      "font-medium",
+                      isCompleted && "text-green-600",
+                      isCurrent && "text-gray-900 dark:text-white",
+                      !isCompleted && !isCurrent && "text-gray-400"
+                    )}>
                       {stage.stageName}
                     </h4>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mt-0.5">
@@ -137,19 +206,24 @@ function StageTimeline({ stages, currentIndex }: { stages: ApplicationStage[]; c
                   
                   {isCompleted && stage.score && (
                     <Badge variant="outline" className="text-green-600 border-green-200">
-                      Score: {stage.score}%
+                      {stage.score}%
                     </Badge>
                   )}
                   
                   {isCurrent && (
-                    <Badge className="bg-primary">
-                      Current Stage
-                    </Badge>
+                    <Button 
+                      size="sm"
+                      onClick={() => onStartInterview(stage)}
+                      data-testid={`button-start-interview-${stage.id}`}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      Start
+                    </Button>
                   )}
                 </div>
                 
                 {isCompleted && stage.feedback && (
-                  <p className="text-sm text-gray-500 mt-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <p className="text-sm text-gray-500 mt-2 bg-gray-50 dark:bg-gray-800 p-2 rounded text-xs">
                     {stage.feedback}
                   </p>
                 )}
@@ -162,181 +236,131 @@ function StageTimeline({ stages, currentIndex }: { stages: ApplicationStage[]; c
   );
 }
 
-function ApplicationCard({ 
-  application, 
+// Detail panel showing selected application
+function ApplicationDetail({ 
+  application,
   onStartInterview,
-  isMostPromising = false
+  onBack
 }: { 
   application: JobApplication;
-  onStartInterview: (stage: ApplicationStage, application: JobApplication) => void;
-  isMostPromising?: boolean;
+  onStartInterview: (stage: ApplicationStage) => void;
+  onBack: () => void;
 }) {
   const [, navigate] = useLocation();
-  const progressPercent = (application.currentStageIndex / application.stages.length) * 100;
-  const currentStage = application.stages[application.currentStageIndex];
-  const completedStages = application.stages.filter(s => s.status === 'completed').length;
+  const completedStages = application.stages.filter(s => s.status === 'completed' || s.status === 'passed').length;
+  const progressPercent = (completedStages / application.stages.length) * 100;
   
   return (
-    <Card className="overflow-hidden" data-testid={`application-card-${application.id}`}>
-      <CardContent className="p-0">
-        <div className="p-5 border-b">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4 flex-1">
-              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-2xl shrink-0 relative">
-                {application.job.company.logo || '🏢'}
-                {isMostPromising && (
-                  <div className="absolute -top-1 -right-1 bg-yellow-400 text-yellow-900 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                    ⭐
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
-                    {application.job.title}
-                  </h3>
-                  {isMostPromising && (
-                    <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs">
-                      Most Promising
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {application.job.company.name}
-                </p>
-                <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {application.job.location}
-                  </span>
-                  <Badge className={getStatusColor(application.status)}>
-                    {application.status}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-right">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {completedStages}/{application.stages.length}
-              </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                Stages Complete
-              </div>
-            </div>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <button 
+          onClick={onBack}
+          className="md:hidden flex items-center gap-1 text-sm text-gray-500 mb-3 hover:text-gray-700"
+          data-testid="button-back-to-list"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to list
+        </button>
+        
+        <div className="flex items-start gap-4">
+          <div className="h-14 w-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-2xl font-bold text-primary">
+            {application.job.company.name.charAt(0)}
           </div>
-          
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-gray-500">Interview Progress</span>
-              <span className="font-medium">{Math.round(progressPercent)}%</span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {application.job.title}
+              </h2>
+              <Badge className={getStatusColor(application.status)}>
+                {application.status}
+              </Badge>
             </div>
-            <Progress value={progressPercent} className="h-2" />
+            <p className="text-gray-600 dark:text-gray-400">
+              {application.job.company.name} • {application.job.company.industry}
+            </p>
+            <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" />
+                {application.job.location}
+              </span>
+              <span className="flex items-center gap-1">
+                <Building2 className="h-3.5 w-3.5" />
+                {application.job.company.size}
+              </span>
+            </div>
           </div>
         </div>
         
-        <div className="p-5">
-          <StageTimeline 
-            stages={application.stages} 
-            currentIndex={application.currentStageIndex} 
-          />
-          
-          {currentStage && currentStage.status !== 'completed' && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">
-                      Ready for the next stage?
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                      {currentStage.stageName} Interview
-                    </p>
-                  </div>
-                </div>
-                <Button 
-                  onClick={() => onStartInterview(currentStage, application)}
-                  className="w-full"
-                  data-testid={`button-start-interview-${currentStage.id}`}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Practice This Interview
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </div>
-          )}
-          
+        {/* Progress bar */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-sm mb-2">
+            <span className="text-gray-500">Interview Progress</span>
+            <span className="font-medium">{completedStages}/{application.stages.length} stages</span>
+          </div>
+          <Progress value={progressPercent} className="h-2" />
+        </div>
+      </div>
+      
+      {/* Content */}
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-6">
+          {/* Show Offer Letter if status is offer */}
           {application.status === 'offer' && application.offerDetails && (
-            <div className="mt-4">
-              <OfferLetter 
-                offer={application.offerDetails}
-                company={application.job.company}
-                job={{
-                  title: application.job.title,
-                  role: application.job.role,
-                  location: application.job.location,
-                }}
-                candidateName="Test User"
-                onProceedToNegotiation={() => navigate(`/negotiation?applicationId=${application.id}`)}
-              />
-            </div>
+            <OfferLetter 
+              offer={application.offerDetails}
+              company={application.job.company}
+              job={{
+                title: application.job.title,
+                role: application.job.role,
+                location: application.job.location,
+              }}
+              candidateName="Test User"
+              onProceedToNegotiation={() => navigate(`/negotiation?applicationId=${application.id}`)}
+            />
           )}
           
           {application.status === 'offer' && !application.offerDetails && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
-              <div className="flex items-center gap-3">
-                <Trophy className="h-8 w-8 text-green-500" />
-                <div>
-                  <h4 className="font-semibold text-green-700 dark:text-green-400">
-                    Congratulations! You received an offer!
-                  </h4>
-                  <p className="text-sm text-green-600 dark:text-green-500 mt-0.5">
-                    Continue to negotiation to maximize your compensation
-                  </p>
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-8 w-8 text-green-500" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-700 dark:text-green-400">
+                      Congratulations! You received an offer!
+                    </h4>
+                    <p className="text-sm text-green-600 dark:text-green-500">
+                      Practice negotiation to maximize your compensation
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => navigate('/negotiation')}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Practice Negotiation
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
-                <Button 
-                  onClick={() => navigate('/negotiation')}
-                  className="ml-auto bg-green-600 hover:bg-green-700 text-white"
-                  data-testid={`button-start-negotiation-${application.id}`}
-                >
-                  Practice Negotiation
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
+          
+          {/* Interview Stages */}
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Interview Stages</h3>
+            <StageTimeline 
+              stages={application.stages} 
+              currentIndex={application.currentStageIndex}
+              onStartInterview={onStartInterview}
+            />
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </ScrollArea>
+    </div>
   );
 }
 
-function EmptyState() {
-  const [, navigate] = useLocation();
-  
-  return (
-    <Card className="p-8">
-      <div className="text-center">
-        <div className="mx-auto h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-          <Rocket className="h-10 w-10 text-gray-400" />
-        </div>
-        <h3 className="font-semibold text-xl text-gray-900 dark:text-white mb-2">
-          Start Your Job Journey
-        </h3>
-        <p className="text-gray-500 max-w-md mx-auto mb-6">
-          Browse job listings, apply to positions, and practice your interviews with our AI-powered simulators.
-        </p>
-        <Button onClick={() => navigate('/jobs')} size="lg" data-testid="button-browse-jobs">
-          <Briefcase className="h-5 w-5 mr-2" />
-          Browse Job Listings
-        </Button>
-      </div>
-    </Card>
-  );
-}
-
+// Stats bar
 function JourneyStats({ applications }: { applications: JobApplication[] }) {
   const stats = {
     totalApplications: applications.length,
@@ -348,69 +372,91 @@ function JourneyStats({ applications }: { applications: JobApplication[] }) {
   };
   
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-              <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{stats.totalApplications}</div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">Applications</div>
+    <div className="grid grid-cols-4 gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+      <div className="text-center">
+        <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.totalApplications}</div>
+        <div className="text-xs text-gray-500">Apps</div>
+      </div>
+      <div className="text-center">
+        <div className="text-lg font-bold text-yellow-600">{stats.interviewing}</div>
+        <div className="text-xs text-gray-500">Active</div>
+      </div>
+      <div className="text-center">
+        <div className="text-lg font-bold text-purple-600">{stats.interviewsCompleted}</div>
+        <div className="text-xs text-gray-500">Interviews</div>
+      </div>
+      <div className="text-center">
+        <div className="text-lg font-bold text-green-600">{stats.offers}</div>
+        <div className="text-xs text-gray-500">Offers</div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  const [, navigate] = useLocation();
+  
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="text-center">
+        <div className="mx-auto h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+          <Rocket className="h-10 w-10 text-gray-400" />
+        </div>
+        <h3 className="font-semibold text-xl text-gray-900 dark:text-white mb-2">
+          Start Your Job Journey
+        </h3>
+        <p className="text-gray-500 max-w-md mx-auto mb-6">
+          Browse job listings, apply to positions, and practice your interviews.
+        </p>
+        <Button onClick={() => navigate('/jobs')} size="lg" data-testid="button-browse-jobs">
+          <Briefcase className="h-5 w-5 mr-2" />
+          Browse Jobs
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="flex h-full">
+      <div className="w-80 border-r border-gray-200 dark:border-gray-700">
+        <div className="p-3 border-b">
+          <Skeleton className="h-6 w-full" />
+        </div>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="p-4 border-b">
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-1.5 w-full" />
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{stats.interviewing}</div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">In Progress</div>
+        ))}
+      </div>
+      <div className="flex-1 p-6">
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <Skeleton className="h-14 w-14 rounded-xl" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-32" />
             </div>
           </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-              <Video className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{stats.interviewsCompleted}</div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">Interviews Done</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900 flex items-center justify-center">
-              <Trophy className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{stats.offers}</div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide">Offers</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <Skeleton className="h-2 w-full" />
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function Journey() {
   const [, navigate] = useLocation();
-  const { toast } = useToast();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   
   const { data: user } = useQuery<{ id: number }>({
     queryKey: ['/api/user'],
@@ -421,22 +467,19 @@ export default function Journey() {
     enabled: !!user?.id,
   });
 
-  const getMostPromisingApplication = (): JobApplication | null => {
-    if (!applications || applications.length === 0) return null;
-    return applications.reduce((best, current) => {
-      const currentProgress = current.currentStageIndex / current.stages.length;
-      const bestProgress = best.currentStageIndex / best.stages.length;
-      
-      if (current.status === 'offer' && best.status !== 'offer') return current;
-      if (best.status === 'offer' && current.status !== 'offer') return best;
-      if (currentProgress > bestProgress) return current;
-      return best;
-    });
+  // Auto-select first application or most promising
+  const selectedApplication = applications?.find(a => a.id === selectedId) 
+    || applications?.[0] 
+    || null;
+
+  const handleSelectApplication = (id: number) => {
+    setSelectedId(id);
+    setShowDetail(true); // Show detail on mobile
   };
 
-  const mostPromising = getMostPromisingApplication();
-
-  const handleStartInterview = (stage: ApplicationStage, app: JobApplication) => {
+  const handleStartInterview = (stage: ApplicationStage) => {
+    if (!selectedApplication) return;
+    
     const stageTypeToInterviewType: Record<string, string> = {
       recruiter_call: 'behavioral',
       behavioral: 'behavioral',
@@ -446,63 +489,73 @@ export default function Journey() {
     };
     
     const interviewType = stageTypeToInterviewType[stage.stageType] || 'behavioral';
-    
-    navigate(`/interview?stageId=${stage.id}&type=${interviewType}&role=${app.job.role}`);
+    navigate(`/interview?stageId=${stage.id}&type=${interviewType}&role=${selectedApplication.job.role}`);
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-[calc(100vh-64px)]">
+        <LoadingSkeleton />
+      </div>
+    );
+  }
+
+  if (!applications || applications.length === 0) {
+    return (
+      <div className="h-[calc(100vh-64px)] flex">
+        <EmptyState />
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-screen-xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Your Job Journey</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Track your applications and progress through interview stages
+    <div className="h-[calc(100vh-64px)] flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Job Journey</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Track applications and interview progress
         </p>
       </div>
-
-      {isLoading ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <Skeleton className="h-10 w-10 rounded-lg mb-2" />
-                  <Skeleton className="h-6 w-12 mb-1" />
-                  <Skeleton className="h-3 w-20" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <Skeleton className="h-12 w-12 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-2 w-full mt-4" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : !applications || applications.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <>
+      
+      {/* Master-Detail Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Application List */}
+        <div className={cn(
+          "w-full md:w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
+          showDetail && "hidden md:flex"
+        )}>
           <JourneyStats applications={applications} />
-          
-          <div className="space-y-4">
+          <ScrollArea className="flex-1">
             {applications.map((application) => (
-              <ApplicationCard
+              <ApplicationListItem
                 key={application.id}
                 application={application}
-                onStartInterview={handleStartInterview}
-                isMostPromising={mostPromising?.id === application.id}
+                isSelected={selectedApplication?.id === application.id}
+                onClick={() => handleSelectApplication(application.id)}
               />
             ))}
-          </div>
-        </>
-      )}
+          </ScrollArea>
+        </div>
+        
+        {/* Right Panel - Application Detail */}
+        <div className={cn(
+          "flex-1 bg-gray-50 dark:bg-gray-900/50",
+          !showDetail && "hidden md:block"
+        )}>
+          {selectedApplication ? (
+            <ApplicationDetail
+              application={selectedApplication}
+              onStartInterview={handleStartInterview}
+              onBack={() => setShowDetail(false)}
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              Select an application to view details
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
