@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import * as pdfParse from "pdf-parse";
 import { storage } from "./storage";
 import { groqService } from "./services/groq";
 import { openaiService } from "./services/openai";
@@ -829,9 +830,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (req.file) {
         cvFileName = req.file.originalname;
-        // For PDF/Word, store the file name. In a real app, you'd parse the content
-        // For MVP, we'll store a placeholder indicating the file was uploaded
-        cvContent = `[${req.file.mimetype}] ${req.file.originalname} (${req.file.size} bytes)`;
+        
+        // Extract text content from PDF
+        if (req.file.mimetype === 'application/pdf') {
+          try {
+            const pdfData = await (pdfParse as any).default(req.file.buffer);
+            cvContent = pdfData.text.trim();
+            console.log(`Extracted ${cvContent.length} characters from CV PDF`);
+          } catch (pdfError) {
+            console.error("Failed to parse PDF:", pdfError);
+            cvContent = `[PDF parsing failed] ${req.file.originalname}`;
+          }
+        } else {
+          // For other document types, store metadata
+          cvContent = `[${req.file.mimetype}] ${req.file.originalname} (${req.file.size} bytes)`;
+        }
       }
 
       // Create the application

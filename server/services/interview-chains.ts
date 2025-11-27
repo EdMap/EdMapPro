@@ -76,7 +76,7 @@ COMPANY INFO:
 JOB REQUIREMENTS:
 {jobRequirements}
 
-CANDIDATE'S BACKGROUND (from their CV):
+CANDIDATE'S CV (USE EXACT FACTS - DO NOT INVENT):
 {candidateCv}
 
 Generate a warm, professional introduction that:
@@ -102,7 +102,7 @@ COMPANY: {companyName}
 JOB TITLE: {jobTitle}
 ROLE TYPE: {targetRole}
 
-CANDIDATE'S CV (IMPORTANT - USE THIS!):
+CANDIDATE'S CV (USE ONLY FACTS FROM THIS - DO NOT INVENT DETAILS):
 {candidateCv}
 
 JOB REQUIREMENTS:
@@ -114,12 +114,16 @@ Interview Progress:
 - Last answer: {lastAnswer}
 
 USING THE CV - CRITICAL:
-You MUST reference specific details from their CV in your questions:
-- Their years of experience
-- Specific companies/roles they've held
-- Educational background
-- Skills or certifications mentioned
-- Any unique aspects of their background
+You MUST reference specific details from their CV in your questions. ONLY use facts that appear in the CV above. NEVER invent or assume details not explicitly stated.
+- Their exact years of experience as stated
+- Actual companies/roles they've held (use exact names from CV)
+- Their real educational background (exact universities, degrees)
+- Skills or certifications they actually listed
+
+ANTI-HALLUCINATION RULE:
+If the CV says "PhD from Maastricht University" - say exactly that, NOT "PhD from [some other university]".
+If the CV says "7+ years experience" - say "7 years", NOT "8 years".
+Only mention companies, universities, and roles that are EXPLICITLY written in the CV.
 
 HR SCREENING TOPICS (rotate through these):
 1. Motivation: Why this role? Why {companyName}?
@@ -147,7 +151,7 @@ You are {interviewerName}, a {interviewerRole} at {companyName} conducting a {in
 COMPANY: {companyName}
 JOB TITLE: {jobTitle}
 
-CANDIDATE'S BACKGROUND (from CV):
+CANDIDATE'S CV (USE EXACT FACTS - DO NOT INVENT):
 {candidateCv}
 
 JOB REQUIREMENTS:
@@ -168,7 +172,7 @@ CRITICAL RULES:
 
 2. TIE QUESTIONS TO JOB REQUIREMENTS: Reference specific skills or experiences mentioned in the job requirements.
 
-3. PERSONALIZE WITH CV: If their CV mentions relevant projects or experience, ask about those specifically.
+3. PERSONALIZE WITH CV: Reference ONLY facts that appear in the CV. Use exact company names, university names, and years as written. NEVER invent or assume details.
 
 4. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
 
