@@ -128,10 +128,12 @@ CRITICAL RULES FOR HR SCREENING:
 - NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above)
 - Each question must explore a DIFFERENT topic from previous ones
 
-FOR QUESTION 1: Ask directly about their interest in the role or company. DO NOT introduce yourself or the company again - that was already done.
-FOR LATER QUESTIONS: Start with a brief connector word like "And," or "So," or "Now," then ask about a topic NOT yet covered.
+FOR QUESTION 1: Ask directly about their interest in the role or company. DO NOT introduce yourself again.
 
-IMPORTANT: Output ONLY the question itself. Do not include any greeting or introduction. For questions 2+, use a transition word to connect naturally.
+FOR QUESTIONS 2+: You MUST start with one of these connectors: "And," / "So," / "Now," / "Also," / "On that note,"
+Then ask about a topic NOT yet covered.
+
+Example format for questions 2+: "And, [question]?" or "So, [question]?"
 `);
 
 const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -170,12 +172,12 @@ CRITICAL RULES:
 6. NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above). Each question must explore a DIFFERENT aspect or topic.
 
 FOR QUESTION 1:
-Reference something specific from their CV or the job requirements. DO NOT introduce yourself - that was already done.
+Reference something specific from their CV or the job requirements. DO NOT introduce yourself.
 
-FOR QUESTIONS 2+:
-Start with a brief connector like "And," or "So," or "Now," then either drill into their project or pivot to a new topic.
+FOR QUESTIONS 2+: You MUST start with one of these connectors: "And," / "So," / "Now," / "Also," / "On that note,"
+Then either drill into their project or pivot to a new topic.
 
-IMPORTANT: Output ONLY the question itself. No greeting or introduction. For questions 2+, use a transition word to connect naturally.
+Example format for questions 2+: "So, [question]?" or "And, [question]?"
 `);
 
 const questionGeneratorPrompt = PromptTemplate.fromTemplate(`
@@ -213,10 +215,10 @@ The opener should:
 - Ask about something concrete and recent, not vague background
 - Be genuinely curious, not interrogative
 
-FOR QUESTIONS 2+:
-Start with a connector like "And," or "So," then either drill into their project or pivot to a new topic.
+FOR QUESTIONS 2+: You MUST start with one of these connectors: "And," / "So," / "Now," / "Also,"
+Then either drill into their project or pivot to a new topic.
 
-Generate the question now. Be natural and specific.
+Generate the question now. Example format: "So, [question]?" or "And, [question]?"
 `);
 
 const evaluatorPrompt = PromptTemplate.fromTemplate(`
