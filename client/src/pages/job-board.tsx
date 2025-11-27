@@ -456,6 +456,7 @@ export default function JobBoard() {
   const [selectedTerm, setSelectedTerm] = useState<GlossaryTerm | null>(null);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
 
   const { data: jobs, isLoading: jobsLoading } = useQuery<JobPosting[]>({
@@ -471,8 +472,26 @@ export default function JobBoard() {
   });
 
   const applyMutation = useMutation({
-    mutationFn: async (data: { userId: number; jobPostingId: number; coverLetter?: string }) => {
-      const response = await apiRequest('POST', '/api/applications', data);
+    mutationFn: async (data: { userId: number; jobPostingId: number; coverLetter?: string; cv?: File }) => {
+      const formData = new FormData();
+      formData.append('userId', data.userId.toString());
+      formData.append('jobPostingId', data.jobPostingId.toString());
+      if (data.coverLetter) {
+        formData.append('coverLetter', data.coverLetter);
+      }
+      if (data.cv) {
+        formData.append('cv', data.cv);
+      }
+      
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit application');
+      }
+      
       return response.json();
     },
     onSuccess: (data) => {
@@ -482,6 +501,7 @@ export default function JobBoard() {
       });
       setShowApplyDialog(false);
       setCoverLetter("");
+      setCvFile(null);
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/applications`] });
       }
@@ -523,6 +543,7 @@ export default function JobBoard() {
       userId: user.id,
       jobPostingId: selectedJob.id,
       coverLetter: coverLetter || undefined,
+      cv: cvFile || undefined,
     });
   };
 
@@ -658,13 +679,31 @@ export default function JobBoard() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                Upload CV (PDF or Word)
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                data-testid="input-cv-upload"
+              />
+              {cvFile && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Selected: {cvFile.name}
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
                 Cover Letter (optional)
               </label>
               <Textarea
                 placeholder="Tell them why you're interested in this role..."
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}
-                rows={5}
+                rows={4}
                 data-testid="input-cover-letter"
               />
             </div>

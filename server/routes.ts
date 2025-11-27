@@ -8,18 +8,21 @@ import { workspaceOrchestrator } from "./services/workspace-orchestrator";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
-// Configure multer for audio file uploads
+// Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Accept audio files
-    if (file.mimetype.startsWith('audio/')) {
+    // Accept audio and document files
+    if (file.mimetype.startsWith('audio/') || 
+        file.mimetype === 'application/pdf' ||
+        file.mimetype === 'application/msword' ||
+        file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       cb(null, true);
     } else {
-      cb(new Error('Only audio files are allowed'));
+      cb(new Error('Only audio and document files (PDF, DOC, DOCX) are allowed'));
     }
   },
 });
@@ -764,7 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create job application
-  app.post("/api/applications", async (req, res) => {
+  app.post("/api/applications", upload.single('cv'), async (req, res) => {
     try {
       const { userId, jobPostingId, coverLetter } = req.body;
       
@@ -778,12 +781,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Job posting not found" });
       }
 
+      // Extract CV data if provided
+      let cvFileName: string | null = null;
+      let cvContent: string | null = null;
+      
+      if (req.file) {
+        cvFileName = req.file.originalname;
+        // For PDF/Word, store the file name. In a real app, you'd parse the content
+        // For MVP, we'll store a placeholder indicating the file was uploaded
+        cvContent = `[${req.file.mimetype}] ${req.file.originalname} (${req.file.size} bytes)`;
+      }
+
       // Create the application
       const application = await storage.createJobApplication({
         userId,
         jobPostingId,
         status: 'submitted',
         coverLetter: coverLetter || null,
+        cvFileName: cvFileName,
+        cvContent: cvContent,
         appliedAt: new Date(),
       });
 
