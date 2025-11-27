@@ -836,8 +836,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Extract text content from PDF
         if (req.file.mimetype === 'application/pdf') {
           try {
-            const parser = new PDFParse();
-            const pdfData = await parser.loadPDF(req.file.buffer);
+            const parser = new PDFParse({ data: req.file.buffer });
+            const pdfData = await parser.getText();
             cvContent = pdfData.text.trim();
             console.log(`Extracted ${cvContent.length} characters from CV PDF`);
           } catch (pdfError) {
