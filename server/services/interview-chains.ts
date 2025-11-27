@@ -126,10 +126,10 @@ CRITICAL RULES FOR HR SCREENING:
 - DO personalize questions based on their CV background
 - KEEP questions conversational, not interrogative
 
-FOR QUESTION 1: Start with something friendly about their interest in the role or company.
+FOR QUESTION 1: Ask directly about their interest in the role or company. DO NOT introduce yourself or the company again - that was already done.
 FOR LATER QUESTIONS: Progress naturally through the HR focus areas above.
 
-Generate a conversational, HR-appropriate question now. Be warm and personable.
+IMPORTANT: Output ONLY the question itself. Do not include any greeting, introduction, or preamble. The introduction has already been given separately. Just ask the question directly.
 `);
 
 const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -168,12 +168,12 @@ CRITICAL RULES:
 6. PIVOT after 2-3 questions on the same topic. Say "Let me switch gears..." or just ask about something new.
 
 FOR QUESTION 1:
-Create a warm opener that references something specific from their CV or the job requirements.
+Reference something specific from their CV or the job requirements. DO NOT introduce yourself - that was already done.
 
 FOR QUESTIONS 2+:
 Either drill into their project or pivot with a brief transition. Be direct and tie to job requirements.
 
-Generate the question now. Be natural, specific, and relevant to the role requirements.
+IMPORTANT: Output ONLY the question itself. Do not include any greeting, introduction, or preamble like "Hi, I'm [name]..." - the introduction has already been given separately. Just ask the question directly.
 `);
 
 const questionGeneratorPrompt = PromptTemplate.fromTemplate(`
