@@ -1,105 +1,105 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { formatDuration, formatScore, getScoreColor } from "@/lib/utils";
-import InterviewSession from "@/components/simulation/interview-session";
-import { Play, MessageCircle } from "lucide-react";
+import LangchainInterviewSession from "@/components/simulation/langchain-interview-session";
+import { 
+  Play, 
+  MessageCircle, 
+  Brain, 
+  Clock,
+  TrendingUp,
+  Briefcase,
+  Code,
+  Lightbulb
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { User, InterviewSession } from "@shared/schema";
 
-const professions = [
-  "Software Engineer",
-  "Product Manager", 
-  "Data Scientist",
-  "UX Designer",
-  "Marketing Manager"
+const targetRoles = [
+  { value: "developer", label: "Software Developer", icon: Code },
+  { value: "pm", label: "Product Manager", icon: Briefcase },
+  { value: "designer", label: "UX Designer", icon: Lightbulb },
+  { value: "data-scientist", label: "Data Scientist", icon: Brain },
 ];
 
 const interviewTypes = [
-  "Technical Interview",
-  "Behavioral Interview", 
-  "System Design",
-  "HR/Culture Fit"
+  { value: "behavioral", label: "Behavioral Interview", description: "Assess soft skills and past experiences" },
+  { value: "technical", label: "Technical Interview", description: "Evaluate technical knowledge and problem-solving" },
+  { value: "system-design", label: "System Design", description: "Test architectural thinking and design skills" },
+  { value: "case-study", label: "Case Study", description: "Analyze business problems and solutions" },
 ];
 
-const difficulties = ["junior", "mid", "senior"];
-const personalities = ["friendly", "strict", "casual", "challenging"];
+const difficulties = [
+  { value: "easy", label: "Entry Level", description: "Junior positions, basic questions" },
+  { value: "medium", label: "Mid Level", description: "Standard industry expectations" },
+  { value: "hard", label: "Senior Level", description: "Advanced, challenging questions" },
+];
 
 export default function InterviewSimulator() {
   const { toast } = useToast();
-  const [currentSession, setCurrentSession] = useState<any>(null);
-  const [jobPosting, setJobPosting] = useState("");
-  const [profession, setProfession] = useState("Software Engineer");
-  const [interviewType, setInterviewType] = useState("Technical Interview");
-  const [difficulty, setDifficulty] = useState("junior");
-  const [personality, setPersonality] = useState("friendly");
-  const [duration, setDuration] = useState("30");
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [activeFirstQuestion, setActiveFirstQuestion] = useState<any>(null);
+  const [targetRole, setTargetRole] = useState("developer");
+  const [interviewType, setInterviewType] = useState("behavioral");
+  const [difficulty, setDifficulty] = useState("medium");
+  const [totalQuestions, setTotalQuestions] = useState([5]);
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<User>({
     queryKey: ["/api/user"],
   });
 
-  const { data: previousSessions = [] } = useQuery({
-    queryKey: [`/api/user/${user?.id}/sessions`],
+  const { data: interviewHistory = [] } = useQuery<InterviewSession[]>({
+    queryKey: ["/api/users", user?.id, "interviews"],
     enabled: !!user?.id,
   });
 
-  const interviewSessions = previousSessions.filter((session: any) => session.type === 'interview');
-
-  const createSessionMutation = useMutation({
-    mutationFn: async (sessionData: any) => {
-      const response = await apiRequest("POST", "/api/sessions", sessionData);
+  const startInterviewMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/interviews/start", data);
       return response.json();
     },
-    onSuccess: (session) => {
-      setCurrentSession(session);
-      queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/sessions`] });
+    onSuccess: (result) => {
+      setActiveSession(result.session);
+      setActiveFirstQuestion(result.firstQuestion);
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "interviews"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
-        title: "Error",
-        description: "Failed to start interview session",
+        title: "Failed to Start Interview",
+        description: error.message || "Please try again",
         variant: "destructive",
       });
     },
   });
 
-  const handleStartInterview = async () => {
+  const handleStartInterview = () => {
     if (!user) return;
 
-    const configuration = {
-      profession,
-      interviewType,
-      difficulty,
-      personality,
-      duration: parseInt(duration),
-      jobPosting: jobPosting.trim() || null
-    };
-
-    createSessionMutation.mutate({
+    startInterviewMutation.mutate({
       userId: user.id,
-      type: 'interview',
-      status: 'active',
-      configuration,
-      messages: []
+      interviewType,
+      targetRole,
+      difficulty,
+      totalQuestions: totalQuestions[0],
     });
   };
 
-  if (currentSession) {
+  if (activeSession && activeFirstQuestion) {
     return (
-      <InterviewSession 
-        session={currentSession}
+      <LangchainInterviewSession
+        session={activeSession}
+        firstQuestion={activeFirstQuestion}
         onComplete={() => {
-          setCurrentSession(null);
-          queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/sessions`] });
+          setActiveSession(null);
+          setActiveFirstQuestion(null);
+          queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "interviews"] });
         }}
       />
     );
@@ -107,170 +107,189 @@ export default function InterviewSimulator() {
 
   return (
     <div className="p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Interview Simulator</h1>
+          <p className="text-gray-600">Practice your interview skills with AI-powered feedback</p>
+        </div>
+
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900">Interview Simulator</CardTitle>
+            <CardTitle className="flex items-center">
+              <Brain className="h-5 w-5 mr-2 text-blue-600" />
+              Configure Your Interview
+            </CardTitle>
+            <CardDescription>
+              Customize your practice session to match your target role and interview type
+            </CardDescription>
           </CardHeader>
-          <CardContent className="p-8">
-            {/* Job Posting Input */}
-            <div className="mb-8">
-              <Label className="text-sm font-medium text-gray-700 mb-2">
-                Job Posting (Optional)
-              </Label>
-              <Textarea
-                className="h-32 resize-none mt-2"
-                placeholder="Paste the job posting here to generate targeted interview questions..."
-                value={jobPosting}
-                onChange={(e) => setJobPosting(e.target.value)}
-              />
-              <p className="mt-2 text-sm text-gray-500">Leave empty for general interview practice</p>
-            </div>
-
-            {/* Interview Configuration */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2">Profession</Label>
-                <Select value={profession} onValueChange={setProfession}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {professions.map((prof) => (
-                      <SelectItem key={prof} value={prof}>{prof}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2">Interview Type</Label>
-                <Select value={interviewType} onValueChange={setInterviewType}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {interviewTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Difficulty & Duration */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2">Difficulty Level</Label>
-                <div className="flex space-x-2 mt-2">
-                  {difficulties.map((diff) => (
+          <CardContent className="space-y-8">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Target Role</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {targetRoles.map((role) => {
+                  const Icon = role.icon;
+                  return (
                     <Button
-                      key={diff}
-                      variant={difficulty === diff ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setDifficulty(diff)}
+                      key={role.value}
+                      variant={targetRole === role.value ? "default" : "outline"}
                       className={cn(
-                        "capitalize",
-                        difficulty === diff && "bg-blue-600 hover:bg-blue-700"
+                        "h-auto py-4 flex flex-col items-center justify-center",
+                        targetRole === role.value && "bg-blue-600 hover:bg-blue-700"
                       )}
+                      onClick={() => setTargetRole(role.value)}
+                      data-testid={`button-role-${role.value}`}
                     >
-                      {diff}
+                      <Icon className="h-6 w-6 mb-2" />
+                      <span className="text-sm">{role.label}</span>
                     </Button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2">Session Duration</Label>
-                <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Interviewer Personality */}
-            <div className="mb-8">
-              <Label className="text-sm font-medium text-gray-700 mb-2">Interviewer Personality</Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-                {personalities.map((pers) => (
-                  <Button
-                    key={pers}
-                    variant={personality === pers ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setPersonality(pers)}
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Interview Type</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {interviewTypes.map((type) => (
+                  <div
+                    key={type.value}
                     className={cn(
-                      "capitalize",
-                      personality === pers && "bg-blue-600 hover:bg-blue-700"
+                      "border rounded-lg p-4 cursor-pointer transition-all",
+                      interviewType === type.value 
+                        ? "border-blue-600 bg-blue-50" 
+                        : "border-gray-200 hover:border-gray-300"
                     )}
+                    onClick={() => setInterviewType(type.value)}
+                    data-testid={`card-interview-type-${type.value}`}
                   >
-                    {pers}
+                    <div className="font-medium text-gray-900">{type.label}</div>
+                    <div className="text-sm text-gray-500">{type.description}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Difficulty Level</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {difficulties.map((diff) => (
+                  <Button
+                    key={diff.value}
+                    variant={difficulty === diff.value ? "default" : "outline"}
+                    className={cn(
+                      "h-auto py-3 flex flex-col",
+                      difficulty === diff.value && "bg-blue-600 hover:bg-blue-700"
+                    )}
+                    onClick={() => setDifficulty(diff.value)}
+                    data-testid={`button-difficulty-${diff.value}`}
+                  >
+                    <span className="font-medium">{diff.label}</span>
+                    <span className="text-xs opacity-80">{diff.description}</span>
                   </Button>
                 ))}
               </div>
             </div>
 
-            {/* Start Interview Button */}
-            <div className="flex justify-center">
-              <Button 
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm font-medium text-gray-700">Number of Questions</Label>
+                <span className="text-sm font-semibold text-blue-600">{totalQuestions[0]} questions</span>
+              </div>
+              <Slider
+                value={totalQuestions}
+                onValueChange={setTotalQuestions}
+                min={3}
+                max={10}
+                step={1}
+                className="w-full"
+                data-testid="slider-questions"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Quick (3)</span>
+                <span>Standard (5-7)</span>
+                <span>Thorough (10)</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center pt-4">
+              <Button
                 size="lg"
                 onClick={handleStartInterview}
-                disabled={createSessionMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                disabled={startInterviewMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 px-8"
+                data-testid="button-start-interview"
               >
-                <Play className="mr-2 h-4 w-4" />
-                {createSessionMutation.isPending ? "Starting..." : "Start Interview"}
+                {startInterviewMutation.isPending ? (
+                  <>
+                    <Clock className="mr-2 h-5 w-5 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-5 w-5" />
+                    Start Interview
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Previous Sessions */}
-        {interviewSessions.length > 0 && (
-          <Card className="mt-8">
+        {interviewHistory.length > 0 && (
+          <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-gray-900">
-                Previous Interview Sessions
+              <CardTitle className="flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
+                Interview History
               </CardTitle>
+              <CardDescription>
+                Review your past interview sessions and track your progress
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {interviewSessions.map((session: any) => (
-                  <div key={session.id} className="border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <MessageCircle className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">
-                            {session.configuration?.profession} - {session.configuration?.interviewType}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {session.status === 'completed' ? 'Completed' : 'In Progress'} • {formatDuration(session.duration || 0)}
-                          </p>
-                        </div>
+                {interviewHistory.map((session: any) => (
+                  <div 
+                    key={session.id} 
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    data-testid={`card-history-${session.id}`}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className={cn(
+                        "w-12 h-12 rounded-lg flex items-center justify-center",
+                        session.status === 'completed' ? "bg-green-100" : "bg-yellow-100"
+                      )}>
+                        <MessageCircle className={cn(
+                          "h-6 w-6",
+                          session.status === 'completed' ? "text-green-600" : "text-yellow-600"
+                        )} />
                       </div>
-                      <div className="flex items-center space-x-4">
-                        {session.score && (
-                          <div className="text-right">
-                            <p className={`text-sm font-medium ${getScoreColor(session.score)}`}>
-                              Score: {formatScore(session.score)}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {session.score >= 80 ? 'Excellent' : session.score >= 60 ? 'Good' : 'Needs Improvement'}
-                            </p>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">
+                          {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          {session.targetRole} • {session.difficulty} level
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <Badge variant={session.status === 'completed' ? "default" : "secondary"}>
+                        {session.status === 'completed' ? 'Completed' : 'In Progress'}
+                      </Badge>
+                      {session.overallScore && (
+                        <div className="text-right">
+                          <div className={cn(
+                            "text-lg font-bold",
+                            session.overallScore >= 80 ? "text-green-600" :
+                            session.overallScore >= 60 ? "text-yellow-600" : "text-red-600"
+                          )}>
+                            {session.overallScore}%
                           </div>
-                        )}
-                        <Button variant="ghost" size="sm">
-                          View Details
-                        </Button>
-                      </div>
+                          <div className="text-xs text-gray-500">Score</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

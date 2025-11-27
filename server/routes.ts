@@ -540,6 +540,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // Interview Simulator API Endpoints
+  // ============================================
+
+  // Start a new interview
+  app.post("/api/interviews/start", async (req, res) => {
+    try {
+      const { userId, interviewType, targetRole, difficulty, totalQuestions } = req.body;
+      
+      if (!userId || !interviewType || !targetRole) {
+        return res.status(400).json({ message: "userId, interviewType, and targetRole are required" });
+      }
+
+      const { interviewOrchestrator } = await import("./services/interview-orchestrator");
+      const result = await interviewOrchestrator.startInterview(
+        userId,
+        interviewType,
+        targetRole,
+        difficulty || "medium",
+        totalQuestions || 5
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to start interview:", error);
+      res.status(500).json({ message: "Failed to start interview: " + (error as Error).message });
+    }
+  });
+
+  // Submit an answer to a question
+  app.post("/api/interviews/:sessionId/answer", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { questionId, answer } = req.body;
+      
+      if (!questionId || !answer) {
+        return res.status(400).json({ message: "questionId and answer are required" });
+      }
+
+      const { interviewOrchestrator } = await import("./services/interview-orchestrator");
+      const result = await interviewOrchestrator.submitAnswer(sessionId, questionId, answer);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to submit answer:", error);
+      res.status(500).json({ message: "Failed to submit answer: " + (error as Error).message });
+    }
+  });
+
+  // Get interview status
+  app.get("/api/interviews/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      const { interviewOrchestrator } = await import("./services/interview-orchestrator");
+      const status = await interviewOrchestrator.getInterviewStatus(sessionId);
+      
+      res.json(status);
+    } catch (error) {
+      console.error("Failed to get interview status:", error);
+      res.status(500).json({ message: "Failed to get interview status: " + (error as Error).message });
+    }
+  });
+
+  // Get user's interview history
+  app.get("/api/users/:userId/interviews", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const sessions = await storage.getUserInterviewSessions(userId);
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get interview history: " + (error as Error).message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
