@@ -144,8 +144,9 @@ export default function InterviewSimulator() {
           queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "interviews"] });
           
           // If this was part of a job application, redirect to journey page
-          if (applicationStageId) {
-            queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'applications'] });
+          if (applicationStageId && user?.id) {
+            // Invalidate with the exact query key format used in journey.tsx
+            queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/applications`] });
             toast({
               title: "Interview Completed!",
               description: "Your application has been updated. Check your journey for next steps.",
