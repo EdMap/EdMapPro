@@ -116,6 +116,7 @@ export interface IStorage {
   // Application stage operations
   getApplicationStages(applicationId: number): Promise<ApplicationStage[]>;
   getApplicationStage(id: number): Promise<ApplicationStage | undefined>;
+  getApplicationStageByInterviewSession(interviewSessionId: number): Promise<ApplicationStage | undefined>;
   createApplicationStage(stage: InsertApplicationStage): Promise<ApplicationStage>;
   updateApplicationStage(id: number, updates: Partial<ApplicationStage>): Promise<ApplicationStage | undefined>;
 }
@@ -1292,6 +1293,15 @@ export class MemStorage implements IStorage {
 
   async getApplicationStage(id: number): Promise<ApplicationStage | undefined> {
     return this.applicationStagesMap.get(id);
+  }
+
+  async getApplicationStageByInterviewSession(interviewSessionId: number): Promise<ApplicationStage | undefined> {
+    for (const stage of this.applicationStagesMap.values()) {
+      if (stage.interviewSessionId === interviewSessionId) {
+        return stage;
+      }
+    }
+    return undefined;
   }
 
   async createApplicationStage(insertStage: InsertApplicationStage): Promise<ApplicationStage> {

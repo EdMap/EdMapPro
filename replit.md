@@ -32,6 +32,15 @@ Preferred communication style: Simple, everyday language.
 - `migrations/`: Database migration files
 
 ### Key Features and Implementations
+- **Job Journey System**: Complete job application flow from discovery to onboarding.
+    - **Job Board**: Searchable/filterable job listings with company info, salary ranges, and interactive glossary for industry terms.
+    - **Application Flow**: Apply with cover letter, track progress through interview stages, receive AI-generated feedback.
+    - **Journey Timeline**: Dashboard showing all applications, current stage, next actions, and completion status.
+    - **Stage Progression**: Automatic advancement through interview stages based on completion and scores.
+    - **Company Variety**: Multiple seed companies (startups, mid-size, enterprise) with different interview pipelines.
+    - **Interview Integration**: Seamless link from Journey page to Interview Simulator via URL parameters (stageId, type, role).
+    - **Database Schema**: Companies, JobPostings, JobGlossary, JobApplications, InterviewTemplates, ApplicationStages.
+
 - **Interview Simulator**: AI-powered interview practice with LangChain.js architecture.
     - **LangChain Chains**: Modular AI workflow with 5 specialized chains (Question Generator, Evaluator, Follow-up Decision, Scoring, Conversation Memory).
     - **Interview Orchestrator**: Coordinates chains, manages session state, and handles interview flow.
@@ -40,6 +49,7 @@ Preferred communication style: Simple, everyday language.
     - **Real-time Evaluation**: Immediate feedback with scores, strengths, and improvement areas.
     - **Final Report**: Comprehensive scoring with hiring decision recommendation.
     - **AI Backend**: Powered by Groq (llama-3.3-70b-versatile) for fast, high-quality responses.
+    - **Job Journey Integration**: URL-based auto-start for application stages; completion updates stage status, score, and advances application.
 - **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work.
     - **Multi-Character AI Team**: 4-6 AI teammates with distinct roles, personalities, and expertise.
     - **Role-Based Practice**: Users can practice as Developer, Product Manager, Designer, QA Engineer, or DevOps Engineer.

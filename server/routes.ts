@@ -596,31 +596,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If interview is complete and linked to an application stage, update the stage
       if (result.finalReport) {
-        // Find any application stage linked to this interview session
-        const allApplications = await storage.getJobApplications(1); // MVP: hardcoded user ID
-        for (const app of allApplications) {
-          const stages = await storage.getApplicationStages(app.id);
-          const linkedStage = stages.find(s => s.interviewSessionId === sessionId);
-          if (linkedStage) {
-            await storage.updateApplicationStage(linkedStage.id, {
-              status: 'completed',
-              completedAt: new Date(),
-              score: result.finalReport.overallScore,
-              feedback: result.finalReport.summary,
-            });
+        // Find the application stage linked to this interview session
+        const linkedStage = await storage.getApplicationStageByInterviewSession(sessionId);
+        if (linkedStage) {
+          await storage.updateApplicationStage(linkedStage.id, {
+            status: 'completed',
+            completedAt: new Date(),
+            score: result.finalReport.overallScore,
+            feedback: result.finalReport.summary,
+          });
+          
+          // Update the application's current stage index
+          const application = await storage.getJobApplication(linkedStage.applicationId);
+          if (application) {
+            const stages = await storage.getApplicationStages(application.id);
+            const nextStageIndex = application.currentStageIndex + 1;
+            const totalStages = stages.length;
             
-            // Update the application's current stage index
-            const application = await storage.getJobApplication(app.id);
-            if (application) {
-              const nextStageIndex = application.currentStageIndex + 1;
-              const totalStages = stages.length;
-              
-              await storage.updateJobApplication(app.id, {
-                currentStageIndex: nextStageIndex,
-                status: nextStageIndex >= totalStages ? 'offer' : 'interviewing',
-              });
-            }
-            break;
+            await storage.updateJobApplication(application.id, {
+              currentStageIndex: nextStageIndex,
+              status: nextStageIndex >= totalStages ? 'offer' : 'interviewing',
+            });
           }
         }
       }
