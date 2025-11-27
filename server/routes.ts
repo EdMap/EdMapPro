@@ -656,10 +656,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const stages = await storage.getApplicationStages(application.id);
             const nextStageIndex = application.currentStageIndex + 1;
             const totalStages = stages.length;
+            const isLastStage = nextStageIndex >= totalStages;
+            
+            // If this is the last stage, generate a job offer
+            let offerDetails = undefined;
+            if (isLastStage) {
+              const { generateJobOffer } = await import("./services/offer-generator");
+              const jobPosting = await storage.getJobPosting(application.jobPostingId);
+              const company = jobPosting ? await storage.getCompany(jobPosting.companyId) : null;
+              const user = await storage.getUser(application.userId);
+              
+              if (jobPosting && company) {
+                offerDetails = generateJobOffer({
+                  jobPosting,
+                  company,
+                  stages,
+                  candidateName: user ? `${user.firstName} ${user.lastName}` : 'Candidate',
+                });
+              }
+            }
             
             await storage.updateJobApplication(application.id, {
               currentStageIndex: nextStageIndex,
-              status: nextStageIndex >= totalStages ? 'offer' : 'interviewing',
+              status: isLastStage ? 'offer' : 'interviewing',
+              offerDetails: offerDetails || undefined,
             });
           }
         }

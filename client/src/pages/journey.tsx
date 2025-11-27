@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { OfferLetter } from "@/components/OfferLetter";
+import type { OfferDetails } from "@shared/schema";
 import { 
   Briefcase, Calendar, Check, ChevronRight, Clock, FileText, MapPin, 
   MessageCircle, Play, Target, TrendingUp, Building2, ArrowRight,
@@ -54,6 +56,7 @@ interface JobApplication {
   appliedAt: string | null;
   job: JobPosting;
   stages: ApplicationStage[];
+  offerDetails: OfferDetails | null;
 }
 
 function getStatusColor(status: string): string {
@@ -265,7 +268,23 @@ function ApplicationCard({
             </div>
           )}
           
-          {application.status === 'offer' && (
+          {application.status === 'offer' && application.offerDetails && (
+            <div className="mt-4">
+              <OfferLetter 
+                offer={application.offerDetails}
+                company={application.job.company}
+                job={{
+                  title: application.job.title,
+                  role: application.job.role,
+                  location: application.job.location,
+                }}
+                candidateName="Test User"
+                onProceedToNegotiation={() => navigate(`/negotiation?applicationId=${application.id}`)}
+              />
+            </div>
+          )}
+          
+          {application.status === 'offer' && !application.offerDetails && (
             <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <div className="flex items-center gap-3">
                 <Trophy className="h-8 w-8 text-green-500" />

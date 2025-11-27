@@ -18,7 +18,8 @@ import {
   type JobGlossary, type InsertJobGlossary,
   type JobApplication, type InsertJobApplication,
   type InterviewTemplate, type InsertInterviewTemplate,
-  type ApplicationStage, type InsertApplicationStage
+  type ApplicationStage, type InsertApplicationStage,
+  type OfferDetails
 } from "@shared/schema";
 
 export interface IStorage {
@@ -1822,7 +1823,21 @@ export class MemStorage implements IStorage {
       // This ensures the seeded application shows up for the logged-in user
       const userId = 1;
 
-      // Create the job application with offer status
+      // Generate dates for the offer
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() + 21);
+      const deadline = new Date(today);
+      deadline.setDate(deadline.getDate() + 7);
+      
+      const formatDate = (date: Date) => date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      // Create the job application with offer status and realistic offer details
       const application = await this.createJobApplication({
         userId: userId,
         jobPostingId: dataSciPosting.id,
@@ -1852,7 +1867,51 @@ BS Computer Science - MIT | 2014
 SKILLS
 Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         coverLetter: 'I am thrilled to apply for the Senior Data Scientist position at DataViz Pro. With my extensive background in machine learning and data visualization, I believe I can contribute significantly to your mission of helping enterprises make sense of complex data.',
-        currentStageIndex: 5
+        currentStageIndex: 5,
+        offerDetails: {
+          baseSalary: 155000,
+          salaryFrequency: 'annual',
+          signingBonus: 15000,
+          annualBonus: {
+            targetPercent: 15,
+            description: 'Based on individual and company performance, paid annually'
+          },
+          equity: {
+            type: 'rsu',
+            amount: 40000,
+            vestingSchedule: '4-year vesting with 1-year cliff',
+            cliffMonths: 12,
+            totalVestingMonths: 48
+          },
+          benefits: {
+            healthInsurance: 'Premium PPO medical, including family coverage (100% employer paid for employee)',
+            dentalVision: true,
+            retirement401k: {
+              available: true,
+              matchPercent: 4,
+              maxMatch: 8000
+            },
+            pto: {
+              days: 20,
+              type: 'accrued'
+            },
+            remote: 'hybrid',
+            otherBenefits: [
+              'Life and disability insurance',
+              'Employee Assistance Program (EAP)',
+              'Professional development budget ($2,000/year)',
+              'Home office stipend ($500)',
+              'Wellness program'
+            ]
+          },
+          startDate: formatDate(startDate),
+          responseDeadline: formatDate(deadline),
+          reportingTo: 'Head of Data Science',
+          teamSize: 6,
+          offerDate: formatDate(today),
+          offerLetterSignatory: 'Amanda Rodriguez',
+          offerLetterSignatoryTitle: 'Chief People Officer'
+        }
       });
 
       // Create all 5 interview stages as passed

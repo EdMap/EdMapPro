@@ -1,16 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearch } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatScore, getScoreColor } from "@/lib/utils";
 import NegotiationSession from "@/components/simulation/negotiation-session";
-import { DollarSign, TrendingUp, Handshake, Play } from "lucide-react";
+import { DollarSign, TrendingUp, Handshake, Play, Building2, Briefcase, Target, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { OfferDetails } from "@shared/schema";
+
+interface ApplicationWithOffer {
+  id: number;
+  status: string;
+  offerDetails: OfferDetails | null;
+  job: {
+    title: string;
+    role: string;
+    location: string;
+    company: {
+      id: number;
+      name: string;
+      logo: string | null;
+      industry: string;
+    };
+  };
+}
 
 const scenarios = [
   {
@@ -46,19 +67,45 @@ const counterpartStyles = [
   { id: "relationship", label: "Relationship-focused", icon: "❤️" }
 ];
 
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 export default function NegotiationSimulator() {
   const { toast } = useToast();
+  const searchString = useSearch();
+  const searchParams = new URLSearchParams(searchString);
+  const applicationId = searchParams.get('applicationId');
+  
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [selectedScenario, setSelectedScenario] = useState("salary");
   const [targetAmount, setTargetAmount] = useState("120000");
   const [companyRange, setCompanyRange] = useState("$90k - $110k");
   const [counterpartStyle, setCounterpartStyle] = useState("collaborative");
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<{ id: number }>({
     queryKey: ["/api/user"],
   });
 
-  const { data: previousSessions = [] } = useQuery({
+  const { data: application } = useQuery<ApplicationWithOffer>({
+    queryKey: [applicationId ? `/api/applications/${applicationId}` : null],
+    enabled: !!applicationId,
+  });
+
+  useEffect(() => {
+    if (application?.offerDetails) {
+      setSelectedScenario("offer");
+      setTargetAmount(String(Math.round(application.offerDetails.baseSalary * 1.15)));
+      const currentOffer = formatCurrency(application.offerDetails.baseSalary);
+      setCompanyRange(`${currentOffer} (current offer)`);
+    }
+  }, [application]);
+
+  const { data: previousSessions = [] } = useQuery<Array<{ id: number; type: string; configuration?: { scenario?: string; targetAmount?: number }; score?: number }>>({
     queryKey: [`/api/user/${user?.id}/sessions`],
     enabled: !!user?.id,
   });
@@ -117,14 +164,89 @@ export default function NegotiationSimulator() {
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
+        {application?.offerDetails && (
+          <Card className="mb-6 border-2 border-green-200 dark:border-green-800 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-xl font-bold text-primary">
+                  {application.job.company.name.charAt(0)}
+                </div>
+                <div>
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">
+                    Negotiating Your Offer from {application.job.company.name}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 dark:text-gray-400">
+                    {application.job.title} • {application.job.location}
+                  </CardDescription>
+                </div>
+                <Badge className="ml-auto bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" data-testid="badge-journey-mode">
+                  Journey Mode
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Separator className="mb-4" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-green-600 mx-auto mb-1" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Current Offer</p>
+                  <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-offer">
+                    {formatCurrency(application.offerDetails.baseSalary)}
+                  </p>
+                </div>
+                {application.offerDetails.signingBonus && (
+                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <Briefcase className="h-5 w-5 text-purple-600 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Signing Bonus</p>
+                    <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-signing">
+                      {formatCurrency(application.offerDetails.signingBonus)}
+                    </p>
+                  </div>
+                )}
+                {application.offerDetails.annualBonus && (
+                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-yellow-600 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Annual Bonus</p>
+                    <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-bonus">
+                      {application.offerDetails.annualBonus.targetPercent}%
+                    </p>
+                  </div>
+                )}
+                {application.offerDetails.equity && (
+                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <Target className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Equity</p>
+                    <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-equity">
+                      {formatCurrency(application.offerDetails.equity.amount)}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                  <p className="text-sm text-blue-700 dark:text-blue-400">
+                    Tip: You can typically negotiate 10-20% higher than the initial offer. Your target is set to 15% above the base salary.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900">Negotiation Simulator</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Negotiation Simulator</CardTitle>
+            {application?.offerDetails && (
+              <CardDescription>
+                Practice negotiating your offer before the real conversation
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="p-8">
             {/* Scenario Selection */}
             <div className="mb-8">
-              <Label className="text-sm font-medium text-gray-700 mb-4">
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
                 Choose Negotiation Scenario
               </Label>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">

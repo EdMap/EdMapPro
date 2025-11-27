@@ -379,3 +379,52 @@ export type InterviewTemplate = typeof interviewTemplates.$inferSelect;
 export type InsertInterviewTemplate = z.infer<typeof insertInterviewTemplateSchema>;
 export type ApplicationStage = typeof applicationStages.$inferSelect;
 export type InsertApplicationStage = z.infer<typeof insertApplicationStageSchema>;
+
+// Job Offer Details Structure - mimics real job offers
+export interface OfferDetails {
+  // Core Compensation
+  baseSalary: number;
+  salaryFrequency: 'annual' | 'monthly';
+  signingBonus?: number;
+  annualBonus?: {
+    targetPercent: number;
+    description: string;
+  };
+  
+  // Equity
+  equity?: {
+    type: 'stock_options' | 'rsu' | 'none';
+    amount: number;
+    vestingSchedule: string;
+    cliffMonths: number;
+    totalVestingMonths: number;
+  };
+  
+  // Benefits
+  benefits: {
+    healthInsurance: string;
+    dentalVision: boolean;
+    retirement401k: {
+      available: boolean;
+      matchPercent?: number;
+      maxMatch?: number;
+    };
+    pto: {
+      days: number;
+      type: 'unlimited' | 'accrued' | 'fixed';
+    };
+    remote: 'full' | 'hybrid' | 'onsite';
+    otherBenefits: string[];
+  };
+  
+  // Job Details
+  startDate: string;
+  responseDeadline: string;
+  reportingTo: string;
+  teamSize: number;
+  
+  // Offer metadata
+  offerDate: string;
+  offerLetterSignatory: string;
+  offerLetterSignatoryTitle: string;
+}
