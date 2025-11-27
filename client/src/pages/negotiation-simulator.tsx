@@ -165,70 +165,98 @@ export default function NegotiationSimulator() {
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
         {application?.offerDetails && (
-          <Card className="mb-6 border-2 border-green-200 dark:border-green-800 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-xl font-bold text-primary">
-                  {application.job.company.name.charAt(0)}
+          <Card className="mb-6 border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-lg font-bold text-primary border border-gray-200 dark:border-gray-600">
+                    {application.job.company.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {application.job.company.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {application.job.title} • {application.job.location}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg text-gray-900 dark:text-white">
-                    Negotiating Your Offer from {application.job.company.name}
-                  </CardTitle>
-                  <CardDescription className="text-gray-600 dark:text-gray-400">
-                    {application.job.title} • {application.job.location}
-                  </CardDescription>
-                </div>
-                <Badge className="ml-auto bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" data-testid="badge-journey-mode">
+                <Badge variant="outline" className="border-primary text-primary" data-testid="badge-journey-mode">
                   Journey Mode
                 </Badge>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Separator className="mb-4" />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Current Offer</p>
-                  <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-offer">
-                    {formatCurrency(application.offerDetails.baseSalary)}
-                  </p>
+            </div>
+            
+            {/* Two-Column Layout */}
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column - Pay Headline */}
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Current Base Offer</p>
+                    <p className="text-4xl font-bold text-gray-900 dark:text-white" data-testid="text-current-offer">
+                      {formatCurrency(application.offerDetails.baseSalary)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Target className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Your target:</span>
+                    <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                      {formatCurrency(Math.round(application.offerDetails.baseSalary * 1.15))}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">(+15%)</span>
+                  </div>
                 </div>
-                {application.offerDetails.signingBonus && (
-                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                    <Briefcase className="h-5 w-5 text-purple-600 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Signing Bonus</p>
-                    <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-signing">
-                      {formatCurrency(application.offerDetails.signingBonus)}
+                
+                {/* Right Column - Secondary Terms */}
+                <div className="grid grid-cols-2 gap-3">
+                  {application.offerDetails.signingBonus && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Signing</p>
+                      <p className="font-semibold text-gray-900 dark:text-white" data-testid="text-current-signing">
+                        {formatCurrency(application.offerDetails.signingBonus)}
+                      </p>
+                    </div>
+                  )}
+                  {application.offerDetails.annualBonus && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Bonus</p>
+                      <p className="font-semibold text-gray-900 dark:text-white" data-testid="text-current-bonus">
+                        {application.offerDetails.annualBonus.targetPercent}%
+                      </p>
+                    </div>
+                  )}
+                  {application.offerDetails.equity && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Equity</p>
+                      <p className="font-semibold text-gray-900 dark:text-white" data-testid="text-current-equity">
+                        {formatCurrency(application.offerDetails.equity.amount)}
+                      </p>
+                    </div>
+                  )}
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Start Date</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {application.offerDetails.startDate}
                     </p>
                   </div>
-                )}
-                {application.offerDetails.annualBonus && (
-                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-yellow-600 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Annual Bonus</p>
-                    <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-bonus">
-                      {application.offerDetails.annualBonus.targetPercent}%
-                    </p>
-                  </div>
-                )}
-                {application.offerDetails.equity && (
-                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                    <Target className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Equity</p>
-                    <p className="font-bold text-gray-900 dark:text-white" data-testid="text-current-equity">
-                      {formatCurrency(application.offerDetails.equity.amount)}
-                    </p>
-                  </div>
-                )}
+                </div>
               </div>
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                  <p className="text-sm text-blue-700 dark:text-blue-400">
-                    Tip: You can typically negotiate 10-20% higher than the initial offer. Your target is set to 15% above the base salary.
-                  </p>
-                </div>
+              
+              {/* Link back to offer */}
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Practice negotiating before responding to your offer.
+                </p>
+                <a 
+                  href="/journey" 
+                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                  data-testid="link-view-full-offer"
+                >
+                  View Full Offer
+                  <span aria-hidden="true">→</span>
+                </a>
               </div>
             </CardContent>
           </Card>
