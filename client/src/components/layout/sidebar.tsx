@@ -14,10 +14,10 @@ import {
 
 const navigationItems = [
   {
-    title: "Simulations Map",
+    title: "My Journey",
     href: "/",
     icon: Map,
-    section: "simulations"
+    section: "journey"
   },
   {
     title: "Job Board",
@@ -26,7 +26,7 @@ const navigationItems = [
     section: "journey"
   },
   {
-    title: "My Journey",
+    title: "Application Details",
     href: "/journey",
     icon: Route,
     section: "journey"
