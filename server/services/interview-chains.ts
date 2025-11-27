@@ -192,16 +192,13 @@ Keep it natural and conversational - about 4-6 sentences total. End with a trans
 `);
 
 const hrScreeningQuestionPrompt = PromptTemplate.fromTemplate(`
-You are {interviewerName}, an HR recruiter at {companyName} having a conversation with a candidate.
+You are {interviewerName}, an HR recruiter at {companyName}.
 
 ROLE: {jobTitle}
 COMPANY: {companyName}
 
 CV HIGHLIGHTS (use these EXACT facts - do not invent):
 {cvHighlights}
-
-FULL CV FOR REFERENCE:
-{candidateCv}
 
 JOB REQUIREMENTS:
 {jobRequirements}
@@ -211,28 +208,18 @@ INTERVIEW STATE:
 - Already discussed: {previousQuestions}
 - Their last answer: {lastAnswer}
 
-YOUR ASSESSMENT AGENDA:
-Question 1: MOTIVATION - Why are they interested in this specific role?
-Question 2: CAREER FIT - How does their background prepare them for this?
-Question 3: SPECIFIC EXPERIENCE - Dig into one company/role from their CV
-Question 4: WORKING STYLE - How do they like to work? Team dynamics?
-Question 5: LOGISTICS - Availability, expectations, questions they have
-
 CURRENT GOAL (Question {questionIndex}):
 {currentGoal}
 
+CRITICAL RULE:
+DO NOT acknowledge, summarize, or comment on their last answer. No "That's helpful" or "Great point" or "Thanks for sharing". Just ask your next question directly.
+
 HOW TO ASK:
-- Use a CV highlight naturally: "I see you're currently at [company from CV]..." or "Your PhD from [university] is interesting..."
-- If they just gave a detailed answer, acknowledge it briefly then pivot: "That's helpful context. I'm curious about..."
-- If they asked for clarification, rephrase the question more simply
-- Be conversational, not interrogative
+- Reference something from their CV naturally: "I see you worked at [company]..." or "Your experience with [skill]..."
+- If they asked for clarification, rephrase more simply
+- Keep questions focused on the current goal
 
-LAST ANSWER CONTEXT:
-If their last answer was detailed, build on it naturally.
-If their last answer was brief or unclear, try a different angle.
-If they asked for clarification, simplify and be more specific.
-
-Output ONLY your question. No preamble.
+Output ONLY the question itself. Nothing else.
 `);
 
 const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -256,27 +243,23 @@ Interview Progress:
 INTERVIEW TYPE FOCUS:
 {interviewTypeFocus}
 
-CRITICAL RULES:
+CRITICAL RULE - NO ACKNOWLEDGMENTS:
+DO NOT acknowledge, praise, or comment on their last answer. No "That's helpful", "Great point", "Thanks for sharing", "Interesting that you mentioned X". Just ask the question directly.
 
-1. NEVER PARROT what the candidate said. Don't say "That's interesting that you mentioned X" or "I love how you described Y".
-
-2. TIE QUESTIONS TO JOB REQUIREMENTS: Reference specific skills or experiences mentioned in the job requirements.
-
-3. PERSONALIZE WITH CV: Reference ONLY facts that appear in the CV. Use exact company names, university names, and years as written. NEVER invent or assume details.
-
-4. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
-
-5. PIVOT after 2-3 questions on the same topic. Ask about something new.
-
-6. NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above). Each question must explore a DIFFERENT aspect or topic.
+OTHER RULES:
+1. TIE QUESTIONS TO JOB REQUIREMENTS
+2. PERSONALIZE WITH CV - use exact facts only
+3. DRILL DOWN ON THEIR PROJECT when relevant
+4. PIVOT after 2-3 questions on same topic
+5. NEVER REPEAT a question already asked
 
 FOR QUESTION 1:
-Reference something specific from their CV or the job requirements. DO NOT introduce yourself.
+Reference something specific from their CV or the job requirements.
 
-FOR QUESTIONS 2+: You MUST start with one of these connectors: "And," / "So," / "Now," / "Also," / "On that note,"
-Then either drill into their project or pivot to a new topic.
+FOR QUESTIONS 2+: 
+Start with a short connector ("So," / "And," / "Now,") then ask directly.
 
-Example format for questions 2+: "So, [question]?" or "And, [question]?"
+Output ONLY the question. Nothing else.
 `);
 
 const questionGeneratorPrompt = PromptTemplate.fromTemplate(`
@@ -288,36 +271,24 @@ Interview Progress:
 - Last answer: {lastAnswer}
 - Project/example they mentioned: {activeProject}
 
-CRITICAL RULES:
+CRITICAL RULE - NO ACKNOWLEDGMENTS:
+DO NOT acknowledge, praise, or comment on their last answer. No "That's helpful", "Great point", "Thanks for sharing", "Interesting". Just ask the question directly.
 
-1. NEVER PARROT what the candidate said. Don't say "That's interesting that you mentioned X" or "I love how you described Y".
+OTHER RULES:
+1. DRILL DOWN ON THEIR PROJECT when relevant ({activeProject})
+2. PIVOT after 2-3 questions on same topic
+3. NEVER REPEAT a question already asked
 
-2. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
+FOR QUESTION 1 - THE OPENING:
+Create a warm, role-specific opener. Examples:
+- Developer: "Hey! What's the most interesting technical problem you've tackled recently?"
+- PM: "Hi! What's a product decision you've made recently that you're proud of?"
+- Designer: "Hey! I'd love to hear about a design challenge you've worked through lately."
 
-3. PIVOT after 2-3 questions on the same topic. Ask about something new.
+FOR QUESTIONS 2+: 
+Start with a short connector ("So," / "And," / "Now,") then ask directly.
 
-4. NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above). Each question must explore a DIFFERENT aspect or topic.
-
-FOR QUESTION 1 ONLY - THE OPENING:
-Don't use generic "tell me about yourself" - that's boring and scripted.
-
-Instead, create a warm, role-specific opener. Examples by role:
-- Software Developer: "Hey! Thanks for chatting with me today. I saw you're interested in our dev role - what's the most interesting technical problem you've tackled recently?"
-- Product Manager: "Hi there! Great to meet you. I'm curious - what's a product decision you've made recently that you're really proud of?"
-- Designer: "Hey! So glad you're here. I'd love to hear about a design challenge you've worked through lately - what made it tricky?"
-- QA Engineer: "Hi! Thanks for joining. Tell me about a bug or quality issue you caught that could have been a real problem - how'd you find it?"
-- DevOps: "Hey there! I'm excited to chat. What's your current infrastructure setup like, and where have you been focusing your energy lately?"
-
-The opener should:
-- Feel like a real person greeting them (casual "Hey!" or "Hi there!")
-- Reference their specific role
-- Ask about something concrete and recent, not vague background
-- Be genuinely curious, not interrogative
-
-FOR QUESTIONS 2+: You MUST start with one of these connectors: "And," / "So," / "Now," / "Also,"
-Then either drill into their project or pivot to a new topic.
-
-Generate the question now. Example format: "So, [question]?" or "And, [question]?"
+Output ONLY the question. Nothing else.
 `);
 
 const evaluatorPrompt = PromptTemplate.fromTemplate(`
