@@ -131,19 +131,18 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
             </Button>
             <Button 
               onClick={onProceedToNegotiation}
-              variant="outline"
               size="sm"
-              className="border-primary text-primary hover:bg-primary/10"
+              className="bg-primary hover:bg-primary/90 text-white"
               data-testid="button-proceed-negotiation"
             >
               Practice Negotiation
             </Button>
             <Button 
+              variant="outline"
               size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
               data-testid="button-accept"
             >
-              <CheckCircle2 className="h-4 w-4 mr-1" />
               Accept
             </Button>
           </div>
