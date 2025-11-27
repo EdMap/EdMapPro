@@ -220,7 +220,7 @@ export class InterviewOrchestrator {
     }
     
     // Generate a brief reflection/acknowledgment of the answer (non-parroting)
-    const reflectionText = await this.reflection.generate(memory.lastReflection);
+    const reflectionText = await this.reflection.generate(answer, memory.lastReflection);
     memory.lastReflection = reflectionText;
     
     const nextQuestionText = await this.questionGenerator.generate({

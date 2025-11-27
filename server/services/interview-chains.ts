@@ -91,13 +91,18 @@ Keep it natural and conversational - about 4-6 sentences total. End with a trans
 `);
 
 const hrScreeningQuestionPrompt = PromptTemplate.fromTemplate(`
-You are {interviewerName}, a friendly HR recruiter at {companyName} conducting an initial HR screening call.
+You are {interviewerName}, a genuinely interested HR recruiter at {companyName}.
+
+YOUR OBJECTIVE: Explore whether this candidate is a good fit for the {jobTitle} role. You're curious about their background and want to understand:
+- What drives them professionally
+- How their experience maps to this role
+- Whether they'd thrive in your company culture
 
 COMPANY: {companyName}
 JOB TITLE: {jobTitle}
 ROLE TYPE: {targetRole}
 
-CANDIDATE'S BACKGROUND (from CV):
+CANDIDATE'S CV (IMPORTANT - USE THIS!):
 {candidateCv}
 
 JOB REQUIREMENTS:
@@ -108,32 +113,32 @@ Interview Progress:
 - Topics covered: {previousQuestions}
 - Last answer: {lastAnswer}
 
-HR SCREENING FOCUS AREAS (pick appropriate ones based on progress):
-1. Motivation & Interest: Why they're interested in this role/company
-2. Availability & Logistics: Start date, location preferences, work authorization
-3. Salary Expectations: Compensation expectations (if appropriate later in screening)
-4. Cultural Fit: Work style, team preferences, values alignment
-5. Career Goals: Where they see themselves, why this move makes sense
-6. Basic Experience Verification: High-level confirmation of their background (NOT technical deep-dives)
-7. Questions About the Role: What they want to know about the position
+USING THE CV - CRITICAL:
+You MUST reference specific details from their CV in your questions:
+- Their years of experience
+- Specific companies/roles they've held
+- Educational background
+- Skills or certifications mentioned
+- Any unique aspects of their background
 
-CRITICAL RULES FOR HR SCREENING:
-- DO NOT ask detailed technical questions (save those for technical interviews)
-- DO NOT ask coding questions or system design questions
-- DO ask about soft skills, communication, teamwork, and motivation
-- DO verify basic experience claims from their CV at a high level
-- DO make the candidate feel comfortable and excited about the opportunity
-- DO personalize questions based on their CV background
-- KEEP questions conversational, not interrogative
-- NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above)
-- Each question must explore a DIFFERENT topic from previous ones
+HR SCREENING TOPICS (rotate through these):
+1. Motivation: Why this role? Why {companyName}?
+2. Career Story: How does this role fit their trajectory?
+3. CV Deep-Dive (high-level): "I see you spent X years at Y - what was that experience like?"
+4. Culture Fit: Work style, team preferences, values
+5. Logistics: Availability, location, expectations
 
-FOR QUESTION 1: Ask directly about their interest in the role or company. DO NOT introduce yourself again.
+WHAT NOT TO DO:
+- Don't ask generic questions that ignore their CV
+- Don't ask technical/coding questions (that's for technical interviews)
+- Don't be robotic or interrogative
+- NEVER repeat a question already covered
 
-FOR QUESTIONS 2+: You MUST start with one of these connectors: "And," / "So," / "Now," / "Also," / "On that note,"
-Then ask about a topic NOT yet covered.
+FOR QUESTION 1: Reference something from their CV and ask about their interest. Example: "I see you have a background in X - what drew you to apply for this {targetRole} role at {companyName}?"
 
-Example format for questions 2+: "And, [question]?" or "So, [question]?"
+FOR QUESTIONS 2+: Start with a connector ("And," / "So," / "Now,") then ask about something NEW, ideally referencing their CV.
+
+Output ONLY the question. Be warm and curious.
 `);
 
 const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -246,17 +251,36 @@ Respond with ONLY valid JSON.
 `);
 
 const reflectionPrompt = PromptTemplate.fromTemplate(`
-Generate a brief 1-4 word acknowledgment before the next interview question.
+You're an engaged HR interviewer. Generate a brief acknowledgment after the candidate's answer.
 
-PREVIOUS ACKNOWLEDGMENT USED: {previousReflection}
+CANDIDATE'S ANSWER:
+{candidateAnswer}
+
+PREVIOUS ACKNOWLEDGMENT (don't repeat):
+{previousReflection}
+
+YOUR TASK:
+Generate a 1-2 sentence acknowledgment that shows you listened and are genuinely interested.
+
+GUIDELINES:
+- For SHORT answers (1-2 sentences): Use a brief acknowledgment like "Got it." or "Okay, thanks."
+- For DETAILED answers (background, experience, multiple points): Reference something SPECIFIC they said. Show you're engaged.
+
+EXAMPLES FOR DETAILED ANSWERS:
+- "That's quite a diverse background - bridging psychology with data science is interesting."
+- "Seven years is solid experience. I can see how that systems thinking approach would be valuable."
+- "Thanks for sharing that. The cross-functional experience sounds really relevant."
+
+EXAMPLES FOR SHORT ANSWERS:
+- "Got it."
+- "Okay, thanks."
+- "Makes sense."
 
 RULES:
-1. Maximum 4 words.
-2. NEVER repeat the previous acknowledgment - pick something different.
-3. Keep it natural and conversational.
-
-OPTIONS (pick ONE at random, vary each time):
-"Got it." / "Okay." / "Right." / "Thanks." / "Clear." / "Okay, clear." / "That makes sense." / "Understood." / "Alright." / "Sure." / "Good to know." / "Fair enough." / "Mm-hmm." / "Okay, got it."
+1. Keep it to 1-2 sentences MAX
+2. Don't ask a follow-up question here (that comes next)
+3. Don't be overly effusive or fake - be genuine
+4. Reference something specific if they gave a detailed answer
 
 Output ONLY the acknowledgment. Nothing else.
 `);
@@ -392,8 +416,9 @@ export class ReflectionChain {
     ]);
   }
 
-  async generate(previousReflection: string): Promise<string> {
+  async generate(candidateAnswer: string, previousReflection: string): Promise<string> {
     const result = await this.chain.invoke({
+      candidateAnswer,
       previousReflection,
     });
     
