@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -44,12 +45,34 @@ const difficulties = [
 
 export default function InterviewSimulator() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const searchString = useSearch();
   const [activeSession, setActiveSession] = useState<any>(null);
   const [activeFirstQuestion, setActiveFirstQuestion] = useState<any>(null);
+  const [applicationStageId, setApplicationStageId] = useState<number | null>(null);
   const [targetRole, setTargetRole] = useState("developer");
   const [interviewType, setInterviewType] = useState("behavioral");
   const [difficulty, setDifficulty] = useState("medium");
   const [totalQuestions, setTotalQuestions] = useState([5]);
+  const [autoStarted, setAutoStarted] = useState(false);
+
+  // Parse URL search params
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const stageId = params.get('stageId');
+    const type = params.get('type');
+    const role = params.get('role');
+    
+    if (stageId) {
+      setApplicationStageId(parseInt(stageId));
+    }
+    if (type && ['behavioral', 'technical', 'system-design', 'case-study'].includes(type)) {
+      setInterviewType(type);
+    }
+    if (role && ['developer', 'pm', 'designer', 'data-scientist'].includes(role)) {
+      setTargetRole(role);
+    }
+  }, [searchString]);
 
   const { data: user } = useQuery<User>({
     queryKey: ["/api/user"],
@@ -68,6 +91,9 @@ export default function InterviewSimulator() {
     onSuccess: (result) => {
       setActiveSession(result.session);
       setActiveFirstQuestion(result.firstQuestion);
+      if (result.applicationStageId) {
+        setApplicationStageId(result.applicationStageId);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "interviews"] });
     },
     onError: (error: any) => {
@@ -79,6 +105,21 @@ export default function InterviewSimulator() {
     },
   });
 
+  // Auto-start interview if coming from Journey page with stageId
+  useEffect(() => {
+    if (user && applicationStageId && !autoStarted && !activeSession) {
+      setAutoStarted(true);
+      startInterviewMutation.mutate({
+        userId: user.id,
+        interviewType,
+        targetRole,
+        difficulty,
+        totalQuestions: totalQuestions[0],
+        applicationStageId,
+      });
+    }
+  }, [user, applicationStageId, autoStarted, activeSession]);
+
   const handleStartInterview = () => {
     if (!user) return;
 
@@ -88,6 +129,7 @@ export default function InterviewSimulator() {
       targetRole,
       difficulty,
       totalQuestions: totalQuestions[0],
+      applicationStageId: applicationStageId || undefined,
     });
   };
 
@@ -100,6 +142,16 @@ export default function InterviewSimulator() {
           setActiveSession(null);
           setActiveFirstQuestion(null);
           queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "interviews"] });
+          
+          // If this was part of a job application, redirect to journey page
+          if (applicationStageId) {
+            queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'applications'] });
+            toast({
+              title: "Interview Completed!",
+              description: "Your application has been updated. Check your journey for next steps.",
+            });
+            navigate('/journey');
+          }
         }}
       />
     );

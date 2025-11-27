@@ -547,7 +547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Start a new interview
   app.post("/api/interviews/start", async (req, res) => {
     try {
-      const { userId, interviewType, targetRole, difficulty, totalQuestions } = req.body;
+      const { userId, interviewType, targetRole, difficulty, totalQuestions, applicationStageId } = req.body;
       
       if (!userId || !interviewType || !targetRole) {
         return res.status(400).json({ message: "userId, interviewType, and targetRole are required" });
@@ -562,7 +562,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalQuestions || 5
       );
       
-      res.json(result);
+      // If this interview is for an application stage, link them
+      if (applicationStageId) {
+        const stage = await storage.getApplicationStage(applicationStageId);
+        if (stage) {
+          await storage.updateApplicationStage(applicationStageId, {
+            interviewSessionId: result.session.id,
+            status: 'in_progress',
+            scheduledAt: new Date(),
+          });
+        }
+      }
+      
+      res.json({ ...result, applicationStageId });
     } catch (error) {
       console.error("Failed to start interview:", error);
       res.status(500).json({ message: "Failed to start interview: " + (error as Error).message });
@@ -581,6 +593,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { interviewOrchestrator } = await import("./services/interview-orchestrator");
       const result = await interviewOrchestrator.submitAnswer(sessionId, questionId, answer);
+      
+      // If interview is complete and linked to an application stage, update the stage
+      if (result.finalReport) {
+        // Find any application stage linked to this interview session
+        const allApplications = await storage.getJobApplications(1); // MVP: hardcoded user ID
+        for (const app of allApplications) {
+          const stages = await storage.getApplicationStages(app.id);
+          const linkedStage = stages.find(s => s.interviewSessionId === sessionId);
+          if (linkedStage) {
+            await storage.updateApplicationStage(linkedStage.id, {
+              status: 'completed',
+              completedAt: new Date(),
+              score: result.finalReport.overallScore,
+              feedback: result.finalReport.summary,
+            });
+            
+            // Update the application's current stage index
+            const application = await storage.getJobApplication(app.id);
+            if (application) {
+              const nextStageIndex = application.currentStageIndex + 1;
+              const totalStages = stages.length;
+              
+              await storage.updateJobApplication(app.id, {
+                currentStageIndex: nextStageIndex,
+                status: nextStageIndex >= totalStages ? 'offer' : 'interviewing',
+              });
+            }
+            break;
+          }
+        }
+      }
       
       res.json(result);
     } catch (error) {
