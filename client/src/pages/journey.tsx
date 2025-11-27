@@ -375,7 +375,7 @@ export default function Journey() {
   });
 
   const { data: applications, isLoading } = useQuery<JobApplication[]>({
-    queryKey: ['/api/users', user?.id, 'applications'],
+    queryKey: [user?.id ? `/api/users/${user.id}/applications` : null],
     enabled: !!user?.id,
   });
 

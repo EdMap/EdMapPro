@@ -482,7 +482,9 @@ export default function JobBoard() {
       });
       setShowApplyDialog(false);
       setCoverLetter("");
-      queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'applications'] });
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/applications`] });
+      }
       navigate(`/journey`);
     },
     onError: () => {
