@@ -17,6 +17,8 @@ interface ConversationMemory {
   answers: string[];
   scores: number[];
   evaluations: EvaluationResult[];
+  activeProject: string | null;
+  projectMentionCount: number;
 }
 
 export class InterviewOrchestrator {
@@ -41,6 +43,8 @@ export class InterviewOrchestrator {
         answers: [],
         scores: [],
         evaluations: [],
+        activeProject: null,
+        projectMentionCount: 0,
       });
     }
     return this.memory.get(sessionId)!;
@@ -128,6 +132,15 @@ export class InterviewOrchestrator {
     memory.answers.push(answer);
     memory.scores.push(evaluation.score);
     memory.evaluations.push(evaluation);
+    
+    if (evaluation.projectMentioned) {
+      if (evaluation.projectMentioned !== memory.activeProject) {
+        memory.activeProject = evaluation.projectMentioned;
+        memory.projectMentionCount = 1;
+      } else {
+        memory.projectMentionCount++;
+      }
+    }
 
     await storage.updateInterviewQuestion(questionId, {
       candidateAnswer: answer,
@@ -165,6 +178,12 @@ export class InterviewOrchestrator {
       currentQuestionIndex: nextQuestionIndex,
     });
 
+    const shouldClearProject = memory.projectMentionCount >= 3;
+    if (shouldClearProject) {
+      memory.activeProject = null;
+      memory.projectMentionCount = 0;
+    }
+    
     const nextQuestionText = await this.questionGenerator.generate({
       config: {
         ...config,
@@ -178,6 +197,7 @@ export class InterviewOrchestrator {
       previousQuestions: memory.questions,
       previousAnswers: memory.answers,
       previousScores: memory.scores,
+      activeProject: memory.activeProject,
     });
 
     memory.questions.push(nextQuestionText);

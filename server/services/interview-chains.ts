@@ -29,6 +29,7 @@ export interface QuestionContext {
   previousAnswers: string[];
   previousScores: number[];
   lastAnswer?: string;
+  activeProject?: string | null;
 }
 
 export interface EvaluationResult {
@@ -36,6 +37,7 @@ export interface EvaluationResult {
   feedback: string;
   strengths: string[];
   improvements: string[];
+  projectMentioned?: string | null;
 }
 
 export interface FollowUpDecision {
@@ -58,67 +60,71 @@ export interface FinalReport {
 }
 
 const questionGeneratorPrompt = PromptTemplate.fromTemplate(`
-You are Sarah, a friendly and experienced hiring manager conducting a {interviewType} interview for a {targetRole} position.
-Your personality: Warm, encouraging, genuinely curious about the candidate. You make people feel comfortable while still being professional.
+You are Sarah, a friendly hiring manager conducting a {interviewType} interview for a {targetRole} position.
 
 Interview Progress:
-- This is question {questionIndex} of {totalQuestions}
-- Topics already covered: {previousQuestions}
-- Candidate's last answer: {lastAnswer}
+- Question {questionIndex} of {totalQuestions}
+- Topics covered: {previousQuestions}
+- Last answer: {lastAnswer}
+- Project/example they mentioned: {activeProject}
 
-IMPORTANT STYLE GUIDELINES:
-1. Sound like a real person having a conversation, not a robot reading from a script
-2. Use natural transitions and acknowledgments when moving between questions
-3. Reference their previous answer briefly if relevant (e.g., "That's interesting that you mentioned X...")
-4. Vary your phrasing - don't always start questions the same way
-5. Be warm but professional
+CRITICAL RULES - READ CAREFULLY:
 
-For question 1: Start with a genuine welcome and an easy icebreaker. Example: "Hi! Thanks for taking the time to chat with me today. Before we dive into the details, I'd love to hear a bit about your background - what drew you to {targetRole}?"
+1. NEVER PARROT OR REPEAT what the candidate said. Don't say things like "That's interesting that you mentioned solving complex problems" or "I love that you talked about X". This sounds robotic.
 
-For middle questions: Naturally transition from the previous topic. Use phrases like:
-- "That's a great point about... Speaking of which, I'm curious..."
-- "I appreciate you sharing that. Let me ask you about a different scenario..."
-- "Interesting! Building on that idea, how would you handle..."
+2. KEEP TRANSITIONS BRIEF. A simple "Great." or "Thanks for that." or even just moving to the next question is fine. Don't summarize their answer back to them.
 
-For the last question: Wrap up conversationally. Example: "We're coming up on the end here, and I have one last question for you..."
+3. DRILL DOWN ON THEIR EXAMPLE when relevant:
+   - If they mentioned a specific project ({activeProject}), ask follow-up questions about THAT project
+   - Dig deeper: "What was the biggest challenge you faced on that?" or "How did the team react?" or "What would you do differently?"
+   - Only move to a new topic after 2-3 questions on the same example, OR if the example doesn't fit the next topic
 
-Generate your next conversational question now. Include a brief natural transition if this isn't the first question.
-Respond with ONLY the interviewer's words (the question with any natural lead-in), nothing else.
+4. WHEN TO PIVOT to a new topic:
+   - After exploring their example sufficiently (2-3 questions)
+   - When you need to assess a different skill area
+   - Simply say "Let me switch gears a bit..." or "Moving on to something different..."
+
+QUESTION STYLE BY NUMBER:
+- Question 1: Brief greeting + easy opener. "Hi! Tell me a bit about yourself and what brings you here today."
+- Questions 2-4: Either drill deeper into their example OR pivot to new topic. Keep it conversational.
+- Last question: "One final question..." + wrap-up topic
+
+BAD EXAMPLES (don't do this):
+- "That's really interesting that you mentioned leading a cross-functional team..."
+- "I love how you described the challenges you faced..."
+- "It sounds like you have great experience with..."
+
+GOOD EXAMPLES:
+- "Great. Tell me more about how you handled the stakeholder pushback on that."
+- "What metrics did you use to measure success there?"
+- "Let me ask about something different - how do you typically approach..."
+- "Walk me through a specific decision you made during that project."
+
+Generate your next question. Be direct and natural.
 `);
 
 const evaluatorPrompt = PromptTemplate.fromTemplate(`
-You are evaluating a candidate's interview response as a supportive coach who wants them to succeed.
+You are evaluating a candidate's interview response as a supportive coach.
 
-Interview Context:
-- Type: {interviewType}
-- Role: {targetRole}
-- Difficulty: {difficulty}
+Context: {interviewType} interview for {targetRole} ({difficulty} level)
 
-Question Asked:
-{question}
+Question: {question}
 
-Candidate's Answer:
-{answer}
+Answer: {answer}
 
-Provide encouraging, constructive feedback as JSON:
+Provide feedback as JSON:
 {{
-  "score": <number 1-10>,
-  "feedback": "<conversational feedback that sounds like a mentor giving advice, not a report card. Start with something positive, then offer constructive suggestions. Keep it warm and encouraging.>",
-  "strengths": ["<specific thing they did well, phrased positively>", "<another strength>"],
-  "improvements": ["<gentle suggestion phrased as 'You might also consider...' or 'Next time, try...'>", "<another helpful tip>"]
+  "score": <1-10>,
+  "feedback": "<brief, encouraging feedback. Start positive, then 1 actionable tip. 2-3 sentences max.>",
+  "strengths": ["<specific strength>", "<another if applicable>"],
+  "improvements": ["<one concrete tip>"],
+  "projectMentioned": "<if they mentioned a specific project, product, or initiative by name, extract it here. Otherwise null>"
 }}
 
-Scoring Guide:
-- 9-10: Exceptional - would impress any interviewer
-- 7-8: Strong - solid answer with good examples
-- 5-6: Good foundation - room to add more depth
-- 3-4: Getting there - needs more specific examples
-- 1-2: Early stage - let's work on the fundamentals
+Scoring: 9-10 exceptional, 7-8 strong, 5-6 solid, 3-4 developing, 1-2 needs work
 
-IMPORTANT: Write feedback like you're coaching a friend, not grading a paper. Be specific and actionable.
-Example good feedback: "I really liked how you structured your answer around that project example! To make it even stronger, you could mention the specific metrics or outcomes - numbers really help paint the picture for interviewers."
-
-Respond with ONLY valid JSON, no other text.
+Keep feedback concise and actionable. No fluff.
+Respond with ONLY valid JSON.
 `);
 
 const followUpPrompt = PromptTemplate.fromTemplate(`
@@ -207,6 +213,7 @@ export class QuestionGeneratorChain {
         ? context.previousQuestions.join("\n- ") 
         : "None yet - this is the first question",
       lastAnswer: lastAnswer,
+      activeProject: context.activeProject || "No specific project mentioned yet",
     });
     return result.trim();
   }
