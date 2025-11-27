@@ -28,6 +28,7 @@ export interface QuestionContext {
   previousQuestions: string[];
   previousAnswers: string[];
   previousScores: number[];
+  lastAnswer?: string;
 }
 
 export interface EvaluationResult {
@@ -57,32 +58,41 @@ export interface FinalReport {
 }
 
 const questionGeneratorPrompt = PromptTemplate.fromTemplate(`
-You are an expert interviewer conducting a {interviewType} interview for a {targetRole} position.
-Difficulty level: {difficulty}
+You are Sarah, a friendly and experienced hiring manager conducting a {interviewType} interview for a {targetRole} position.
+Your personality: Warm, encouraging, genuinely curious about the candidate. You make people feel comfortable while still being professional.
 
 Interview Progress:
-- Question {questionIndex} of {totalQuestions}
-- Previous questions asked: {previousQuestions}
+- This is question {questionIndex} of {totalQuestions}
+- Topics already covered: {previousQuestions}
+- Candidate's last answer: {lastAnswer}
 
-Generate the next interview question. Consider:
-1. Don't repeat topics already covered
-2. Match the difficulty level appropriately
-3. For behavioral: Use STAR method prompts
-4. For technical: Focus on practical scenarios
-5. Build complexity as the interview progresses
+IMPORTANT STYLE GUIDELINES:
+1. Sound like a real person having a conversation, not a robot reading from a script
+2. Use natural transitions and acknowledgments when moving between questions
+3. Reference their previous answer briefly if relevant (e.g., "That's interesting that you mentioned X...")
+4. Vary your phrasing - don't always start questions the same way
+5. Be warm but professional
 
-If this is question 1, start with an icebreaker or introduction question.
-If this is the last question, make it a closing/wrap-up question.
+For question 1: Start with a genuine welcome and an easy icebreaker. Example: "Hi! Thanks for taking the time to chat with me today. Before we dive into the details, I'd love to hear a bit about your background - what drew you to {targetRole}?"
 
-Respond with ONLY the interview question, nothing else.
+For middle questions: Naturally transition from the previous topic. Use phrases like:
+- "That's a great point about... Speaking of which, I'm curious..."
+- "I appreciate you sharing that. Let me ask you about a different scenario..."
+- "Interesting! Building on that idea, how would you handle..."
+
+For the last question: Wrap up conversationally. Example: "We're coming up on the end here, and I have one last question for you..."
+
+Generate your next conversational question now. Include a brief natural transition if this isn't the first question.
+Respond with ONLY the interviewer's words (the question with any natural lead-in), nothing else.
 `);
 
 const evaluatorPrompt = PromptTemplate.fromTemplate(`
-You are an expert interview evaluator assessing a candidate's response.
+You are evaluating a candidate's interview response as a supportive coach who wants them to succeed.
 
-Interview Type: {interviewType}
-Target Role: {targetRole}
-Difficulty: {difficulty}
+Interview Context:
+- Type: {interviewType}
+- Role: {targetRole}
+- Difficulty: {difficulty}
 
 Question Asked:
 {question}
@@ -90,20 +100,23 @@ Question Asked:
 Candidate's Answer:
 {answer}
 
-Evaluate the response and provide a JSON response with this exact structure:
+Provide encouraging, constructive feedback as JSON:
 {{
   "score": <number 1-10>,
-  "feedback": "<constructive feedback>",
-  "strengths": ["<strength 1>", "<strength 2>"],
-  "improvements": ["<area to improve 1>", "<area to improve 2>"]
+  "feedback": "<conversational feedback that sounds like a mentor giving advice, not a report card. Start with something positive, then offer constructive suggestions. Keep it warm and encouraging.>",
+  "strengths": ["<specific thing they did well, phrased positively>", "<another strength>"],
+  "improvements": ["<gentle suggestion phrased as 'You might also consider...' or 'Next time, try...'>", "<another helpful tip>"]
 }}
 
 Scoring Guide:
-- 9-10: Exceptional, exceeds expectations
-- 7-8: Strong, meets expectations well
-- 5-6: Adequate, meets basic expectations
-- 3-4: Below expectations, needs improvement
-- 1-2: Poor, significant gaps
+- 9-10: Exceptional - would impress any interviewer
+- 7-8: Strong - solid answer with good examples
+- 5-6: Good foundation - room to add more depth
+- 3-4: Getting there - needs more specific examples
+- 1-2: Early stage - let's work on the fundamentals
+
+IMPORTANT: Write feedback like you're coaching a friend, not grading a paper. Be specific and actionable.
+Example good feedback: "I really liked how you structured your answer around that project example! To make it even stronger, you could mention the specific metrics or outcomes - numbers really help paint the picture for interviewers."
 
 Respond with ONLY valid JSON, no other text.
 `);
@@ -180,6 +193,10 @@ export class QuestionGeneratorChain {
   }
 
   async generate(context: QuestionContext): Promise<string> {
+    const lastAnswer = context.previousAnswers.length > 0 
+      ? context.previousAnswers[context.previousAnswers.length - 1]
+      : "This is the first question";
+    
     const result = await this.chain.invoke({
       interviewType: context.config.interviewType,
       targetRole: context.config.targetRole,
@@ -188,7 +205,8 @@ export class QuestionGeneratorChain {
       totalQuestions: context.config.totalQuestions,
       previousQuestions: context.previousQuestions.length > 0 
         ? context.previousQuestions.join("\n- ") 
-        : "None yet",
+        : "None yet - this is the first question",
+      lastAnswer: lastAnswer,
     });
     return result.trim();
   }
