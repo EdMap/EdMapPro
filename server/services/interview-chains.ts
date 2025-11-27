@@ -9,11 +9,112 @@ const model = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+const questionModel = new ChatGroq({
+  model: "llama-3.3-70b-versatile",
+  temperature: 0.3,
+  apiKey: process.env.GROQ_API_KEY,
+});
+
 const evaluatorModel = new ChatGroq({
   model: "llama-3.3-70b-versatile",
   temperature: 0.3,
   apiKey: process.env.GROQ_API_KEY,
 });
+
+export function extractCvHighlights(cvText: string): string {
+  if (!cvText || cvText.length < 50) {
+    return "No CV provided";
+  }
+  
+  const highlights: string[] = [];
+  
+  const experienceMatch = cvText.match(/(\d+)\+?\s*years?/i);
+  if (experienceMatch) {
+    highlights.push(`- Years of experience: ${experienceMatch[0]}`);
+  }
+  
+  const companies = [
+    { pattern: /rabobank/i, name: "Rabobank" },
+    { pattern: /redkite/i, name: "RedKite" },
+    { pattern: /unicef/i, name: "UNICEF" },
+    { pattern: /unfpa|united nations population fund/i, name: "UNFPA" },
+    { pattern: /world bank/i, name: "World Bank" },
+    { pattern: /maastricht university/i, name: "Maastricht University" },
+    { pattern: /tilburg university/i, name: "Tilburg University" },
+    { pattern: /american university of armenia/i, name: "American University of Armenia" },
+    { pattern: /yerevan state university/i, name: "Yerevan State University" },
+  ];
+  
+  const foundCompanies: string[] = [];
+  const foundEducation: string[] = [];
+  
+  for (const { pattern, name } of companies) {
+    if (pattern.test(cvText)) {
+      if (name.includes("University")) {
+        foundEducation.push(name);
+      } else {
+        foundCompanies.push(name);
+      }
+    }
+  }
+  
+  if (foundCompanies.length > 0) {
+    highlights.push(`- Companies worked at: ${foundCompanies.join(", ")}`);
+  }
+  
+  if (foundEducation.length > 0) {
+    highlights.push(`- Education: ${foundEducation.join(", ")}`);
+  }
+  
+  const rolePatterns = [
+    /snr\.?\s*data\s*scientist/i,
+    /senior\s*data\s*scientist/i,
+    /lead\s*data\s*scientist/i,
+    /data\s*scientist/i,
+    /phd\s*candidate/i,
+    /data\s*analy[sz]t/i,
+    /program\s*manager/i,
+  ];
+  
+  const foundRoles: string[] = [];
+  for (const pattern of rolePatterns) {
+    const match = cvText.match(pattern);
+    if (match && !foundRoles.some(r => r.toLowerCase() === match[0].toLowerCase())) {
+      foundRoles.push(match[0]);
+    }
+  }
+  
+  if (foundRoles.length > 0) {
+    highlights.push(`- Roles held: ${foundRoles.slice(0, 3).join(", ")}`);
+  }
+  
+  const phdMatch = cvText.match(/ph\.?d\.?|philosophy\s*doctor/i);
+  const masterMatch = cvText.match(/m\.?s\.?c?\.?|master/i);
+  if (phdMatch) {
+    highlights.push(`- Highest degree: PhD`);
+  } else if (masterMatch) {
+    highlights.push(`- Highest degree: Master's`);
+  }
+  
+  const skillPatterns = [
+    /python/i, /r(?:\s|,|$)/i, /sql/i, /machine\s*learning/i, 
+    /power\s*bi/i, /tableau/i, /spark|pyspark/i, /statistics/i
+  ];
+  const foundSkills: string[] = [];
+  for (const pattern of skillPatterns) {
+    if (pattern.test(cvText)) {
+      const skill = cvText.match(pattern)?.[0].trim();
+      if (skill && skill.length > 1) foundSkills.push(skill);
+    }
+  }
+  if (foundSkills.length > 0) {
+    highlights.push(`- Key skills: ${foundSkills.slice(0, 5).join(", ")}`);
+  }
+  
+  return highlights.length > 0 
+    ? highlights.join("\n") 
+    : "CV provided but key details not extracted";
+}
 
 export interface InterviewConfig {
   interviewType: string;
@@ -91,58 +192,47 @@ Keep it natural and conversational - about 4-6 sentences total. End with a trans
 `);
 
 const hrScreeningQuestionPrompt = PromptTemplate.fromTemplate(`
-You are {interviewerName}, a genuinely interested HR recruiter at {companyName}.
+You are {interviewerName}, an HR recruiter at {companyName} having a conversation with a candidate.
 
-YOUR OBJECTIVE: Explore whether this candidate is a good fit for the {jobTitle} role. You're curious about their background and want to understand:
-- What drives them professionally
-- How their experience maps to this role
-- Whether they'd thrive in your company culture
-
+ROLE: {jobTitle}
 COMPANY: {companyName}
-JOB TITLE: {jobTitle}
-ROLE TYPE: {targetRole}
 
-CANDIDATE'S CV (USE ONLY FACTS FROM THIS - DO NOT INVENT DETAILS):
+CV HIGHLIGHTS (use these EXACT facts - do not invent):
+{cvHighlights}
+
+FULL CV FOR REFERENCE:
 {candidateCv}
 
 JOB REQUIREMENTS:
 {jobRequirements}
 
-Interview Progress:
+INTERVIEW STATE:
 - Question {questionIndex} of {totalQuestions}
-- Topics covered: {previousQuestions}
-- Last answer: {lastAnswer}
+- Already discussed: {previousQuestions}
+- Their last answer: {lastAnswer}
 
-USING THE CV - CRITICAL:
-You MUST reference specific details from their CV in your questions. ONLY use facts that appear in the CV above. NEVER invent or assume details not explicitly stated.
-- Their exact years of experience as stated
-- Actual companies/roles they've held (use exact names from CV)
-- Their real educational background (exact universities, degrees)
-- Skills or certifications they actually listed
+YOUR ASSESSMENT AGENDA:
+Question 1: MOTIVATION - Why are they interested in this specific role?
+Question 2: CAREER FIT - How does their background prepare them for this?
+Question 3: SPECIFIC EXPERIENCE - Dig into one company/role from their CV
+Question 4: WORKING STYLE - How do they like to work? Team dynamics?
+Question 5: LOGISTICS - Availability, expectations, questions they have
 
-ANTI-HALLUCINATION RULE:
-If the CV says "PhD from Maastricht University" - say exactly that, NOT "PhD from [some other university]".
-If the CV says "7+ years experience" - say "7 years", NOT "8 years".
-Only mention companies, universities, and roles that are EXPLICITLY written in the CV.
+CURRENT GOAL (Question {questionIndex}):
+{currentGoal}
 
-HR SCREENING TOPICS (rotate through these):
-1. Motivation: Why this role? Why {companyName}?
-2. Career Story: How does this role fit their trajectory?
-3. CV Deep-Dive (high-level): "I see you spent X years at Y - what was that experience like?"
-4. Culture Fit: Work style, team preferences, values
-5. Logistics: Availability, location, expectations
+HOW TO ASK:
+- Use a CV highlight naturally: "I see you're currently at [company from CV]..." or "Your PhD from [university] is interesting..."
+- If they just gave a detailed answer, acknowledge it briefly then pivot: "That's helpful context. I'm curious about..."
+- If they asked for clarification, rephrase the question more simply
+- Be conversational, not interrogative
 
-WHAT NOT TO DO:
-- Don't ask generic questions that ignore their CV
-- Don't ask technical/coding questions (that's for technical interviews)
-- Don't be robotic or interrogative
-- NEVER repeat a question already covered
+LAST ANSWER CONTEXT:
+If their last answer was detailed, build on it naturally.
+If their last answer was brief or unclear, try a different angle.
+If they asked for clarification, simplify and be more specific.
 
-FOR QUESTION 1: Reference something from their CV and ask about their interest. Example: "I see you have a background in X - what drew you to apply for this {targetRole} role at {companyName}?"
-
-FOR QUESTIONS 2+: Start with a connector ("And," / "So," / "Now,") then ask about something NEW, ideally referencing their CV.
-
-Output ONLY the question. Be warm and curious.
+Output ONLY your question. No preamble.
 `);
 
 const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -264,29 +354,24 @@ PREVIOUS ACKNOWLEDGMENT (don't repeat):
 {previousReflection}
 
 YOUR TASK:
-Generate a 1-2 sentence acknowledgment that shows you listened and are genuinely interested.
+Generate a brief acknowledgment based on what they said.
 
-GUIDELINES:
-- For SHORT answers (1-2 sentences): Use a brief acknowledgment like "Got it." or "Okay, thanks."
-- For DETAILED answers (background, experience, multiple points): Reference something SPECIFIC they said. Show you're engaged.
+SPECIAL CASES:
+- If they asked for CLARIFICATION or said they don't understand: Say "No worries, I'll clarify." or "Sure, let me rephrase."
+- For SHORT answers (1-2 sentences): "Got it." or "Okay, thanks."
+- For DETAILED answers: Reference something SPECIFIC they said briefly.
 
-EXAMPLES FOR DETAILED ANSWERS:
-- "That's quite a diverse background - bridging psychology with data science is interesting."
-- "Seven years is solid experience. I can see how that systems thinking approach would be valuable."
-- "Thanks for sharing that. The cross-functional experience sounds really relevant."
-
-EXAMPLES FOR SHORT ANSWERS:
-- "Got it."
-- "Okay, thanks."
-- "Makes sense."
+EXAMPLES:
+- Clarification request → "No worries, I'll clarify."
+- Short answer → "Got it."
+- Detailed background → "Seven years is solid. The systems thinking angle is interesting."
 
 RULES:
-1. Keep it to 1-2 sentences MAX
-2. Don't ask a follow-up question here (that comes next)
-3. Don't be overly effusive or fake - be genuine
-4. Reference something specific if they gave a detailed answer
+1. Keep it BRIEF - 1 sentence, max 15 words
+2. Don't ask questions here
+3. Be genuine, not effusive
 
-Output ONLY the acknowledgment. Nothing else.
+Output ONLY the acknowledgment.
 `);
 
 const followUpPrompt = PromptTemplate.fromTemplate(`
@@ -443,12 +528,12 @@ export class QuestionGeneratorChain {
     ]);
     this.hrChain = RunnableSequence.from([
       hrScreeningQuestionPrompt,
-      model,
+      questionModel,
       new StringOutputParser(),
     ]);
     this.technicalChain = RunnableSequence.from([
       technicalQuestionPrompt,
-      model,
+      questionModel,
       new StringOutputParser(),
     ]);
   }
@@ -490,21 +575,48 @@ export class QuestionGeneratorChain {
 
   private async generateHrQuestion(context: QuestionContext, lastAnswer: string): Promise<string> {
     const config = context.config;
+    const questionNum = context.questionIndex + 1;
+    
+    const cvHighlights = config.candidateCv 
+      ? extractCvHighlights(config.candidateCv)
+      : "No CV provided";
+    
+    const currentGoal = this.getHrQuestionGoal(questionNum);
+    
     const result = await this.hrChain.invoke({
       interviewerName: config.interviewerName || "Sarah",
       companyName: config.companyName || "the company",
       jobTitle: config.jobTitle || `${config.targetRole} position`,
       targetRole: config.targetRole,
+      cvHighlights: cvHighlights,
       candidateCv: config.candidateCv || "CV not provided",
       jobRequirements: config.jobRequirements || "Standard requirements for this role",
-      questionIndex: context.questionIndex + 1,
+      questionIndex: questionNum,
       totalQuestions: config.totalQuestions,
       previousQuestions: context.previousQuestions.length > 0 
         ? context.previousQuestions.join("\n- ") 
         : "None yet - this is the first question",
       lastAnswer: lastAnswer,
+      currentGoal: currentGoal,
     });
     return result.trim();
+  }
+  
+  private getHrQuestionGoal(questionNum: number): string {
+    switch (questionNum) {
+      case 1:
+        return "MOTIVATION: Understand why they're interested in this specific role and company. Reference their current situation from CV.";
+      case 2:
+        return "CAREER FIT: Explore how their background prepares them. Reference a specific role or experience from their CV.";
+      case 3:
+        return "DEEP DIVE: Ask about a specific company or project from their CV. Get concrete details about what they did.";
+      case 4:
+        return "WORKING STYLE: Understand how they prefer to work, collaborate, handle challenges.";
+      case 5:
+        return "WRAP UP: Availability, timeline, salary expectations, or any questions they have.";
+      default:
+        return "Continue exploring their fit for the role based on previous discussion.";
+    }
   }
 
   private async generateTechnicalQuestion(context: QuestionContext, lastAnswer: string): Promise<string> {
