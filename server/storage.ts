@@ -2,6 +2,7 @@ import {
   users, simulationSessions, userProgress,
   workspaceProjects, workspaceRoles, workspaceArtifacts, workspaceTasks, workspaceInteractions, workspaceEvaluations,
   interviewSessions, interviewQuestions, interviewFeedback,
+  companies, jobPostings, jobGlossary, jobApplications, interviewTemplates, applicationStages,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -11,7 +12,13 @@ import {
   type WorkspaceEvaluation, type InsertWorkspaceEvaluation,
   type InterviewSession, type InsertInterviewSession,
   type InterviewQuestion, type InsertInterviewQuestion,
-  type InterviewFeedback, type InsertInterviewFeedback
+  type InterviewFeedback, type InsertInterviewFeedback,
+  type Company, type InsertCompany,
+  type JobPosting, type InsertJobPosting,
+  type JobGlossary, type InsertJobGlossary,
+  type JobApplication, type InsertJobApplication,
+  type InterviewTemplate, type InsertInterviewTemplate,
+  type ApplicationStage, type InsertApplicationStage
 } from "@shared/schema";
 
 export interface IStorage {
@@ -78,6 +85,39 @@ export interface IStorage {
   // Interview feedback operations
   getInterviewFeedback(sessionId: number): Promise<InterviewFeedback | undefined>;
   createInterviewFeedback(feedback: InsertInterviewFeedback): Promise<InterviewFeedback>;
+  
+  // Company operations
+  getCompanies(): Promise<Company[]>;
+  getCompany(id: number): Promise<Company | undefined>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  
+  // Job posting operations
+  getJobPostings(filters?: { companyId?: number; role?: string; isActive?: boolean }): Promise<JobPosting[]>;
+  getJobPosting(id: number): Promise<JobPosting | undefined>;
+  getJobPostingWithCompany(id: number): Promise<(JobPosting & { company: Company }) | undefined>;
+  createJobPosting(posting: InsertJobPosting): Promise<JobPosting>;
+  
+  // Job glossary operations
+  getJobGlossary(): Promise<JobGlossary[]>;
+  getJobGlossaryTerm(term: string): Promise<JobGlossary | undefined>;
+  createJobGlossaryTerm(term: InsertJobGlossary): Promise<JobGlossary>;
+  
+  // Job application operations
+  getJobApplications(userId: number): Promise<JobApplication[]>;
+  getJobApplication(id: number): Promise<JobApplication | undefined>;
+  createJobApplication(application: InsertJobApplication): Promise<JobApplication>;
+  updateJobApplication(id: number, updates: Partial<JobApplication>): Promise<JobApplication | undefined>;
+  
+  // Interview template operations
+  getInterviewTemplates(companyId?: number, role?: string): Promise<InterviewTemplate[]>;
+  getInterviewTemplate(id: number): Promise<InterviewTemplate | undefined>;
+  createInterviewTemplate(template: InsertInterviewTemplate): Promise<InterviewTemplate>;
+  
+  // Application stage operations
+  getApplicationStages(applicationId: number): Promise<ApplicationStage[]>;
+  getApplicationStage(id: number): Promise<ApplicationStage | undefined>;
+  createApplicationStage(stage: InsertApplicationStage): Promise<ApplicationStage>;
+  updateApplicationStage(id: number, updates: Partial<ApplicationStage>): Promise<ApplicationStage | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -93,6 +133,12 @@ export class MemStorage implements IStorage {
   private interviewSessionsMap: Map<number, InterviewSession>;
   private interviewQuestionsMap: Map<number, InterviewQuestion>;
   private interviewFeedbackMap: Map<number, InterviewFeedback>;
+  private companiesMap: Map<number, Company>;
+  private jobPostingsMap: Map<number, JobPosting>;
+  private jobGlossaryMap: Map<number, JobGlossary>;
+  private jobApplicationsMap: Map<number, JobApplication>;
+  private interviewTemplatesMap: Map<number, InterviewTemplate>;
+  private applicationStagesMap: Map<number, ApplicationStage>;
   private currentUserId: number;
   private currentSessionId: number;
   private currentProgressId: number;
@@ -105,6 +151,12 @@ export class MemStorage implements IStorage {
   private currentInterviewSessionId: number;
   private currentInterviewQuestionId: number;
   private currentInterviewFeedbackId: number;
+  private currentCompanyId: number;
+  private currentJobPostingId: number;
+  private currentJobGlossaryId: number;
+  private currentJobApplicationId: number;
+  private currentInterviewTemplateId: number;
+  private currentApplicationStageId: number;
 
   constructor() {
     this.users = new Map();
@@ -119,6 +171,12 @@ export class MemStorage implements IStorage {
     this.interviewSessionsMap = new Map();
     this.interviewQuestionsMap = new Map();
     this.interviewFeedbackMap = new Map();
+    this.companiesMap = new Map();
+    this.jobPostingsMap = new Map();
+    this.jobGlossaryMap = new Map();
+    this.jobApplicationsMap = new Map();
+    this.interviewTemplatesMap = new Map();
+    this.applicationStagesMap = new Map();
     this.currentUserId = 1;
     this.currentSessionId = 1;
     this.currentProgressId = 1;
@@ -131,6 +189,12 @@ export class MemStorage implements IStorage {
     this.currentInterviewSessionId = 1;
     this.currentInterviewQuestionId = 1;
     this.currentInterviewFeedbackId = 1;
+    this.currentCompanyId = 1;
+    this.currentJobPostingId = 1;
+    this.currentJobGlossaryId = 1;
+    this.currentJobApplicationId = 1;
+    this.currentInterviewTemplateId = 1;
+    this.currentApplicationStageId = 1;
     
     // Create a default user
     this.createUser({
@@ -143,6 +207,9 @@ export class MemStorage implements IStorage {
 
     // Seed workspace data
     this.seedWorkspaceData();
+    
+    // Seed job journey data
+    this.seedJobJourneyData();
   }
 
   private async seedWorkspaceData() {
@@ -1052,6 +1119,532 @@ export class MemStorage implements IStorage {
     };
     this.interviewFeedbackMap.set(id, feedback);
     return feedback;
+  }
+
+  // Company operations
+  async getCompanies(): Promise<Company[]> {
+    return Array.from(this.companiesMap.values());
+  }
+
+  async getCompany(id: number): Promise<Company | undefined> {
+    return this.companiesMap.get(id);
+  }
+
+  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+    const id = this.currentCompanyId++;
+    const company: Company = {
+      ...insertCompany,
+      id,
+      logo: insertCompany.logo || null,
+      values: insertCompany.values || [],
+      benefits: insertCompany.benefits || [],
+      interviewStyle: insertCompany.interviewStyle || 'balanced',
+      createdAt: new Date()
+    };
+    this.companiesMap.set(id, company);
+    return company;
+  }
+
+  // Job posting operations
+  async getJobPostings(filters?: { companyId?: number; role?: string; isActive?: boolean }): Promise<JobPosting[]> {
+    let postings = Array.from(this.jobPostingsMap.values());
+    if (filters?.companyId) {
+      postings = postings.filter(p => p.companyId === filters.companyId);
+    }
+    if (filters?.role) {
+      postings = postings.filter(p => p.role === filters.role);
+    }
+    if (filters?.isActive !== undefined) {
+      postings = postings.filter(p => p.isActive === filters.isActive);
+    }
+    return postings;
+  }
+
+  async getJobPosting(id: number): Promise<JobPosting | undefined> {
+    return this.jobPostingsMap.get(id);
+  }
+
+  async getJobPostingWithCompany(id: number): Promise<(JobPosting & { company: Company }) | undefined> {
+    const posting = this.jobPostingsMap.get(id);
+    if (!posting) return undefined;
+    const company = this.companiesMap.get(posting.companyId);
+    if (!company) return undefined;
+    return { ...posting, company };
+  }
+
+  async createJobPosting(insertPosting: InsertJobPosting): Promise<JobPosting> {
+    const id = this.currentJobPostingId++;
+    const posting: JobPosting = {
+      ...insertPosting,
+      id,
+      employmentType: insertPosting.employmentType || 'full-time',
+      salaryMin: insertPosting.salaryMin || null,
+      salaryMax: insertPosting.salaryMax || null,
+      responsibilities: insertPosting.responsibilities || [],
+      requirements: insertPosting.requirements || [],
+      niceToHave: insertPosting.niceToHave || [],
+      highlightedTerms: insertPosting.highlightedTerms || [],
+      interviewStages: insertPosting.interviewStages || 3,
+      isActive: insertPosting.isActive !== false,
+      postedAt: new Date()
+    };
+    this.jobPostingsMap.set(id, posting);
+    return posting;
+  }
+
+  // Job glossary operations
+  async getJobGlossary(): Promise<JobGlossary[]> {
+    return Array.from(this.jobGlossaryMap.values());
+  }
+
+  async getJobGlossaryTerm(term: string): Promise<JobGlossary | undefined> {
+    return Array.from(this.jobGlossaryMap.values()).find(t => t.term.toLowerCase() === term.toLowerCase());
+  }
+
+  async createJobGlossaryTerm(insertTerm: InsertJobGlossary): Promise<JobGlossary> {
+    const id = this.currentJobGlossaryId++;
+    const glossaryTerm: JobGlossary = {
+      ...insertTerm,
+      id,
+      category: insertTerm.category || null,
+      relatedTerms: insertTerm.relatedTerms || []
+    };
+    this.jobGlossaryMap.set(id, glossaryTerm);
+    return glossaryTerm;
+  }
+
+  // Job application operations
+  async getJobApplications(userId: number): Promise<JobApplication[]> {
+    return Array.from(this.jobApplicationsMap.values())
+      .filter(app => app.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getJobApplication(id: number): Promise<JobApplication | undefined> {
+    return this.jobApplicationsMap.get(id);
+  }
+
+  async createJobApplication(insertApplication: InsertJobApplication): Promise<JobApplication> {
+    const id = this.currentJobApplicationId++;
+    const application: JobApplication = {
+      ...insertApplication,
+      id,
+      status: insertApplication.status || 'draft',
+      cvFileName: insertApplication.cvFileName || null,
+      cvContent: insertApplication.cvContent || null,
+      coverLetter: insertApplication.coverLetter || null,
+      currentStageIndex: insertApplication.currentStageIndex || 0,
+      hrContactedAt: insertApplication.hrContactedAt || null,
+      offerDetails: insertApplication.offerDetails || null,
+      notes: insertApplication.notes || null,
+      appliedAt: insertApplication.appliedAt || null,
+      updatedAt: new Date(),
+      createdAt: new Date()
+    };
+    this.jobApplicationsMap.set(id, application);
+    return application;
+  }
+
+  async updateJobApplication(id: number, updates: Partial<JobApplication>): Promise<JobApplication | undefined> {
+    const application = this.jobApplicationsMap.get(id);
+    if (!application) return undefined;
+    const updated = { ...application, ...updates, updatedAt: new Date() };
+    this.jobApplicationsMap.set(id, updated);
+    return updated;
+  }
+
+  // Interview template operations
+  async getInterviewTemplates(companyId?: number, role?: string): Promise<InterviewTemplate[]> {
+    let templates = Array.from(this.interviewTemplatesMap.values());
+    if (companyId) {
+      templates = templates.filter(t => t.companyId === companyId || t.companyId === null);
+    }
+    if (role) {
+      templates = templates.filter(t => t.role === role || t.role === null);
+    }
+    return templates;
+  }
+
+  async getInterviewTemplate(id: number): Promise<InterviewTemplate | undefined> {
+    return this.interviewTemplatesMap.get(id);
+  }
+
+  async createInterviewTemplate(insertTemplate: InsertInterviewTemplate): Promise<InterviewTemplate> {
+    const id = this.currentInterviewTemplateId++;
+    const template: InterviewTemplate = {
+      ...insertTemplate,
+      id,
+      companyId: insertTemplate.companyId || null,
+      role: insertTemplate.role || null,
+      totalDuration: insertTemplate.totalDuration || null,
+      createdAt: new Date()
+    };
+    this.interviewTemplatesMap.set(id, template);
+    return template;
+  }
+
+  // Application stage operations
+  async getApplicationStages(applicationId: number): Promise<ApplicationStage[]> {
+    return Array.from(this.applicationStagesMap.values())
+      .filter(stage => stage.applicationId === applicationId)
+      .sort((a, b) => a.stageOrder - b.stageOrder);
+  }
+
+  async getApplicationStage(id: number): Promise<ApplicationStage | undefined> {
+    return this.applicationStagesMap.get(id);
+  }
+
+  async createApplicationStage(insertStage: InsertApplicationStage): Promise<ApplicationStage> {
+    const id = this.currentApplicationStageId++;
+    const stage: ApplicationStage = {
+      ...insertStage,
+      id,
+      status: insertStage.status || 'pending',
+      interviewSessionId: insertStage.interviewSessionId || null,
+      scheduledAt: insertStage.scheduledAt || null,
+      completedAt: insertStage.completedAt || null,
+      score: insertStage.score || null,
+      feedback: insertStage.feedback || null,
+      recruiterNotes: insertStage.recruiterNotes || null,
+      createdAt: new Date()
+    };
+    this.applicationStagesMap.set(id, stage);
+    return stage;
+  }
+
+  async updateApplicationStage(id: number, updates: Partial<ApplicationStage>): Promise<ApplicationStage | undefined> {
+    const stage = this.applicationStagesMap.get(id);
+    if (!stage) return undefined;
+    const updated = { ...stage, ...updates };
+    this.applicationStagesMap.set(id, updated);
+    return updated;
+  }
+
+  private async seedJobJourneyData() {
+    // Seed companies
+    const companySeedData = [
+      {
+        name: 'QuantumSphere Innovations',
+        logo: '🔮',
+        industry: 'tech',
+        size: 'mid-size',
+        description: 'QuantumSphere Innovations is a cutting-edge AI and machine learning company building the next generation of intelligent enterprise solutions.',
+        culture: 'Innovation-driven culture with emphasis on experimentation and learning. We believe in failing fast and iterating quickly.',
+        values: ['Innovation', 'Collaboration', 'Transparency', 'Growth Mindset'],
+        benefits: ['Unlimited PTO', 'Remote-first', 'Learning budget $2,000/year', 'Health + dental', 'Stock options'],
+        interviewStyle: 'rigorous'
+      },
+      {
+        name: 'CyberVortex Technologies',
+        logo: '⚡',
+        industry: 'tech',
+        size: 'startup',
+        description: 'CyberVortex Technologies is a fast-growing cybersecurity startup protecting enterprises from emerging digital threats.',
+        culture: 'Fast-paced, mission-driven team focused on making the internet safer. We work hard and celebrate wins together.',
+        values: ['Security First', 'Speed', 'Customer Obsession', 'Integrity'],
+        benefits: ['Competitive salary', 'Equity package', 'Flexible hours', 'Team offsites', 'Latest MacBook'],
+        interviewStyle: 'balanced'
+      },
+      {
+        name: 'NanoByte Dynamics',
+        logo: '🧬',
+        industry: 'healthtech',
+        size: 'enterprise',
+        description: 'NanoByte Dynamics leverages nanotechnology and AI to revolutionize healthcare diagnostics and treatment.',
+        culture: 'Scientific rigor meets startup agility. Our diverse team includes PhDs, engineers, and healthcare professionals.',
+        values: ['Scientific Excellence', 'Patient Impact', 'Diversity', 'Ethical Innovation'],
+        benefits: ['Comprehensive healthcare', '401k matching', 'Parental leave', 'On-site gym', 'Research publications'],
+        interviewStyle: 'rigorous'
+      },
+      {
+        name: 'HyperSynth Innovations',
+        logo: '🚀',
+        industry: 'fintech',
+        size: 'mid-size',
+        description: 'HyperSynth Innovations is transforming financial services with AI-powered trading and risk management solutions.',
+        culture: 'Data-driven decision making with a focus on continuous improvement. We value both individual excellence and team collaboration.',
+        values: ['Excellence', 'Data-Driven', 'Accountability', 'Innovation'],
+        benefits: ['Bonus structure', 'Stock options', 'Premium insurance', 'Gym membership', 'Conference budget'],
+        interviewStyle: 'rigorous'
+      },
+      {
+        name: 'NebulaForge Solutions',
+        logo: '☁️',
+        industry: 'tech',
+        size: 'startup',
+        description: 'NebulaForge Solutions builds developer tools and cloud infrastructure that makes deploying applications effortless.',
+        culture: 'Developer-first company built by developers. We use our own tools daily and obsess over developer experience.',
+        values: ['Developer Experience', 'Simplicity', 'Open Source', 'Community'],
+        benefits: ['Remote-first', 'Unlimited PTO', 'Conference sponsorship', 'Home office budget', 'Async-friendly'],
+        interviewStyle: 'casual'
+      }
+    ];
+
+    const createdCompanies: Company[] = [];
+    for (const company of companySeedData) {
+      createdCompanies.push(await this.createCompany(company));
+    }
+
+    // Seed job postings
+    const jobPostingSeedData = [
+      // QuantumSphere Innovations
+      {
+        companyId: createdCompanies[0].id,
+        title: 'Junior Project Manager',
+        role: 'pm',
+        seniority: 'junior',
+        department: 'Product',
+        location: 'Remote',
+        salaryMin: 70000,
+        salaryMax: 90000,
+        description: 'As an Associate Product Manager, you\'ll support the end-to-end product development process, collaborating with cross-functional teams. Your role involves market research, roadmap maintenance, and coordination to ensure timely product delivery.',
+        responsibilities: [
+          'Collaborate with cross-functional teams to assist in the development and execution of product strategies',
+          'Conduct market research to identify trends, customer needs, and competitor activities',
+          'Assist in creating and maintaining product roadmaps, ensuring alignment with company objectives',
+          'Support the product lifecycle from ideation to launch, including product planning, development, and post-launch analysis'
+        ],
+        requirements: [
+          '1-2 years of experience in product management or related field',
+          'Strong analytical and problem-solving skills',
+          'Excellent communication and interpersonal abilities',
+          'Familiarity with agile methodologies'
+        ],
+        niceToHave: [
+          'MBA or relevant certification',
+          'Experience with product analytics tools',
+          'Technical background'
+        ],
+        highlightedTerms: ['cross-functional teams', 'product development process', 'roadmap'],
+        interviewStages: 3
+      },
+      // CyberVortex Technologies
+      {
+        companyId: createdCompanies[1].id,
+        title: 'Junior Project Manager',
+        role: 'pm',
+        seniority: 'junior',
+        department: 'Product',
+        location: 'San Francisco, CA (Hybrid)',
+        salaryMin: 75000,
+        salaryMax: 95000,
+        description: 'Join our growing product team to help shape the future of cybersecurity. You\'ll work closely with engineering and design to deliver features that protect millions of users.',
+        responsibilities: [
+          'Define and prioritize product features based on customer feedback and market analysis',
+          'Work with UX designers to create intuitive security interfaces',
+          'Coordinate with engineering on sprint planning and delivery',
+          'Track product metrics and report on KPIs'
+        ],
+        requirements: [
+          'Bachelor\'s degree in Business, Computer Science, or related field',
+          'Understanding of software development lifecycle',
+          'Strong written and verbal communication skills',
+          'Ability to work in a fast-paced startup environment'
+        ],
+        highlightedTerms: ['sprint planning', 'KPIs', 'product metrics'],
+        interviewStages: 3
+      },
+      // NanoByte Dynamics
+      {
+        companyId: createdCompanies[2].id,
+        title: 'Mid Project Manager',
+        role: 'pm',
+        seniority: 'mid',
+        department: 'Product',
+        location: 'Boston, MA',
+        salaryMin: 100000,
+        salaryMax: 130000,
+        description: 'Lead product initiatives at the intersection of healthcare and technology. Drive products that have direct impact on patient outcomes.',
+        responsibilities: [
+          'Own product strategy for key diagnostic platform features',
+          'Partner with clinical and engineering teams to ensure regulatory compliance',
+          'Conduct user research with healthcare professionals',
+          'Define success metrics and monitor product performance'
+        ],
+        requirements: [
+          '3-5 years of product management experience',
+          'Experience in healthcare or regulated industries preferred',
+          'Strong stakeholder management skills',
+          'Data-driven decision making approach'
+        ],
+        highlightedTerms: ['regulatory compliance', 'stakeholder management', 'product strategy'],
+        interviewStages: 4
+      },
+      // HyperSynth Innovations
+      {
+        companyId: createdCompanies[3].id,
+        title: 'Senior Project Manager',
+        role: 'pm',
+        seniority: 'senior',
+        department: 'Product',
+        location: 'New York, NY',
+        salaryMin: 140000,
+        salaryMax: 180000,
+        description: 'Lead product strategy for our flagship AI trading platform. You\'ll work with quants, engineers, and business stakeholders to define the future of algorithmic trading.',
+        responsibilities: [
+          'Define product vision and roadmap for trading platform features',
+          'Partner with quantitative research team on feature prioritization',
+          'Lead cross-functional teams through complex product launches',
+          'Present to C-level executives on product strategy and performance'
+        ],
+        requirements: [
+          '5+ years of product management experience',
+          'Fintech or trading platform experience strongly preferred',
+          'Strong analytical and quantitative skills',
+          'Experience with agile methodologies at scale'
+        ],
+        highlightedTerms: ['product vision', 'C-level', 'algorithmic trading'],
+        interviewStages: 5
+      },
+      // NebulaForge Solutions
+      {
+        companyId: createdCompanies[4].id,
+        title: 'Junior Project Manager',
+        role: 'pm',
+        seniority: 'junior',
+        department: 'Product',
+        location: 'Remote',
+        salaryMin: 65000,
+        salaryMax: 85000,
+        description: 'Help shape developer tools that thousands of engineers use daily. Perfect for someone who loves developer experience and wants to learn product management.',
+        responsibilities: [
+          'Gather and synthesize feedback from developer community',
+          'Write product specs and user stories',
+          'Work with engineering to ship features iteratively',
+          'Contribute to product documentation and changelog'
+        ],
+        requirements: [
+          'Technical background or strong technical aptitude',
+          'Passion for developer tools and experience',
+          'Strong writing skills',
+          'Self-motivated and comfortable with ambiguity'
+        ],
+        highlightedTerms: ['user stories', 'developer experience', 'product specs'],
+        interviewStages: 3
+      },
+      // Software Developer positions
+      {
+        companyId: createdCompanies[0].id,
+        title: 'Senior Software Engineer',
+        role: 'developer',
+        seniority: 'senior',
+        department: 'Engineering',
+        location: 'Remote',
+        salaryMin: 150000,
+        salaryMax: 200000,
+        description: 'Build the core AI infrastructure powering our enterprise solutions. Work with cutting-edge ML technologies and distributed systems.',
+        responsibilities: [
+          'Design and implement scalable backend services',
+          'Lead technical architecture decisions',
+          'Mentor junior engineers',
+          'Collaborate with ML team on model deployment'
+        ],
+        requirements: [
+          '5+ years of software engineering experience',
+          'Strong experience with Python, Go, or Java',
+          'Experience with distributed systems',
+          'Cloud platform experience (AWS/GCP/Azure)'
+        ],
+        highlightedTerms: ['distributed systems', 'ML technologies', 'technical architecture'],
+        interviewStages: 5
+      },
+      {
+        companyId: createdCompanies[1].id,
+        title: 'Mid-Level Software Engineer',
+        role: 'developer',
+        seniority: 'mid',
+        department: 'Engineering',
+        location: 'San Francisco, CA (Hybrid)',
+        salaryMin: 120000,
+        salaryMax: 160000,
+        description: 'Build secure, reliable systems that protect our customers from cyber threats. Work on challenging problems in network security and threat detection.',
+        responsibilities: [
+          'Develop and maintain security monitoring systems',
+          'Implement threat detection algorithms',
+          'Participate in code reviews and security audits',
+          'On-call rotation for critical security incidents'
+        ],
+        requirements: [
+          '3-5 years of software development experience',
+          'Experience with security tools and practices',
+          'Proficiency in Python or Rust',
+          'Understanding of network protocols'
+        ],
+        highlightedTerms: ['threat detection', 'security monitoring', 'code reviews'],
+        interviewStages: 4
+      }
+    ];
+
+    for (const posting of jobPostingSeedData) {
+      await this.createJobPosting(posting);
+    }
+
+    // Seed glossary terms
+    const glossaryTerms = [
+      { term: 'cross-functional teams', definition: 'Groups of people with different functional expertise working toward a common goal. In tech companies, this typically includes engineers, designers, product managers, and other specialists collaborating on projects.', category: 'business' },
+      { term: 'product development process', definition: 'The complete journey of creating a product from initial idea through launch and iteration. Includes discovery, design, development, testing, and release phases.', category: 'product' },
+      { term: 'roadmap', definition: 'A strategic document that outlines the vision, direction, and progress of a product over time. Shows planned features, milestones, and timelines.', category: 'product' },
+      { term: 'sprint planning', definition: 'An agile ceremony where the team decides what work to commit to during an upcoming sprint (typically 2 weeks). Involves breaking down user stories into tasks.', category: 'engineering' },
+      { term: 'KPIs', definition: 'Key Performance Indicators - measurable values that demonstrate how effectively a company or team is achieving key business objectives.', category: 'business' },
+      { term: 'product metrics', definition: 'Quantitative data points used to track product performance, user behavior, and business outcomes. Examples include DAU, retention rate, and conversion rate.', category: 'product' },
+      { term: 'regulatory compliance', definition: 'Ensuring products and processes adhere to relevant laws, regulations, and guidelines. Critical in industries like healthcare, finance, and security.', category: 'business' },
+      { term: 'stakeholder management', definition: 'The process of managing expectations and communication with people who have an interest in a project\'s outcome, including executives, customers, and team members.', category: 'business' },
+      { term: 'product strategy', definition: 'A high-level plan that defines what a product will achieve and how it supports business goals. Includes target market, value proposition, and competitive positioning.', category: 'product' },
+      { term: 'user stories', definition: 'Short, simple descriptions of a feature told from the user\'s perspective. Format: "As a [user], I want [goal] so that [benefit]."', category: 'product' },
+      { term: 'developer experience', definition: 'The overall experience developers have when using tools, APIs, or platforms. Includes documentation quality, ease of use, and developer productivity.', category: 'engineering' },
+      { term: 'product specs', definition: 'Detailed documents that describe what a product or feature should do, including requirements, user flows, and acceptance criteria.', category: 'product' },
+      { term: 'distributed systems', definition: 'Computer systems where components are located on different networked computers and communicate by passing messages. Designed for scalability and fault tolerance.', category: 'engineering' },
+      { term: 'ML technologies', definition: 'Machine Learning technologies - tools, frameworks, and techniques for building systems that can learn from data. Includes neural networks, deep learning, and NLP.', category: 'engineering' },
+      { term: 'technical architecture', definition: 'The structure and design of a software system, including components, their relationships, and the principles guiding its design and evolution.', category: 'engineering' },
+      { term: 'product vision', definition: 'A long-term aspirational description of what a product aims to achieve and the impact it will have on users and the market.', category: 'product' },
+      { term: 'C-level', definition: 'Top executives in an organization, typically including CEO (Chief Executive Officer), CTO (Chief Technology Officer), CFO (Chief Financial Officer), etc.', category: 'business' },
+      { term: 'algorithmic trading', definition: 'Using computer algorithms to automatically execute trading strategies. Involves analyzing market data and executing trades at high speeds.', category: 'fintech' }
+    ];
+
+    for (const term of glossaryTerms) {
+      await this.createJobGlossaryTerm(term);
+    }
+
+    // Seed interview templates
+    const interviewTemplateSeedData = [
+      {
+        name: 'Standard PM Interview (3 rounds)',
+        role: 'pm',
+        stages: [
+          { order: 1, type: 'recruiter_call', name: 'Recruiter Screen', duration: 30, config: { interviewType: 'behavioral' } },
+          { order: 2, type: 'behavioral', name: 'Hiring Manager Interview', duration: 45, config: { interviewType: 'behavioral' } },
+          { order: 3, type: 'case_study', name: 'Product Case Study', duration: 60, config: { interviewType: 'case_study' } }
+        ],
+        totalDuration: 135
+      },
+      {
+        name: 'Standard Developer Interview (5 rounds)',
+        role: 'developer',
+        stages: [
+          { order: 1, type: 'recruiter_call', name: 'Recruiter Screen', duration: 30, config: { interviewType: 'behavioral' } },
+          { order: 2, type: 'technical', name: 'Technical Phone Screen', duration: 45, config: { interviewType: 'technical' } },
+          { order: 3, type: 'technical', name: 'Coding Interview', duration: 60, config: { interviewType: 'technical' } },
+          { order: 4, type: 'technical', name: 'System Design', duration: 60, config: { interviewType: 'system-design' } },
+          { order: 5, type: 'behavioral', name: 'Team Fit', duration: 45, config: { interviewType: 'behavioral' } }
+        ],
+        totalDuration: 240
+      },
+      {
+        name: 'Standard Designer Interview (4 rounds)',
+        role: 'designer',
+        stages: [
+          { order: 1, type: 'recruiter_call', name: 'Recruiter Screen', duration: 30, config: { interviewType: 'behavioral' } },
+          { order: 2, type: 'portfolio', name: 'Portfolio Review', duration: 60, config: { interviewType: 'behavioral' } },
+          { order: 3, type: 'case_study', name: 'Design Challenge', duration: 90, config: { interviewType: 'case_study' } },
+          { order: 4, type: 'behavioral', name: 'Team Fit', duration: 45, config: { interviewType: 'behavioral' } }
+        ],
+        totalDuration: 225
+      }
+    ];
+
+    for (const template of interviewTemplateSeedData) {
+      await this.createInterviewTemplate(template);
+    }
   }
 }
 

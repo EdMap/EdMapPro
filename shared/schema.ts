@@ -248,3 +248,134 @@ export type InterviewQuestion = typeof interviewQuestions.$inferSelect;
 export type InsertInterviewQuestion = z.infer<typeof insertInterviewQuestionSchema>;
 export type InterviewFeedback = typeof interviewFeedback.$inferSelect;
 export type InsertInterviewFeedback = z.infer<typeof insertInterviewFeedbackSchema>;
+
+// Job Journey Tables
+
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  logo: text("logo"), // URL or emoji
+  industry: text("industry").notNull(), // 'tech', 'fintech', 'healthtech', 'e-commerce'
+  size: text("size").notNull(), // 'startup', 'mid-size', 'enterprise'
+  description: text("description").notNull(),
+  culture: text("culture").notNull(), // Brief culture description
+  values: jsonb("values").notNull().default('[]'), // Array of company values
+  benefits: jsonb("benefits").notNull().default('[]'), // Array of benefits
+  interviewStyle: text("interview_style").notNull().default('balanced'), // 'rigorous', 'balanced', 'casual'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const jobPostings = pgTable("job_postings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  title: text("title").notNull(), // 'Junior Project Manager', 'Senior Software Engineer'
+  role: text("role").notNull(), // 'pm', 'developer', 'designer', 'qa', 'devops'
+  seniority: text("seniority").notNull(), // 'junior', 'mid', 'senior', 'lead'
+  department: text("department").notNull(), // 'Engineering', 'Product', 'Design'
+  location: text("location").notNull(), // 'Remote', 'San Francisco, CA', 'Hybrid'
+  employmentType: text("employment_type").notNull().default('full-time'), // 'full-time', 'contract', 'part-time'
+  salaryMin: integer("salary_min"),
+  salaryMax: integer("salary_max"),
+  description: text("description").notNull(), // Full job description
+  responsibilities: jsonb("responsibilities").notNull().default('[]'), // Array of responsibilities
+  requirements: jsonb("requirements").notNull().default('[]'), // Array of requirements
+  niceToHave: jsonb("nice_to_have").default('[]'), // Array of nice-to-haves
+  highlightedTerms: jsonb("highlighted_terms").default('[]'), // Terms to highlight with glossary popups
+  interviewStages: integer("interview_stages").notNull().default(3), // Number of interview stages
+  isActive: boolean("is_active").notNull().default(true),
+  postedAt: timestamp("posted_at").defaultNow().notNull(),
+});
+
+export const jobGlossary = pgTable("job_glossary", {
+  id: serial("id").primaryKey(),
+  term: text("term").notNull().unique(),
+  definition: text("definition").notNull(),
+  category: text("category"), // 'product', 'engineering', 'business', 'general'
+  relatedTerms: jsonb("related_terms").default('[]'),
+});
+
+export const jobApplications = pgTable("job_applications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  jobPostingId: integer("job_posting_id").references(() => jobPostings.id).notNull(),
+  status: text("status").notNull().default('draft'), // 'draft', 'submitted', 'screening', 'interviewing', 'offer', 'accepted', 'rejected'
+  cvFileName: text("cv_file_name"),
+  cvContent: text("cv_content"), // Stored CV text for AI context
+  coverLetter: text("cover_letter"),
+  currentStageIndex: integer("current_stage_index").notNull().default(0),
+  hrContactedAt: timestamp("hr_contacted_at"),
+  offerDetails: jsonb("offer_details"), // Salary, start date, etc.
+  notes: text("notes"),
+  appliedAt: timestamp("applied_at"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const interviewTemplates = pgTable("interview_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id),
+  role: text("role"), // If null, applies to all roles at company
+  name: text("name").notNull(),
+  stages: jsonb("stages").notNull(), // Array of stage configs: [{order, type, name, duration, config}]
+  totalDuration: integer("total_duration"), // Estimated total time in minutes
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const applicationStages = pgTable("application_stages", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id").references(() => jobApplications.id).notNull(),
+  stageOrder: integer("stage_order").notNull(),
+  stageName: text("stage_name").notNull(), // 'Phone Screen', 'Technical Interview', 'System Design'
+  stageType: text("stage_type").notNull(), // 'recruiter_call', 'technical', 'behavioral', 'case_study', 'panel', 'offer'
+  status: text("status").notNull().default('pending'), // 'pending', 'scheduled', 'in_progress', 'completed', 'skipped'
+  interviewSessionId: integer("interview_session_id").references(() => interviewSessions.id),
+  scheduledAt: timestamp("scheduled_at"),
+  completedAt: timestamp("completed_at"),
+  score: integer("score"), // 0-100
+  feedback: text("feedback"),
+  recruiterNotes: text("recruiter_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCompanySchema = createInsertSchema(companies).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertJobPostingSchema = createInsertSchema(jobPostings).omit({
+  id: true,
+  postedAt: true,
+});
+
+export const insertJobGlossarySchema = createInsertSchema(jobGlossary).omit({
+  id: true,
+});
+
+export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInterviewTemplateSchema = createInsertSchema(interviewTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertApplicationStageSchema = createInsertSchema(applicationStages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type JobPosting = typeof jobPostings.$inferSelect;
+export type InsertJobPosting = z.infer<typeof insertJobPostingSchema>;
+export type JobGlossary = typeof jobGlossary.$inferSelect;
+export type InsertJobGlossary = z.infer<typeof insertJobGlossarySchema>;
+export type JobApplication = typeof jobApplications.$inferSelect;
+export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
+export type InterviewTemplate = typeof interviewTemplates.$inferSelect;
+export type InsertInterviewTemplate = z.infer<typeof insertInterviewTemplateSchema>;
+export type ApplicationStage = typeof applicationStages.$inferSelect;
+export type InsertApplicationStage = z.infer<typeof insertApplicationStageSchema>;

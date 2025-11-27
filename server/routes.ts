@@ -615,6 +615,276 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== JOB JOURNEY ROUTES ====================
+
+  // Get all companies
+  app.get("/api/companies", async (req, res) => {
+    try {
+      const companies = await storage.getCompanies();
+      res.json(companies);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get companies" });
+    }
+  });
+
+  // Get single company
+  app.get("/api/companies/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const company = await storage.getCompany(id);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      res.json(company);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get company" });
+    }
+  });
+
+  // Get job postings with optional filters
+  app.get("/api/jobs", async (req, res) => {
+    try {
+      const filters: { companyId?: number; role?: string; isActive?: boolean } = {};
+      if (req.query.companyId) filters.companyId = parseInt(req.query.companyId as string);
+      if (req.query.role) filters.role = req.query.role as string;
+      if (req.query.isActive !== undefined) filters.isActive = req.query.isActive === 'true';
+      
+      const postings = await storage.getJobPostings(filters);
+      
+      // Attach company info to each posting
+      const postingsWithCompanies = await Promise.all(
+        postings.map(async (posting) => {
+          const company = await storage.getCompany(posting.companyId);
+          return { ...posting, company };
+        })
+      );
+      
+      res.json(postingsWithCompanies);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get job postings" });
+    }
+  });
+
+  // Get single job posting with company
+  app.get("/api/jobs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const posting = await storage.getJobPostingWithCompany(id);
+      if (!posting) {
+        return res.status(404).json({ message: "Job posting not found" });
+      }
+      res.json(posting);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get job posting" });
+    }
+  });
+
+  // Get glossary terms
+  app.get("/api/glossary", async (req, res) => {
+    try {
+      const terms = await storage.getJobGlossary();
+      res.json(terms);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get glossary" });
+    }
+  });
+
+  // Get single glossary term
+  app.get("/api/glossary/:term", async (req, res) => {
+    try {
+      const term = decodeURIComponent(req.params.term);
+      const glossaryTerm = await storage.getJobGlossaryTerm(term);
+      if (!glossaryTerm) {
+        return res.status(404).json({ message: "Term not found" });
+      }
+      res.json(glossaryTerm);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get glossary term" });
+    }
+  });
+
+  // Get user's job applications
+  app.get("/api/users/:userId/applications", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const applications = await storage.getJobApplications(userId);
+      
+      // Attach job and company info
+      const applicationsWithDetails = await Promise.all(
+        applications.map(async (app) => {
+          const jobWithCompany = await storage.getJobPostingWithCompany(app.jobPostingId);
+          const stages = await storage.getApplicationStages(app.id);
+          return { ...app, job: jobWithCompany, stages };
+        })
+      );
+      
+      res.json(applicationsWithDetails);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get applications" });
+    }
+  });
+
+  // Create job application
+  app.post("/api/applications", async (req, res) => {
+    try {
+      const { userId, jobPostingId, coverLetter } = req.body;
+      
+      if (!userId || !jobPostingId) {
+        return res.status(400).json({ message: "userId and jobPostingId are required" });
+      }
+
+      // Get job posting to determine interview stages
+      const job = await storage.getJobPosting(jobPostingId);
+      if (!job) {
+        return res.status(404).json({ message: "Job posting not found" });
+      }
+
+      // Create the application
+      const application = await storage.createJobApplication({
+        userId,
+        jobPostingId,
+        status: 'submitted',
+        coverLetter: coverLetter || null,
+        appliedAt: new Date(),
+      });
+
+      // Get interview template for this role
+      const templates = await storage.getInterviewTemplates(job.companyId, job.role);
+      const template = templates[0]; // Use first matching template
+      
+      // Create interview stages based on template or defaults
+      if (template && template.stages) {
+        const stages = template.stages as Array<{ order: number; type: string; name: string; duration: number; config: any }>;
+        for (const stage of stages) {
+          await storage.createApplicationStage({
+            applicationId: application.id,
+            stageOrder: stage.order,
+            stageName: stage.name,
+            stageType: stage.type,
+            status: 'pending',
+          });
+        }
+      } else {
+        // Default stages based on role
+        const defaultStages = job.role === 'developer' 
+          ? [
+              { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
+              { order: 2, name: 'Technical Screen', type: 'technical' },
+              { order: 3, name: 'Coding Interview', type: 'technical' },
+              { order: 4, name: 'System Design', type: 'technical' },
+              { order: 5, name: 'Team Fit', type: 'behavioral' },
+            ]
+          : job.role === 'pm'
+          ? [
+              { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
+              { order: 2, name: 'Hiring Manager', type: 'behavioral' },
+              { order: 3, name: 'Product Case', type: 'case_study' },
+            ]
+          : [
+              { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
+              { order: 2, name: 'Skills Interview', type: 'behavioral' },
+              { order: 3, name: 'Team Fit', type: 'behavioral' },
+            ];
+
+        for (const stage of defaultStages) {
+          await storage.createApplicationStage({
+            applicationId: application.id,
+            stageOrder: stage.order,
+            stageName: stage.name,
+            stageType: stage.type,
+            status: 'pending',
+          });
+        }
+      }
+
+      // Get the created stages
+      const stages = await storage.getApplicationStages(application.id);
+      const jobWithCompany = await storage.getJobPostingWithCompany(jobPostingId);
+
+      res.json({ ...application, job: jobWithCompany, stages });
+    } catch (error) {
+      console.error("Failed to create application:", error);
+      res.status(500).json({ message: "Failed to create application" });
+    }
+  });
+
+  // Get single application with stages
+  app.get("/api/applications/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const application = await storage.getJobApplication(id);
+      
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      const jobWithCompany = await storage.getJobPostingWithCompany(application.jobPostingId);
+      const stages = await storage.getApplicationStages(id);
+
+      res.json({ ...application, job: jobWithCompany, stages });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get application" });
+    }
+  });
+
+  // Update application status
+  app.patch("/api/applications/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const application = await storage.updateJobApplication(id, updates);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      res.json(application);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update application" });
+    }
+  });
+
+  // Update application stage (for interview completion, etc.)
+  app.patch("/api/applications/:applicationId/stages/:stageId", async (req, res) => {
+    try {
+      const stageId = parseInt(req.params.stageId);
+      const updates = req.body;
+      
+      const stage = await storage.updateApplicationStage(stageId, updates);
+      if (!stage) {
+        return res.status(404).json({ message: "Stage not found" });
+      }
+      
+      // If stage is completed, update application's current stage index
+      if (updates.status === 'completed') {
+        const applicationId = parseInt(req.params.applicationId);
+        const application = await storage.getJobApplication(applicationId);
+        if (application) {
+          await storage.updateJobApplication(applicationId, {
+            currentStageIndex: application.currentStageIndex + 1,
+          });
+        }
+      }
+      
+      res.json(stage);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update stage" });
+    }
+  });
+
+  // Get interview templates
+  app.get("/api/interview-templates", async (req, res) => {
+    try {
+      const companyId = req.query.companyId ? parseInt(req.query.companyId as string) : undefined;
+      const role = req.query.role as string | undefined;
+      
+      const templates = await storage.getInterviewTemplates(companyId, role);
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get templates" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
