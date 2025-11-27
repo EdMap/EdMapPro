@@ -161,10 +161,12 @@ function StageTimeline({ stages, currentIndex }: { stages: ApplicationStage[]; c
 
 function ApplicationCard({ 
   application, 
-  onStartInterview 
+  onStartInterview,
+  isMostPromising = false
 }: { 
   application: JobApplication;
   onStartInterview: (stage: ApplicationStage) => void;
+  isMostPromising?: boolean;
 }) {
   const progressPercent = (application.currentStageIndex / application.stages.length) * 100;
   const currentStage = application.stages[application.currentStageIndex];
@@ -175,15 +177,27 @@ function ApplicationCard({
       <CardContent className="p-0">
         <div className="p-5 border-b">
           <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-2xl shrink-0">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-2xl shrink-0 relative">
                 {application.job.company.logo || '🏢'}
+                {isMostPromising && (
+                  <div className="absolute -top-1 -right-1 bg-yellow-400 text-yellow-900 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                    ⭐
+                  </div>
+                )}
               </div>
               
-              <div>
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
-                  {application.job.title}
-                </h3>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                    {application.job.title}
+                  </h3>
+                  {isMostPromising && (
+                    <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs">
+                      Most Promising
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-gray-600 dark:text-gray-400">
                   {application.job.company.name}
                 </p>
@@ -225,22 +239,26 @@ function ApplicationCard({
           />
           
           {currentStage && currentStage.status !== 'completed' && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white">
-                    Next: {currentStage.stageName}
-                  </h4>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Practice this interview stage in the simulator
-                  </p>
+            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">
+                      Ready for the next stage?
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      {currentStage.stageName} Interview
+                    </p>
+                  </div>
                 </div>
                 <Button 
                   onClick={() => onStartInterview(currentStage)}
+                  className="w-full"
                   data-testid={`button-start-interview-${currentStage.id}`}
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  Start Interview
+                  Practice This Interview
+                  <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </div>
@@ -258,8 +276,12 @@ function ApplicationCard({
                     Continue to negotiation to maximize your compensation
                   </p>
                 </div>
-                <Button variant="outline" className="ml-auto border-green-300 text-green-700 hover:bg-green-50">
-                  Start Negotiation
+                <Button 
+                  onClick={() => navigate('/negotiation')}
+                  className="ml-auto bg-green-600 hover:bg-green-700 text-white"
+                  data-testid={`button-start-negotiation-${application.id}`}
+                >
+                  Practice Negotiation
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -379,6 +401,21 @@ export default function Journey() {
     enabled: !!user?.id,
   });
 
+  const getMostPromisingApplication = (): JobApplication | null => {
+    if (!applications || applications.length === 0) return null;
+    return applications.reduce((best, current) => {
+      const currentProgress = current.currentStageIndex / current.stages.length;
+      const bestProgress = best.currentStageIndex / best.stages.length;
+      
+      if (current.status === 'offer' && best.status !== 'offer') return current;
+      if (best.status === 'offer' && current.status !== 'offer') return best;
+      if (currentProgress > bestProgress) return current;
+      return best;
+    });
+  };
+
+  const mostPromising = getMostPromisingApplication();
+
   const handleStartInterview = (stage: ApplicationStage) => {
     const stageTypeToInterviewType: Record<string, string> = {
       recruiter_call: 'behavioral',
@@ -440,6 +477,7 @@ export default function Journey() {
                 key={application.id}
                 application={application}
                 onStartInterview={handleStartInterview}
+                isMostPromising={mostPromising?.id === application.id}
               />
             ))}
           </div>
