@@ -1,13 +1,17 @@
 import { 
   users, simulationSessions, userProgress,
   workspaceProjects, workspaceRoles, workspaceArtifacts, workspaceTasks, workspaceInteractions, workspaceEvaluations,
+  interviewSessions, interviewQuestions, interviewFeedback,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
   type WorkspaceArtifact, type InsertWorkspaceArtifact,
   type WorkspaceTask, type InsertWorkspaceTask,
   type WorkspaceInteraction, type InsertWorkspaceInteraction,
-  type WorkspaceEvaluation, type InsertWorkspaceEvaluation
+  type WorkspaceEvaluation, type InsertWorkspaceEvaluation,
+  type InterviewSession, type InsertInterviewSession,
+  type InterviewQuestion, type InsertInterviewQuestion,
+  type InterviewFeedback, type InsertInterviewFeedback
 } from "@shared/schema";
 
 export interface IStorage {
@@ -58,6 +62,22 @@ export interface IStorage {
   // Workspace evaluation operations
   getWorkspaceEvaluations(sessionId: number): Promise<WorkspaceEvaluation[]>;
   createWorkspaceEvaluation(evaluation: InsertWorkspaceEvaluation): Promise<WorkspaceEvaluation>;
+  
+  // Interview session operations
+  getInterviewSession(id: number): Promise<InterviewSession | undefined>;
+  getUserInterviewSessions(userId: number): Promise<InterviewSession[]>;
+  createInterviewSession(session: InsertInterviewSession): Promise<InterviewSession>;
+  updateInterviewSession(id: number, updates: Partial<InterviewSession>): Promise<InterviewSession | undefined>;
+  
+  // Interview question operations
+  getInterviewQuestion(id: number): Promise<InterviewQuestion | undefined>;
+  getInterviewQuestions(sessionId: number): Promise<InterviewQuestion[]>;
+  createInterviewQuestion(question: InsertInterviewQuestion): Promise<InterviewQuestion>;
+  updateInterviewQuestion(id: number, updates: Partial<InterviewQuestion>): Promise<InterviewQuestion | undefined>;
+  
+  // Interview feedback operations
+  getInterviewFeedback(sessionId: number): Promise<InterviewFeedback | undefined>;
+  createInterviewFeedback(feedback: InsertInterviewFeedback): Promise<InterviewFeedback>;
 }
 
 export class MemStorage implements IStorage {
@@ -70,6 +90,9 @@ export class MemStorage implements IStorage {
   private workspaceTasks: Map<number, WorkspaceTask>;
   private workspaceInteractions: Map<number, WorkspaceInteraction>;
   private workspaceEvaluations: Map<number, WorkspaceEvaluation>;
+  private interviewSessionsMap: Map<number, InterviewSession>;
+  private interviewQuestionsMap: Map<number, InterviewQuestion>;
+  private interviewFeedbackMap: Map<number, InterviewFeedback>;
   private currentUserId: number;
   private currentSessionId: number;
   private currentProgressId: number;
@@ -79,6 +102,9 @@ export class MemStorage implements IStorage {
   private currentTaskId: number;
   private currentInteractionId: number;
   private currentEvaluationId: number;
+  private currentInterviewSessionId: number;
+  private currentInterviewQuestionId: number;
+  private currentInterviewFeedbackId: number;
 
   constructor() {
     this.users = new Map();
@@ -90,6 +116,9 @@ export class MemStorage implements IStorage {
     this.workspaceTasks = new Map();
     this.workspaceInteractions = new Map();
     this.workspaceEvaluations = new Map();
+    this.interviewSessionsMap = new Map();
+    this.interviewQuestionsMap = new Map();
+    this.interviewFeedbackMap = new Map();
     this.currentUserId = 1;
     this.currentSessionId = 1;
     this.currentProgressId = 1;
@@ -99,6 +128,9 @@ export class MemStorage implements IStorage {
     this.currentTaskId = 1;
     this.currentInteractionId = 1;
     this.currentEvaluationId = 1;
+    this.currentInterviewSessionId = 1;
+    this.currentInterviewQuestionId = 1;
+    this.currentInterviewFeedbackId = 1;
     
     // Create a default user
     this.createUser({
@@ -926,6 +958,100 @@ export class MemStorage implements IStorage {
     };
     this.workspaceEvaluations.set(id, evaluation);
     return evaluation;
+  }
+
+  // Interview session operations
+  async getInterviewSession(id: number): Promise<InterviewSession | undefined> {
+    return this.interviewSessionsMap.get(id);
+  }
+
+  async getUserInterviewSessions(userId: number): Promise<InterviewSession[]> {
+    return Array.from(this.interviewSessionsMap.values())
+      .filter(session => session.userId === userId)
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  }
+
+  async createInterviewSession(insertSession: InsertInterviewSession): Promise<InterviewSession> {
+    const id = this.currentInterviewSessionId++;
+    const session: InterviewSession = {
+      ...insertSession,
+      id,
+      difficulty: insertSession.difficulty || "medium",
+      status: insertSession.status || "in_progress",
+      currentQuestionIndex: insertSession.currentQuestionIndex || 0,
+      totalQuestions: insertSession.totalQuestions || 5,
+      overallScore: insertSession.overallScore || null,
+      completedAt: insertSession.completedAt || null,
+      startedAt: new Date()
+    };
+    this.interviewSessionsMap.set(id, session);
+    return session;
+  }
+
+  async updateInterviewSession(id: number, updates: Partial<InterviewSession>): Promise<InterviewSession | undefined> {
+    const session = this.interviewSessionsMap.get(id);
+    if (!session) return undefined;
+    
+    const updatedSession = { ...session, ...updates };
+    this.interviewSessionsMap.set(id, updatedSession);
+    return updatedSession;
+  }
+
+  // Interview question operations
+  async getInterviewQuestion(id: number): Promise<InterviewQuestion | undefined> {
+    return this.interviewQuestionsMap.get(id);
+  }
+
+  async getInterviewQuestions(sessionId: number): Promise<InterviewQuestion[]> {
+    return Array.from(this.interviewQuestionsMap.values())
+      .filter(question => question.sessionId === sessionId)
+      .sort((a, b) => a.questionIndex - b.questionIndex);
+  }
+
+  async createInterviewQuestion(insertQuestion: InsertInterviewQuestion): Promise<InterviewQuestion> {
+    const id = this.currentInterviewQuestionId++;
+    const question: InterviewQuestion = {
+      ...insertQuestion,
+      id,
+      candidateAnswer: insertQuestion.candidateAnswer || null,
+      score: insertQuestion.score || null,
+      feedback: insertQuestion.feedback || null,
+      strengths: insertQuestion.strengths || [],
+      improvements: insertQuestion.improvements || [],
+      answeredAt: insertQuestion.answeredAt || null,
+      askedAt: new Date()
+    };
+    this.interviewQuestionsMap.set(id, question);
+    return question;
+  }
+
+  async updateInterviewQuestion(id: number, updates: Partial<InterviewQuestion>): Promise<InterviewQuestion | undefined> {
+    const question = this.interviewQuestionsMap.get(id);
+    if (!question) return undefined;
+    
+    const updatedQuestion = { ...question, ...updates };
+    this.interviewQuestionsMap.set(id, updatedQuestion);
+    return updatedQuestion;
+  }
+
+  // Interview feedback operations
+  async getInterviewFeedback(sessionId: number): Promise<InterviewFeedback | undefined> {
+    return Array.from(this.interviewFeedbackMap.values())
+      .find(feedback => feedback.sessionId === sessionId);
+  }
+
+  async createInterviewFeedback(insertFeedback: InsertInterviewFeedback): Promise<InterviewFeedback> {
+    const id = this.currentInterviewFeedbackId++;
+    const feedback: InterviewFeedback = {
+      ...insertFeedback,
+      id,
+      technicalScore: insertFeedback.technicalScore || null,
+      problemSolvingScore: insertFeedback.problemSolvingScore || null,
+      cultureFitScore: insertFeedback.cultureFitScore || null,
+      createdAt: new Date()
+    };
+    this.interviewFeedbackMap.set(id, feedback);
+    return feedback;
   }
 }
 
