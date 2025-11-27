@@ -129,9 +129,9 @@ CRITICAL RULES FOR HR SCREENING:
 - Each question must explore a DIFFERENT topic from previous ones
 
 FOR QUESTION 1: Ask directly about their interest in the role or company. DO NOT introduce yourself or the company again - that was already done.
-FOR LATER QUESTIONS: Progress naturally through the HR focus areas above. Pick a topic NOT yet covered.
+FOR LATER QUESTIONS: Start with a brief connector word like "And," or "So," or "Now," then ask about a topic NOT yet covered.
 
-IMPORTANT: Output ONLY the question itself. Do not include any greeting, introduction, or preamble. The introduction has already been given separately. Just ask the question directly.
+IMPORTANT: Output ONLY the question itself. Do not include any greeting or introduction. For questions 2+, use a transition word to connect naturally.
 `);
 
 const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -173,9 +173,9 @@ FOR QUESTION 1:
 Reference something specific from their CV or the job requirements. DO NOT introduce yourself - that was already done.
 
 FOR QUESTIONS 2+:
-Either drill into their project or pivot to a new topic. Be direct and tie to job requirements.
+Start with a brief connector like "And," or "So," or "Now," then either drill into their project or pivot to a new topic.
 
-IMPORTANT: Output ONLY the question itself. Do not include any greeting, introduction, or preamble like "Hi, I'm [name]..." - the introduction has already been given separately. Just ask the question directly.
+IMPORTANT: Output ONLY the question itself. No greeting or introduction. For questions 2+, use a transition word to connect naturally.
 `);
 
 const questionGeneratorPrompt = PromptTemplate.fromTemplate(`
@@ -214,7 +214,7 @@ The opener should:
 - Be genuinely curious, not interrogative
 
 FOR QUESTIONS 2+:
-Either drill into their project or pivot with a brief transition. Be direct.
+Start with a connector like "And," or "So," then either drill into their project or pivot to a new topic.
 
 Generate the question now. Be natural and specific.
 `);
