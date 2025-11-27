@@ -125,13 +125,28 @@ export default function LangchainInterviewSession({
         setFinalReport(result.finalReport);
         setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
       } else if (result.nextQuestion) {
+        // Update session state immediately to avoid stale state
+        setSession(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex + 1 }));
+        setCurrentQuestion(result.nextQuestion);
+        
         setShowTypingIndicator(true);
+        
+        // Show reflection first (if any), then the question - in a single update
+        const hasReflection = result.reflection && result.reflection.trim().length > 0;
+        
         setTimeout(() => {
           setShowTypingIndicator(false);
-          setCurrentQuestion(result.nextQuestion);
-          setMessages(prev => [...prev, { role: 'interviewer', content: result.nextQuestion.questionText }]);
-          setSession(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex + 1 }));
-        }, 1500);
+          
+          // Add both messages in a single state update to avoid race conditions
+          setMessages(prev => {
+            const newMessages = [...prev];
+            if (hasReflection) {
+              newMessages.push({ role: 'interviewer', content: result.reflection });
+            }
+            newMessages.push({ role: 'interviewer', content: result.nextQuestion.questionText });
+            return newMessages;
+          });
+        }, hasReflection ? 1500 : 1200);
       }
       
       setIsSubmitting(false);

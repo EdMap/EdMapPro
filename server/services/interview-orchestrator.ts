@@ -4,6 +4,7 @@ import {
   FollowUpChain,
   ScoringChain,
   IntroductionChain,
+  ReflectionChain,
   InterviewConfig,
   QuestionContext,
   EvaluationResult,
@@ -37,6 +38,7 @@ export class InterviewOrchestrator {
   private followUp: FollowUpChain;
   private scoring: ScoringChain;
   private introduction: IntroductionChain;
+  private reflection: ReflectionChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -45,6 +47,7 @@ export class InterviewOrchestrator {
     this.followUp = new FollowUpChain();
     this.scoring = new ScoringChain();
     this.introduction = new IntroductionChain();
+    this.reflection = new ReflectionChain();
     this.memory = new Map();
   }
 
@@ -137,6 +140,7 @@ export class InterviewOrchestrator {
     evaluation: EvaluationResult;
     decision: FollowUpDecision;
     nextQuestion?: InterviewQuestion;
+    reflection?: string;
     finalReport?: FinalReport;
   }> {
     const session = await storage.getInterviewSession(sessionId);
@@ -213,6 +217,13 @@ export class InterviewOrchestrator {
       memory.projectMentionCount = 0;
     }
     
+    // Generate a brief reflection/acknowledgment of the answer (non-parroting)
+    const reflectionText = await this.reflection.generate(
+      question.questionText,
+      answer,
+      evaluation.score
+    );
+    
     const nextQuestionText = await this.questionGenerator.generate({
       config: {
         ...config,
@@ -239,7 +250,7 @@ export class InterviewOrchestrator {
       expectedCriteria: this.getExpectedCriteria(config, nextQuestionIndex),
     });
 
-    return { evaluation, decision, nextQuestion };
+    return { evaluation, decision, nextQuestion, reflection: reflectionText };
   }
 
   async generateFinalReport(sessionId: number): Promise<FinalReport> {

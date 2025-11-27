@@ -125,9 +125,11 @@ CRITICAL RULES FOR HR SCREENING:
 - DO make the candidate feel comfortable and excited about the opportunity
 - DO personalize questions based on their CV background
 - KEEP questions conversational, not interrogative
+- NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above)
+- Each question must explore a DIFFERENT topic from previous ones
 
 FOR QUESTION 1: Ask directly about their interest in the role or company. DO NOT introduce yourself or the company again - that was already done.
-FOR LATER QUESTIONS: Progress naturally through the HR focus areas above.
+FOR LATER QUESTIONS: Progress naturally through the HR focus areas above. Pick a topic NOT yet covered.
 
 IMPORTANT: Output ONLY the question itself. Do not include any greeting, introduction, or preamble. The introduction has already been given separately. Just ask the question directly.
 `);
@@ -157,21 +159,21 @@ CRITICAL RULES:
 
 1. NEVER PARROT what the candidate said. Don't say "That's interesting that you mentioned X" or "I love how you described Y".
 
-2. KEEP TRANSITIONS BRIEF. Just "Great." or move directly to the next question.
+2. TIE QUESTIONS TO JOB REQUIREMENTS: Reference specific skills or experiences mentioned in the job requirements.
 
-3. TIE QUESTIONS TO JOB REQUIREMENTS: Reference specific skills or experiences mentioned in the job requirements.
+3. PERSONALIZE WITH CV: If their CV mentions relevant projects or experience, ask about those specifically.
 
-4. PERSONALIZE WITH CV: If their CV mentions relevant projects or experience, ask about those specifically.
+4. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
 
-5. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
+5. PIVOT after 2-3 questions on the same topic. Ask about something new.
 
-6. PIVOT after 2-3 questions on the same topic. Say "Let me switch gears..." or just ask about something new.
+6. NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above). Each question must explore a DIFFERENT aspect or topic.
 
 FOR QUESTION 1:
 Reference something specific from their CV or the job requirements. DO NOT introduce yourself - that was already done.
 
 FOR QUESTIONS 2+:
-Either drill into their project or pivot with a brief transition. Be direct and tie to job requirements.
+Either drill into their project or pivot to a new topic. Be direct and tie to job requirements.
 
 IMPORTANT: Output ONLY the question itself. Do not include any greeting, introduction, or preamble like "Hi, I'm [name]..." - the introduction has already been given separately. Just ask the question directly.
 `);
@@ -189,11 +191,11 @@ CRITICAL RULES:
 
 1. NEVER PARROT what the candidate said. Don't say "That's interesting that you mentioned X" or "I love how you described Y".
 
-2. KEEP TRANSITIONS BRIEF. Just "Great." or move directly to the next question.
+2. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
 
-3. DRILL DOWN ON THEIR PROJECT when relevant. Ask about specific challenges, decisions, metrics, or outcomes from the project they mentioned ({activeProject}).
+3. PIVOT after 2-3 questions on the same topic. Ask about something new.
 
-4. PIVOT after 2-3 questions on the same topic. Say "Let me switch gears..." or just ask about something new.
+4. NEVER REPEAT A QUESTION that was already asked (check "Topics covered" above). Each question must explore a DIFFERENT aspect or topic.
 
 FOR QUESTION 1 ONLY - THE OPENING:
 Don't use generic "tell me about yourself" - that's boring and scripted.
@@ -239,6 +241,36 @@ Scoring: 9-10 exceptional, 7-8 strong, 5-6 solid, 3-4 developing, 1-2 needs work
 
 Keep feedback concise and actionable. No fluff.
 Respond with ONLY valid JSON.
+`);
+
+const reflectionPrompt = PromptTemplate.fromTemplate(`
+You are an interviewer providing a brief, natural acknowledgment before your next question.
+
+THE QUESTION YOU ASKED: {question}
+THE CANDIDATE'S ANSWER: {lastAnswer}
+ANSWER QUALITY: {answerQuality}
+
+YOUR TASK: Generate a SHORT (1 sentence max) acknowledgment that:
+1. Shows you listened and valued their response
+2. Matches the quality level (stronger praise for better answers)
+
+CRITICAL - DO NOT PARROT:
+- NEVER repeat or rephrase what they said
+- NEVER say "I love how you mentioned X" or "That's interesting about Y"
+- NEVER summarize their answer back to them
+- NEVER reference specific details from their answer
+
+GOOD EXAMPLES (notice they don't repeat content):
+- For strong answers: "That's exactly the kind of thinking we look for." / "Really well put."
+- For solid answers: "Good to know." / "Makes sense." / "Appreciate you sharing that."
+- For developing answers: "Thanks for that." / "Understood."
+
+BAD EXAMPLES (these parrot the answer - NEVER do this):
+- "I love how you mentioned the microservices architecture..."
+- "That's really interesting about your experience with Python..."
+- "So you worked on scaling the database, that's great..."
+
+Output ONLY the brief acknowledgment (1 sentence). No question - that comes separately.
 `);
 
 const followUpPrompt = PromptTemplate.fromTemplate(`
@@ -358,6 +390,38 @@ export class IntroductionChain {
       default:
         return "Alex";
     }
+  }
+}
+
+export class ReflectionChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      reflectionPrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generate(question: string, lastAnswer: string, score: number): Promise<string> {
+    // Don't generate reflection for the first question (no previous answer)
+    if (!lastAnswer || lastAnswer === "This is the first question") {
+      return "";
+    }
+    
+    // Determine answer quality based on score
+    let answerQuality = "solid";
+    if (score >= 8) answerQuality = "strong";
+    else if (score >= 6) answerQuality = "solid";
+    else answerQuality = "developing";
+    
+    const result = await this.chain.invoke({
+      question,
+      lastAnswer,
+      answerQuality,
+    });
+    return result.trim();
   }
 }
 
