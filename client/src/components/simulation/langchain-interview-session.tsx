@@ -122,8 +122,22 @@ export default function LangchainInterviewSession({
       });
 
       if (result.finalReport) {
-        setFinalReport(result.finalReport);
-        setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+        // Show closure message if available, then transition to report
+        if (result.closure) {
+          setShowTypingIndicator(true);
+          setTimeout(() => {
+            setShowTypingIndicator(false);
+            setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
+            // Wait a bit before showing the report
+            setTimeout(() => {
+              setFinalReport(result.finalReport);
+              setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+            }, 2000);
+          }, 1500);
+        } else {
+          setFinalReport(result.finalReport);
+          setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+        }
       } else if (result.nextQuestion) {
         // Update session state immediately to avoid stale state
         setSession(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex + 1 }));

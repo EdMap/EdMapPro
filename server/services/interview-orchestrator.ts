@@ -5,11 +5,16 @@ import {
   ScoringChain,
   IntroductionChain,
   ReflectionChain,
+  ClosureChain,
+  WrapupChain,
   InterviewConfig,
   QuestionContext,
   EvaluationResult,
   FollowUpDecision,
   FinalReport,
+  InterviewStage,
+  getInterviewStage,
+  shouldGenerateReflection,
 } from "./interview-chains";
 import { storage } from "../storage";
 import type { InterviewSession, InterviewQuestion } from "@shared/schema";
@@ -31,6 +36,7 @@ interface ConversationMemory {
   projectMentionCount: number;
   jobContext?: JobContext;
   lastReflection: string;
+  currentStage: InterviewStage;
 }
 
 export class InterviewOrchestrator {
@@ -40,6 +46,8 @@ export class InterviewOrchestrator {
   private scoring: ScoringChain;
   private introduction: IntroductionChain;
   private reflection: ReflectionChain;
+  private closure: ClosureChain;
+  private wrapup: WrapupChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -49,6 +57,8 @@ export class InterviewOrchestrator {
     this.scoring = new ScoringChain();
     this.introduction = new IntroductionChain();
     this.reflection = new ReflectionChain();
+    this.closure = new ClosureChain();
+    this.wrapup = new WrapupChain();
     this.memory = new Map();
   }
 
@@ -62,6 +72,7 @@ export class InterviewOrchestrator {
         activeProject: null,
         projectMentionCount: 0,
         lastReflection: "None yet",
+        currentStage: "opening",
       });
     }
     return this.memory.get(sessionId)!;
@@ -144,6 +155,7 @@ export class InterviewOrchestrator {
     nextQuestion?: InterviewQuestion;
     reflection?: string;
     finalReport?: FinalReport;
+    closure?: string;
   }> {
     const session = await storage.getInterviewSession(sessionId);
     if (!session) {
@@ -193,7 +205,16 @@ export class InterviewOrchestrator {
       memory.scores
     );
 
-    if (decision.action === "end_interview" || session.currentQuestionIndex >= config.totalQuestions - 1) {
+    // Determine stages: what stage was the question we just answered, and what's next
+    const answeredQuestionStage = getInterviewStage(session.currentQuestionIndex, config.totalQuestions);
+    memory.currentStage = answeredQuestionStage;
+    
+    const isLastQuestion = session.currentQuestionIndex >= config.totalQuestions - 1;
+    
+    if (decision.action === "end_interview" || isLastQuestion) {
+      // Generate closure message before ending
+      const closureMessage = await this.closure.generate(config);
+      
       const finalReport = await this.generateFinalReport(sessionId);
       
       await storage.updateInterviewSession(sessionId, {
@@ -204,10 +225,11 @@ export class InterviewOrchestrator {
 
       this.memory.delete(sessionId);
 
-      return { evaluation, decision, finalReport };
+      return { evaluation, decision, finalReport, closure: closureMessage };
     }
 
     const nextQuestionIndex = session.currentQuestionIndex + 1;
+    const nextQuestionStage = getInterviewStage(nextQuestionIndex, config.totalQuestions);
     
     await storage.updateInterviewSession(sessionId, {
       currentQuestionIndex: nextQuestionIndex,
@@ -219,25 +241,37 @@ export class InterviewOrchestrator {
       memory.projectMentionCount = 0;
     }
     
-    // Generate a brief reflection/acknowledgment of the answer (non-parroting)
-    const reflectionText = await this.reflection.generate(answer, memory.lastReflection);
-    memory.lastReflection = reflectionText;
+    // Adaptive reflection: skip for wrapup answers, only ~40% for core with longer answers
+    let reflectionText: string | undefined;
+    if (answeredQuestionStage === "core" && shouldGenerateReflection(answer, answeredQuestionStage)) {
+      reflectionText = await this.reflection.generate(answer, memory.lastReflection);
+      memory.lastReflection = reflectionText;
+    }
     
-    const nextQuestionText = await this.questionGenerator.generate({
-      config: {
-        ...config,
-        difficulty: decision.difficultyAdjustment === "easier" 
-          ? this.adjustDifficulty(config.difficulty, -1)
-          : decision.difficultyAdjustment === "harder"
-          ? this.adjustDifficulty(config.difficulty, 1)
-          : config.difficulty,
-      },
-      questionIndex: nextQuestionIndex,
-      previousQuestions: memory.questions,
-      previousAnswers: memory.answers,
-      previousScores: memory.scores,
-      activeProject: memory.activeProject,
-    });
+    // Generate next question based on upcoming stage
+    let nextQuestionText: string;
+    
+    if (nextQuestionStage === "wrapup") {
+      // Use wrapup chain for the final question
+      nextQuestionText = await this.wrapup.generate(config);
+    } else {
+      // Normal question generation for core phase
+      nextQuestionText = await this.questionGenerator.generate({
+        config: {
+          ...config,
+          difficulty: decision.difficultyAdjustment === "easier" 
+            ? this.adjustDifficulty(config.difficulty, -1)
+            : decision.difficultyAdjustment === "harder"
+            ? this.adjustDifficulty(config.difficulty, 1)
+            : config.difficulty,
+        },
+        questionIndex: nextQuestionIndex,
+        previousQuestions: memory.questions,
+        previousAnswers: memory.answers,
+        previousScores: memory.scores,
+        activeProject: memory.activeProject,
+      });
+    }
 
     memory.questions.push(nextQuestionText);
 

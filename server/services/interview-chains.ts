@@ -21,6 +21,22 @@ const evaluatorModel = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+export type InterviewStage = "opening" | "core" | "wrapup" | "closure";
+
+export function getInterviewStage(questionIndex: number, totalQuestions: number): InterviewStage {
+  if (questionIndex === 0) return "opening";
+  if (questionIndex >= totalQuestions - 1) return "wrapup";
+  return "core";
+}
+
+export function shouldGenerateReflection(answer: string, stage: InterviewStage): boolean {
+  if (stage === "opening") return false;
+  if (stage === "wrapup") return false;
+  const wordCount = answer.trim().split(/\s+/).length;
+  if (wordCount < 15) return false;
+  return Math.random() < 0.4;
+}
+
 export function extractCvHighlights(cvText: string): string {
   if (!cvText || cvText.length < 50) {
     return "No CV provided";
@@ -189,6 +205,41 @@ Generate a warm, professional introduction that:
 6. Sets a comfortable tone for the conversation
 
 Keep it natural and conversational - about 4-6 sentences total. End with a transitional phrase like "So, to get started..." but DON'T ask a question yet.
+`);
+
+const closurePrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, an HR recruiter at {companyName}. The HR screening interview is now complete.
+
+CANDIDATE NAME: The candidate
+COMPANY: {companyName}
+ROLE: {jobTitle}
+
+Generate a warm, professional closing that:
+1. Thanks them sincerely for their time and thoughtful answers
+2. Briefly summarizes what you discussed (1 sentence max)
+3. Explains next steps: "Our team will review and get back to you within [timeframe]"
+4. Mentions that if they move forward, they'll hear about the next interview stage
+5. Asks if they have any final questions for you
+6. Ends with a warm goodbye
+
+Keep it concise - about 3-4 sentences. Be genuine, not robotic.
+Example: "Thanks so much for chatting with me today - I really enjoyed learning about your experience at [company from CV]. Our team will review everything and get back to you within the next week or so. If there's anything else you'd like to know about DataViz Pro or the role, I'm happy to answer. Otherwise, have a great rest of your day!"
+`);
+
+const wrapupQuestionPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, an HR recruiter at {companyName}. This is the FINAL question before wrapping up.
+
+ROLE: {jobTitle}
+COMPANY: {companyName}
+
+This is the wrap-up phase. Ask ONE of these (pick the most natural based on conversation):
+- Salary expectations: "Before we wrap up, do you have a salary range in mind for this role?"
+- Availability: "When would you be available to start if everything works out?"
+- Their questions: "We're almost at the end - is there anything you'd like to ask me about the role or DataViz Pro?"
+- Timeline: "Are you interviewing elsewhere or working with any specific timelines?"
+
+Pick the ONE that flows best. Keep it brief and natural.
+Output ONLY the question.
 `);
 
 const hrScreeningQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -486,6 +537,48 @@ export class ReflectionChain {
   }
 }
 
+export class ClosureChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      closurePrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generate(config: InterviewConfig): Promise<string> {
+    const result = await this.chain.invoke({
+      interviewerName: config.interviewerName || "Sarah",
+      companyName: config.companyName || "the company",
+      jobTitle: config.jobTitle || `${config.targetRole} position`,
+    });
+    return result.trim();
+  }
+}
+
+export class WrapupChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      wrapupQuestionPrompt,
+      questionModel,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generate(config: InterviewConfig): Promise<string> {
+    const result = await this.chain.invoke({
+      interviewerName: config.interviewerName || "Sarah",
+      companyName: config.companyName || "the company",
+      jobTitle: config.jobTitle || `${config.targetRole} position`,
+    });
+    return result.trim();
+  }
+}
+
 export class QuestionGeneratorChain {
   private defaultChain: RunnableSequence;
   private hrChain: RunnableSequence;
@@ -548,15 +641,9 @@ export class QuestionGeneratorChain {
     const config = context.config;
     const questionNum = context.questionIndex + 1;
     
-    // Debug logging
-    console.log("=== HR Question Generation ===");
-    console.log("CV provided:", config.candidateCv ? `${config.candidateCv.substring(0, 500)}...` : "NO CV");
-    
     const cvHighlights = config.candidateCv 
       ? extractCvHighlights(config.candidateCv)
       : "No CV provided";
-    
-    console.log("CV Highlights:", cvHighlights);
     
     const currentGoal = this.getHrQuestionGoal(questionNum);
     
