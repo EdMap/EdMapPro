@@ -136,6 +136,19 @@ export default function InterviewSimulator() {
     });
   };
 
+  // Show loading if in Journey mode and interview is starting
+  if (isJourneyMode && startInterviewMutation.isPending) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Starting your interview...</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Preparing your interview session</p>
+        </div>
+      </div>
+    );
+  }
+
   if (activeSession && activeFirstQuestion) {
     return (
       <LangchainInterviewSession
