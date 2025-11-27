@@ -22,7 +22,7 @@ Preferred communication style: Simple, everyday language.
 - **Language**: TypeScript
 - **Database ORM**: Drizzle ORM
 - **Database**: PostgreSQL (Neon Database)
-- **AI Integration**: OpenAI GPT-4o, Groq (llama-3.1-70b-versatile)
+- **AI Integration**: Groq (llama-3.3-70b-versatile) via LangChain.js
 - **Session Management**: Express sessions with PostgreSQL store
 
 ### Monorepo Structure
@@ -32,6 +32,14 @@ Preferred communication style: Simple, everyday language.
 - `migrations/`: Database migration files
 
 ### Key Features and Implementations
+- **Interview Simulator**: AI-powered interview practice with LangChain.js architecture.
+    - **LangChain Chains**: Modular AI workflow with 5 specialized chains (Question Generator, Evaluator, Follow-up Decision, Scoring, Conversation Memory).
+    - **Interview Orchestrator**: Coordinates chains, manages session state, and handles interview flow.
+    - **Interview Types**: Behavioral, Technical, and Case Study interviews.
+    - **Role-Based Preparation**: Practice for Developer, Product Manager, Designer, QA Engineer, and DevOps roles.
+    - **Real-time Evaluation**: Immediate feedback with scores, strengths, and improvement areas.
+    - **Final Report**: Comprehensive scoring with hiring decision recommendation.
+    - **AI Backend**: Powered by Groq (llama-3.3-70b-versatile) for fast, high-quality responses.
 - **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work.
     - **Multi-Character AI Team**: 4-6 AI teammates with distinct roles, personalities, and expertise.
     - **Role-Based Practice**: Users can practice as Developer, Product Manager, Designer, QA Engineer, or DevOps Engineer.
@@ -53,8 +61,10 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### AI Services
-- **OpenAI API**: GPT-4o for dynamic simulation content generation.
-- **Groq API**: llama-3.1-70b-versatile for dynamic AI team member responses and Whisper AI for voice transcription.
+- **Groq API**: llama-3.3-70b-versatile powers all AI features:
+  - Interview Simulator (via LangChain.js chains)
+  - Workspace Simulator AI team member responses
+  - Whisper AI for voice transcription
 
 ### Database
 - **Neon Database**: Serverless PostgreSQL for production.

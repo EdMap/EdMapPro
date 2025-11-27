@@ -1,18 +1,18 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatGroq } from "@langchain/groq";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 
-const model = new ChatOpenAI({
-  modelName: "gpt-4o",
+const model = new ChatGroq({
+  model: "llama-3.3-70b-versatile",
   temperature: 0.7,
-  openAIApiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-const evaluatorModel = new ChatOpenAI({
-  modelName: "gpt-4o",
+const evaluatorModel = new ChatGroq({
+  model: "llama-3.3-70b-versatile",
   temperature: 0.3,
-  openAIApiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 export interface InterviewConfig {
