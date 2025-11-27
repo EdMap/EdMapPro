@@ -41,13 +41,22 @@ Preferred communication style: Simple, everyday language.
     - **Interview Integration**: Seamless link from Journey page to Interview Simulator via URL parameters (stageId, type, role).
     - **Database Schema**: Companies, JobPostings, JobGlossary, JobApplications, InterviewTemplates, ApplicationStages.
 
-- **Interview Simulator**: AI-powered interview practice with dual-mode architecture.
+- **Interview Simulator**: AI-powered interview practice with dual-mode architecture and natural conversational flow.
     - **Dual-Mode System**: 
       - **Practice Mode** (Sidebar access): Standalone interviews for skill-building. Users can practice any role/type without prerequisites. Results tracked separately.
       - **Journey Mode** (Job Journey): Context-aware interviews tied to job applications. Auto-populated with company/role. Completion updates application progress and advances stages.
     - **Mode Detection**: Determined by URL parameters—stageId in URL = Journey Mode, no stageId = Practice Mode.
-    - **LangChain Chains**: Modular AI workflow with 5 specialized chains (Question Generator, Evaluator, Follow-up Decision, Scoring, Conversation Memory).
-    - **Interview Orchestrator**: Coordinates chains, manages session state, and handles interview flow.
+    - **Staged Interview Flow** (for HR/Behavioral interviews):
+      - **Opening Stage** (Q1): Warm introduction and motivation question
+      - **Core Stage** (Q2 to Q(n-1)): In-depth role and experience exploration
+      - **Wrapup Stage** (Final Q): Salary expectations, availability, or candidate questions
+      - **Closure**: Warm goodbye message with next steps before showing final report
+    - **Adaptive Reflections**: Context-aware acknowledgments based on answer quality:
+      - Detailed answers (~100+ chars): Specific acknowledgments (~40% of time during Core stage)
+      - Brief answers: Short "Got it" / "Okay" responses
+      - Wrapup stage: No reflections (direct transition to closure)
+    - **LangChain Chains**: Modular AI workflow with specialized chains (Question Generator, HR Question, Wrapup, Closure, Evaluator, Follow-up Decision, Reflection, Scoring).
+    - **Interview Orchestrator**: Coordinates chains, manages stage transitions, and handles interview flow.
     - **Interview Types**: Behavioral, Technical, and Case Study interviews.
     - **Role-Based Preparation**: Practice for Developer, Product Manager, Designer roles.
     - **Real-time Evaluation**: Immediate feedback with scores, strengths, and improvement areas.
