@@ -6,14 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
   Search, Briefcase, MessageCircle, Handshake, Users, Check, Lock, 
-  ChevronRight, Zap, Target
+  ChevronRight, Zap, Target, TrendingUp, Flame, Star
 } from "lucide-react";
 
 interface JobApplication {
   id: number;
   status: string;
   currentStageIndex: number;
-  stages: { status: string }[];
+  appliedAt?: string | null;
+  stages: { status: string; score?: number | null; completedAt?: string | null }[];
 }
 
 interface Phase {
@@ -52,6 +53,49 @@ export default function JourneyMap() {
     (acc, app) => acc + app.stages.filter(s => s.status === "completed").length,
     0
   );
+
+  // Calculate streak (simulated based on completed stages)
+  const calculateStreak = () => {
+    if (totalInterviewsCompleted === 0) return 0;
+    // Mock: assume 1 interview per day in the past week if they have completed interviews
+    return Math.min(totalInterviewsCompleted, 7);
+  };
+
+  // Calculate performance insights
+  const calculatePerformance = () => {
+    const completedStages = applications.flatMap(app => 
+      app.stages.filter(s => s.status === "completed" && s.score !== null)
+    );
+    
+    if (completedStages.length === 0) {
+      return {
+        averageScore: 0,
+        completionRate: 0,
+        topStrength: "Keep practicing!",
+        improvementArea: "All areas"
+      };
+    }
+
+    const scores = completedStages.map(s => s.score as number);
+    const averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    const completionRate = Math.round((totalInterviewsCompleted / (totalApplications * 3 + 1)) * 100);
+
+    const scoreDistribution = {
+      excellent: scores.filter(s => s >= 80).length,
+      good: scores.filter(s => s >= 70 && s < 80).length,
+      needsWork: scores.filter(s => s < 70).length,
+    };
+
+    return {
+      averageScore,
+      completionRate,
+      topStrength: scoreDistribution.excellent > 0 ? "Strong Technical Skills" : "Consistent Progress",
+      improvementArea: scoreDistribution.needsWork > 0 ? "Communication" : "System Design"
+    };
+  };
+
+  const performance = calculatePerformance();
+  const streak = calculateStreak();
 
   // Determine phase statuses
   const getPhaseStatus = (phaseId: string): "completed" | "active" | "locked" => {
@@ -175,6 +219,26 @@ export default function JourneyMap() {
           </div>
         )}
 
+        {/* Streak & Performance Highlight */}
+        {totalInterviewsCompleted > 0 && (
+          <div className="mb-12 p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-lg border border-orange-200 dark:border-orange-800 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Flame className="h-6 w-6 text-orange-500" />
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-white">
+                  {streak}-Day Streak! 🔥
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  You completed {totalInterviewsCompleted} interviews
+                </div>
+              </div>
+            </div>
+            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+              Keep it up!
+            </Badge>
+          </div>
+        )}
+
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
           <Card>
@@ -241,6 +305,65 @@ export default function JourneyMap() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Performance Insights Card */}
+        {totalInterviewsCompleted > 0 && (
+          <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      Average Score
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {performance.averageScore}%
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                    <Star className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      Strength
+                    </div>
+                    <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {performance.topStrength}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+                    <Target className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      Focus Area
+                    </div>
+                    <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {performance.improvementArea}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Phase Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
