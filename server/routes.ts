@@ -775,8 +775,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "userId and jobPostingId are required" });
       }
 
+      // Parse IDs as integers (FormData sends them as strings)
+      const userIdNum = parseInt(userId);
+      const jobPostingIdNum = parseInt(jobPostingId);
+
       // Get job posting to determine interview stages
-      const job = await storage.getJobPosting(jobPostingId);
+      const job = await storage.getJobPosting(jobPostingIdNum);
       if (!job) {
         return res.status(404).json({ message: "Job posting not found" });
       }
@@ -794,8 +798,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create the application
       const application = await storage.createJobApplication({
-        userId,
-        jobPostingId,
+        userId: userIdNum,
+        jobPostingId: jobPostingIdNum,
         status: 'submitted',
         coverLetter: coverLetter || null,
         cvFileName: cvFileName,
