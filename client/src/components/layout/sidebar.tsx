@@ -7,7 +7,8 @@ import {
   Handshake, 
   Users, 
   TrendingUp, 
-  Settings 
+  Settings,
+  Briefcase
 } from "lucide-react";
 
 const navigationItems = [
@@ -16,6 +17,12 @@ const navigationItems = [
     href: "/",
     icon: Map,
     section: "simulations"
+  },
+  {
+    title: "Job Board",
+    href: "/jobs",
+    icon: Briefcase,
+    section: "journey"
   },
   {
     title: "Interview Sessions", 
@@ -78,7 +85,7 @@ export default function Sidebar() {
           <div key={section} className="mb-8">
             <div className="px-4 mb-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {section === "simulations" ? "Simulations" : "Account"}
+                {section === "simulations" ? "Simulations" : section === "journey" ? "Job Journey" : "Account"}
               </h3>
             </div>
             

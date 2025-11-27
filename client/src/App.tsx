@@ -9,6 +9,7 @@ import NegotiationSimulator from "@/pages/negotiation-simulator";
 import WorkspaceSimulator from "@/pages/workspace-simulator";
 import DocumentViewer from "@/pages/document-viewer";
 import Progress from "@/pages/progress";
+import JobBoard from "@/pages/job-board";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import NotFound from "@/pages/not-found";
@@ -29,6 +30,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/jobs" component={JobBoard} />
       <Route path="/interview" component={InterviewSimulator} />
       <Route path="/negotiation" component={NegotiationSimulator} />
       <Route path="/workspace" component={WorkspaceSimulator} />
