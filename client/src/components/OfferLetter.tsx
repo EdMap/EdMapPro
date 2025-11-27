@@ -3,16 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { 
   Building2, Calendar, DollarSign, Briefcase, Heart, Users, 
-  Clock, Gift, ArrowRight, CheckCircle2, Sparkles,
-  Medal, ChevronDown, ChevronUp, MoreHorizontal
+  Clock, Gift, CheckCircle2, Sparkles,
+  Medal, ChevronDown, ChevronUp
 } from "lucide-react";
 import type { OfferDetails } from "@shared/schema";
 
@@ -128,33 +122,30 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
           {/* Right: Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button 
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+              data-testid="button-decline"
+            >
+              Decline
+            </Button>
+            <Button 
               onClick={onProceedToNegotiation}
-              className="bg-primary hover:bg-primary/90 text-white"
+              variant="outline"
+              size="sm"
+              className="border-primary text-primary hover:bg-primary/10"
               data-testid="button-proceed-negotiation"
             >
               Practice Negotiation
-              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" data-testid="button-more-actions">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="text-green-600" data-testid="menu-accept">
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Accept Offer
-                </DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-ask-questions">
-                  Ask Questions
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600" data-testid="menu-decline">
-                  Decline Offer
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button 
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              data-testid="button-accept"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              Accept
+            </Button>
           </div>
         </div>
 
