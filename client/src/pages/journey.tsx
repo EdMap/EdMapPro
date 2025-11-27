@@ -165,7 +165,7 @@ function ApplicationCard({
   isMostPromising = false
 }: { 
   application: JobApplication;
-  onStartInterview: (stage: ApplicationStage) => void;
+  onStartInterview: (stage: ApplicationStage, application: JobApplication) => void;
   isMostPromising?: boolean;
 }) {
   const progressPercent = (application.currentStageIndex / application.stages.length) * 100;
@@ -252,7 +252,7 @@ function ApplicationCard({
                   </div>
                 </div>
                 <Button 
-                  onClick={() => onStartInterview(currentStage)}
+                  onClick={() => onStartInterview(currentStage, application)}
                   className="w-full"
                   data-testid={`button-start-interview-${currentStage.id}`}
                 >
@@ -416,7 +416,7 @@ export default function Journey() {
 
   const mostPromising = getMostPromisingApplication();
 
-  const handleStartInterview = (stage: ApplicationStage) => {
+  const handleStartInterview = (stage: ApplicationStage, app: JobApplication) => {
     const stageTypeToInterviewType: Record<string, string> = {
       recruiter_call: 'behavioral',
       behavioral: 'behavioral',
@@ -427,7 +427,7 @@ export default function Journey() {
     
     const interviewType = stageTypeToInterviewType[stage.stageType] || 'behavioral';
     
-    navigate(`/interview?stageId=${stage.id}&type=${interviewType}`);
+    navigate(`/interview?stageId=${stage.id}&type=${interviewType}&role=${app.job.role}`);
   };
 
   return (
