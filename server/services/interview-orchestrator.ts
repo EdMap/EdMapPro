@@ -30,6 +30,7 @@ interface ConversationMemory {
   activeProject: string | null;
   projectMentionCount: number;
   jobContext?: JobContext;
+  lastReflection: string;
 }
 
 export class InterviewOrchestrator {
@@ -60,6 +61,7 @@ export class InterviewOrchestrator {
         evaluations: [],
         activeProject: null,
         projectMentionCount: 0,
+        lastReflection: "None yet",
       });
     }
     return this.memory.get(sessionId)!;
@@ -218,11 +220,8 @@ export class InterviewOrchestrator {
     }
     
     // Generate a brief reflection/acknowledgment of the answer (non-parroting)
-    const reflectionText = await this.reflection.generate(
-      question.questionText,
-      answer,
-      evaluation.score
-    );
+    const reflectionText = await this.reflection.generate(memory.lastReflection);
+    memory.lastReflection = reflectionText;
     
     const nextQuestionText = await this.questionGenerator.generate({
       config: {

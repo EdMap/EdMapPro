@@ -244,33 +244,19 @@ Respond with ONLY valid JSON.
 `);
 
 const reflectionPrompt = PromptTemplate.fromTemplate(`
-You are an interviewer providing a brief, natural acknowledgment before your next question.
+Generate a brief 1-4 word acknowledgment before the next interview question.
 
-THE QUESTION YOU ASKED: {question}
-THE CANDIDATE'S ANSWER: {lastAnswer}
-ANSWER QUALITY: {answerQuality}
+PREVIOUS ACKNOWLEDGMENT USED: {previousReflection}
 
-YOUR TASK: Generate a SHORT (1 sentence max) acknowledgment that:
-1. Shows you listened and valued their response
-2. Matches the quality level (stronger praise for better answers)
+RULES:
+1. Maximum 4 words.
+2. NEVER repeat the previous acknowledgment - pick something different.
+3. Keep it natural and conversational.
 
-CRITICAL - DO NOT PARROT:
-- NEVER repeat or rephrase what they said
-- NEVER say "I love how you mentioned X" or "That's interesting about Y"
-- NEVER summarize their answer back to them
-- NEVER reference specific details from their answer
+OPTIONS (pick ONE at random, vary each time):
+"Got it." / "Okay." / "Right." / "Thanks." / "Clear." / "Okay, clear." / "That makes sense." / "Understood." / "Alright." / "Sure." / "Good to know." / "Fair enough." / "Mm-hmm." / "Okay, got it."
 
-GOOD EXAMPLES (notice they don't repeat content):
-- For strong answers: "That's exactly the kind of thinking we look for." / "Really well put."
-- For solid answers: "Good to know." / "Makes sense." / "Appreciate you sharing that."
-- For developing answers: "Thanks for that." / "Understood."
-
-BAD EXAMPLES (these parrot the answer - NEVER do this):
-- "I love how you mentioned the microservices architecture..."
-- "That's really interesting about your experience with Python..."
-- "So you worked on scaling the database, that's great..."
-
-Output ONLY the brief acknowledgment (1 sentence). No question - that comes separately.
+Output ONLY the acknowledgment. Nothing else.
 `);
 
 const followUpPrompt = PromptTemplate.fromTemplate(`
@@ -404,23 +390,11 @@ export class ReflectionChain {
     ]);
   }
 
-  async generate(question: string, lastAnswer: string, score: number): Promise<string> {
-    // Don't generate reflection for the first question (no previous answer)
-    if (!lastAnswer || lastAnswer === "This is the first question") {
-      return "";
-    }
-    
-    // Determine answer quality based on score
-    let answerQuality = "solid";
-    if (score >= 8) answerQuality = "strong";
-    else if (score >= 6) answerQuality = "solid";
-    else answerQuality = "developing";
-    
+  async generate(previousReflection: string): Promise<string> {
     const result = await this.chain.invoke({
-      question,
-      lastAnswer,
-      answerQuality,
+      previousReflection,
     });
+    
     return result.trim();
   }
 }

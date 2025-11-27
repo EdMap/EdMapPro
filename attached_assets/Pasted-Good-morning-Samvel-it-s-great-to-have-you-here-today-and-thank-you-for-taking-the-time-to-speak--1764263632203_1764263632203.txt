@@ -1,0 +1,21 @@
+Good morning, Samvel, it's great to have you here today, and thank you for taking the time to speak with me. My name is Sarah, and I'm an HR Recruiter at DataViz Pro, a company that specializes in providing enterprise-grade data analytics and visualization platforms to help businesses turn their data into actionable insights. As a Senior Data Scientist candidate, I'm excited to learn more about your experience and qualifications. I've had a chance to review your CV, and I was particularly impressed by your experience with machine learning and statistical analysis, as well as your research in AI-powered anomaly detection. This interview will be a conversation about your past experiences and how they relate to the responsibilities of the Senior Data Scientist role at DataViz Pro. So, to get started...
+
+What specifically drew you to the Senior Data Scientist role at DataViz Pro, and what aspects of the position excite you the most?
+
+Your products sit at the intersection of analytics and decision-making, and that aligns perfectly with my background in building models that don’t just predict, but actually drive better business decisions. and I enjoy roles where I can work from problem framing through modeling, deployment, and performance tracking — and the senior role here emphasizes autonomy, technical leadership, and cross-functional influence.
+
+Score: 9/10
+Great job highlighting your relevant background and enthusiasm for the role. To take it to the next level, consider providing a specific example from your past experience that demonstrates your ability to drive business decisions with your models. This will help make your answer more concrete and impactful.
+
+That's exactly the kind of thinking we look for.
+
+What aspects of your background and experience do you think will enable you to make a strong impact at DataViz Pro, and how do you see your skills and expertise aligning with the company's goals and values?
+
+I’ve repeatedly taken models from concept → data engineering → modeling → deployment → monitoring. Because your role emphasizes owning full lifecycle projects, this experience means I can step in with relatively little ramp-up.I’ve led A/B testing frameworks, uplift modeling, and long-term impact measurement. Since DataViz Pro focuses on helping customers make data-driven decisions, my background in designing statistically sound experiments aligns directly with your product’s value proposition.
+
+Score: 8/10
+Your answer effectively highlights your relevant experience and skills, demonstrating a clear understanding of the company's goals. To take it to the next level, consider providing a specific example or metric that showcases the impact of your work. This will help to further illustrate your value.
+
+That's exactly the kind of thinking we look for.
+
+What are some aspects of DataViz Pro's company culture or values that resonate with you, and how do you see yourself contributing to and thriving in our team environment?
