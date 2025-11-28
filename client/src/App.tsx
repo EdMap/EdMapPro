@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import JourneyMap from "@/pages/journey-map";
 import InterviewSimulator from "@/pages/interview-simulator";
+import InterviewHistory from "@/pages/interview-history";
 import NegotiationSimulator from "@/pages/negotiation-simulator";
 import WorkspaceSimulator from "@/pages/workspace-simulator";
 import DocumentViewer from "@/pages/document-viewer";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/jobs" component={JobBoard} />
       <Route path="/journey" component={Journey} />
       <Route path="/interview" component={InterviewSimulator} />
+      <Route path="/interview/history" component={InterviewHistory} />
       <Route path="/negotiation" component={NegotiationSimulator} />
       <Route path="/workspace" component={WorkspaceSimulator} />
       <Route path="/progress" component={Progress} />

@@ -743,6 +743,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get interview feedback (for viewing past results)
+  app.get("/api/interviews/:sessionId/feedback", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      const feedback = await storage.getInterviewFeedback(sessionId);
+      if (!feedback) {
+        return res.status(404).json({ message: "Feedback not found for this session" });
+      }
+      
+      // Also get the session info and questions for context
+      const session = await storage.getInterviewSession(sessionId);
+      const questions = await storage.getInterviewQuestions(sessionId);
+      
+      res.json({
+        feedback,
+        session,
+        questions
+      });
+    } catch (error) {
+      console.error("Failed to get interview feedback:", error);
+      res.status(500).json({ message: "Failed to get interview feedback: " + (error as Error).message });
+    }
+  });
+
   // Get user's interview history
   app.get("/api/users/:userId/interviews", async (req, res) => {
     try {

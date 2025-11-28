@@ -9,7 +9,8 @@ import {
   TrendingUp, 
   Settings,
   Briefcase,
-  Route
+  Route,
+  History
 } from "lucide-react";
 
 const navigationItems = [
@@ -35,6 +36,12 @@ const navigationItems = [
     title: "Interview Practice", 
     href: "/interview",
     icon: MessageCircle,
+    section: "practice"
+  },
+  {
+    title: "Interview History", 
+    href: "/interview/history",
+    icon: History,
     section: "practice"
   },
   {

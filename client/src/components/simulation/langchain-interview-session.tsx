@@ -117,6 +117,7 @@ export default function LangchainInterviewSession({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [finalReport, setFinalReport] = useState<FinalReport | null>(null);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);
+  const [showPreparingFeedback, setShowPreparingFeedback] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -199,6 +200,16 @@ export default function LangchainInterviewSession({
       const hasCandidateQuestionAnswer = result.candidateQuestionAnswer && result.candidateQuestionAnswer.trim().length > 0;
 
       if (result.finalReport) {
+        // Helper to show "Preparing feedback..." transition then final report
+        const showFeedbackTransition = (report: FinalReport) => {
+          setShowPreparingFeedback(true);
+          setTimeout(() => {
+            setShowPreparingFeedback(false);
+            setFinalReport(report);
+            setSession(prev => ({ ...prev, status: 'completed', overallScore: report.overallScore }));
+          }, 2500);
+        };
+        
         // Show candidate question answer first if present, then closure
         if (hasCandidateQuestionAnswer) {
           setShowTypingIndicator(true);
@@ -213,15 +224,13 @@ export default function LangchainInterviewSession({
                   setShowTypingIndicator(false);
                   setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
                   setTimeout(() => {
-                    setFinalReport(result.finalReport);
-                    setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+                    showFeedbackTransition(result.finalReport);
                   }, 2000);
                 }, 1200);
               }, 1000);
             } else {
               setTimeout(() => {
-                setFinalReport(result.finalReport);
-                setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+                showFeedbackTransition(result.finalReport);
               }, 1000);
             }
           }, 1200);
@@ -231,13 +240,11 @@ export default function LangchainInterviewSession({
             setShowTypingIndicator(false);
             setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
             setTimeout(() => {
-              setFinalReport(result.finalReport);
-              setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+              showFeedbackTransition(result.finalReport);
             }, 2000);
           }, 1500);
         } else {
-          setFinalReport(result.finalReport);
-          setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+          showFeedbackTransition(result.finalReport);
         }
       } else if (result.nextQuestion) {
         // Update session state immediately to avoid stale state
@@ -321,6 +328,43 @@ export default function LangchainInterviewSession({
       default: return decision;
     }
   };
+
+  // Show "Preparing feedback" transition state
+  if (showPreparingFeedback) {
+    return (
+      <div className="h-[calc(100vh-80px)] flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-8 pb-8">
+            <div className="text-center space-y-6">
+              <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold text-gray-900">Preparing Your Feedback</h2>
+                <p className="text-gray-500">
+                  We're analyzing your interview performance...
+                </p>
+              </div>
+              <div className="space-y-3 text-left bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <span className="text-sm text-gray-600">Interview completed</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <span className="text-sm text-gray-600">Responses analyzed</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                  <span className="text-sm text-gray-600">Generating personalized feedback...</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (finalReport) {
     return (
