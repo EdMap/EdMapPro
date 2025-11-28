@@ -57,6 +57,12 @@ export default function InterviewSimulator() {
   const [difficulty, setDifficulty] = useState("medium");
   const [totalQuestions, setTotalQuestions] = useState([5]);
   const [autoStarted, setAutoStarted] = useState(false);
+  
+  // Prelude conversation state
+  const [isPreludeMode, setIsPreludeMode] = useState(false);
+  const [preludeMessages, setPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string}>>([]);
+  const [preludeResponse, setPreludeResponse] = useState("");
+  const [isPreludeSubmitting, setIsPreludeSubmitting] = useState(false);
 
   // Determine mode based on URL params
   const isJourneyMode = applicationStageId !== null;
@@ -95,8 +101,17 @@ export default function InterviewSimulator() {
     },
     onSuccess: (result) => {
       setActiveSession(result.session);
-      setActiveFirstQuestion(result.firstQuestion);
-      setActiveIntroduction(result.introduction);
+      
+      if (result.isPreludeMode && result.greeting) {
+        // Enter conversational prelude mode
+        setIsPreludeMode(true);
+        setPreludeMessages([{ role: 'interviewer', content: result.greeting }]);
+      } else {
+        // Legacy flow without prelude
+        setActiveFirstQuestion(result.firstQuestion);
+        setActiveIntroduction(result.introduction);
+      }
+      
       if (result.applicationStageId) {
         setApplicationStageId(result.applicationStageId);
       }
@@ -110,6 +125,49 @@ export default function InterviewSimulator() {
       });
     },
   });
+
+  // Handle prelude responses during conversational intro
+  const preludeMutation = useMutation({
+    mutationFn: async ({ sessionId, response }: { sessionId: number; response: string }) => {
+      const res = await apiRequest("POST", `/api/interviews/${sessionId}/prelude`, { response });
+      return res.json();
+    },
+    onSuccess: (result) => {
+      setIsPreludeSubmitting(false);
+      setPreludeResponse("");
+      
+      if (result.preludeComplete && result.firstQuestion) {
+        // Prelude is done, transition to real interview
+        setIsPreludeMode(false);
+        setActiveFirstQuestion(result.firstQuestion);
+        // Keep prelude messages as the introduction context
+        setActiveIntroduction(preludeMessages.map(m => m.content).join('\n\n'));
+      } else if (result.preludeMessage) {
+        // Add interviewer's response to prelude messages
+        setPreludeMessages(prev => [...prev, { role: 'interviewer', content: result.preludeMessage }]);
+      }
+    },
+    onError: (error: any) => {
+      setIsPreludeSubmitting(false);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to continue conversation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePreludeSubmit = () => {
+    if (!preludeResponse.trim() || isPreludeSubmitting || !activeSession) return;
+    
+    setIsPreludeSubmitting(true);
+    setPreludeMessages(prev => [...prev, { role: 'candidate', content: preludeResponse }]);
+    
+    preludeMutation.mutate({
+      sessionId: activeSession.id,
+      response: preludeResponse.trim()
+    });
+  };
 
   // Auto-start interview if coming from Journey page with stageId
   useEffect(() => {
@@ -148,6 +206,100 @@ export default function InterviewSimulator() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Starting your interview...</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-2">Preparing your interview session</p>
         </div>
+      </div>
+    );
+  }
+
+  // Show conversational prelude UI
+  if (activeSession && isPreludeMode) {
+    return (
+      <div className="p-8 max-w-3xl mx-auto">
+        <ModeBanner mode="journey" variant="banner" />
+        
+        <Card className="mt-6">
+          <CardContent className="p-6">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <MessageCircle className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Getting Started</h2>
+                <p className="text-sm text-gray-500">Let's get to know each other before we dive in</p>
+              </div>
+            </div>
+            
+            {/* Messages */}
+            <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
+              {preludeMessages.map((msg, idx) => (
+                <div 
+                  key={idx} 
+                  className={cn(
+                    "flex gap-3",
+                    msg.role === 'candidate' && "justify-end"
+                  )}
+                >
+                  {msg.role === 'interviewer' && (
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Briefcase className="h-4 w-4 text-blue-600" />
+                    </div>
+                  )}
+                  <div 
+                    className={cn(
+                      "rounded-lg px-4 py-3 max-w-[80%]",
+                      msg.role === 'interviewer' 
+                        ? "bg-gray-100 dark:bg-gray-800" 
+                        : "bg-blue-600 text-white"
+                    )}
+                  >
+                    <p className="text-sm">{msg.content}</p>
+                  </div>
+                  {msg.role === 'candidate' && (
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Play className="h-4 w-4 text-gray-600" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {isPreludeSubmitting && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Briefcase className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Input */}
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={preludeResponse}
+                onChange={(e) => setPreludeResponse(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePreludeSubmit()}
+                placeholder="Type your response..."
+                disabled={isPreludeSubmitting}
+                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                data-testid="input-prelude-response"
+              />
+              <Button 
+                onClick={handlePreludeSubmit} 
+                disabled={!preludeResponse.trim() || isPreludeSubmitting}
+                data-testid="button-send-prelude"
+              >
+                <Play className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
