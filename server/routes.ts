@@ -606,12 +606,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { interviewOrchestrator } = await import("./services/interview-orchestrator");
+      
+      // Determine default question count based on interview type
+      // HR/behavioral interviews need more questions (7) to properly assess fit
+      // Technical interviews can be shorter (5) as they're more focused
+      const defaultQuestionCount = interviewType === 'behavioral' || interviewType === 'hr' ? 7 : 5;
+      
       const result = await interviewOrchestrator.startInterview(
         userId,
         interviewType,
         targetRole,
         difficulty || "medium",
-        totalQuestions || 5,
+        totalQuestions || defaultQuestionCount,
         jobContext,
         candidateName
       );

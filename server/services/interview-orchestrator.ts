@@ -699,6 +699,32 @@ export class InterviewOrchestrator {
     const isLastQuestion = session.currentQuestionIndex >= config.totalQuestions - 1;
     
     if (decision.action === "end_interview" || isLastQuestion) {
+      // Check if the candidate asked a question (e.g., when wrapup asked "do you have questions?")
+      // We should answer their question before closing
+      let closingQuestionAnswer: string | undefined;
+      
+      const closingClassification = responseClassifier.classify(
+        answer,
+        question.questionText,
+        config.jobTitle || config.targetRole
+      );
+      
+      // If the candidate asked a question in their final response, answer it first
+      if (closingClassification.candidateQuestion || closingClassification.intent === 'question_for_recruiter') {
+        const handlerResult = await responseHandler.handleResponse(
+          { ...closingClassification, intent: 'question_for_recruiter' },
+          question.questionText,
+          {
+            interviewerName: this.getInterviewerName(session.interviewType),
+            companyName: config.companyName,
+            companyDescription: config.companyDescription,
+            jobTitle: config.jobTitle,
+            jobRequirements: config.jobRequirements
+          }
+        );
+        closingQuestionAnswer = handlerResult.response;
+      }
+      
       // Generate closure message before ending
       const closureMessage = await this.closure.generate(config);
       
@@ -712,7 +738,12 @@ export class InterviewOrchestrator {
 
       this.memory.delete(sessionId);
 
-      return { evaluation, decision, finalReport, closure: closureMessage, candidateQuestionAnswer };
+      // Include the answer to any candidate question before the closure
+      const fullClosure = closingQuestionAnswer 
+        ? `${closingQuestionAnswer}\n\n${closureMessage}`
+        : closureMessage;
+
+      return { evaluation, decision, finalReport, closure: fullClosure, candidateQuestionAnswer };
     }
 
     const nextQuestionIndex = session.currentQuestionIndex + 1;
