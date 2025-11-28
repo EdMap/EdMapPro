@@ -312,7 +312,6 @@ export default function LangchainInterviewSession({
       }
       
       setIsSubmitting(false);
-      setAnswer("");
     },
     onError: (error) => {
       setIsSubmitting(false);
@@ -328,15 +327,20 @@ export default function LangchainInterviewSession({
   const handleSubmitAnswer = () => {
     if (!answer.trim() || isSubmitting) return;
 
+    const trimmedAnswer = answer.trim();
+    
     setIsSubmitting(true);
-    setMessages(prev => [...prev, { role: 'candidate', content: answer }]);
+    setMessages(prev => [...prev, { role: 'candidate', content: trimmedAnswer }]);
+    
+    // Clear input immediately so user sees their message was sent
+    setAnswer("");
     
     // Show typing indicator immediately so user knows AI is processing
     setShowTypingIndicator(true);
     
     submitAnswerMutation.mutate({
       questionId: currentQuestion.id,
-      answer: answer.trim()
+      answer: trimmedAnswer
     });
   };
 

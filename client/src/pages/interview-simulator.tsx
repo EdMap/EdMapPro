@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSearch, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -76,6 +76,16 @@ export default function InterviewSimulator() {
   // Pacing state for prelude
   const [preludeStartTime, setPreludeStartTime] = useState<number | null>(null);
   const [preludeElapsedMinutes, setPreludeElapsedMinutes] = useState(0);
+
+  // Ref for auto-scroll in prelude
+  const preludeMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change or submitting
+  useEffect(() => {
+    if (preludeMessagesEndRef.current) {
+      preludeMessagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [preludeMessages, isPreludeSubmitting]);
 
   // Determine mode based on URL params
   const isJourneyMode = applicationStageId !== null;
@@ -158,7 +168,6 @@ export default function InterviewSimulator() {
     },
     onSuccess: (result) => {
       setIsPreludeSubmitting(false);
-      setPreludeResponse("");
       
       if (result.preludeComplete && result.firstQuestion) {
         // Prelude is done, transition to real interview
@@ -184,17 +193,22 @@ export default function InterviewSimulator() {
   const handlePreludeSubmit = () => {
     if (!preludeResponse.trim() || isPreludeSubmitting || !activeSession) return;
     
+    const trimmedResponse = preludeResponse.trim();
+    
     setIsPreludeSubmitting(true);
     
     // Add the candidate's response to messages first
-    const candidateMessage = { role: 'candidate' as const, content: preludeResponse };
+    const candidateMessage = { role: 'candidate' as const, content: trimmedResponse };
     const updatedMessages = [...preludeMessages, candidateMessage];
     setPreludeMessages(updatedMessages);
+    
+    // Clear input immediately so user sees their message was sent
+    setPreludeResponse("");
     
     // Pass the updated messages to the mutation to avoid stale closure
     preludeMutation.mutate({
       sessionId: activeSession.id,
-      response: preludeResponse.trim(),
+      response: trimmedResponse,
       currentMessages: updatedMessages
     });
   };
@@ -383,6 +397,9 @@ export default function InterviewSimulator() {
                 </div>
               </div>
             )}
+            
+            {/* Scroll anchor */}
+            <div ref={preludeMessagesEndRef} />
           </CardContent>
 
           <div className="flex-shrink-0 border-t p-4">
