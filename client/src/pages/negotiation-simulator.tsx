@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatScore, getScoreColor } from "@/lib/utils";
 import NegotiationSession from "@/components/simulation/negotiation-session";
-import { DollarSign, TrendingUp, Handshake, Play, Building2, Briefcase, Target, CheckCircle2 } from "lucide-react";
+import { 
+  DollarSign, TrendingUp, Handshake, Play, Building2, Briefcase, 
+  Target, CheckCircle2, MapPin, ArrowRight, ChevronLeft
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OfferDetails } from "@shared/schema";
 
@@ -31,6 +34,7 @@ interface ApplicationWithOffer {
       industry: string;
     };
   };
+  stages: any[];
 }
 
 const scenarios = [
@@ -39,24 +43,24 @@ const scenarios = [
     title: "Salary Negotiation",
     description: "Negotiate your salary with HR or hiring manager",
     icon: DollarSign,
-    bgColor: "bg-green-100",
-    iconColor: "text-green-600"
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+    iconColor: "text-green-600 dark:text-green-400"
   },
   {
     id: "promotion", 
     title: "Promotion Discussion",
     description: "Discuss career advancement with your manager",
     icon: TrendingUp,
-    bgColor: "bg-purple-100",
-    iconColor: "text-purple-600"
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    iconColor: "text-purple-600 dark:text-purple-400"
   },
   {
     id: "offer",
     title: "Job Offer Terms",
     description: "Negotiate complete offer package terms",
     icon: Handshake,
-    bgColor: "bg-blue-100",
-    iconColor: "text-blue-600"
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    iconColor: "text-blue-600 dark:text-blue-400"
   }
 ];
 
@@ -75,12 +79,285 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Offer Selection Card Component
+function OfferCard({ 
+  application, 
+  isSelected, 
+  onSelect 
+}: { 
+  application: ApplicationWithOffer; 
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const offer = application.offerDetails!;
+  
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        "w-full text-left p-4 rounded-lg border-2 transition-all",
+        isSelected 
+          ? "border-primary bg-primary/5 dark:bg-primary/10" 
+          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+      )}
+      data-testid={`offer-card-${application.id}`}
+    >
+      <div className="flex items-start gap-4">
+        <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xl font-bold text-primary shrink-0">
+          {application.job.company.name.charAt(0)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+              {application.job.title}
+            </h3>
+            {isSelected && (
+              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+            )}
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {application.job.company.name} • {application.job.location}
+          </p>
+          <div className="flex items-center gap-4 mt-3">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Base Salary</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                {formatCurrency(offer.baseSalary)}
+              </p>
+            </div>
+            {offer.signingBonus && (
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Signing</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(offer.signingBonus)}
+                </p>
+              </div>
+            )}
+            {offer.equity && (
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Equity</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(offer.equity.amount)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// Offer Selection Step
+function OfferSelectionStep({ 
+  offers, 
+  selectedOfferId,
+  onSelectOffer,
+  onContinue,
+  onPracticeMode
+}: { 
+  offers: ApplicationWithOffer[];
+  selectedOfferId: number | null;
+  onSelectOffer: (id: number) => void;
+  onContinue: () => void;
+  onPracticeMode: () => void;
+}) {
+  return (
+    <div className="p-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Negotiation Simulator
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Select an offer to practice negotiating, or practice with a custom scenario.
+          </p>
+        </div>
+
+        {offers.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-green-600" />
+                Your Offers
+              </CardTitle>
+              <CardDescription>
+                Choose an offer to practice negotiating for better terms
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {offers.map((offer) => (
+                <OfferCard
+                  key={offer.id}
+                  application={offer}
+                  isSelected={selectedOfferId === offer.id}
+                  onSelect={() => onSelectOffer(offer.id)}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="flex items-center gap-4">
+          {offers.length > 0 && (
+            <Button
+              size="lg"
+              onClick={onContinue}
+              disabled={!selectedOfferId}
+              className="flex-1"
+              data-testid="button-continue-with-offer"
+            >
+              Continue with Selected Offer
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+          <Button
+            size="lg"
+            variant={offers.length > 0 ? "outline" : "default"}
+            onClick={onPracticeMode}
+            className={offers.length === 0 ? "flex-1" : ""}
+            data-testid="button-practice-mode"
+          >
+            {offers.length > 0 ? "Practice Without Offer" : "Start Practice Session"}
+          </Button>
+        </div>
+
+        {offers.length === 0 && (
+          <Card className="mt-6 bg-gray-50 dark:bg-gray-800/50">
+            <CardContent className="p-6 text-center">
+              <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+                <Briefcase className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                No Offers Yet
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                Complete your interview stages in the Job Journey to receive offers. 
+                In the meantime, you can practice negotiation with custom scenarios.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Selected Offer Summary (shown in configuration step)
+function SelectedOfferSummary({ 
+  application,
+  onChangeOffer 
+}: { 
+  application: ApplicationWithOffer;
+  onChangeOffer: () => void;
+}) {
+  const offer = application.offerDetails!;
+  
+  return (
+    <Card className="mb-6 border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-lg font-bold text-primary border border-gray-200 dark:border-gray-600">
+              {application.job.company.name.charAt(0)}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                {application.job.company.name}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {application.job.title} • {application.job.location}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-primary text-primary" data-testid="badge-journey-mode">
+              Journey Mode
+            </Badge>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onChangeOffer}
+              className="text-gray-500 hover:text-gray-700"
+              data-testid="button-change-offer"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Change
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Current Base Offer</p>
+              <p className="text-4xl font-bold text-gray-900 dark:text-white" data-testid="text-current-offer">
+                {formatCurrency(offer.baseSalary)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Target className="h-4 w-4 text-blue-600" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Suggested target:</span>
+              <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                {formatCurrency(Math.round(offer.baseSalary * 1.15))}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">(+15%)</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {offer.signingBonus && (
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Signing</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(offer.signingBonus)}
+                </p>
+              </div>
+            )}
+            {offer.annualBonus && (
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Bonus</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {offer.annualBonus.targetPercent}%
+                </p>
+              </div>
+            )}
+            {offer.equity && (
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Equity</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(offer.equity.amount)}
+                </p>
+              </div>
+            )}
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Start Date</p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {offer.startDate}
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function NegotiationSimulator() {
   const { toast } = useToast();
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
-  const applicationId = searchParams.get('applicationId');
+  const applicationIdFromUrl = searchParams.get('applicationId');
   
+  // Step management: 'select' | 'configure' | 'session'
+  const [step, setStep] = useState<'select' | 'configure' | 'session'>(
+    applicationIdFromUrl ? 'configure' : 'select'
+  );
+  const [selectedApplicationId, setSelectedApplicationId] = useState<number | null>(
+    applicationIdFromUrl ? parseInt(applicationIdFromUrl) : null
+  );
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [selectedScenario, setSelectedScenario] = useState("salary");
   const [targetAmount, setTargetAmount] = useState("120000");
@@ -91,19 +368,31 @@ export default function NegotiationSimulator() {
     queryKey: ["/api/user"],
   });
 
-  const { data: application } = useQuery<ApplicationWithOffer>({
-    queryKey: [applicationId ? `/api/applications/${applicationId}` : null],
-    enabled: !!applicationId,
+  // Fetch all applications to find offers
+  const { data: allApplications = [], isLoading: isLoadingApplications } = useQuery<ApplicationWithOffer[]>({
+    queryKey: [user?.id ? `/api/users/${user.id}/applications` : null],
+    enabled: !!user?.id,
   });
 
+  // Filter to only applications with offers
+  const applicationsWithOffers = allApplications.filter(
+    app => app.status === 'offer' && app.offerDetails
+  );
+
+  // Get selected application
+  const selectedApplication = selectedApplicationId 
+    ? applicationsWithOffers.find(app => app.id === selectedApplicationId) 
+    : null;
+
+  // Update config when application is selected
   useEffect(() => {
-    if (application?.offerDetails) {
+    if (selectedApplication?.offerDetails) {
       setSelectedScenario("offer");
-      setTargetAmount(String(Math.round(application.offerDetails.baseSalary * 1.15)));
-      const currentOffer = formatCurrency(application.offerDetails.baseSalary);
+      setTargetAmount(String(Math.round(selectedApplication.offerDetails.baseSalary * 1.15)));
+      const currentOffer = formatCurrency(selectedApplication.offerDetails.baseSalary);
       setCompanyRange(`${currentOffer} (current offer)`);
     }
-  }, [application]);
+  }, [selectedApplication]);
 
   const { data: previousSessions = [] } = useQuery<Array<{ id: number; type: string; configuration?: { scenario?: string; targetAmount?: number }; score?: number }>>({
     queryKey: [`/api/user/${user?.id}/sessions`],
@@ -119,6 +408,7 @@ export default function NegotiationSimulator() {
     },
     onSuccess: (session) => {
       setCurrentSession(session);
+      setStep('session');
       queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/sessions`] });
     },
     onError: (error) => {
@@ -137,7 +427,8 @@ export default function NegotiationSimulator() {
       scenario: selectedScenario,
       targetAmount: parseInt(targetAmount),
       companyRange,
-      counterpartStyle
+      counterpartStyle,
+      applicationId: selectedApplicationId,
     };
 
     createSessionMutation.mutate({
@@ -149,127 +440,110 @@ export default function NegotiationSimulator() {
     });
   };
 
-  if (currentSession) {
+  const handleSelectOffer = (id: number) => {
+    setSelectedApplicationId(id);
+  };
+
+  const handleContinueWithOffer = () => {
+    if (selectedApplicationId) {
+      setStep('configure');
+    }
+  };
+
+  const handlePracticeMode = () => {
+    setSelectedApplicationId(null);
+    setSelectedScenario("salary");
+    setTargetAmount("120000");
+    setCompanyRange("$90k - $110k");
+    setStep('configure');
+  };
+
+  const handleChangeOffer = () => {
+    setStep('select');
+  };
+
+  // Show active session
+  if (currentSession || step === 'session') {
     return (
       <NegotiationSession 
         session={currentSession}
         onComplete={() => {
           setCurrentSession(null);
+          setStep('select');
           queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/sessions`] });
         }}
       />
     );
   }
 
-  return (
-    <div className="p-8">
-      <div className="max-w-4xl mx-auto">
-        {application?.offerDetails && (
-          <Card className="mb-6 border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {/* Header */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-lg font-bold text-primary border border-gray-200 dark:border-gray-600">
-                    {application.job.company.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {application.job.company.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {application.job.title} • {application.job.location}
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="border-primary text-primary" data-testid="badge-journey-mode">
-                  Journey Mode
-                </Badge>
-              </div>
-            </div>
-            
-            {/* Two-Column Layout */}
+  // Loading state
+  if (isLoadingApplications) {
+    return (
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+          <Card>
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column - Pay Headline */}
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Current Base Offer</p>
-                    <p className="text-4xl font-bold text-gray-900 dark:text-white" data-testid="text-current-offer">
-                      {formatCurrency(application.offerDetails.baseSalary)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <Target className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Your target:</span>
-                    <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                      {formatCurrency(Math.round(application.offerDetails.baseSalary * 1.15))}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">(+15%)</span>
-                  </div>
-                </div>
-                
-                {/* Right Column - Secondary Terms */}
-                <div className="grid grid-cols-2 gap-3">
-                  {application.offerDetails.signingBonus && (
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Signing</p>
-                      <p className="font-semibold text-gray-900 dark:text-white" data-testid="text-current-signing">
-                        {formatCurrency(application.offerDetails.signingBonus)}
-                      </p>
-                    </div>
-                  )}
-                  {application.offerDetails.annualBonus && (
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Bonus</p>
-                      <p className="font-semibold text-gray-900 dark:text-white" data-testid="text-current-bonus">
-                        {application.offerDetails.annualBonus.targetPercent}%
-                      </p>
-                    </div>
-                  )}
-                  {application.offerDetails.equity && (
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Equity</p>
-                      <p className="font-semibold text-gray-900 dark:text-white" data-testid="text-current-equity">
-                        {formatCurrency(application.offerDetails.equity.amount)}
-                      </p>
-                    </div>
-                  )}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Start Date</p>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {application.offerDetails.startDate}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Link back to offer */}
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Practice negotiating before responding to your offer.
-                </p>
-                <a 
-                  href="/journey" 
-                  className="text-sm text-primary hover:underline flex items-center gap-1"
-                  data-testid="link-view-full-offer"
-                >
-                  View Full Offer
-                  <span aria-hidden="true">→</span>
-                </a>
+              <div className="space-y-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
               </div>
             </CardContent>
           </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Offer Selection Step
+  if (step === 'select') {
+    return (
+      <OfferSelectionStep
+        offers={applicationsWithOffers}
+        selectedOfferId={selectedApplicationId}
+        onSelectOffer={handleSelectOffer}
+        onContinue={handleContinueWithOffer}
+        onPracticeMode={handlePracticeMode}
+      />
+    );
+  }
+
+  // Configuration Step
+  return (
+    <div className="p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Back button for practice mode */}
+        {!selectedApplication && (
+          <button
+            onClick={() => setStep('select')}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-4"
+            data-testid="button-back-to-selection"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to offer selection
+          </button>
+        )}
+
+        {/* Selected Offer Summary */}
+        {selectedApplication && (
+          <SelectedOfferSummary 
+            application={selectedApplication}
+            onChangeOffer={handleChangeOffer}
+          />
         )}
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Negotiation Simulator</CardTitle>
-            {application?.offerDetails && (
-              <CardDescription>
-                Practice negotiating your offer before the real conversation
-              </CardDescription>
-            )}
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+              {selectedApplication ? "Configure Negotiation" : "Practice Negotiation"}
+            </CardTitle>
+            <CardDescription>
+              {selectedApplication 
+                ? "Customize your negotiation parameters before starting"
+                : "Set up a practice scenario to hone your negotiation skills"
+              }
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-8">
             {/* Scenario Selection */}
@@ -284,16 +558,19 @@ export default function NegotiationSimulator() {
                     <div
                       key={scenario.id}
                       className={cn(
-                        "scenario-card",
-                        selectedScenario === scenario.id && "active"
+                        "cursor-pointer p-4 rounded-lg border-2 transition-all",
+                        selectedScenario === scenario.id 
+                          ? "border-primary bg-primary/5" 
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
                       )}
                       onClick={() => setSelectedScenario(scenario.id)}
+                      data-testid={`scenario-${scenario.id}`}
                     >
                       <div className={`w-12 h-12 ${scenario.bgColor} rounded-lg flex items-center justify-center mb-3`}>
                         <Icon className={`${scenario.iconColor} h-6 w-6`} />
                       </div>
-                      <h3 className="font-semibold text-gray-900 mb-2">{scenario.title}</h3>
-                      <p className="text-sm text-gray-600">{scenario.description}</p>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{scenario.title}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{scenario.description}</p>
                     </div>
                   );
                 })}
@@ -303,7 +580,7 @@ export default function NegotiationSimulator() {
             {/* Negotiation Parameters */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2">Your Target</Label>
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Target</Label>
                 <div className="relative mt-2">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                   <Input
@@ -312,23 +589,25 @@ export default function NegotiationSimulator() {
                     placeholder="120000"
                     value={targetAmount}
                     onChange={(e) => setTargetAmount(e.target.value)}
+                    data-testid="input-target-amount"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2">Company's Likely Range</Label>
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Company's Likely Range</Label>
                 <Input
                   className="mt-2"
                   placeholder="$90k - $110k"
                   value={companyRange}
                   onChange={(e) => setCompanyRange(e.target.value)}
+                  data-testid="input-company-range"
                 />
               </div>
             </div>
 
             {/* Counterpart Style */}
             <div className="mb-8">
-              <Label className="text-sm font-medium text-gray-700 mb-2">Counterpart Style</Label>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Counterpart Style</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
                 {counterpartStyles.map((style) => (
                   <Button
@@ -340,6 +619,7 @@ export default function NegotiationSimulator() {
                       "flex flex-col items-center space-y-1 h-auto py-3",
                       counterpartStyle === style.id && "bg-blue-600 hover:bg-blue-700"
                     )}
+                    data-testid={`style-${style.id}`}
                   >
                     <span className="text-lg">{style.icon}</span>
                     <span className="text-xs">{style.label}</span>
@@ -355,6 +635,7 @@ export default function NegotiationSimulator() {
                 onClick={handleStartNegotiation}
                 disabled={createSessionMutation.isPending}
                 className="bg-green-600 hover:bg-green-700"
+                data-testid="button-start-negotiation"
               >
                 <Play className="mr-2 h-4 w-4" />
                 {createSessionMutation.isPending ? "Starting..." : "Start Negotiation"}
@@ -367,24 +648,24 @@ export default function NegotiationSimulator() {
         {negotiationSessions.length > 0 && (
           <Card className="mt-8">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-gray-900">
+              <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
                 Previous Negotiations
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {negotiationSessions.map((session: any) => (
-                  <div key={session.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={session.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <Handshake className="h-5 w-5 text-green-600" />
+                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                          <Handshake className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900 capitalize">
+                          <h4 className="font-semibold text-gray-900 dark:text-white capitalize">
                             {session.configuration?.scenario} Negotiation
                           </h4>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
                             Target: ${session.configuration?.targetAmount?.toLocaleString()} → Final: {session.score ? 'TBD' : 'In Progress'}
                           </p>
                         </div>
@@ -395,7 +676,7 @@ export default function NegotiationSimulator() {
                             <p className={`text-sm font-medium ${getScoreColor(session.score)}`}>
                               Success Rate: {session.score}%
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {session.score >= 80 ? 'Strong performance' : session.score >= 60 ? 'Good result' : 'Needs improvement'}
                             </p>
                           </>
