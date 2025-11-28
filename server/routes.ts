@@ -567,12 +567,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jobRequirements?: string;
         candidateCv?: string;
       } | undefined;
+      
+      // Extract candidate name for personalized greeting
+      let candidateName: string | undefined;
 
       if (applicationStageId) {
         const stage = await storage.getApplicationStage(applicationStageId);
         if (stage) {
           const application = await storage.getJobApplication(stage.applicationId);
           if (application) {
+            // Get candidate name from user profile
+            const user = await storage.getUser(application.userId);
+            if (user) {
+              candidateName = user.firstName || user.username;
+            }
+            
             const jobWithCompany = await storage.getJobPostingWithCompany(application.jobPostingId);
             if (jobWithCompany) {
               // Build requirements string from job posting
@@ -603,7 +612,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetRole,
         difficulty || "medium",
         totalQuestions || 5,
-        jobContext
+        jobContext,
+        candidateName
       );
       
       // If this interview is for an application stage, link them
@@ -622,6 +632,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to start interview:", error);
       res.status(500).json({ message: "Failed to start interview: " + (error as Error).message });
+    }
+  });
+
+  // Handle prelude responses during conversational interview intro
+  app.post("/api/interviews/:sessionId/prelude", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { response } = req.body;
+      
+      if (!response) {
+        return res.status(400).json({ message: "response is required" });
+      }
+
+      const { interviewOrchestrator } = await import("./services/interview-orchestrator");
+      const result = await interviewOrchestrator.handlePreludeResponse(sessionId, response);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to handle prelude response:", error);
+      res.status(500).json({ message: "Failed to handle prelude response: " + (error as Error).message });
     }
   });
 
