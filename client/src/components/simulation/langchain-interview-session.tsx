@@ -59,10 +59,16 @@ interface FinalReport {
   hiringDecision: string;
 }
 
+interface PreludeMessage {
+  role: 'interviewer' | 'candidate';
+  content: string;
+}
+
 interface LangchainInterviewSessionProps {
   session: InterviewSession;
   firstQuestion: InterviewQuestion;
   introduction?: string;
+  preludeMessages?: PreludeMessage[];
   onComplete: () => void;
   mode?: "practice" | "journey";
 }
@@ -71,6 +77,7 @@ export default function LangchainInterviewSession({
   session: initialSession, 
   firstQuestion,
   introduction,
+  preludeMessages: initialPreludeMessages,
   onComplete,
   mode = "practice"
 }: LangchainInterviewSessionProps) {
@@ -79,14 +86,26 @@ export default function LangchainInterviewSession({
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion>(firstQuestion);
   const [answer, setAnswer] = useState("");
   
-  // Initialize messages with introduction if provided, then the first question
-  const initialMessages: Array<{role: 'interviewer' | 'candidate', content: string, evaluation?: any}> = [];
-  if (introduction) {
-    initialMessages.push({ role: 'interviewer', content: introduction });
-  }
-  initialMessages.push({ role: 'interviewer', content: firstQuestion.questionText });
+  // Initialize messages: prelude messages (if any) OR introduction (legacy), then first question
+  const buildInitialMessages = (): Array<{role: 'interviewer' | 'candidate', content: string, evaluation?: any}> => {
+    const msgs: Array<{role: 'interviewer' | 'candidate', content: string, evaluation?: any}> = [];
+    
+    // Prefer prelude messages (properly attributed) over introduction string
+    if (initialPreludeMessages && initialPreludeMessages.length > 0) {
+      initialPreludeMessages.forEach(pm => {
+        msgs.push({ role: pm.role, content: pm.content });
+      });
+    } else if (introduction) {
+      // Legacy: single introduction from interviewer
+      msgs.push({ role: 'interviewer', content: introduction });
+    }
+    
+    // Add first question
+    msgs.push({ role: 'interviewer', content: firstQuestion.questionText });
+    return msgs;
+  };
   
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState(buildInitialMessages());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [finalReport, setFinalReport] = useState<FinalReport | null>(null);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);

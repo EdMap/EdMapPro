@@ -61,6 +61,7 @@ export default function InterviewSimulator() {
   // Prelude conversation state
   const [isPreludeMode, setIsPreludeMode] = useState(false);
   const [preludeMessages, setPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string}>>([]);
+  const [completedPreludeMessages, setCompletedPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string}>>([]);
   const [preludeResponse, setPreludeResponse] = useState("");
   const [isPreludeSubmitting, setIsPreludeSubmitting] = useState(false);
 
@@ -102,12 +103,17 @@ export default function InterviewSimulator() {
     onSuccess: (result) => {
       setActiveSession(result.session);
       
+      // Reset prelude state for new session
+      setCompletedPreludeMessages([]);
+      
       if (result.isPreludeMode && result.greeting) {
         // Enter conversational prelude mode
         setIsPreludeMode(true);
         setPreludeMessages([{ role: 'interviewer', content: result.greeting }]);
       } else {
         // Legacy flow without prelude
+        setIsPreludeMode(false);
+        setPreludeMessages([]);
         setActiveFirstQuestion(result.firstQuestion);
         setActiveIntroduction(result.introduction);
       }
@@ -128,9 +134,15 @@ export default function InterviewSimulator() {
 
   // Handle prelude responses during conversational intro
   const preludeMutation = useMutation({
-    mutationFn: async ({ sessionId, response }: { sessionId: number; response: string }) => {
+    mutationFn: async ({ sessionId, response, currentMessages }: { 
+      sessionId: number; 
+      response: string;
+      currentMessages: Array<{role: 'interviewer' | 'candidate', content: string}>;
+    }) => {
       const res = await apiRequest("POST", `/api/interviews/${sessionId}/prelude`, { response });
-      return res.json();
+      const data = await res.json();
+      // Return both the API result and the current messages for proper state handling
+      return { ...data, messagesAtSubmit: currentMessages };
     },
     onSuccess: (result) => {
       setIsPreludeSubmitting(false);
@@ -138,10 +150,10 @@ export default function InterviewSimulator() {
       
       if (result.preludeComplete && result.firstQuestion) {
         // Prelude is done, transition to real interview
+        // Use the messages from the mutation context (not stale closure)
+        setCompletedPreludeMessages(result.messagesAtSubmit);
         setIsPreludeMode(false);
         setActiveFirstQuestion(result.firstQuestion);
-        // Keep prelude messages as the introduction context
-        setActiveIntroduction(preludeMessages.map(m => m.content).join('\n\n'));
       } else if (result.preludeMessage) {
         // Add interviewer's response to prelude messages
         setPreludeMessages(prev => [...prev, { role: 'interviewer', content: result.preludeMessage }]);
@@ -161,11 +173,17 @@ export default function InterviewSimulator() {
     if (!preludeResponse.trim() || isPreludeSubmitting || !activeSession) return;
     
     setIsPreludeSubmitting(true);
-    setPreludeMessages(prev => [...prev, { role: 'candidate', content: preludeResponse }]);
     
+    // Add the candidate's response to messages first
+    const candidateMessage = { role: 'candidate' as const, content: preludeResponse };
+    const updatedMessages = [...preludeMessages, candidateMessage];
+    setPreludeMessages(updatedMessages);
+    
+    // Pass the updated messages to the mutation to avoid stale closure
     preludeMutation.mutate({
       sessionId: activeSession.id,
-      response: preludeResponse.trim()
+      response: preludeResponse.trim(),
+      currentMessages: updatedMessages
     });
   };
 
@@ -310,6 +328,7 @@ export default function InterviewSimulator() {
         session={activeSession}
         firstQuestion={activeFirstQuestion}
         introduction={activeIntroduction}
+        preludeMessages={completedPreludeMessages.length > 0 ? completedPreludeMessages : undefined}
         mode={isJourneyMode ? "journey" : "practice"}
         onComplete={() => {
           setActiveSession(null);
