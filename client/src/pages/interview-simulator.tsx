@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ModeBanner } from "@/components/ModeBanner";
 import LangchainInterviewSession from "@/components/simulation/langchain-interview-session";
 import { 
   Play, 
@@ -188,17 +189,20 @@ export default function InterviewSimulator() {
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto space-y-8">
+        {/* Mode Banner */}
+        <ModeBanner 
+          mode={isJourneyMode ? "journey" : "practice"} 
+          variant="banner"
+        />
+
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-gray-900">Interview Simulator</h1>
-            <Badge className={isJourneyMode ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"}>
-              {isJourneyMode ? "Job Journey" : "Practice Mode"}
-            </Badge>
-          </div>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            {isJourneyMode ? "Complete Your Interview" : "Interview Simulator"}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
             {isJourneyMode 
-              ? "Complete this interview to advance your job application"
-              : "Practice your interview skills with AI-powered feedback"}
+              ? "This interview is part of your job application — your performance will be evaluated"
+              : "Build your interview skills with AI-powered feedback — no real stakes"}
           </p>
         </div>
 
@@ -209,7 +213,9 @@ export default function InterviewSimulator() {
               Configure Your Interview
             </CardTitle>
             <CardDescription>
-              Customize your practice session to match your target role and interview type
+              {isJourneyMode 
+                ? "Review and confirm your interview settings before starting"
+                : "Customize your practice session to match your target role and interview type"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">

@@ -11,6 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatScore, getScoreColor } from "@/lib/utils";
+import { ModeBanner } from "@/components/ModeBanner";
 import NegotiationSession from "@/components/simulation/negotiation-session";
 import { 
   DollarSign, TrendingUp, Handshake, Play, Building2, Briefcase, 
@@ -170,7 +171,7 @@ function OfferSelectionStep({
             Negotiation Simulator
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Select an offer to practice negotiating, or practice with a custom scenario.
+            Select an offer to negotiate, or start a practice session with custom scenarios.
           </p>
         </div>
 
@@ -182,7 +183,7 @@ function OfferSelectionStep({
                 Your Offers
               </CardTitle>
               <CardDescription>
-                Choose an offer to practice negotiating for better terms
+                Choose an offer to negotiate for better terms
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -270,21 +271,16 @@ function SelectedOfferSummary({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-primary text-primary" data-testid="badge-journey-mode">
-              Journey Mode
-            </Badge>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onChangeOffer}
-              className="text-gray-500 hover:text-gray-700"
-              data-testid="button-change-offer"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Change
-            </Button>
-          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onChangeOffer}
+            className="text-gray-500 hover:text-gray-700"
+            data-testid="button-change-offer"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Change Offer
+          </Button>
         </div>
       </div>
       
@@ -536,6 +532,16 @@ export default function NegotiationSimulator() {
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
+        {/* Mode Banner */}
+        <ModeBanner 
+          mode={selectedApplication ? "journey" : "practice"} 
+          variant="banner"
+          context={selectedApplication ? {
+            companyName: selectedApplication.job.company.name,
+            jobTitle: selectedApplication.job.title,
+          } : undefined}
+        />
+
         {/* Back button for practice mode */}
         {!selectedApplication && (
           <button
@@ -558,20 +564,13 @@ export default function NegotiationSimulator() {
         
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                {selectedApplication ? "Configure Negotiation" : "Practice Negotiation"}
-              </CardTitle>
-              {!selectedApplication && (
-                <Badge variant="outline" className="border-purple-400 text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20" data-testid="badge-practice-mode">
-                  Practice Mode
-                </Badge>
-              )}
-            </div>
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+              {selectedApplication ? "Configure Negotiation" : "Practice Negotiation"}
+            </CardTitle>
             <CardDescription>
               {selectedApplication 
                 ? "Customize your negotiation parameters before starting"
-                : "Build your negotiation skills with sample scenarios — no real stakes"
+                : "Build your negotiation skills with sample scenarios"
               }
             </CardDescription>
           </CardHeader>

@@ -406,7 +406,7 @@ function EmptyState() {
           Start Your Job Journey
         </h3>
         <p className="text-gray-500 max-w-md mx-auto mb-6">
-          Browse job listings, apply to positions, and practice your interviews.
+          Browse job listings, apply to positions, and complete your interviews.
         </p>
         <Button onClick={() => navigate('/jobs')} size="lg" data-testid="button-browse-jobs">
           <Briefcase className="h-5 w-5 mr-2" />
