@@ -223,15 +223,16 @@ export default function LangchainInterviewSession({
                 setTimeout(() => {
                   setShowTypingIndicator(false);
                   setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
+                  // Give user 4 seconds to read the closure message before transitioning
                   setTimeout(() => {
                     showFeedbackTransition(result.finalReport);
-                  }, 2000);
+                  }, 4000);
                 }, 1200);
               }, 1000);
             } else {
               setTimeout(() => {
                 showFeedbackTransition(result.finalReport);
-              }, 1000);
+              }, 1500);
             }
           }, 1200);
         } else if (result.closure) {
@@ -239,9 +240,10 @@ export default function LangchainInterviewSession({
           setTimeout(() => {
             setShowTypingIndicator(false);
             setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
+            // Give user 4 seconds to read the closure message before transitioning
             setTimeout(() => {
               showFeedbackTransition(result.finalReport);
-            }, 2000);
+            }, 4000);
           }, 1500);
         } else {
           showFeedbackTransition(result.finalReport);
