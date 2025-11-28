@@ -316,6 +316,7 @@ export default function LangchainInterviewSession({
     },
     onError: (error) => {
       setIsSubmitting(false);
+      setShowTypingIndicator(false);
       toast({
         title: "Error",
         description: "Failed to submit answer. Please try again.",
@@ -329,6 +330,9 @@ export default function LangchainInterviewSession({
 
     setIsSubmitting(true);
     setMessages(prev => [...prev, { role: 'candidate', content: answer }]);
+    
+    // Show typing indicator immediately so user knows AI is processing
+    setShowTypingIndicator(true);
     
     submitAnswerMutation.mutate({
       questionId: currentQuestion.id,
