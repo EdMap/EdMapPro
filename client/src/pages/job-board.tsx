@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ModeBanner } from "@/components/ModeBanner";
 import { 
   Search, MapPin, DollarSign, Briefcase, Building2, Users, Clock, 
   ChevronRight, Sparkles, BookOpen, Filter, X, CheckCircle, ArrowRight,
@@ -555,6 +556,11 @@ export default function JobBoard() {
           Discover opportunities and start your journey. Click highlighted terms to learn more.
         </p>
       </div>
+
+      <ModeBanner 
+        mode="journey" 
+        variant="badge"
+      />
 
       <div className="flex items-center gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
