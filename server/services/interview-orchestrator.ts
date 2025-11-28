@@ -7,6 +7,9 @@ import {
   ReflectionChain,
   ClosureChain,
   WrapupChain,
+  GreetingChain,
+  IntroExchangeChain,
+  SelfIntroChain,
   InterviewConfig,
   QuestionContext,
   EvaluationResult,
@@ -14,6 +17,7 @@ import {
   FinalReport,
   InterviewStage,
   getInterviewStage,
+  getPreludeStage,
   shouldGenerateReflection,
 } from "./interview-chains";
 import { storage } from "../storage";
@@ -37,6 +41,9 @@ interface ConversationMemory {
   jobContext?: JobContext;
   lastReflection: string;
   currentStage: InterviewStage;
+  preludeStep: number; // 0 = greeting, 1 = intro exchange, 2 = self-intro, 3+ = questions
+  preludeResponses: string[]; // Store candidate's prelude responses
+  candidateName?: string;
 }
 
 export class InterviewOrchestrator {
@@ -48,6 +55,9 @@ export class InterviewOrchestrator {
   private reflection: ReflectionChain;
   private closure: ClosureChain;
   private wrapup: WrapupChain;
+  private greeting: GreetingChain;
+  private introExchange: IntroExchangeChain;
+  private selfIntro: SelfIntroChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -59,6 +69,9 @@ export class InterviewOrchestrator {
     this.reflection = new ReflectionChain();
     this.closure = new ClosureChain();
     this.wrapup = new WrapupChain();
+    this.greeting = new GreetingChain();
+    this.introExchange = new IntroExchangeChain();
+    this.selfIntro = new SelfIntroChain();
     this.memory = new Map();
   }
 
@@ -72,7 +85,9 @@ export class InterviewOrchestrator {
         activeProject: null,
         projectMentionCount: 0,
         lastReflection: "None yet",
-        currentStage: "opening",
+        currentStage: "greeting",
+        preludeStep: 0,
+        preludeResponses: [],
       });
     }
     return this.memory.get(sessionId)!;
@@ -98,8 +113,15 @@ export class InterviewOrchestrator {
     targetRole: string,
     difficulty: string = "medium",
     totalQuestions: number = 5,
-    jobContext?: JobContext
-  ): Promise<{ session: InterviewSession; firstQuestion: InterviewQuestion; introduction?: string }> {
+    jobContext?: JobContext,
+    candidateName?: string
+  ): Promise<{ 
+    session: InterviewSession; 
+    firstQuestion?: InterviewQuestion; 
+    greeting?: string;
+    introduction?: string;
+    isPreludeMode?: boolean;
+  }> {
     const session = await storage.createInterviewSession({
       userId,
       interviewType,
@@ -117,8 +139,30 @@ export class InterviewOrchestrator {
     if (jobContext) {
       memory.jobContext = jobContext;
     }
+    
+    // Store candidate name for personalized greeting
+    if (candidateName) {
+      memory.candidateName = candidateName;
+    }
 
-    // Generate introduction if we have job context (Journey mode)
+    // For HR/behavioral interviews with job context, use conversational prelude
+    const usePrelude = jobContext?.companyName && 
+      (interviewType === "behavioral" || interviewType === "recruiter_call");
+    
+    if (usePrelude && candidateName) {
+      // Start with greeting phase - don't generate questions yet
+      const greetingText = await this.greeting.generate(config, candidateName);
+      memory.currentStage = "greeting";
+      memory.preludeStep = 0;
+      
+      return { 
+        session, 
+        greeting: greetingText,
+        isPreludeMode: true 
+      };
+    }
+
+    // Fallback to old flow for practice mode or technical interviews
     let introduction: string | undefined;
     if (jobContext?.companyName) {
       introduction = await this.introduction.generate(config);
@@ -133,6 +177,8 @@ export class InterviewOrchestrator {
     });
 
     memory.questions.push(questionText);
+    memory.currentStage = "opening";
+    memory.preludeStep = 3; // Skip prelude
 
     const question = await storage.createInterviewQuestion({
       sessionId: session.id,
@@ -142,7 +188,92 @@ export class InterviewOrchestrator {
       expectedCriteria: this.getExpectedCriteria(config, 0),
     });
 
-    return { session, firstQuestion: question, introduction };
+    return { session, firstQuestion: question, introduction, isPreludeMode: false };
+  }
+
+  /**
+   * Handle candidate responses during the conversational prelude phase
+   * Returns the interviewer's next prelude message, or the first question when prelude is complete
+   */
+  async handlePreludeResponse(
+    sessionId: number,
+    candidateResponse: string
+  ): Promise<{
+    preludeMessage?: string;
+    firstQuestion?: InterviewQuestion;
+    preludeComplete: boolean;
+  }> {
+    const session = await storage.getInterviewSession(sessionId);
+    if (!session) {
+      throw new Error("Interview session not found");
+    }
+
+    const memory = this.getMemory(sessionId);
+    const config = this.getConfig(session, memory.jobContext);
+
+    // Store the candidate's response
+    memory.preludeResponses.push(candidateResponse);
+
+    // Advance prelude step
+    memory.preludeStep++;
+
+    if (memory.preludeStep === 1) {
+      // Step 1: After greeting, propose introductions
+      const introExchangeText = await this.introExchange.generate(config, candidateResponse);
+      memory.currentStage = "intro_exchange";
+      return { preludeMessage: introExchangeText, preludeComplete: false };
+    }
+
+    if (memory.preludeStep === 2) {
+      // Step 2: After they agree to intros, give self-intro and invite them to introduce
+      const selfIntroText = await this.selfIntro.generate(config);
+      return { preludeMessage: selfIntroText, preludeComplete: false };
+    }
+
+    if (memory.preludeStep >= 3) {
+      // Step 3+: After candidate introduces themselves, start the real interview
+      memory.currentStage = "opening";
+      
+      // Generate the first real interview question
+      const questionText = await this.questionGenerator.generate({
+        config,
+        questionIndex: 0,
+        previousQuestions: memory.questions,
+        previousAnswers: memory.answers,
+        previousScores: memory.scores,
+      });
+
+      memory.questions.push(questionText);
+
+      const question = await storage.createInterviewQuestion({
+        sessionId: session.id,
+        questionIndex: 0,
+        questionText,
+        questionType: "opening",
+        expectedCriteria: this.getExpectedCriteria(config, 0),
+      });
+
+      return { firstQuestion: question, preludeComplete: true };
+    }
+
+    // Should not reach here
+    return { preludeComplete: false };
+  }
+
+  /**
+   * Check if a session is currently in prelude mode
+   */
+  isInPreludeMode(sessionId: number): boolean {
+    const memory = this.memory.get(sessionId);
+    return memory ? memory.preludeStep < 3 : false;
+  }
+
+  /**
+   * Get current prelude step for a session
+   */
+  getPreludeStep(sessionId: number): number {
+    const memory = this.memory.get(sessionId);
+    return memory ? memory.preludeStep : 0;
   }
 
   async submitAnswer(

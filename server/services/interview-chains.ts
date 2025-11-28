@@ -21,12 +21,18 @@ const evaluatorModel = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-export type InterviewStage = "opening" | "core" | "wrapup" | "closure";
+export type InterviewStage = "greeting" | "intro_exchange" | "opening" | "core" | "wrapup" | "closure";
 
 export function getInterviewStage(questionIndex: number, totalQuestions: number): InterviewStage {
   if (questionIndex === 0) return "opening";
   if (questionIndex >= totalQuestions - 1) return "wrapup";
   return "core";
+}
+
+export function getPreludeStage(preludeStep: number): InterviewStage {
+  if (preludeStep === 0) return "greeting";
+  if (preludeStep === 1) return "intro_exchange";
+  return "opening";
 }
 
 export function shouldGenerateReflection(answer: string, stage: InterviewStage): boolean {
@@ -202,6 +208,65 @@ Second paragraph: Briefly preview what you'll chat about today. If their CV ment
 TONE: Warm but professional. Like a friendly colleague, not a formal interviewer. No numbered lists or bullet points—just speak naturally.
 
 Output ONLY the introduction (4-6 sentences). Don't ask the first interview question yet.
+`);
+
+// New conversational prelude prompts for natural interview flow
+const greetingPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a friendly {interviewerRole} at {companyName}.
+
+The candidate ({candidateName}) just joined the call for a {interviewType} interview for the {jobTitle} position.
+
+Write a brief, warm greeting—just like you'd start any video call with someone new. Include:
+1. A friendly hello using their first name
+2. Introduce yourself (just name and role, nothing more)
+3. A simple "How are you doing today?" or similar
+
+KEEP IT SHORT. This is just the opening moment, not your life story.
+
+Examples:
+- "Hi Samvel! I'm Sarah, an HR recruiter here at DataViz Pro. How's your day going so far?"
+- "Hey Marcus! Nice to meet you—I'm Sarah from the People team. How are you doing today?"
+
+Output ONLY the greeting (1-2 sentences max).
+`);
+
+const introExchangePrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a friendly {interviewerRole} at {companyName}.
+
+The candidate just responded to your greeting: "{candidateResponse}"
+
+Acknowledge their response naturally (don't overthink it), then propose doing a round of introductions.
+
+Examples:
+- "Great to hear! So, I thought we could start with quick intros—I'll go first, then you?"
+- "Glad you're doing well! How about we kick things off with brief introductions? I'll start."
+- "Nice! Shall we do a quick round of intros before we dive in?"
+
+Keep it casual and brief. Don't launch into your full intro yet—just propose the format.
+
+Output ONLY your response (1-2 sentences max).
+`);
+
+const selfIntroPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a friendly {interviewerRole} at {companyName}.
+
+COMPANY INFO:
+{companyDescription}
+
+The candidate agreed to do introductions. Now give YOUR brief self-introduction, then invite them to share theirs.
+
+Your intro should include:
+- Your role at {companyName}
+- How long you've been there (make up a reasonable timeframe, 2-5 years)
+- One thing you enjoy about working there (keep it genuine, not salesy)
+
+Then open the floor to them with something like:
+- "So that's me in a nutshell—I'd love to hear a bit about you and what brings you here today."
+- "Enough about me though! Tell me a bit about yourself."
+
+KEEP IT CONVERSATIONAL. You're chatting, not presenting.
+
+Output ONLY your self-intro + invitation (3-4 sentences max).
 `);
 
 const closurePrompt = PromptTemplate.fromTemplate(`
@@ -552,6 +617,129 @@ export class IntroductionChain {
         return "Jennifer";
       default:
         return "Alex";
+    }
+  }
+}
+
+// New prelude chains for conversational interview flow
+export class GreetingChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      greetingPrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generate(config: InterviewConfig, candidateName: string): Promise<string> {
+    const interviewerRole = this.getInterviewerRole(config.interviewType);
+    
+    const result = await this.chain.invoke({
+      interviewerName: config.interviewerName || this.getDefaultInterviewerName(config.interviewType),
+      interviewerRole,
+      companyName: config.companyName || "the company",
+      jobTitle: config.jobTitle || `${config.targetRole} position`,
+      candidateName,
+      interviewType: config.interviewType,
+    });
+    return result.trim();
+  }
+
+  private getInterviewerRole(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "HR Recruiter";
+      case "technical":
+        return "Senior Engineer";
+      default:
+        return "Hiring Manager";
+    }
+  }
+
+  private getDefaultInterviewerName(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "Sarah";
+      case "technical":
+        return "Michael";
+      default:
+        return "Alex";
+    }
+  }
+}
+
+export class IntroExchangeChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      introExchangePrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generate(config: InterviewConfig, candidateResponse: string): Promise<string> {
+    const interviewerRole = this.getInterviewerRole(config.interviewType);
+    
+    const result = await this.chain.invoke({
+      interviewerName: config.interviewerName || "Sarah",
+      interviewerRole,
+      companyName: config.companyName || "the company",
+      candidateResponse,
+    });
+    return result.trim();
+  }
+
+  private getInterviewerRole(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "HR Recruiter";
+      case "technical":
+        return "Senior Engineer";
+      default:
+        return "Hiring Manager";
+    }
+  }
+}
+
+export class SelfIntroChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      selfIntroPrompt,
+      model,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generate(config: InterviewConfig): Promise<string> {
+    const interviewerRole = this.getInterviewerRole(config.interviewType);
+    
+    const result = await this.chain.invoke({
+      interviewerName: config.interviewerName || "Sarah",
+      interviewerRole,
+      companyName: config.companyName || "the company",
+      companyDescription: config.companyDescription || "A growing technology company",
+    });
+    return result.trim();
+  }
+
+  private getInterviewerRole(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "HR Recruiter";
+      case "technical":
+        return "Senior Engineer";
+      default:
+        return "Hiring Manager";
     }
   }
 }
