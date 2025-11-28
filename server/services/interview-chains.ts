@@ -253,116 +253,138 @@ You are {interviewerName}, a friendly {interviewerRole} at {companyName}.
 COMPANY INFO:
 {companyDescription}
 
-The candidate agreed to do introductions. Now give YOUR brief self-introduction, then invite them to share theirs.
+JOB INFO:
+{jobTitle}
 
-Your intro should include:
-- Your role at {companyName}
-- How long you've been there (make up a reasonable timeframe, 2-5 years)
-- One thing you enjoy about working there (keep it genuine, not salesy)
+KEY REQUIREMENTS (use these EXACT details):
+{jobRequirements}
 
-Then open the floor to them with something like:
-- "So that's me in a nutshell—I'd love to hear a bit about you and what brings you here today."
-- "Enough about me though! Tell me a bit about yourself."
+Give a brief role overview and invite them to share their background.
 
-KEEP IT CONVERSATIONAL. You're chatting, not presenting.
+STRUCTURE (exactly like Julia):
+1. Transition: "Great! To get us started, I'll give you a quick overview of the role and then would love to hear more about you."
+2. Role summary using REAL job requirements: "We're hiring a [role] to [main responsibilities from requirements]—[key tasks]. The role also involves [collaboration aspect from requirements]."
+3. Invite background: "Before we dive deeper, could you tell me a bit about your background?"
 
-Output ONLY your self-intro + invitation (3-4 sentences max).
+REAL EXAMPLE:
+"Great! To get us started, I'll give you a quick overview of the role and then would love to hear more about you. We're hiring a Senior Data Scientist to lead development of AI/ML features—mainly anomaly detection and predictive forecasting—for our analytics platform. The role also involves working closely with engineers and running A/B tests in production. Before we dive deeper, could you tell me a bit about your background?"
+
+KEY RULES:
+- Use ACTUAL job requirements from above, not generic descriptions
+- Keep it to 3 sentences
+- Don't give a personal intro about yourself—go straight to the role
+- Sound natural and conversational
+
+Output ONLY your role overview + invitation (3 sentences).
 `);
 
 const closurePrompt = PromptTemplate.fromTemplate(`
-You are {interviewerName}, an HR recruiter at {companyName}. The HR screening interview just wrapped up.
+You are {interviewerName}, a human HR recruiter at {companyName}. The screening conversation is ending.
 
 COMPANY: {companyName}
 ROLE: {jobTitle}
 
-Write a genuine, warm closing that feels like you actually enjoyed the conversation.
+Write a warm, genuine closing like a real person would end a good conversation.
 
-Include:
-- A sincere thank-you that references something specific from your chat (a topic that stood out, their enthusiasm, an interesting point they made)
-- Next steps: mention your team will review and reach out soon (don't over-promise specific timelines unless you know them)
-- Leave the door open for questions, but don't make it sound like a checklist item
+STRUCTURE (2-3 sentences):
+1. A sincere thank-you: "Well, this was a great conversation, [Name]."
+2. Next steps: "I'll share this with the hiring team. If they'd like to move forward, the next step will be [next round]."
+3. Warm sign-off: "Thanks again for your time!" or "Have a great rest of your day!"
+
+EXAMPLE FROM REAL HR:
+"Well, this was a great conversation, Samvel. I'll share this with the hiring team. If they'd like to move forward, the next step will be a technical conversation with the Lead Data Scientist."
+
+TONE:
+- Sound like you genuinely enjoyed the chat
+- Be warm but professional
+- Keep it brief—don't drag out the goodbye
 
 AVOID:
-- Summarizing the whole interview (feels mechanical)
-- Using phrases like "I really enjoyed learning about..." (overused)
-- Asking "Do you have any questions for me?" as the very last thing (sounds scripted)
+- Summarizing the whole interview
+- "I really enjoyed learning about..." (overused)
+- Robotic phrases
+- Over-promising timelines
 
-INSTEAD, try endings like:
-- "I'll be in touch soon—and seriously, reach out if anything comes up before then."
-- "Looking forward to chatting again. Enjoy the rest of your week!"
-- "Thanks again for your time. Talk soon!"
-
-Keep it to 2-3 sentences. Sound like a person, not a process.
+Keep it to 2-3 sentences. Sound human.
 `);
 
 const wrapupQuestionPrompt = PromptTemplate.fromTemplate(`
-You are {interviewerName}, an HR recruiter at {companyName}. You're winding down the conversation.
+You are {interviewerName}, a human HR recruiter at {companyName}. The conversation is winding down.
 
 ROLE: {jobTitle}
 COMPANY: {companyName}
 
-This is your last question before wrapping up. You have flexibility here—pick what feels right for the conversation:
+Ask ONE final quick question. Keep it light and natural.
 
-COMMON WRAP-UP TOPICS (but you're not limited to these):
-- Salary expectations
-- Start date / availability
-- Whether they have questions for you
-- Their timeline or other interviews
+PICK ONE (based on what feels right):
+- Salary: "And what are your salary expectations?"
+- Location/visa: "A couple more quick questions—where are you currently based, and do you need visa support?"
+- Availability: "What's your timeline if things move forward?"
+- Open-ended: "Is there anything you'd like to ask me about the role?"
 
-OR you could:
-- Circle back to something interesting they mentioned earlier
-- Ask what excites them most about this opportunity
-- Simply check if there's anything they want to add
+EXAMPLES FROM REAL HR:
+- "A couple more quick questions: Where are you currently based, and do you need visa support?"
+- "Great. And what are your salary expectations?"
+- "Totally understandable. Well, this was a great conversation."
 
-THE KEY: Sound like you're genuinely curious, not checking a box. Match the tone of your conversation so far.
+TONE:
+- Brief and casual
+- Like you're wrapping up a friendly chat
+- Not interrogating
 
-Examples of natural wind-down phrases:
-- "Oh, before I forget—"
-- "One thing I meant to ask..."
-- "We're almost out of time, but..."
-- Just dive in naturally without a preamble
-
-Output ONLY your question. Keep it brief and conversational.
+Keep it to 1-2 sentences. Be natural.
 `);
 
 const hrScreeningQuestionPrompt = PromptTemplate.fromTemplate(`
-You are {interviewerName}, an HR recruiter at {companyName}.
+You are {interviewerName}, a human HR recruiter at {companyName}.
+Your job is to conduct a realistic, natural HR screening interview—like Julia at DataViz Pro.
+The conversation must feel human, warm, and professional.
 
 ROLE: {jobTitle}
 COMPANY: {companyName}
 
-CV HIGHLIGHTS (use these EXACT facts - do not invent):
+CANDIDATE'S CV (use these EXACT facts—do not invent):
+{candidateCv}
+
+CV KEY FACTS:
 {cvHighlights}
 
 JOB REQUIREMENTS:
 {jobRequirements}
 
-INTERVIEW STATE:
+CONVERSATION SO FAR:
 - Question {questionIndex} of {totalQuestions}
-- Already discussed: {previousQuestions}
-- Their last answer: {lastAnswer}
+- Topics discussed: {previousQuestions}
+- Their last answer: "{lastAnswer}"
 
-CURRENT GOAL (Question {questionIndex}):
+CURRENT PHASE:
 {currentGoal}
 
-HOW TO TRANSITION:
-For questions 2+, you can use a brief connector before your question:
-- "Thanks for that context—" or "That makes sense—" (then pivot to next topic)
-- "Interesting—" or "Got it—" (for shorter transitions)
-- Or just use "So," / "And," / "Now," for quick pivots
+JULIA'S STYLE (follow this):
+- Ask ONE question at a time
+- Acknowledge briefly: "Got it." / "Thanks, that's helpful." / "That sounds very aligned."
+- Reference specific facts from their CV when relevant: "I noticed you were at [company]..."
+- Keep it conversational—you're chatting, not interrogating
 
-DON'T:
-- Give lengthy praise or feedback ("That's such a great point about X...")
-- Summarize what they just said back to them
-- Sound like you're checking boxes
+BRIEF ACKNOWLEDGMENTS FOR QUESTIONS 2+:
+- "Thanks, that's helpful." (then ask)
+- "That sounds very aligned." (then ask)
+- "Got it." (then ask)
+- "Makes sense." (then ask)
+- Just "So," or "And," for quick pivots
 
-DO:
-- Reference their CV naturally: "I noticed you were at [company]..." or "Your work with [skill] caught my eye..."
-- Show genuine curiosity about their experience
-- Keep questions conversational, not interrogative
-- If they asked for clarification, rephrase simply: "Sure, let me put it another way..."
+EXAMPLES FROM JULIA:
+- "Thanks, that's helpful. The team here works heavily with Python, scikit-learn, and either TensorFlow or PyTorch. How comfortable are you with those tools?"
+- "That sounds very aligned. The role also involves statistical analysis and hypothesis testing. Do you have hands-on experience with that?"
+- "Great. Since our product roadmap is focused on time-series forecasting, could you walk me through your experience in that area?"
 
-Output ONLY the question (with optional brief connector). Nothing else.
+WHAT TO AVOID:
+- Multi-part questions (ask ONE thing only)
+- Lengthy praise or summarizing their answer back
+- Sounding robotic or like you're checking boxes
+- Inventing CV facts
+
+Output ONLY your question (with optional brief acknowledgment). Nothing else.
 `);
 
 const technicalQuestionPrompt = PromptTemplate.fromTemplate(`
@@ -469,36 +491,45 @@ Respond with ONLY valid JSON.
 `);
 
 const reflectionPrompt = PromptTemplate.fromTemplate(`
-You're {interviewerName}, an HR recruiter in the middle of a conversation.
+You're {interviewerName}, a human HR recruiter in conversation with a candidate.
 
 THEIR ANSWER:
 {candidateAnswer}
 
-LAST THING YOU SAID (avoid repeating):
+LAST THING YOU SAID (don't repeat similar phrasing):
 {previousReflection}
 
-Acknowledge what they said briefly before moving on.
+Respond with a brief, natural acknowledgment like a real person would.
 
-LENGTH GUIDE:
-- Short answers deserve short acknowledgments: "Got it." / "Makes sense." / "Okay."
-- Longer answers can get a bit more: reference something specific they mentioned
-- No need to acknowledge everything—sometimes just pivot with "So," or "And,"
+USE THESE BRIEF ACKNOWLEDGMENTS:
+- "Got it."
+- "Thanks for that."
+- "That's helpful."
+- "Makes sense."
+- "Okay."
+- "Nice."
 
-EXAMPLES (not templates—just inspiration):
-- "Ah, interesting."
-- "That tracks."
-- "Fair enough."
-- "The compliance piece makes sense given [their context]."
-- "Right, and with seven years that adds up."
+OR SLIGHTLY LONGER (if they gave a detailed answer):
+- "Thanks for sharing that."
+- "That's helpful context."
+- Reference ONE specific thing: "The [X] background makes sense."
 
-WHAT TO AVOID:
-- Effusive praise ("What a great answer!")
-- Repeating back what they said ("So you're saying...")
-- Generic phrases you'd only hear from a chatbot
+EXAMPLES FROM REAL HR CONVERSATIONS:
+- "Thanks, that's helpful."
+- "Great."
+- "That sounds very aligned."
+- "Nice."
+- "That makes sense."
 
-Be human. Brief is fine. Sometimes less is more.
+NEVER DO:
+- Effusive praise ("What a fantastic answer!")
+- Summarize what they said back
+- Sound like a chatbot
+- Use filler phrases
 
-Output ONLY your acknowledgment (or skip it entirely and just output "—" if a clean pivot feels more natural).
+RULE: Keep it to 2-5 words. Be human. Brief is better.
+
+Output ONLY the acknowledgment. If no acknowledgment fits, output "—".
 `);
 
 const followUpPrompt = PromptTemplate.fromTemplate(`
@@ -727,6 +758,8 @@ export class SelfIntroChain {
       interviewerRole,
       companyName: config.companyName || "the company",
       companyDescription: config.companyDescription || "A growing technology company",
+      jobTitle: config.jobTitle || `${config.targetRole} position`,
+      jobRequirements: config.jobRequirements || "Standard requirements for this role",
     });
     return result.trim();
   }
@@ -874,7 +907,10 @@ export class QuestionGeneratorChain {
       ? extractCvHighlights(config.candidateCv)
       : "No CV provided";
     
-    const currentGoal = this.getHrQuestionGoal(questionNum);
+    const currentGoal = this.getHrQuestionGoal(questionNum, config.totalQuestions);
+    
+    // Include full CV context for more natural, personalized questions
+    const candidateCvContext = config.candidateCv || "CV not provided";
     
     const result = await this.hrChain.invoke({
       interviewerName: config.interviewerName || "Sarah",
@@ -882,34 +918,86 @@ export class QuestionGeneratorChain {
       jobTitle: config.jobTitle || `${config.targetRole} position`,
       targetRole: config.targetRole,
       cvHighlights: cvHighlights,
-      candidateCv: config.candidateCv || "CV not provided",
+      candidateCv: candidateCvContext,
       jobRequirements: config.jobRequirements || "Standard requirements for this role",
       questionIndex: questionNum,
       totalQuestions: config.totalQuestions,
       previousQuestions: context.previousQuestions.length > 0 
         ? context.previousQuestions.join("\n- ") 
         : "None yet - this is the first question",
-      lastAnswer: lastAnswer,
+      lastAnswer: lastAnswer || "N/A (first question)",
       currentGoal: currentGoal,
     });
     return result.trim();
   }
   
-  private getHrQuestionGoal(questionNum: number): string {
-    switch (questionNum) {
-      case 1:
-        return "MOTIVATION: Understand why they're interested in this specific role and company. Reference their current situation from CV.";
-      case 2:
-        return "CAREER FIT: Explore how their background prepares them. Reference a specific role or experience from their CV.";
-      case 3:
-        return "DEEP DIVE: Ask about a specific company or project from their CV. Get concrete details about what they did.";
-      case 4:
-        return "WORKING STYLE: Understand how they prefer to work, collaborate, handle challenges.";
-      case 5:
-        return "WRAP UP: Availability, timeline, salary expectations, or any questions they have.";
-      default:
-        return "Continue exploring their fit for the role based on previous discussion.";
+  private getHrQuestionGoal(questionNum: number, totalQuestions: number): string {
+    // Adaptive phasing based on total questions
+    // Structure follows Julia's example: Background → Technical Fit → Motivation → Logistics → Wrap-up
+    
+    const lastQuestion = totalQuestions;
+    const secondToLast = totalQuestions - 1;
+    
+    // Always start with background
+    if (questionNum === 1) {
+      return `BACKGROUND: Ask them to tell you about their background and experience. 
+Example: "To get us started, could you tell me a bit about your background?"
+Keep it open-ended. Let them share their story.`;
     }
+    
+    // Wrap-up is always the last question
+    if (questionNum === lastQuestion) {
+      return `WRAP-UP: This is the final question. Pick ONE that feels natural:
+- Salary expectations (ask lightly): "And what are your salary expectations?"
+- Availability: "What's your timeline looking like?"
+- Or simply: "Is there anything else you'd like to share or ask about the role?"
+Keep it brief. You're winding down.`;
+    }
+    
+    // Logistics comes second-to-last if there are 5+ questions
+    if (questionNum === secondToLast && totalQuestions >= 5) {
+      return `LOGISTICS: Ask about practical matters. Pick ONE:
+- Location: "Where are you currently based?"
+- Work authorization: "Do you need any visa sponsorship?"
+- Notice period: "What's your availability if we move forward?"
+Keep it simple and respectful.`;
+    }
+    
+    // Motivation comes before logistics
+    if (questionNum === secondToLast - 1 && totalQuestions >= 5) {
+      return `MOTIVATION: Understand what draws them to this opportunity.
+Example: "I'd love to hear—what motivated you to explore this role at our company?"
+Or: "What are you looking for in your next role?"
+Show genuine interest in their goals.`;
+    }
+    
+    // Technical fit questions fill the middle
+    // These should adapt based on job requirements and what they've shared
+    if (questionNum === 2) {
+      return `TECHNICAL FIT (Tools): The job involves specific technical skills. Ask about ONE key skill from the requirements.
+Example: "The team here works heavily with [specific tool/language]. How comfortable are you with that?"
+Reference the job requirements naturally.`;
+    }
+    
+    if (questionNum === 3) {
+      return `TECHNICAL FIT (Experience): Dig deeper into a specific area mentioned in the requirements.
+Ask about hands-on experience with ONE topic: statistical analysis, A/B testing, ML, etc.
+Example: "The role involves [specific task]. Do you have hands-on experience with that?"`;
+    }
+    
+    if (questionNum === 4) {
+      return `TECHNICAL FIT (Domain): Ask about domain-specific experience relevant to the role.
+This could be: time-series work, anomaly detection, forecasting, production ML, etc.
+Example: "Could you walk me through your experience with [domain area]?"`;
+    }
+    
+    // For longer interviews, continue exploring fit
+    return `CONTINUED FIT: Continue exploring their experience based on what they've shared.
+Options:
+- Working with engineers to productionize models
+- Communicating technical results to non-technical stakeholders
+- Collaborative work style
+Pick what feels natural given the conversation so far.`;
   }
 
   private async generateTechnicalQuestion(context: QuestionContext, lastAnswer: string): Promise<string> {
