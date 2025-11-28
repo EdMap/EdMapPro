@@ -33,6 +33,39 @@ export interface JobContext {
   candidateCv?: string;
 }
 
+// Assessment criteria for dynamic interview completion
+export type AssessmentCriterion = 
+  | 'background'      // Professional background & roles
+  | 'skills'          // Core competencies vs. role requirements
+  | 'behavioral'      // Behavioral & collaboration examples
+  | 'motivation'      // Motivation & career goals
+  | 'culture_fit'     // Cultural/team fit
+  | 'logistics';      // Availability, salary, visa status
+
+interface CoverageScore {
+  score: number;        // 0-1 coverage level
+  notes: string[];      // Key points gathered
+  questionsAsked: number;
+}
+
+interface CoverageTracker {
+  background: CoverageScore;
+  skills: CoverageScore;
+  behavioral: CoverageScore;
+  motivation: CoverageScore;
+  culture_fit: CoverageScore;
+  logistics: CoverageScore;
+}
+
+// Thresholds for determining interview sufficiency
+const SUFFICIENCY_CONFIG = {
+  maxQuestions: 15,              // Hard limit
+  timeWarningThreshold: 0.75,    // Warn at 75% of max questions
+  criticalThreshold: 0.6,        // Minimum coverage for critical areas
+  overallThreshold: 0.7,         // Overall sufficiency threshold
+  criticalAreas: ['background', 'skills', 'motivation'] as AssessmentCriterion[],
+};
+
 interface ConversationMemory {
   questions: string[];
   answers: string[];
@@ -50,6 +83,10 @@ interface ConversationMemory {
   awaitingCandidateIntro?: boolean; // Waiting for candidate to share their intro
   lastQuestionAsked?: string; // Track the last question for response classification
   lastCandidateIntent?: CandidateIntent; // Last classified intent
+  // Dynamic interview completion tracking
+  coverage: CoverageTracker;
+  totalQuestionsAsked: number;
+  timeWarningGiven: boolean;
 }
 
 export class InterviewOrchestrator {
@@ -81,6 +118,22 @@ export class InterviewOrchestrator {
     this.memory = new Map();
   }
 
+  private initializeCoverage(): CoverageTracker {
+    const emptyCoverage = (): CoverageScore => ({
+      score: 0,
+      notes: [],
+      questionsAsked: 0,
+    });
+    return {
+      background: emptyCoverage(),
+      skills: emptyCoverage(),
+      behavioral: emptyCoverage(),
+      motivation: emptyCoverage(),
+      culture_fit: emptyCoverage(),
+      logistics: emptyCoverage(),
+    };
+  }
+
   private getMemory(sessionId: number): ConversationMemory {
     if (!this.memory.has(sessionId)) {
       this.memory.set(sessionId, {
@@ -93,6 +146,9 @@ export class InterviewOrchestrator {
         lastReflection: "None yet",
         currentStage: "greeting",
         preludeStep: 0,
+        coverage: this.initializeCoverage(),
+        totalQuestionsAsked: 0,
+        timeWarningGiven: false,
         preludeResponses: [],
       });
     }
@@ -111,6 +167,184 @@ export class InterviewOrchestrator {
       jobRequirements: jobContext?.jobRequirements,
       candidateCv: jobContext?.candidateCv,
     };
+  }
+
+  /**
+   * Classify which assessment criteria a question/answer pair covers
+   */
+  private classifyQuestionCriteria(question: string, answer: string): AssessmentCriterion[] {
+    const criteria: AssessmentCriterion[] = [];
+    const lowerQ = question.toLowerCase();
+    const lowerA = answer.toLowerCase();
+    const combined = lowerQ + ' ' + lowerA;
+
+    // Background: experience, roles, career history
+    if (/background|experience|career|role|position|previous|worked at|company|years/i.test(combined)) {
+      criteria.push('background');
+    }
+
+    // Skills: technical abilities, competencies, tools
+    if (/skill|technical|technology|tool|framework|proficient|expert|knowledge|ability|capable/i.test(combined)) {
+      criteria.push('skills');
+    }
+
+    // Behavioral: teamwork, challenges, examples, situations
+    if (/team|collaborate|challenge|difficult|situation|example|time when|how did you|conflict|problem/i.test(combined)) {
+      criteria.push('behavioral');
+    }
+
+    // Motivation: why this role/company, goals, interests
+    if (/why|interest|motivat|goal|passion|excit|drawn|appeal|looking for/i.test(combined)) {
+      criteria.push('motivation');
+    }
+
+    // Culture fit: values, work style, team dynamics
+    if (/culture|value|work style|environment|prefer|ideal|team dynamic|diversity|remote|office/i.test(combined)) {
+      criteria.push('culture_fit');
+    }
+
+    // Logistics: availability, salary, visa, location
+    if (/availab|start|notice|salary|compensation|expect|visa|relocat|location|timeline/i.test(combined)) {
+      criteria.push('logistics');
+    }
+
+    // If no specific criteria detected, default to background (general info)
+    return criteria.length > 0 ? criteria : ['background'];
+  }
+
+  /**
+   * Calculate coverage delta based on answer quality
+   */
+  private calculateCoverageDelta(answer: string, score: number): number {
+    const wordCount = answer.split(/\s+/).length;
+    
+    // Base delta from score (0-10 → 0-0.3)
+    const scoreDelta = (score / 10) * 0.3;
+    
+    // Length bonus (longer, more detailed answers contribute more)
+    const lengthBonus = Math.min(wordCount / 100, 0.2); // Max 0.2 bonus for 100+ words
+    
+    // Combine for total delta (max ~0.5 per answer)
+    return Math.min(scoreDelta + lengthBonus, 0.5);
+  }
+
+  /**
+   * Update coverage scores based on a question/answer pair
+   */
+  private updateCoverage(
+    memory: ConversationMemory,
+    question: string,
+    answer: string,
+    score: number
+  ): void {
+    const criteria = this.classifyQuestionCriteria(question, answer);
+    const delta = this.calculateCoverageDelta(answer, score);
+    
+    for (const criterion of criteria) {
+      const coverage = memory.coverage[criterion];
+      // Update score with diminishing returns (cap at 1.0)
+      coverage.score = Math.min(coverage.score + delta / criteria.length, 1.0);
+      coverage.questionsAsked++;
+      
+      // Extract a brief note about what was covered
+      const firstSentence = answer.split(/[.!?]/)[0].trim();
+      if (firstSentence.length > 10 && firstSentence.length < 200) {
+        coverage.notes.push(firstSentence);
+      }
+    }
+  }
+
+  /**
+   * Calculate overall interview sufficiency
+   */
+  private calculateSufficiency(memory: ConversationMemory): {
+    overall: number;
+    criticalMet: boolean;
+    gaps: AssessmentCriterion[];
+    prioritizedGaps: AssessmentCriterion[];
+  } {
+    const coverage = memory.coverage;
+    
+    // Calculate overall average
+    const scores = Object.values(coverage).map(c => c.score);
+    const overall = scores.reduce((a, b) => a + b, 0) / scores.length;
+    
+    // Check critical areas
+    const criticalMet = SUFFICIENCY_CONFIG.criticalAreas.every(
+      area => coverage[area].score >= SUFFICIENCY_CONFIG.criticalThreshold
+    );
+    
+    // Find gaps (areas below threshold)
+    const gaps: AssessmentCriterion[] = [];
+    const allCriteria: AssessmentCriterion[] = ['background', 'skills', 'behavioral', 'motivation', 'culture_fit', 'logistics'];
+    
+    for (const criterion of allCriteria) {
+      if (coverage[criterion].score < SUFFICIENCY_CONFIG.criticalThreshold) {
+        gaps.push(criterion);
+      }
+    }
+    
+    // Prioritize gaps: critical areas first, then by lowest score
+    const prioritizedGaps = [...gaps].sort((a, b) => {
+      const aIsCritical = SUFFICIENCY_CONFIG.criticalAreas.includes(a);
+      const bIsCritical = SUFFICIENCY_CONFIG.criticalAreas.includes(b);
+      if (aIsCritical !== bIsCritical) return aIsCritical ? -1 : 1;
+      return coverage[a].score - coverage[b].score;
+    });
+    
+    return { overall, criticalMet, gaps, prioritizedGaps };
+  }
+
+  /**
+   * Determine if the interview should wrap up based on coverage sufficiency
+   */
+  private shouldWrapUp(memory: ConversationMemory): {
+    shouldEnd: boolean;
+    reason: 'sufficient' | 'max_reached' | 'time_pressure' | 'continue';
+    message?: string;
+  } {
+    const sufficiency = this.calculateSufficiency(memory);
+    const questionsAsked = memory.totalQuestionsAsked;
+    
+    // Check if we've hit the max question limit
+    if (questionsAsked >= SUFFICIENCY_CONFIG.maxQuestions) {
+      return {
+        shouldEnd: true,
+        reason: 'max_reached',
+        message: sufficiency.gaps.length > 0
+          ? `We've covered a lot of ground today. I still had a few topics I wanted to explore, but we're at our time limit.`
+          : undefined
+      };
+    }
+    
+    // Check if we have sufficient coverage
+    if (sufficiency.overall >= SUFFICIENCY_CONFIG.overallThreshold && sufficiency.criticalMet) {
+      return {
+        shouldEnd: true,
+        reason: 'sufficient',
+      };
+    }
+    
+    // Check if we're approaching the limit with gaps remaining
+    const timeRatio = questionsAsked / SUFFICIENCY_CONFIG.maxQuestions;
+    if (timeRatio >= SUFFICIENCY_CONFIG.timeWarningThreshold && !memory.timeWarningGiven && sufficiency.gaps.length > 0) {
+      memory.timeWarningGiven = true;
+      return {
+        shouldEnd: false,
+        reason: 'time_pressure',
+        message: `We're running a bit short on our scheduled time, but I still have a few key questions I'd like to cover.`
+      };
+    }
+    
+    return { shouldEnd: false, reason: 'continue' };
+  }
+
+  /**
+   * Get the next question topic based on coverage gaps
+   */
+  private getPrioritizedTopic(memory: ConversationMemory): AssessmentCriterion | null {
+    const sufficiency = this.calculateSufficiency(memory);
+    return sufficiency.prioritizedGaps[0] || null;
   }
 
   async startInterview(
