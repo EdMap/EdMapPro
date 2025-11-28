@@ -19,10 +19,18 @@ import {
   TrendingUp,
   Briefcase,
   Code,
-  Lightbulb
+  Lightbulb,
+  Bot,
+  User as UserIcon,
+  Send,
+  Loader2,
+  Target
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import type { User, InterviewSession } from "@shared/schema";
+import type { User as UserType, InterviewSession } from "@shared/schema";
 
 const targetRoles = [
   { value: "developer", label: "Software Developer", icon: Code },
@@ -86,7 +94,7 @@ export default function InterviewSimulator() {
     }
   }, [searchString]);
 
-  const { data: user } = useQuery<User>({
+  const { data: user } = useQuery<UserType>({
     queryKey: ["/api/user"],
   });
 
@@ -228,95 +236,115 @@ export default function InterviewSimulator() {
     );
   }
 
-  // Show conversational prelude UI
+  // Show conversational prelude UI - matches LangchainInterviewSession styling
   if (activeSession && isPreludeMode) {
+    const interviewTypeLabel = activeSession.interviewType.charAt(0).toUpperCase() + activeSession.interviewType.slice(1);
+    
     return (
-      <div className="p-8 max-w-3xl mx-auto">
-        <ModeBanner mode="journey" variant="banner" />
-        
-        <Card className="mt-6">
-          <CardContent className="p-6">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-blue-600" />
-              </div>
+      <div className="h-[calc(100vh-80px)] flex flex-col p-4">
+        <Card className="flex-1 flex flex-col overflow-hidden">
+          <CardHeader className="flex-shrink-0 border-b">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-semibold text-gray-900 dark:text-white">Getting Started</h2>
-                <p className="text-sm text-gray-500">Let's get to know each other before we dive in</p>
+                <CardTitle className="text-xl">
+                  {interviewTypeLabel} Interview
+                </CardTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {activeSession.targetRole} • {activeSession.difficulty} level
+                </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <MessageCircle className="h-5 w-5 text-blue-500" />
+                  <span className="text-sm text-gray-600">
+                    Getting to know each other
+                  </span>
+                </div>
+                <Progress value={0} className="w-32 h-2" />
               </div>
             </div>
-            
-            {/* Messages */}
-            <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-              {preludeMessages.map((msg, idx) => (
-                <div 
-                  key={idx} 
-                  className={cn(
-                    "flex gap-3",
-                    msg.role === 'candidate' && "justify-end"
-                  )}
-                >
-                  {msg.role === 'interviewer' && (
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Briefcase className="h-4 w-4 text-blue-600" />
-                    </div>
-                  )}
-                  <div 
-                    className={cn(
-                      "rounded-lg px-4 py-3 max-w-[80%]",
-                      msg.role === 'interviewer' 
-                        ? "bg-gray-100 dark:bg-gray-800" 
-                        : "bg-blue-600 text-white"
+          </CardHeader>
+
+          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+            {preludeMessages.map((msg, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-start space-x-3",
+                  msg.role === 'candidate' && "flex-row-reverse space-x-reverse"
+                )}
+              >
+                <Avatar className={cn(
+                  "h-10 w-10",
+                  msg.role === 'interviewer' ? "bg-blue-100" : "bg-green-100"
+                )}>
+                  <AvatarFallback>
+                    {msg.role === 'interviewer' ? (
+                      <Bot className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <UserIcon className="h-5 w-5 text-green-600" />
                     )}
-                  >
-                    <p className="text-sm">{msg.content}</p>
-                  </div>
-                  {msg.role === 'candidate' && (
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Play className="h-4 w-4 text-gray-600" />
-                    </div>
-                  )}
+                  </AvatarFallback>
+                </Avatar>
+                <div className={cn(
+                  "max-w-[70%] rounded-lg p-4",
+                  msg.role === 'interviewer' 
+                    ? "bg-blue-50 text-gray-900" 
+                    : "bg-green-50 text-gray-900"
+                )}>
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
                 </div>
-              ))}
-              
-              {isPreludeSubmitting && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Briefcase className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            ))}
             
-            {/* Input */}
-            <div className="flex gap-3">
-              <input
-                type="text"
+            {isPreludeSubmitting && (
+              <div className="flex items-start space-x-3">
+                <Avatar className="h-10 w-10 bg-blue-100">
+                  <AvatarFallback>
+                    <Bot className="h-5 w-5 text-blue-600" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+
+          <div className="flex-shrink-0 border-t p-4">
+            <div className="flex space-x-3">
+              <Textarea
                 value={preludeResponse}
                 onChange={(e) => setPreludeResponse(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePreludeSubmit()}
-                placeholder="Type your response..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handlePreludeSubmit();
+                  }
+                }}
+                placeholder="Type your response here... (Press Enter to send, Shift+Enter for new line)"
+                className="flex-1 min-h-[80px] resize-none"
                 disabled={isPreludeSubmitting}
-                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 data-testid="input-prelude-response"
               />
               <Button 
-                onClick={handlePreludeSubmit} 
+                onClick={handlePreludeSubmit}
                 disabled={!preludeResponse.trim() || isPreludeSubmitting}
+                className="self-end"
                 data-testid="button-send-prelude"
               >
-                <Play className="h-4 w-4" />
+                {isPreludeSubmitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
               </Button>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
     );
