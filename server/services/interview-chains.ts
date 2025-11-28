@@ -3,6 +3,15 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 
+/**
+ * Strip Qwen3's <think>...</think> reasoning tags from output
+ * Qwen3 is a reasoning model that outputs its chain-of-thought in these tags
+ */
+export function stripThinkingTags(text: string): string {
+  // Remove <think>...</think> blocks (including multiline)
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
 // Using Qwen3-32B for better reasoning quality (latency is acceptable - gives "thinking" feel)
 const MODEL_NAME = "qwen/qwen3-32b";
 
@@ -657,7 +666,7 @@ export class IntroductionChain {
       candidateCv: config.candidateCv || "CV not provided",
       interviewType: config.interviewType,
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 
   private getInterviewerRole(interviewType: string): string {
@@ -716,7 +725,7 @@ export class GreetingChain {
       candidateName,
       interviewType: config.interviewType,
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 
   private getInterviewerRole(interviewType: string): string {
@@ -764,7 +773,7 @@ export class IntroExchangeChain {
       companyName: config.companyName || "the company",
       candidateResponse,
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 
   private getInterviewerRole(interviewType: string): string {
@@ -802,7 +811,7 @@ export class SelfIntroChain {
       jobTitle: config.jobTitle || `${config.targetRole} position`,
       jobRequirements: config.jobRequirements || "Standard requirements for this role",
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 
   private getInterviewerRole(interviewType: string): string {
@@ -836,7 +845,7 @@ export class ReflectionChain {
       interviewerName,
     });
     
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 }
 
@@ -857,7 +866,7 @@ export class ClosureChain {
       companyName: config.companyName || "the company",
       jobTitle: config.jobTitle || `${config.targetRole} position`,
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 }
 
@@ -878,7 +887,7 @@ export class WrapupChain {
       companyName: config.companyName || "the company",
       jobTitle: config.jobTitle || `${config.targetRole} position`,
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 }
 
@@ -937,7 +946,7 @@ export class QuestionGeneratorChain {
       lastAnswer: lastAnswer,
       activeProject: context.activeProject || "No specific project mentioned yet",
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 
   private async generateHrQuestion(context: QuestionContext, lastAnswer: string): Promise<string> {
@@ -972,7 +981,7 @@ export class QuestionGeneratorChain {
       lastAnswer: lastAnswer || "N/A (first question)",
       currentGoal: currentGoal,
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
   
   private getGoalForTopic(topic: 'background' | 'skills' | 'behavioral' | 'motivation' | 'culture_fit' | 'logistics'): string {
@@ -1111,7 +1120,7 @@ Pick what feels natural given the conversation so far.`;
       lastAnswer: lastAnswer,
       activeProject: context.activeProject || "No specific project mentioned yet",
     });
-    return result.trim();
+    return stripThinkingTags(result).trim();
   }
 
   private getInterviewTypeFocus(interviewType: string): string {
@@ -1381,7 +1390,9 @@ Output ONLY the JSON object.
 `);
 
 function stripMarkdownCodeBlocks(text: string): string {
-  let cleaned = text.trim();
+  // First strip Qwen3 thinking tags
+  let cleaned = stripThinkingTags(text);
+  
   if (cleaned.startsWith('```json')) {
     cleaned = cleaned.slice(7);
   } else if (cleaned.startsWith('```')) {

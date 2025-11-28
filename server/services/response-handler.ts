@@ -1,6 +1,7 @@
 import { ChatGroq } from "@langchain/groq";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { CandidateIntent, ClassificationResult } from "./response-classifier";
+import { stripThinkingTags } from "./interview-chains";
 
 // ==================== RESPONSE HANDLER ====================
 // Generates appropriate interviewer responses based on candidate intent
@@ -257,7 +258,8 @@ export class ResponseHandler {
     const content = typeof response.content === 'string' 
       ? response.content 
       : JSON.stringify(response.content);
-    return content.trim();
+    // Strip Qwen3 thinking tags before returning
+    return stripThinkingTags(content).trim();
   }
 }
 
