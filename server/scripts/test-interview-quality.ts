@@ -334,8 +334,8 @@ async function runSingleInterview(iteration: number): Promise<IterationResult> {
     }
   }
   
-  // Main interview loop
-  const maxQuestions = 5;
+  // Main interview loop - let it run until natural wrap-up (no artificial limit)
+  const maxQuestions = 20; // Safety limit only, should wrap up naturally before this
   
   while (questionCount < maxQuestions) {
     const currentSession = await storage.getInterviewSession(session.id);
