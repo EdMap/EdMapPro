@@ -44,6 +44,8 @@ interface ConversationMemory {
   preludeStep: number; // 0 = greeting, 1 = intro exchange, 2 = self-intro, 3+ = questions
   preludeResponses: string[]; // Store candidate's prelude responses
   candidateName?: string;
+  candidateWentFirst?: boolean; // Track if candidate introduced themselves first
+  awaitingCandidateIntro?: boolean; // Waiting for candidate to share their intro
 }
 
 export class InterviewOrchestrator {
@@ -192,6 +194,62 @@ export class InterviewOrchestrator {
   }
 
   /**
+   * Classify candidate's response to intro exchange proposal
+   * Returns: 'interviewer_first' | 'candidate_first' | 'skip_intros' | 'unclear'
+   */
+  private classifyIntroResponse(response: string): 'interviewer_first' | 'candidate_first' | 'skip_intros' | 'unclear' {
+    const lower = response.toLowerCase();
+    
+    // Candidate wants to go first
+    const candidateFirstPatterns = [
+      /i('d| would) (like to|prefer to|want to) (go |start )?first/i,
+      /let me (go |start )?first/i,
+      /can i (go |start )?first/i,
+      /i('ll| will) (go |start )?first/i,
+      /me first/i,
+      /i start/i,
+      /i'd rather start/i,
+    ];
+    
+    for (const pattern of candidateFirstPatterns) {
+      if (pattern.test(response)) {
+        return 'candidate_first';
+      }
+    }
+    
+    // Candidate wants to skip intros
+    const skipPatterns = [
+      /skip (the )?intro/i,
+      /no (need for )?intro/i,
+      /let's (just )?get (right )?(to|into)/i,
+      /skip (to|ahead)/i,
+      /don't need intro/i,
+    ];
+    
+    for (const pattern of skipPatterns) {
+      if (pattern.test(response)) {
+        return 'skip_intros';
+      }
+    }
+    
+    // Default: agrees to let interviewer go first (or unclear = default to interviewer first)
+    // Common agreement patterns
+    const agreePatterns = [
+      /sure|okay|yes|sounds good|go ahead|please/i,
+      /that works|that's fine|perfect|great/i,
+    ];
+    
+    for (const pattern of agreePatterns) {
+      if (pattern.test(response)) {
+        return 'interviewer_first';
+      }
+    }
+    
+    // If unclear, default to interviewer first
+    return 'interviewer_first';
+  }
+
+  /**
    * Handle candidate responses during the conversational prelude phase
    * Returns the interviewer's next prelude message, or the first question when prelude is complete
    */
@@ -225,13 +283,62 @@ export class InterviewOrchestrator {
     }
 
     if (memory.preludeStep === 2) {
-      // Step 2: After they agree to intros, give self-intro and invite them to introduce
+      // Check if we're waiting for candidate to share their intro (they went first)
+      if (memory.awaitingCandidateIntro) {
+        // Candidate just shared their intro - now give role overview
+        memory.awaitingCandidateIntro = false;
+        memory.candidateWentFirst = true;
+        
+        // Acknowledge their intro and give role overview
+        const selfIntroText = await this.selfIntro.generate(config);
+        const ackAndIntro = `Thanks for sharing that! ${selfIntroText}`;
+        return { preludeMessage: ackAndIntro, preludeComplete: false };
+      }
+      
+      // Step 2: Parse candidate's response to intro exchange proposal
+      const introPreference = this.classifyIntroResponse(candidateResponse);
+      
+      if (introPreference === 'candidate_first') {
+        // Candidate wants to go first - acknowledge and wait for their intro
+        const ackMessage = "Of course, please go ahead! I'd love to hear about you first.";
+        memory.awaitingCandidateIntro = true;
+        memory.preludeStep = 1; // Stay at step 1 so next increment brings us back to step 2
+        return { preludeMessage: ackMessage, preludeComplete: false };
+      }
+      
+      if (introPreference === 'skip_intros') {
+        // Skip straight to questions - mark prelude complete
+        memory.currentStage = "opening";
+        memory.preludeStep = 3; // Mark prelude as complete for isInPreludeMode check
+        
+        const questionText = await this.questionGenerator.generate({
+          config,
+          questionIndex: 0,
+          previousQuestions: memory.questions,
+          previousAnswers: memory.answers,
+          previousScores: memory.scores,
+        });
+
+        memory.questions.push(questionText);
+
+        const question = await storage.createInterviewQuestion({
+          sessionId: session.id,
+          questionIndex: 0,
+          questionText,
+          questionType: "opening",
+          expectedCriteria: this.getExpectedCriteria(config, 0),
+        });
+
+        return { firstQuestion: question, preludeComplete: true };
+      }
+      
+      // Default: interviewer goes first with role overview
       const selfIntroText = await this.selfIntro.generate(config);
       return { preludeMessage: selfIntroText, preludeComplete: false };
     }
 
     if (memory.preludeStep >= 3) {
-      // Step 3+: After candidate introduces themselves, start the real interview
+      // Step 3+: After intros are done, start the real interview
       memory.currentStage = "opening";
       
       // Generate the first real interview question
