@@ -343,6 +343,35 @@ export class InterviewOrchestrator {
   }
 
   /**
+   * Generate a warm response that also includes the role overview
+   * Used when candidate asks a conversational question during the intro exchange
+   */
+  private async generateWarmResponseWithIntro(response: string, config: InterviewConfig): Promise<string> {
+    const lower = response.toLowerCase();
+    
+    // Get the role overview
+    const roleOverview = await this.selfIntro.generate(config);
+    
+    // Generate appropriate warm prefix based on their question
+    let warmPrefix: string;
+    
+    if (/how('re| are) you/i.test(lower) || /how about you/i.test(lower) || /and you\??/i.test(lower)) {
+      const responses = [
+        "I'm doing great, thanks for asking!",
+        "I'm doing well, thank you for asking!",
+        "Doing well, thanks! I appreciate you asking.",
+      ];
+      warmPrefix = responses[Math.floor(Math.random() * responses.length)];
+    } else if (/before (that|we)/i.test(lower)) {
+      warmPrefix = "Of course! I'm doing well, thanks for asking.";
+    } else {
+      warmPrefix = "I appreciate you asking! I'm doing well.";
+    }
+    
+    return `${warmPrefix} ${roleOverview}`;
+  }
+
+  /**
    * Handle candidate responses during the conversational prelude phase
    * Returns the interviewer's next prelude message, or the first question when prelude is complete
    */
@@ -386,6 +415,17 @@ export class InterviewOrchestrator {
         const selfIntroText = await this.selfIntro.generate(config);
         const ackAndIntro = `Thanks for sharing that! ${selfIntroText}`;
         return { preludeMessage: ackAndIntro, preludeComplete: false };
+      }
+      
+      // Check if the candidate is asking a conversational question alongside their response
+      // e.g., "Sure. But before that, how are you?"
+      const hasConversationalQuestion = this.isConversationalQuestion(candidateResponse);
+      
+      if (hasConversationalQuestion) {
+        // Answer their question and then proceed with role overview
+        const warmResponse = await this.generateWarmResponseWithIntro(candidateResponse, config);
+        // Don't decrement - we're answering and proceeding to role overview in one message
+        return { preludeMessage: warmResponse, preludeComplete: false };
       }
       
       // Step 2: Parse candidate's response to intro exchange proposal
