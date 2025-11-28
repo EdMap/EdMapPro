@@ -244,7 +244,8 @@ export class InterviewOrchestrator {
     // Adaptive reflection: skip for wrapup answers, only ~40% for core with longer answers
     let reflectionText: string | undefined;
     if (answeredQuestionStage === "core" && shouldGenerateReflection(answer, answeredQuestionStage)) {
-      reflectionText = await this.reflection.generate(answer, memory.lastReflection);
+      const interviewerName = this.getInterviewerName(session.interviewType);
+      reflectionText = await this.reflection.generate(answer, memory.lastReflection, interviewerName);
       memory.lastReflection = reflectionText;
     }
     
@@ -389,6 +390,22 @@ export class InterviewOrchestrator {
     const currentIndex = levels.indexOf(current);
     const newIndex = Math.max(0, Math.min(levels.length - 1, currentIndex + delta));
     return levels[newIndex];
+  }
+
+  private getInterviewerName(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "Sarah";
+      case "technical":
+        return "Michael";
+      case "system-design":
+        return "David";
+      case "case-study":
+        return "Jennifer";
+      default:
+        return "Alex";
+    }
   }
 }
 
