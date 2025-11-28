@@ -9,7 +9,15 @@ import { StringOutputParser } from "@langchain/core/output_parsers";
  */
 export function stripThinkingTags(text: string): string {
   // Remove <think>...</think> blocks (including multiline)
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  
+  // Remove wrapping quotation marks if the entire response is quoted
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+      (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  
+  return cleaned;
 }
 
 // Using Qwen3-32B for better reasoning quality (latency is acceptable - gives "thinking" feel)
