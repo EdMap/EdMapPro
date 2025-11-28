@@ -1011,7 +1011,11 @@ export class InterviewOrchestrator {
           jobRequirements: config.jobRequirements
         }
       );
-      candidateQuestionAnswer = handlerResult.response;
+      // Don't include elaboration offer acknowledgments in mixed content
+      // The triage chain will handle whether we need more info
+      if (!handlerResult.isElaborationOffer) {
+        candidateQuestionAnswer = handlerResult.response;
+      }
     }
     
     // Use sanitized text for evaluation (protects against injection)
