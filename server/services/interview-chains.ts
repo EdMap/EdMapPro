@@ -172,6 +172,105 @@ export interface InterviewConfig {
   jobRequirements?: string;
   candidateCv?: string;
   interviewerName?: string;
+  // Stage runtime settings for dynamic interview flow
+  stageSettings?: StageRuntimeSettings;
+}
+
+// Stage-specific runtime settings for dynamic interview flow
+export interface StageRuntimeSettings {
+  minDurationMs: number;      // Minimum interview duration in milliseconds
+  maxDurationMs: number;      // Maximum interview duration in milliseconds
+  minQuestions: number;       // Minimum core questions to ask
+  maxQuestions: number;       // Hard limit on questions (prevents endless interviews)
+  criticalCriteria: AssessmentCriterion[]; // Must-cover criteria for this stage
+  sufficiencyThresholds: {
+    overall: number;          // Required overall coverage (0-1)
+    critical: number;         // Required coverage for critical criteria (0-1)
+    confidence: number;       // Required evaluator confidence for early end (0-1)
+  };
+}
+
+// Interview stage type definitions
+export type InterviewStageType = 'hr_screening' | 'technical' | 'behavioral' | 'final' | 'case_study';
+
+// Default stage settings for each interview type
+export const DEFAULT_STAGE_SETTINGS: Record<InterviewStageType, StageRuntimeSettings> = {
+  hr_screening: {
+    minDurationMs: 15 * 60 * 1000,  // 15 minutes
+    maxDurationMs: 30 * 60 * 1000,  // 30 minutes
+    minQuestions: 4,
+    maxQuestions: 12,
+    criticalCriteria: ['background', 'motivation', 'culture_fit'],
+    sufficiencyThresholds: {
+      overall: 0.70,
+      critical: 0.60,
+      confidence: 0.75
+    }
+  },
+  technical: {
+    minDurationMs: 35 * 60 * 1000,  // 35 minutes
+    maxDurationMs: 55 * 60 * 1000,  // 55 minutes
+    minQuestions: 6,
+    maxQuestions: 18,
+    criticalCriteria: ['skills', 'background'],
+    sufficiencyThresholds: {
+      overall: 0.75,
+      critical: 0.70,
+      confidence: 0.80
+    }
+  },
+  behavioral: {
+    minDurationMs: 25 * 60 * 1000,  // 25 minutes
+    maxDurationMs: 40 * 60 * 1000,  // 40 minutes
+    minQuestions: 5,
+    maxQuestions: 15,
+    criticalCriteria: ['behavioral', 'culture_fit', 'motivation'],
+    sufficiencyThresholds: {
+      overall: 0.70,
+      critical: 0.65,
+      confidence: 0.75
+    }
+  },
+  final: {
+    minDurationMs: 25 * 60 * 1000,  // 25 minutes
+    maxDurationMs: 40 * 60 * 1000,  // 40 minutes
+    minQuestions: 5,
+    maxQuestions: 12,
+    criticalCriteria: ['culture_fit', 'motivation', 'logistics'],
+    sufficiencyThresholds: {
+      overall: 0.75,
+      critical: 0.70,
+      confidence: 0.80
+    }
+  },
+  case_study: {
+    minDurationMs: 40 * 60 * 1000,  // 40 minutes
+    maxDurationMs: 60 * 60 * 1000,  // 60 minutes
+    minQuestions: 3,
+    maxQuestions: 8,
+    criticalCriteria: ['skills', 'behavioral'],
+    sufficiencyThresholds: {
+      overall: 0.80,
+      critical: 0.75,
+      confidence: 0.85
+    }
+  }
+};
+
+// Helper to get stage settings from interview type
+export function getStageSettings(interviewType: string): StageRuntimeSettings {
+  const typeMapping: Record<string, InterviewStageType> = {
+    'hr': 'hr_screening',
+    'hr_screening': 'hr_screening',
+    'recruiter_call': 'hr_screening',
+    'behavioral': 'behavioral',
+    'technical': 'technical',
+    'case_study': 'case_study',
+    'final': 'final'
+  };
+  
+  const stageType = typeMapping[interviewType.toLowerCase()] || 'hr_screening';
+  return DEFAULT_STAGE_SETTINGS[stageType];
 }
 
 export interface QuestionContext {

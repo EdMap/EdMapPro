@@ -67,6 +67,12 @@ interface PreludeMessage {
   content: string;
 }
 
+interface PacingInfo {
+  elapsedMinutes: number;
+  progressPercent: number;
+  status: 'starting' | 'on_track' | 'mid_interview' | 'wrapping_soon' | 'overtime';
+}
+
 interface LangchainInterviewSessionProps {
   session: InterviewSession;
   firstQuestion: InterviewQuestion;
@@ -123,6 +129,8 @@ export default function LangchainInterviewSession({
   const [showPreparingFeedback, setShowPreparingFeedback] = useState(false);
   const [showInterviewEndModal, setShowInterviewEndModal] = useState(false);
   const [pendingFinalReport, setPendingFinalReport] = useState<FinalReport | null>(null);
+  const [pacing, setPacing] = useState<PacingInfo>({ elapsedMinutes: 0, progressPercent: 0, status: 'starting' });
+  const [startTime] = useState(() => Date.now());
   const [showFeedbackBanner, setShowFeedbackBanner] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -133,6 +141,25 @@ export default function LangchainInterviewSession({
   useEffect(() => {
     scrollToBottom();
   }, [messages, showTypingIndicator]);
+  
+  // Local timer to update elapsed time every 10 seconds for smooth display
+  useEffect(() => {
+    // Immediate update on mount
+    const elapsed = Math.floor((Date.now() - startTime) / 60000);
+    setPacing(prev => ({ ...prev, elapsedMinutes: elapsed }));
+    
+    const timer = setInterval(() => {
+      const elapsedNow = Math.floor((Date.now() - startTime) / 60000);
+      setPacing(prev => {
+        if (prev.elapsedMinutes !== elapsedNow) {
+          return { ...prev, elapsedMinutes: elapsedNow };
+        }
+        return prev;
+      });
+    }, 10000); // Update every 10 seconds for smoother UX
+    
+    return () => clearInterval(timer);
+  }, [startTime]);
 
   const submitAnswerMutation = useMutation({
     mutationFn: async ({ questionId, answer }: { questionId: number; answer: string }) => {
@@ -251,6 +278,11 @@ export default function LangchainInterviewSession({
           showEndModal(result.finalReport);
         }
       } else if (result.nextQuestion) {
+        // Update pacing info if provided
+        if (result.pacing) {
+          setPacing(result.pacing);
+        }
+        
         // Update session state immediately to avoid stale state
         setSession(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex + 1 }));
         setCurrentQuestion(result.nextQuestion);
@@ -577,16 +609,65 @@ export default function LangchainInterviewSession({
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Time-based pacing indicator */}
               <div className="flex items-center space-x-2">
-                <Target className="h-5 w-5 text-gray-400" />
+                <Clock className="h-5 w-5 text-gray-400" />
                 <span className="text-sm text-gray-600">
-                  Question {session.currentQuestionIndex + 1} of {session.totalQuestions}
+                  {pacing.elapsedMinutes} min
                 </span>
               </div>
-              <Progress 
-                value={((session.currentQuestionIndex + 1) / session.totalQuestions) * 100} 
-                className="w-32 h-2"
-              />
+              
+              {/* Status chip */}
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-xs px-2 py-0.5",
+                  pacing.status === 'starting' && "border-blue-200 bg-blue-50 text-blue-700",
+                  pacing.status === 'on_track' && "border-green-200 bg-green-50 text-green-700",
+                  pacing.status === 'mid_interview' && "border-yellow-200 bg-yellow-50 text-yellow-700",
+                  pacing.status === 'wrapping_soon' && "border-orange-200 bg-orange-50 text-orange-700",
+                  pacing.status === 'overtime' && "border-red-200 bg-red-50 text-red-700"
+                )}
+                data-testid="badge-pacing-status"
+              >
+                {pacing.status === 'starting' && 'Getting started'}
+                {pacing.status === 'on_track' && 'On track'}
+                {pacing.status === 'mid_interview' && 'In progress'}
+                {pacing.status === 'wrapping_soon' && 'Wrapping up soon'}
+                {pacing.status === 'overtime' && 'Overtime'}
+              </Badge>
+              
+              {/* Progress ring (visual indicator) */}
+              <div className="relative w-8 h-8">
+                <svg className="w-8 h-8 transform -rotate-90">
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="12"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    className="text-gray-200"
+                  />
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="12"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeDasharray={`${pacing.progressPercent * 0.75} 100`}
+                    className={cn(
+                      pacing.status === 'starting' && "text-blue-500",
+                      pacing.status === 'on_track' && "text-green-500",
+                      pacing.status === 'mid_interview' && "text-yellow-500",
+                      pacing.status === 'wrapping_soon' && "text-orange-500",
+                      pacing.status === 'overtime' && "text-red-500"
+                    )}
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
         </CardHeader>

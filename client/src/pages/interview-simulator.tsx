@@ -263,15 +263,6 @@ export default function InterviewSimulator() {
                   {activeSession.targetRole} • {activeSession.difficulty} level
                 </p>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <MessageCircle className="h-5 w-5 text-blue-500" />
-                  <span className="text-sm text-gray-600">
-                    Getting to know each other
-                  </span>
-                </div>
-                <Progress value={0} className="w-32 h-2" />
-              </div>
             </div>
           </CardHeader>
 

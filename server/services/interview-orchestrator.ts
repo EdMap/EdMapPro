@@ -21,14 +21,25 @@ import {
   InterviewPlan,
   PlannedQuestion,
   TriageDecision,
+  StageRuntimeSettings,
   getInterviewStage,
   getPreludeStage,
   shouldGenerateReflection,
+  getStageSettings,
 } from "./interview-chains";
 import { storage } from "../storage";
 import type { InterviewSession, InterviewQuestion } from "@shared/schema";
 import { responseClassifier, CandidateIntent, ClassificationResult } from "./response-classifier";
 import { responseHandler } from "./response-handler";
+import { 
+  evaluateCompletion, 
+  CompletionDecisionResult, 
+  CompletionAction,
+  generatePacingNotice,
+  getWrapUpMessage,
+  getStageRuntimeConfig,
+  StageRuntimeConfig
+} from "./completion-decision";
 
 export interface JobContext {
   companyName?: string;
@@ -71,6 +82,16 @@ const SUFFICIENCY_CONFIG = {
   criticalAreas: ['background', 'skills', 'motivation'] as AssessmentCriterion[],
 };
 
+// Session telemetry for dynamic interview flow
+interface SessionTelemetry {
+  startedAt: number;            // Unix timestamp when interview started
+  firstQuestionAt?: number;     // Unix timestamp when first core question was asked
+  followUpsUsed: number;        // Number of follow-up questions asked
+  lowScoreStreak: number;       // Consecutive answers with score < 4
+  highScoreStreak: number;      // Consecutive answers with score >= 8
+  avgConfidence: number;        // Running average of evaluator confidence
+}
+
 interface ConversationMemory {
   questions: string[];
   answers: string[];
@@ -97,6 +118,8 @@ interface ConversationMemory {
   currentQuestionId?: string; // ID of the question currently being asked
   pendingFollowUp?: string; // Follow-up question to ask if response was partial/vague
   pendingCandidateQuestion?: string; // Question the candidate asked that needs answering
+  // Session telemetry for dynamic completion
+  telemetry: SessionTelemetry;
 }
 
 export class InterviewOrchestrator {
@@ -148,6 +171,16 @@ export class InterviewOrchestrator {
     };
   }
 
+  private initializeTelemetry(): SessionTelemetry {
+    return {
+      startedAt: Date.now(),
+      followUpsUsed: 0,
+      lowScoreStreak: 0,
+      highScoreStreak: 0,
+      avgConfidence: 0,
+    };
+  }
+
   private getMemory(sessionId: number): ConversationMemory {
     if (!this.memory.has(sessionId)) {
       this.memory.set(sessionId, {
@@ -164,6 +197,7 @@ export class InterviewOrchestrator {
         totalQuestionsAsked: 0,
         timeWarningGiven: false,
         preludeResponses: [],
+        telemetry: this.initializeTelemetry(),
       });
     }
     return this.memory.get(sessionId)!;
@@ -180,6 +214,7 @@ export class InterviewOrchestrator {
       jobTitle: jobContext?.jobTitle,
       jobRequirements: jobContext?.jobRequirements,
       candidateCv: jobContext?.candidateCv,
+      stageSettings: getStageSettings(session.interviewType),
     };
   }
 
@@ -311,46 +346,136 @@ export class InterviewOrchestrator {
 
   /**
    * Determine if the interview should wrap up based on coverage sufficiency
+   * Now uses the CompletionDecision engine for dynamic, time-based decisions
    */
-  private shouldWrapUp(memory: ConversationMemory): {
+  private shouldWrapUp(memory: ConversationMemory, config?: InterviewConfig): {
     shouldEnd: boolean;
     reason: 'sufficient' | 'max_reached' | 'time_pressure' | 'continue';
     message?: string;
+    pacing?: CompletionDecisionResult['pacing'];
+    prioritizedTopic?: AssessmentCriterion;
   } {
-    const sufficiency = this.calculateSufficiency(memory);
-    const questionsAsked = memory.totalQuestionsAsked;
+    // Get stage settings from config or use defaults
+    const stageSettings = config?.stageSettings || getStageSettings('hr_screening');
     
-    // Check if we've hit the max question limit
-    if (questionsAsked >= SUFFICIENCY_CONFIG.maxQuestions) {
+    // Calculate average score
+    const avgScore = memory.scores.length > 0 
+      ? memory.scores.reduce((a, b) => a + b, 0) / memory.scores.length 
+      : 5;
+    
+    // Count pending questions in backlog
+    const pendingBacklogCount = memory.interviewPlan?.questions
+      .filter(q => q.status === 'pending').length || 0;
+    
+    // Use the completion decision engine
+    const decision = evaluateCompletion({
+      coverage: memory.coverage,
+      telemetry: memory.telemetry,
+      questionsAsked: memory.totalQuestionsAsked,
+      stageSettings,
+      pendingBacklogCount,
+      avgScore
+    });
+    
+    // Map the new decision format to the existing return type
+    if (decision.action.type === 'wrap_up') {
+      const reasonMap: Record<string, 'sufficient' | 'max_reached' | 'time_pressure'> = {
+        'sufficient_coverage': 'sufficient',
+        'high_confidence_positive': 'sufficient',
+        'high_confidence_negative': 'sufficient',
+        'time_limit': 'time_pressure',
+        'max_questions': 'max_reached',
+        'candidate_fatigue': 'max_reached'
+      };
+      
       return {
         shouldEnd: true,
-        reason: 'max_reached',
-        message: sufficiency.gaps.length > 0
-          ? `We've covered a lot of ground today. I still had a few topics I wanted to explore, but we're at our time limit.`
-          : undefined
+        reason: reasonMap[decision.action.reason] || 'sufficient',
+        message: decision.action.message || getWrapUpMessage(decision.action.reason),
+        pacing: decision.pacing
       };
     }
     
-    // Check if we have sufficient coverage
-    if (sufficiency.overall >= SUFFICIENCY_CONFIG.overallThreshold && sufficiency.criticalMet) {
-      return {
-        shouldEnd: true,
-        reason: 'sufficient',
-      };
-    }
-    
-    // Check if we're approaching the limit with gaps remaining
-    const timeRatio = questionsAsked / SUFFICIENCY_CONFIG.maxQuestions;
-    if (timeRatio >= SUFFICIENCY_CONFIG.timeWarningThreshold && !memory.timeWarningGiven && sufficiency.gaps.length > 0) {
-      memory.timeWarningGiven = true;
+    if (decision.action.type === 'prioritize') {
+      // Time pressure with topic prioritization
+      if (!memory.timeWarningGiven) {
+        memory.timeWarningGiven = true;
+      }
       return {
         shouldEnd: false,
         reason: 'time_pressure',
-        message: `We're running a bit short on our scheduled time, but I still have a few key questions I'd like to cover.`
+        message: decision.action.reason,
+        pacing: decision.pacing,
+        prioritizedTopic: decision.action.topic
       };
     }
     
-    return { shouldEnd: false, reason: 'continue' };
+    // Continue normally
+    return { 
+      shouldEnd: false, 
+      reason: 'continue',
+      pacing: decision.pacing
+    };
+  }
+  
+  /**
+   * Update telemetry after each answer is scored
+   */
+  private updateTelemetry(memory: ConversationMemory, score: number): void {
+    const { telemetry } = memory;
+    
+    // Update score streaks
+    if (score < 4) {
+      telemetry.lowScoreStreak++;
+      telemetry.highScoreStreak = 0;
+    } else if (score >= 8) {
+      telemetry.highScoreStreak++;
+      telemetry.lowScoreStreak = 0;
+    } else {
+      // Reset streaks for mid-range scores
+      telemetry.lowScoreStreak = 0;
+      telemetry.highScoreStreak = 0;
+    }
+    
+    // Track first question time
+    if (!telemetry.firstQuestionAt && memory.totalQuestionsAsked === 1) {
+      telemetry.firstQuestionAt = Date.now();
+    }
+  }
+  
+  /**
+   * Calculate pacing info for frontend display
+   */
+  private getPacingInfo(memory: ConversationMemory, config: StageRuntimeConfig): {
+    elapsedMinutes: number;
+    progressPercent: number;
+    status: 'starting' | 'on_track' | 'mid_interview' | 'wrapping_soon' | 'overtime';
+  } {
+    const { telemetry } = memory;
+    const elapsedMs = Date.now() - telemetry.startedAt;
+    const elapsedMinutes = Math.floor(elapsedMs / 60000);
+    
+    const { minTimeMinutes, maxTimeMinutes } = config;
+    const targetTime = (minTimeMinutes + maxTimeMinutes) / 2;
+    
+    // Calculate progress as percentage of target time
+    const progressPercent = Math.min(100, Math.round((elapsedMinutes / targetTime) * 100));
+    
+    // Determine status based on time
+    let status: 'starting' | 'on_track' | 'mid_interview' | 'wrapping_soon' | 'overtime';
+    if (elapsedMinutes < 3) {
+      status = 'starting';
+    } else if (elapsedMinutes < minTimeMinutes * 0.5) {
+      status = 'on_track';
+    } else if (elapsedMinutes < minTimeMinutes * 0.85) {
+      status = 'mid_interview';
+    } else if (elapsedMinutes < maxTimeMinutes) {
+      status = 'wrapping_soon';
+    } else {
+      status = 'overtime';
+    }
+    
+    return { elapsedMinutes, progressPercent, status };
   }
 
   /**
@@ -942,6 +1067,12 @@ export class InterviewOrchestrator {
     candidateIntent?: CandidateIntent;
     currentQuestionText?: string; // The question that's still pending (for interim responses)
     candidateQuestionAnswer?: string; // Answer to a question the candidate asked (for mixed content)
+    // Pacing info for frontend
+    pacing?: {
+      elapsedMinutes: number;
+      progressPercent: number;
+      status: 'starting' | 'on_track' | 'mid_interview' | 'wrapping_soon' | 'overtime';
+    };
   }> {
     const session = await storage.getInterviewSession(sessionId);
     if (!session) {
@@ -1035,6 +1166,9 @@ export class InterviewOrchestrator {
     // Update coverage tracking for dynamic completion
     this.updateCoverage(memory, question.questionText, sanitizedAnswer, evaluation.score);
     
+    // Update telemetry for dynamic interview flow
+    this.updateTelemetry(memory, evaluation.score);
+    
     if (evaluation.projectMentioned) {
       if (evaluation.projectMentioned !== memory.activeProject) {
         memory.activeProject = evaluation.projectMentioned;
@@ -1061,7 +1195,7 @@ export class InterviewOrchestrator {
     );
 
     // Check dynamic interview completion based on coverage sufficiency
-    const wrapUpCheck = this.shouldWrapUp(memory);
+    const wrapUpCheck = this.shouldWrapUp(memory, config);
     
     // Determine stages: what stage was the question we just answered, and what's next
     const answeredQuestionStage = getInterviewStage(session.currentQuestionIndex, config.totalQuestions);
@@ -1237,6 +1371,7 @@ export class InterviewOrchestrator {
       // Use the follow-up question for partial/vague answers
       nextQuestionText = memory.pendingFollowUp;
       memory.pendingFollowUp = undefined; // Clear after use
+      memory.telemetry.followUpsUsed++; // Track follow-up usage for telemetry
     } else if (memory.interviewPlan) {
       // Use the next planned question from the backlog
       pendingPlannedQuestion = this.getNextPlannedQuestion(memory);
@@ -1321,7 +1456,11 @@ export class InterviewOrchestrator {
       expectedCriteria: this.getExpectedCriteria(config, nextQuestionIndex),
     });
 
-    return { evaluation, decision, nextQuestion, reflection: reflectionText, candidateQuestionAnswer };
+    // Calculate pacing info for frontend
+    const stageConfig = getStageRuntimeConfig(config.interviewType as 'hr' | 'technical' | 'final');
+    const pacing = this.getPacingInfo(memory, stageConfig);
+    
+    return { evaluation, decision, nextQuestion, reflection: reflectionText, candidateQuestionAnswer, pacing };
   }
 
   async generateFinalReport(sessionId: number): Promise<FinalReport> {
