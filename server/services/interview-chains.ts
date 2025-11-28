@@ -219,6 +219,7 @@ export interface TriageDecision {
   action: 'proceed_next' | 'follow_up' | 'answer_then_proceed' | 'acknowledge_coverage';
   reason: string;
   followUpPrompt?: string; // Specific follow-up if needed
+  candidateQuestion?: string; // The question the candidate asked (if has_question)
   coveredQuestionIds?: string[]; // Questions proactively covered by this answer
   acknowledgment?: string; // Natural acknowledgment for proactive coverage
 }
@@ -1339,25 +1340,39 @@ REMAINING PLANNED QUESTIONS:
 {remainingQuestions}
 
 Analyze the response and decide:
-1. Was the answer complete and specific? (satisfied)
-2. Did they partially answer but miss key aspects? (partial)
-3. Was the answer too vague or generic? (vague)
-4. Did they ask you a question? (has_question)
-5. Did they proactively cover topics from your remaining questions? (proactive_coverage)
+1. Was the answer complete with specific examples/details? (satisfied) → Move to next question
+2. Did they partially answer but miss key aspects? (partial) → Ask targeted follow-up
+3. Was the answer too vague/generic without specifics? (vague) → Probe for concrete example
+4. Did they ask YOU a question? (has_question) → Answer their question first
+5. Did they cover topics from remaining questions? (proactive_coverage) → Acknowledge and skip those
+
+CRITICAL RULES FOR FOLLOW-UPS:
+- NEVER rephrase or repeat the original question
+- For VAGUE: Ask for ONE specific example ("Can you give me a specific example of that?")
+- For PARTIAL: Ask about the MISSING piece only ("You mentioned X, but what about Y?")
+- Keep follow-ups SHORT (1 sentence, under 20 words)
+
+EXAMPLES:
+Original Q: "Walk me through your experience with model deployment"
+Vague answer: "I have experience deploying models"
+BAD follow-up: "Can you walk me through your experience with model deployment in detail?"
+GOOD follow-up: "Can you give me a specific example of a model you deployed?"
+
+Original Q: "How do you handle stakeholder communication?"
+Partial answer: "I create reports and dashboards"
+BAD follow-up: "Can you elaborate on how you handle stakeholder communication?"
+GOOD follow-up: "How do you handle it when stakeholders disagree with your findings?"
 
 Output a JSON object:
 {{
   "outcome": "satisfied|partial|vague|has_question|proactive_coverage",
   "action": "proceed_next|follow_up|answer_then_proceed|acknowledge_coverage",
-  "reason": "Brief explanation",
-  "followUpPrompt": "If partial/vague, what specific follow-up to ask",
+  "reason": "Brief explanation of what's missing or what they asked",
+  "followUpPrompt": "SHORT, SPECIFIC follow-up (only if partial/vague) - max 20 words",
+  "candidateQuestion": "The question they asked you (only if has_question)",
   "coveredQuestionIds": ["q2", "q3"] or null,
-  "acknowledgment": "If proactive coverage, a natural acknowledgment like 'That actually touches on what I was going to ask next!'"
+  "acknowledgment": "Natural acknowledgment for proactive coverage"
 }}
-
-Examples of proactive coverage:
-- If Q2 was about Python experience and they mentioned Python in their background answer
-- If you planned to ask about teamwork and they shared a collaboration story unprompted
 
 Output ONLY the JSON object.
 `);

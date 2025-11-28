@@ -96,6 +96,7 @@ interface ConversationMemory {
   interviewPlan?: InterviewPlan;
   currentQuestionId?: string; // ID of the question currently being asked
   pendingFollowUp?: string; // Follow-up question to ask if response was partial/vague
+  pendingCandidateQuestion?: string; // Question the candidate asked that needs answering
 }
 
 export class InterviewOrchestrator {
@@ -1151,6 +1152,11 @@ export class InterviewOrchestrator {
           triageDecision.followUpPrompt) {
         memory.pendingFollowUp = triageDecision.followUpPrompt;
       }
+      
+      // Handle candidate asking a question - we need to answer it first
+      if (triageDecision.outcome === 'has_question' && triageDecision.candidateQuestion) {
+        memory.pendingCandidateQuestion = triageDecision.candidateQuestion;
+      }
     }
     
     // Adaptive reflection: skip for wrapup answers, only ~40% for core with longer answers
@@ -1172,6 +1178,33 @@ export class InterviewOrchestrator {
     let timePressurePrefix = '';
     if (wrapUpCheck.reason === 'time_pressure' && wrapUpCheck.message) {
       timePressurePrefix = wrapUpCheck.message + ' ';
+    }
+    
+    // Handle candidate's question if they asked one
+    let candidateQuestionAnswerPrefix = '';
+    if (memory.pendingCandidateQuestion && triageDecision?.outcome === 'has_question') {
+      // Generate answer to the candidate's question using response handler
+      const answerResult = await responseHandler.handleResponse(
+        { 
+          intent: 'question_for_recruiter', 
+          candidateQuestion: memory.pendingCandidateQuestion,
+          confidence: 0.9,
+          sanitizedText: sanitizedAnswer,
+          injectionDetected: false,
+        },
+        question.questionText,
+        {
+          interviewerName: this.getInterviewerName(session.interviewType),
+          companyName: config.companyName || memory.jobContext?.companyName,
+          companyDescription: config.companyDescription || memory.jobContext?.companyDescription,
+          jobTitle: config.targetRole || config.jobTitle || memory.jobContext?.jobTitle,
+          jobRequirements: config.jobRequirements || memory.jobContext?.jobRequirements,
+        }
+      );
+      if (answerResult.response) {
+        candidateQuestionAnswerPrefix = answerResult.response + ' ';
+      }
+      memory.pendingCandidateQuestion = undefined; // Clear after handling
     }
     
     // Generate next question based on triage decision and interview plan
@@ -1232,6 +1265,11 @@ export class InterviewOrchestrator {
     // Prepend time pressure message if applicable
     if (timePressurePrefix) {
       nextQuestionText = timePressurePrefix + nextQuestionText;
+    }
+    
+    // Prepend answer to candidate's question if they asked one
+    if (candidateQuestionAnswerPrefix) {
+      nextQuestionText = candidateQuestionAnswerPrefix + nextQuestionText;
     }
 
     memory.questions.push(nextQuestionText);
