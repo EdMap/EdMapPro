@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { cn } from "@/lib/utils";
 import { 
   GraduationCap, 
@@ -63,8 +63,21 @@ const navigationItems = [
   }
 ];
 
+// Paths that can be in Journey mode when they have specific URL params
+const journeyModeIndicators: Record<string, string[]> = {
+  "/interview": ["stageId"],
+  "/negotiation": ["applicationId"],
+};
+
 export default function Sidebar() {
   const [location] = useLocation();
+  const searchString = useSearch();
+  const searchParams = new URLSearchParams(searchString);
+
+  // Check if current page is in Journey mode (has journey-related URL params)
+  const isInJourneyMode = Object.entries(journeyModeIndicators).some(
+    ([path, params]) => location === path && params.some(p => searchParams.has(p))
+  );
 
   const groupedItems = navigationItems.reduce((acc, item) => {
     if (!acc[item.section]) {
@@ -73,6 +86,22 @@ export default function Sidebar() {
     acc[item.section].push(item);
     return acc;
   }, {} as Record<string, typeof navigationItems>);
+
+  // Determine which item should be active
+  const getIsActive = (item: typeof navigationItems[0]) => {
+    // If we're in Journey mode on a simulator page, highlight "Application Details" instead
+    if (isInJourneyMode && item.href === "/journey") {
+      return true;
+    }
+    
+    // If we're in Journey mode, don't highlight the practice section items
+    if (isInJourneyMode && item.section === "practice") {
+      return false;
+    }
+    
+    // Normal path matching
+    return location === item.href;
+  };
 
   return (
     <aside className="w-64 bg-white shadow-sm border-r border-gray-200 fixed h-full overflow-y-auto">
@@ -98,7 +127,7 @@ export default function Sidebar() {
             
             {items.map((item) => {
               const Icon = item.icon;
-              const isActive = location === item.href;
+              const isActive = getIsActive(item);
               
               return (
                 <Link
