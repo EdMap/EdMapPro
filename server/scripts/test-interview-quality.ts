@@ -13,7 +13,7 @@ interface ConversationTurn {
   speaker: 'interviewer' | 'candidate';
   message: string;
   questionNumber?: number;
-  responseType?: 'complete' | 'vague' | 'partial' | 'asks_question';
+  responseType?: 'complete' | 'vague' | 'partial' | 'asks_question' | 'offers_elaboration';
 }
 
 interface QualityEvaluation {
@@ -33,14 +33,15 @@ interface IterationResult {
 }
 
 // Response type distribution for realistic simulation
-type ResponseType = 'complete' | 'vague' | 'partial' | 'asks_question';
+type ResponseType = 'complete' | 'vague' | 'partial' | 'asks_question' | 'offers_elaboration';
 
 function getRandomResponseType(): ResponseType {
   const rand = Math.random();
-  if (rand < 0.5) return 'complete';      // 50% complete answers
-  if (rand < 0.7) return 'partial';       // 20% partial answers
-  if (rand < 0.85) return 'vague';        // 15% vague answers
-  return 'asks_question';                  // 15% asks a question back
+  if (rand < 0.4) return 'complete';           // 40% complete answers
+  if (rand < 0.55) return 'partial';           // 15% partial answers
+  if (rand < 0.7) return 'vague';              // 15% vague answers
+  if (rand < 0.85) return 'offers_elaboration'; // 15% offers to elaborate (TEST THE FIX)
+  return 'asks_question';                       // 15% asks a question back
 }
 
 // Samvel's CV content
@@ -140,6 +141,13 @@ class SimulatedCandidate {
       'asks_question': `Ask a CLARIFYING QUESTION instead of answering.
         1-2 sentences. Show interest but need more context.
         Example: "What kind of scale are we talking about here?"`,
+      
+      'offers_elaboration': `Give a brief answer then OFFER TO ELABORATE more.
+        2 sentences. Provide some info, then ask if they want more details.
+        Examples: 
+        - "I worked on a churn model at Rabobank. Would you like me to elaborate on the technical details?"
+        - "Yes, I have experience with that. Should I go into more detail about how I implemented it?"
+        - "I already mentioned the predictive model. Would you like me to go deeper into the methodology?"`,
     };
 
     const prompt = `You are ${this.profile.name}, a candidate in a job interview for a Senior Data Scientist position.
