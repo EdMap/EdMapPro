@@ -940,6 +940,10 @@ export class InterviewOrchestrator {
     memory.answers.push(answer);
     memory.scores.push(evaluation.score);
     memory.evaluations.push(evaluation);
+    memory.totalQuestionsAsked++;
+    
+    // Update coverage tracking for dynamic completion
+    this.updateCoverage(memory, question.questionText, sanitizedAnswer, evaluation.score);
     
     if (evaluation.projectMentioned) {
       if (evaluation.projectMentioned !== memory.activeProject) {
@@ -966,13 +970,17 @@ export class InterviewOrchestrator {
       memory.scores
     );
 
+    // Check dynamic interview completion based on coverage sufficiency
+    const wrapUpCheck = this.shouldWrapUp(memory);
+    
     // Determine stages: what stage was the question we just answered, and what's next
     const answeredQuestionStage = getInterviewStage(session.currentQuestionIndex, config.totalQuestions);
     memory.currentStage = answeredQuestionStage;
     
-    const isLastQuestion = session.currentQuestionIndex >= config.totalQuestions - 1;
+    // Use dynamic sufficiency check instead of fixed question count
+    const shouldEndInterview = wrapUpCheck.shouldEnd || decision.action === "end_interview";
     
-    if (decision.action === "end_interview" || isLastQuestion) {
+    if (shouldEndInterview) {
       // Check if the candidate asked a question (e.g., when wrapup asked "do you have questions?")
       // We should answer their question before closing
       let closingQuestionAnswer: string | undefined;
@@ -1021,7 +1029,6 @@ export class InterviewOrchestrator {
     }
 
     const nextQuestionIndex = session.currentQuestionIndex + 1;
-    const nextQuestionStage = getInterviewStage(nextQuestionIndex, config.totalQuestions);
     
     await storage.updateInterviewSession(sessionId, {
       currentQuestionIndex: nextQuestionIndex,
@@ -1041,14 +1048,26 @@ export class InterviewOrchestrator {
       memory.lastReflection = reflectionText;
     }
     
-    // Generate next question based on upcoming stage
-    let nextQuestionText: string;
+    // Add time pressure messaging if we're running short
+    let timePressurePrefix = '';
+    if (wrapUpCheck.reason === 'time_pressure' && wrapUpCheck.message) {
+      timePressurePrefix = wrapUpCheck.message + ' ';
+    }
     
-    if (nextQuestionStage === "wrapup") {
-      // Use wrapup chain for the final question
+    // Generate next question based on coverage gaps (prioritize uncovered areas)
+    let nextQuestionText: string;
+    const prioritizedTopic = this.getPrioritizedTopic(memory);
+    
+    // Check if we should do a final wrapup (approaching max questions with good coverage)
+    const sufficiency = this.calculateSufficiency(memory);
+    const isNearingEnd = memory.totalQuestionsAsked >= SUFFICIENCY_CONFIG.maxQuestions - 2;
+    const shouldDoWrapup = isNearingEnd || (sufficiency.overall >= 0.65 && sufficiency.criticalMet);
+    
+    if (shouldDoWrapup && !sufficiency.gaps.includes('logistics')) {
+      // We have good coverage - do a natural wrapup
       nextQuestionText = await this.wrapup.generate(config);
     } else {
-      // Normal question generation for core phase
+      // Generate a focused question based on coverage gaps
       nextQuestionText = await this.questionGenerator.generate({
         config: {
           ...config,
@@ -1063,7 +1082,13 @@ export class InterviewOrchestrator {
         previousAnswers: memory.answers,
         previousScores: memory.scores,
         activeProject: memory.activeProject,
+        prioritizedTopic: prioritizedTopic || undefined,
       });
+    }
+    
+    // Prepend time pressure message if applicable
+    if (timePressurePrefix) {
+      nextQuestionText = timePressurePrefix + nextQuestionText;
     }
 
     memory.questions.push(nextQuestionText);

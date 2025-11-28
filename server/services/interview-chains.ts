@@ -159,6 +159,7 @@ export interface QuestionContext {
   previousScores: number[];
   lastAnswer?: string;
   activeProject?: string | null;
+  prioritizedTopic?: 'background' | 'skills' | 'behavioral' | 'motivation' | 'culture_fit' | 'logistics';
 }
 
 export interface EvaluationResult {
@@ -909,7 +910,10 @@ export class QuestionGeneratorChain {
       ? extractCvHighlights(config.candidateCv)
       : "No CV provided";
     
-    const currentGoal = this.getHrQuestionGoal(questionNum, config.totalQuestions);
+    // Use prioritized topic from coverage tracking if available, otherwise use fixed goals
+    const currentGoal = context.prioritizedTopic 
+      ? this.getGoalForTopic(context.prioritizedTopic)
+      : this.getHrQuestionGoal(questionNum, config.totalQuestions);
     
     // Include full CV context for more natural, personalized questions
     const candidateCvContext = config.candidateCv || "CV not provided";
@@ -931,6 +935,51 @@ export class QuestionGeneratorChain {
       currentGoal: currentGoal,
     });
     return result.trim();
+  }
+  
+  private getGoalForTopic(topic: 'background' | 'skills' | 'behavioral' | 'motivation' | 'culture_fit' | 'logistics'): string {
+    switch (topic) {
+      case 'background':
+        return `BACKGROUND: We need more information about their professional background.
+Ask about their experience, past roles, or career journey.
+Example: "I'd love to hear more about your background—what brought you to this field?"
+Keep it open-ended.`;
+      
+      case 'skills':
+        return `SKILLS/TECHNICAL FIT: We need to assess their technical capabilities.
+Ask about specific skills mentioned in job requirements or their CV.
+Example: "You mentioned working with [technology]. Can you tell me more about that experience?"
+Focus on practical, hands-on experience.`;
+      
+      case 'behavioral':
+        return `BEHAVIORAL: We need examples of how they work with others.
+Ask about collaboration, handling challenges, or team dynamics.
+Example: "Can you walk me through a time when you had to work through a disagreement with a colleague?"
+Look for STAR-format answers.`;
+      
+      case 'motivation':
+        return `MOTIVATION: We need to understand what drives them.
+Ask about their interest in this role, career goals, or what excites them.
+Example: "What attracted you to this opportunity?" or "What are you looking for in your next role?"
+Show genuine interest in their aspirations.`;
+      
+      case 'culture_fit':
+        return `CULTURE FIT: We need to assess team compatibility.
+Ask about work style, preferred environment, or values.
+Example: "What kind of team environment do you thrive in?" or "How do you prefer to receive feedback?"
+Keep it conversational.`;
+      
+      case 'logistics':
+        return `LOGISTICS: We need practical information.
+Ask about availability, location, or timeline. Pick ONE:
+- "What's your availability like if we move forward?"
+- "Where are you currently based?"
+- "What's your timeline looking like?"
+Keep it brief and respectful.`;
+      
+      default:
+        return `GENERAL: Ask a relevant follow-up based on the conversation so far.`;
+    }
   }
   
   private getHrQuestionGoal(questionNum: number, totalQuestions: number): string {
