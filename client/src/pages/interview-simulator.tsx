@@ -72,6 +72,10 @@ export default function InterviewSimulator() {
   const [completedPreludeMessages, setCompletedPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string}>>([]);
   const [preludeResponse, setPreludeResponse] = useState("");
   const [isPreludeSubmitting, setIsPreludeSubmitting] = useState(false);
+  
+  // Pacing state for prelude
+  const [preludeStartTime, setPreludeStartTime] = useState<number | null>(null);
+  const [preludeElapsedMinutes, setPreludeElapsedMinutes] = useState(0);
 
   // Determine mode based on URL params
   const isJourneyMode = applicationStageId !== null;
@@ -210,6 +214,27 @@ export default function InterviewSimulator() {
       });
     }
   }, [user, applicationStageId, autoStarted, activeSession]);
+  
+  // Track elapsed time during prelude
+  useEffect(() => {
+    if (isPreludeMode && activeSession && !preludeStartTime) {
+      setPreludeStartTime(Date.now());
+    }
+    
+    if (!isPreludeMode || !preludeStartTime) return;
+    
+    // Immediate update
+    const elapsed = Math.floor((Date.now() - preludeStartTime) / 60000);
+    setPreludeElapsedMinutes(elapsed);
+    
+    // Update every 10 seconds
+    const timer = setInterval(() => {
+      const elapsedNow = Math.floor((Date.now() - preludeStartTime) / 60000);
+      setPreludeElapsedMinutes(elapsedNow);
+    }, 10000);
+    
+    return () => clearInterval(timer);
+  }, [isPreludeMode, activeSession, preludeStartTime]);
 
   const handleStartInterview = () => {
     if (!user) return;
@@ -262,6 +287,50 @@ export default function InterviewSimulator() {
                 <p className="text-sm text-gray-500 mt-1">
                   {activeSession.targetRole} • {activeSession.difficulty} level
                 </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                {/* Time-based pacing indicator */}
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    {preludeElapsedMinutes} min
+                  </span>
+                </div>
+                
+                {/* Status chip */}
+                <Badge 
+                  variant="outline" 
+                  className="text-xs px-2 py-0.5 border-blue-200 bg-blue-50 text-blue-700"
+                  data-testid="badge-pacing-status"
+                >
+                  Getting started
+                </Badge>
+                
+                {/* Progress ring */}
+                <div className="relative w-8 h-8">
+                  <svg className="w-8 h-8 transform -rotate-90">
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="12"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      className="text-gray-200"
+                    />
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="12"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeDasharray={`${Math.min(preludeElapsedMinutes * 3, 75)} 100`}
+                      className="text-blue-500"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
           </CardHeader>

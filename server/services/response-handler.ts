@@ -249,6 +249,7 @@ export class ResponseHandler {
         
       case 'clarification_request':
         // Candidate confused - clarify the question
+        // The AI generates a rephrased question, so we don't need to repeat the original
         const clarifyPromptText = await clarifyQuestionPrompt.format({
           interviewerName,
           companyName,
@@ -259,7 +260,7 @@ export class ResponseHandler {
         return {
           response: this.extractContent(clarifyResponse),
           shouldProceedWithEvaluation: false,
-          questionRepeated: true
+          questionRepeated: false  // Clarification already contains the rephrased question
         };
         
       case 'conversational_comment':
