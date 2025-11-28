@@ -254,6 +254,57 @@ export class InterviewOrchestrator {
   }
 
   /**
+   * Check if the candidate's response is a conversational question (like "how're you?")
+   * that should be responded to before continuing with the interview
+   */
+  private isConversationalQuestion(response: string): boolean {
+    const lower = response.toLowerCase();
+    
+    // Patterns for conversational questions directed at the interviewer
+    const conversationalPatterns = [
+      /how('re| are) you/i,
+      /how about you/i,
+      /and you\??/i,
+      /what about you/i,
+      /how's (it going|your day|things)/i,
+      /before (that|we (start|begin|dive))/i,
+    ];
+    
+    for (const pattern of conversationalPatterns) {
+      if (pattern.test(response)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Generate a warm, friendly response to conversational questions
+   */
+  private generateWarmResponse(response: string): string {
+    const lower = response.toLowerCase();
+    
+    // Respond to "how are you" type questions
+    if (/how('re| are) you/i.test(lower) || /how about you/i.test(lower) || /and you\??/i.test(lower)) {
+      const responses = [
+        "I'm doing great, thanks for asking! It's always nice when candidates take a moment to connect.",
+        "I'm doing well, thank you! I appreciate you asking.",
+        "Doing well, thanks! It's great to meet candidates who are personable.",
+      ];
+      return responses[Math.floor(Math.random() * responses.length)] + " Now, to get us started, could you tell me a bit about your background?";
+    }
+    
+    // Respond to "before that" type interjections
+    if (/before (that|we)/i.test(lower)) {
+      return "Of course, happy to chat! I'm doing well, thanks for asking. Now, to get us started, could you tell me a bit about your background?";
+    }
+    
+    // Default warm response
+    return "I appreciate that! I'm doing well. Now, let's get started with the interview - could you tell me a bit about your background?";
+  }
+
+  /**
    * Handle candidate responses during the conversational prelude phase
    * Returns the interviewer's next prelude message, or the first question when prelude is complete
    */
@@ -342,7 +393,18 @@ export class InterviewOrchestrator {
     }
 
     if (memory.preludeStep >= 3) {
-      // Step 3+: After intros are done, start the real interview
+      // Step 3+: Check if the candidate is asking a conversational question
+      // before proceeding to the first real interview question
+      const isConversationalQuestion = this.isConversationalQuestion(candidateResponse);
+      
+      if (isConversationalQuestion) {
+        // Respond warmly to conversational questions like "how're you?"
+        const warmResponse = this.generateWarmResponse(candidateResponse);
+        memory.preludeStep--; // Stay at current step to ask question after responding
+        return { preludeMessage: warmResponse, preludeComplete: false };
+      }
+      
+      // After intros are done, start the real interview
       memory.currentStage = "opening";
       
       // Generate the first real interview question
