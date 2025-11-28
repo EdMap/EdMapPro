@@ -559,7 +559,7 @@ export default function JobBoard() {
 
       <ModeBanner 
         mode="journey" 
-        variant="badge"
+        variant="banner"
       />
 
       <div className="flex items-center gap-4 mb-6">
