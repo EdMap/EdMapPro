@@ -330,14 +330,14 @@ function ApplicationDetail({
                       Congratulations! You received an offer!
                     </h4>
                     <p className="text-sm text-green-600 dark:text-green-500">
-                      Practice negotiation to maximize your compensation
+                      Negotiate to maximize your compensation package
                     </p>
                   </div>
                   <Button 
                     onClick={() => navigate(`/negotiation?applicationId=${application.id}`)}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Practice Negotiation
+                    Negotiate Your Offer
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>

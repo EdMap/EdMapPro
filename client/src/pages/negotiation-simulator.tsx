@@ -207,7 +207,7 @@ function OfferSelectionStep({
               className="flex-1"
               data-testid="button-continue-with-offer"
             >
-              Continue with Selected Offer
+              Negotiate This Offer
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           )}
@@ -218,7 +218,7 @@ function OfferSelectionStep({
             className={offers.length === 0 ? "flex-1" : ""}
             data-testid="button-practice-mode"
           >
-            {offers.length > 0 ? "Practice Without Offer" : "Start Practice Session"}
+            {offers.length > 0 ? "Practice Mode Instead" : "Start Practice Session"}
           </Button>
         </div>
 
@@ -558,13 +558,20 @@ export default function NegotiationSimulator() {
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-              {selectedApplication ? "Configure Negotiation" : "Practice Negotiation"}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                {selectedApplication ? "Configure Negotiation" : "Practice Negotiation"}
+              </CardTitle>
+              {!selectedApplication && (
+                <Badge variant="outline" className="border-purple-400 text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20" data-testid="badge-practice-mode">
+                  Practice Mode
+                </Badge>
+              )}
+            </div>
             <CardDescription>
               {selectedApplication 
                 ? "Customize your negotiation parameters before starting"
-                : "Set up a practice scenario to hone your negotiation skills"
+                : "Build your negotiation skills with sample scenarios — no real stakes"
               }
             </CardDescription>
           </CardHeader>

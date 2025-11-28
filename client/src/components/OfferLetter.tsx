@@ -135,7 +135,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
               className="bg-primary hover:bg-primary/90 text-white"
               data-testid="button-proceed-negotiation"
             >
-              Practice Negotiation
+              Negotiate Your Offer
             </Button>
             <Button 
               variant="outline"
