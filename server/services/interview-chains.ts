@@ -3,24 +3,27 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 
-// Use smaller model for testing (switch back to llama-3.3-70b-versatile for production)
-const MODEL_NAME = "llama-3.1-8b-instant";
+// Using Qwen3-32B for better reasoning quality (latency is acceptable - gives "thinking" feel)
+const MODEL_NAME = "qwen/qwen3-32b";
 
 const model = new ChatGroq({
   model: MODEL_NAME,
-  temperature: 0.7,
+  temperature: 0.6,
+  topP: 0.95,
   apiKey: process.env.GROQ_API_KEY,
 });
 
 const questionModel = new ChatGroq({
   model: MODEL_NAME,
-  temperature: 0.3,
+  temperature: 0.6,
+  topP: 0.95,
   apiKey: process.env.GROQ_API_KEY,
 });
 
 const evaluatorModel = new ChatGroq({
   model: MODEL_NAME,
-  temperature: 0.3,
+  temperature: 0.6,
+  topP: 0.95,
   apiKey: process.env.GROQ_API_KEY,
 });
 

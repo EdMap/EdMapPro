@@ -126,8 +126,9 @@ export class ResponseHandler {
   constructor() {
     this.model = new ChatGroq({
       apiKey: process.env.GROQ_API_KEY,
-      model: "llama-3.1-8b-instant",
-      temperature: 0.7,
+      model: "qwen/qwen3-32b",
+      temperature: 0.6,
+      topP: 0.95,
     });
   }
   
