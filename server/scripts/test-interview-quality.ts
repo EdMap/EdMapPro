@@ -2,7 +2,7 @@
  * Interview Quality Test Script
  * 
  * Simulates a candidate going through the interview engine
- * and evaluates the conversation quality.
+ * with varied response types and evaluates conversation quality.
  */
 
 import { InterviewOrchestrator } from '../services/interview-orchestrator';
@@ -13,64 +13,141 @@ interface ConversationTurn {
   speaker: 'interviewer' | 'candidate';
   message: string;
   questionNumber?: number;
+  responseType?: 'complete' | 'vague' | 'partial' | 'asks_question';
 }
 
 interface QualityEvaluation {
-  flow: {
-    score: number;
-    reasoning: string;
-  };
-  naturalness: {
-    score: number;
-    reasoning: string;
-  };
-  relevance: {
-    score: number;
-    reasoning: string;
-  };
+  flow: { score: number; reasoning: string };
+  naturalness: { score: number; reasoning: string };
+  relevance: { score: number; reasoning: string };
   overallScore: number;
   summary: string;
+  improvements: string[];
 }
 
-// Simulated candidate that responds based on their "profile"
+interface IterationResult {
+  iteration: number;
+  questionCount: number;
+  conversation: ConversationTurn[];
+  evaluation: QualityEvaluation;
+}
+
+// Response type distribution for realistic simulation
+type ResponseType = 'complete' | 'vague' | 'partial' | 'asks_question';
+
+function getRandomResponseType(): ResponseType {
+  const rand = Math.random();
+  if (rand < 0.5) return 'complete';      // 50% complete answers
+  if (rand < 0.7) return 'partial';       // 20% partial answers
+  if (rand < 0.85) return 'vague';        // 15% vague answers
+  return 'asks_question';                  // 15% asks a question back
+}
+
+// Samvel's CV content
+const SAMVEL_CV = `
+SAMVEL MKHITARYAN, PhD
+
+HIGHLIGHTS:
+• 7+ years in research and program management positions
+• 4+ years in data analytics
+• 4+ years using Python, R and SQL, Power BI and Tableau
+• Working knowledge of state of the art techniques in Machine Learning and AI
+• Knowledge of Apache Spark and PySpark technologies
+
+EXPERIENCE:
+
+2025-Now: Senior Data Scientist at Rabobank, Utrecht, Netherlands
+- Applied statistical methods and machine learning to obtain insights from data to inform decision making
+- Built, tested and validated predictive models
+- Turned data into simple valuable solutions for the business
+
+2018-2022: PhD Candidate, Maastricht University
+- Developed a computational framework for analysing behaviour as a system of interdependent components
+- Helped stakeholders avoid costly experiments by developing a computational framework for scenario analysis using Fuzzy Cognitive Maps and Machine Learning
+
+2019-2021: Data Analyst at RedKite, Armenia
+- Collected and analysed user experience data for a SaaS
+- Designed experiments to test the success of new features
+- Contributed to the improvement and development of product features
+
+2017: Data Analysis Consultant at UNFPA, Armenia
+- Quantitatively evaluated the effectiveness and quality of e-learning modules
+
+2015-2016: Data Analysis Consultant at World Bank, Armenia
+- Designed and analysed baseline and follow-up evaluation surveys
+
+2011-2014: Program Manager at UNICEF, Armenia
+- Statistics, Monitoring and Evaluation Unit
+- Conducted Multiple Overlapping Deprivation Analysis
+
+EDUCATION:
+- PhD, Maastricht University (2018-2022)
+- Research Master of Sciences, Tilburg University (2016-2018)
+- Master of Public Health, American University of Armenia (2013-2015)
+- Bachelor's, Psychology, Yerevan State University (2007-2011)
+
+TRAINING:
+- Complex System Modeling Winter School at MIT/NECSI (2020)
+- Advanced Statistics and Data Mining, Universidad Politécnica de Madrid (2017)
+- Big Data on AWS, Pluralsight (2020)
+
+PUBLICATIONS:
+- FCMpy: A Python Module for Constructing and Analyzing Fuzzy Cognitive Maps
+- How to Use Machine Learning and Fuzzy Cognitive Maps to Test Hypothetical Scenarios
+- Dealing with complexity: How to use a hybrid approach to incorporate complexity in health behavior interventions
+
+LANGUAGES: English, Dutch, Russian, Spanish, Armenian
+`;
+
+// Simulated candidate with varied response behaviors
 class SimulatedCandidate {
   private model: ChatGroq;
   private profile: {
     name: string;
-    yearsExperience: number;
-    skills: string[];
-    background: string;
-    targetRole: string;
-    personality: string;
+    cv: string;
   };
 
-  constructor(profile: {
-    name: string;
-    yearsExperience: number;
-    skills: string[];
-    background: string;
-    targetRole: string;
-    personality: string;
-  }) {
-    this.profile = profile;
+  constructor(name: string, cv: string) {
+    this.profile = { name, cv };
     this.model = new ChatGroq({
       model: "llama-3.3-70b-versatile",
-      temperature: 0.7,
+      temperature: 0.8,
     });
   }
 
-  async respond(interviewerMessage: string, conversationHistory: ConversationTurn[]): Promise<string> {
-    const historyText = conversationHistory
+  async respond(
+    interviewerMessage: string, 
+    conversationHistory: ConversationTurn[],
+    responseType: ResponseType
+  ): Promise<string> {
+    const historyText = conversationHistory.slice(-6)
       .map(turn => `${turn.speaker === 'interviewer' ? 'Interviewer' : 'You'}: ${turn.message}`)
       .join('\n');
 
-    const prompt = `You are ${this.profile.name}, a candidate in a job interview for a ${this.profile.targetRole} position.
+    const responseInstructions = {
+      'complete': `Give a COMPLETE, detailed answer with specific examples from your CV/experience. 
+        Provide concrete numbers, project names, or outcomes when possible.
+        Response should be 3-5 sentences with clear details.`,
+      
+      'vague': `Give a VAGUE answer that lacks specifics. Be general and non-committal.
+        Avoid concrete examples, numbers, or specific project details.
+        Response should be 1-2 short sentences that don't really answer the question.
+        Example: "I've done some work in that area" or "Yes, I have experience with that."`,
+      
+      'partial': `Give a PARTIAL answer that addresses part of the question but misses key aspects.
+        Mention something relevant but don't fully answer what was asked.
+        Response should be 2-3 sentences but leave obvious gaps.`,
+      
+      'asks_question': `Instead of fully answering, ASK A CLARIFYING QUESTION back.
+        Show interest but seek more context before answering.
+        Can include a brief partial answer, then ask for clarification.
+        Example: "That's interesting - could you tell me more about the specific type of models you're looking for?"`,
+    };
 
-YOUR PROFILE:
-- Years of Experience: ${this.profile.yearsExperience}
-- Skills: ${this.profile.skills.join(', ')}
-- Background: ${this.profile.background}
-- Personality: ${this.profile.personality}
+    const prompt = `You are ${this.profile.name}, a candidate in a job interview for a Senior Data Scientist position.
+
+YOUR CV/BACKGROUND:
+${this.profile.cv}
 
 CONVERSATION SO FAR:
 ${historyText}
@@ -78,11 +155,10 @@ ${historyText}
 INTERVIEWER'S LATEST MESSAGE:
 ${interviewerMessage}
 
-Respond naturally as this candidate would. Be authentic to the profile - give specific examples from your background when asked.
-Keep responses conversational (2-4 sentences typically, longer for detailed questions).
-If asked about experience, draw from your background.
-If the interviewer asks if you have questions, ask 1-2 thoughtful questions about the role or company.
+RESPONSE INSTRUCTION (${responseType.toUpperCase()}):
+${responseInstructions[responseType]}
 
+Respond naturally as this candidate would, staying authentic to your CV background.
 YOUR RESPONSE (just the response, no prefix):`;
 
     const response = await this.model.invoke(prompt);
@@ -97,7 +173,7 @@ class QualityEvaluator {
   constructor() {
     this.model = new ChatGroq({
       model: "llama-3.3-70b-versatile",
-      temperature: 0.3,
+      temperature: 0.2,
     });
   }
 
@@ -107,89 +183,81 @@ class QualityEvaluator {
     candidateLevel: string
   ): Promise<QualityEvaluation> {
     const conversationText = conversation
-      .map(turn => `[${turn.speaker.toUpperCase()}${turn.questionNumber ? ` Q${turn.questionNumber}` : ''}]: ${turn.message}`)
+      .map(turn => {
+        const typeLabel = turn.responseType ? ` [${turn.responseType}]` : '';
+        return `[${turn.speaker.toUpperCase()}${turn.questionNumber ? ` Q${turn.questionNumber}` : ''}${typeLabel}]: ${turn.message}`;
+      })
       .join('\n\n');
 
-    const prompt = `You are an expert at evaluating interview quality. Analyze this interview conversation for a ${jobTitle} position (${candidateLevel} level).
+    const prompt = `You are an expert at evaluating interview quality. Analyze this interview for a ${jobTitle} position (${candidateLevel} level).
+
+Note: Response types [vague], [partial], [asks_question] indicate intentionally limited candidate answers to test how the interviewer handles them.
 
 CONVERSATION:
 ${conversationText}
 
-Evaluate the INTERVIEWER's performance on these dimensions (1-10 scale):
+Evaluate the INTERVIEWER's performance:
 
-1. FLOW (1-10): How well did the conversation progress?
-   - Were transitions between questions smooth?
-   - Did follow-up questions make sense?
-   - Was there a logical structure (intro → core → wrap-up)?
-   - Were there any awkward repetitions or abrupt changes?
+1. FLOW (1-10): 
+   - Were transitions smooth?
+   - Did follow-ups make sense after vague/partial answers?
+   - Was there logical structure?
+   - Any awkward repetitions?
 
-2. NATURALNESS (1-10): How human-like was the interviewer?
-   - Did responses feel scripted or authentic?
-   - Were acknowledgments appropriate and varied?
-   - Did the interviewer adapt to the candidate's responses?
-   - Was the tone professional yet personable?
+2. NATURALNESS (1-10):
+   - Did it feel scripted or authentic?
+   - Did interviewer adapt to varied response quality?
+   - Were acknowledgments appropriate?
+   - Did interviewer probe deeper when answers were vague?
 
-3. RELEVANCE (1-10): How well did questions match the position?
-   - Were questions appropriate for a ${candidateLevel} ${jobTitle}?
-   - Did questions probe the right skills and experiences?
-   - Were technical depth and behavioral questions balanced appropriately?
-   - Did the interviewer show understanding of the role requirements?
+3. RELEVANCE (1-10):
+   - Were questions appropriate for ${candidateLevel} ${jobTitle}?
+   - Did questions leverage the candidate's specific CV/background?
+   - Were technical depth and behavioral questions balanced?
 
-Respond in JSON format:
+Also provide 3-5 specific improvements to make the flow more like a real interview.
+
+Respond in JSON:
 {
-  "flow": {
-    "score": <number 1-10>,
-    "reasoning": "<2-3 sentences explaining the score>"
-  },
-  "naturalness": {
-    "score": <number 1-10>,
-    "reasoning": "<2-3 sentences explaining the score>"
-  },
-  "relevance": {
-    "score": <number 1-10>,
-    "reasoning": "<2-3 sentences explaining the score>"
-  },
+  "flow": {"score": <1-10>, "reasoning": "<explanation>"},
+  "naturalness": {"score": <1-10>, "reasoning": "<explanation>"},
+  "relevance": {"score": <1-10>, "reasoning": "<explanation>"},
   "overallScore": <weighted average>,
-  "summary": "<3-4 sentence overall assessment>"
+  "summary": "<overall assessment>",
+  "improvements": ["<improvement 1>", "<improvement 2>", ...]
 }`;
 
     const response = await this.model.invoke(prompt);
-    const content = response.content.toString().trim();
+    let content = response.content.toString().trim();
     
-    // Strip markdown if present
-    let cleaned = content;
-    if (cleaned.startsWith('```json')) {
-      cleaned = cleaned.slice(7);
-    } else if (cleaned.startsWith('```')) {
-      cleaned = cleaned.slice(3);
-    }
-    if (cleaned.endsWith('```')) {
-      cleaned = cleaned.slice(0, -3);
-    }
+    // Strip markdown
+    if (content.startsWith('```json')) content = content.slice(7);
+    else if (content.startsWith('```')) content = content.slice(3);
+    if (content.endsWith('```')) content = content.slice(0, -3);
     
     try {
-      return JSON.parse(cleaned.trim());
+      return JSON.parse(content.trim());
     } catch (e) {
-      console.error('Failed to parse evaluation:', content);
+      console.error('Parse error:', content);
       return {
         flow: { score: 0, reasoning: 'Parse error' },
         naturalness: { score: 0, reasoning: 'Parse error' },
         relevance: { score: 0, reasoning: 'Parse error' },
         overallScore: 0,
-        summary: 'Failed to parse evaluation response'
+        summary: 'Failed to parse',
+        improvements: []
       };
     }
   }
 }
 
-async function runInterviewTest() {
-  console.log('='.repeat(80));
-  console.log('INTERVIEW QUALITY TEST');
+async function runSingleInterview(iteration: number): Promise<IterationResult> {
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`ITERATION ${iteration}`);
   console.log('='.repeat(80));
   
   const orchestrator = new InterviewOrchestrator();
   
-  // Define job context (Senior Data Scientist at DataViz Pro)
   const jobContext = {
     companyName: "DataViz Pro",
     companyDescription: "A leading data visualization and analytics company helping enterprises make data-driven decisions.",
@@ -202,95 +270,57 @@ async function runInterviewTest() {
       - Experience building and deploying ML models to production
       - Background in anomaly detection or forecasting preferred
     `,
-    candidateCv: `
-      ARSEN PETROSYAN
-      Senior Data Analyst / ML Engineer
-      
-      EXPERIENCE:
-      Data Scientist at TechCorp (2021-Present)
-      - Built predictive models for customer churn reducing attrition by 15%
-      - Developed anomaly detection system for fraud prevention
-      - Led A/B testing framework for product experiments
-      
-      Data Analyst at StartupXYZ (2019-2021)
-      - Created dashboards and reports for executive team
-      - Implemented automated data pipelines using Python
-      - Performed statistical analysis on user behavior
-      
-      SKILLS:
-      Python, R, SQL, scikit-learn, TensorFlow, Pandas, Spark
-      Statistical Analysis, A/B Testing, Machine Learning
-      Data Visualization (Tableau, PowerBI)
-      
-      EDUCATION:
-      M.S. Computer Science, focus on Machine Learning
-      B.S. Statistics
-    `
+    candidateCv: SAMVEL_CV
   };
   
-  // Create simulated candidate
-  const candidate = new SimulatedCandidate({
-    name: "Arsen",
-    yearsExperience: 5,
-    skills: ["Python", "Machine Learning", "TensorFlow", "A/B Testing", "Statistical Analysis"],
-    background: "Data Scientist at TechCorp with experience in predictive modeling, anomaly detection, and A/B testing. Previously a Data Analyst at StartupXYZ.",
-    targetRole: "Senior Data Scientist",
-    personality: "Professional, thoughtful, gives specific examples, asks clarifying questions when needed"
-  });
-  
+  const candidate = new SimulatedCandidate("Samvel", SAMVEL_CV);
   const conversation: ConversationTurn[] = [];
   let questionCount = 0;
   
   // Start interview
-  console.log('\n--- Starting Interview ---\n');
-  
   const { session, greeting, isPreludeMode } = await orchestrator.startInterview(
-    1, // userId
-    "behavioral",
-    "Data Scientist",
-    "medium",
-    10,
-    jobContext,
-    "Arsen"
+    1, "behavioral", "Data Scientist", "medium", 10, jobContext, "Samvel"
   );
   
-  console.log(`[INTERVIEWER - Greeting]: ${greeting}`);
+  console.log(`\n[INTERVIEWER - Greeting]: ${greeting}`);
   conversation.push({ speaker: 'interviewer', message: greeting || '' });
   
-  // Candidate responds to greeting
-  let candidateResponse = await candidate.respond(greeting || '', conversation);
+  // Handle prelude with complete responses (greetings should be natural)
+  let candidateResponse = await candidate.respond(greeting || '', conversation, 'complete');
   console.log(`[CANDIDATE]: ${candidateResponse}\n`);
-  conversation.push({ speaker: 'candidate', message: candidateResponse });
+  conversation.push({ speaker: 'candidate', message: candidateResponse, responseType: 'complete' });
   
-  // Handle prelude (intro exchange)
   if (isPreludeMode) {
-    const preludeResult1 = await orchestrator.handlePreludeResponse(session.id, candidateResponse);
-    if (preludeResult1.preludeMessage) {
-      console.log(`[INTERVIEWER - Intro]: ${preludeResult1.preludeMessage}`);
-      conversation.push({ speaker: 'interviewer', message: preludeResult1.preludeMessage });
+    // Intro exchange
+    const prelude1 = await orchestrator.handlePreludeResponse(session.id, candidateResponse);
+    if (prelude1.preludeMessage) {
+      console.log(`[INTERVIEWER]: ${prelude1.preludeMessage}`);
+      conversation.push({ speaker: 'interviewer', message: prelude1.preludeMessage });
       
-      candidateResponse = await candidate.respond(preludeResult1.preludeMessage, conversation);
+      candidateResponse = await candidate.respond(prelude1.preludeMessage, conversation, 'complete');
       console.log(`[CANDIDATE]: ${candidateResponse}\n`);
-      conversation.push({ speaker: 'candidate', message: candidateResponse });
+      conversation.push({ speaker: 'candidate', message: candidateResponse, responseType: 'complete' });
       
-      // Another prelude step (self-intro)
-      const preludeResult2 = await orchestrator.handlePreludeResponse(session.id, candidateResponse);
-      if (preludeResult2.preludeMessage) {
-        console.log(`[INTERVIEWER - Self Intro]: ${preludeResult2.preludeMessage}`);
-        conversation.push({ speaker: 'interviewer', message: preludeResult2.preludeMessage });
+      // Self-intro
+      const prelude2 = await orchestrator.handlePreludeResponse(session.id, candidateResponse);
+      if (prelude2.preludeMessage) {
+        console.log(`[INTERVIEWER]: ${prelude2.preludeMessage}`);
+        conversation.push({ speaker: 'interviewer', message: prelude2.preludeMessage });
         
-        candidateResponse = await candidate.respond(preludeResult2.preludeMessage, conversation);
-        console.log(`[CANDIDATE]: ${candidateResponse}\n`);
-        conversation.push({ speaker: 'candidate', message: candidateResponse });
+        // First real answer - use varied response
+        const responseType = getRandomResponseType();
+        candidateResponse = await candidate.respond(prelude2.preludeMessage, conversation, responseType);
+        console.log(`[CANDIDATE] (${responseType}): ${candidateResponse}\n`);
+        conversation.push({ speaker: 'candidate', message: candidateResponse, responseType });
         
         // Get first question
-        const preludeResult3 = await orchestrator.handlePreludeResponse(session.id, candidateResponse);
-        if (preludeResult3.firstQuestion) {
+        const prelude3 = await orchestrator.handlePreludeResponse(session.id, candidateResponse);
+        if (prelude3.firstQuestion) {
           questionCount++;
-          console.log(`[INTERVIEWER - Q${questionCount}]: ${preludeResult3.firstQuestion.questionText}`);
+          console.log(`[INTERVIEWER - Q${questionCount}]: ${prelude3.firstQuestion.questionText}`);
           conversation.push({ 
             speaker: 'interviewer', 
-            message: preludeResult3.firstQuestion.questionText,
+            message: prelude3.firstQuestion.questionText,
             questionNumber: questionCount
           });
         }
@@ -298,35 +328,26 @@ async function runInterviewTest() {
     }
   }
   
-  // Main interview loop - answer questions until interview ends
-  const maxQuestions = 8; // Limit for testing
+  // Main interview loop
+  const maxQuestions = 5;
   
   while (questionCount < maxQuestions) {
-    // Get current question from session
     const currentSession = await storage.getInterviewSession(session.id);
-    if (!currentSession || currentSession.status === 'completed') {
-      console.log('\n--- Interview Completed by System ---\n');
-      break;
-    }
+    if (!currentSession || currentSession.status === 'completed') break;
     
     const questions = await storage.getInterviewQuestions(session.id);
     const currentQuestion = questions[questions.length - 1];
+    if (!currentQuestion) break;
     
-    if (!currentQuestion) {
-      console.log('No current question found');
-      break;
-    }
+    // Varied response type
+    const responseType = getRandomResponseType();
+    candidateResponse = await candidate.respond(currentQuestion.questionText, conversation, responseType);
+    console.log(`[CANDIDATE] (${responseType}): ${candidateResponse}\n`);
+    conversation.push({ speaker: 'candidate', message: candidateResponse, responseType });
     
-    // Candidate responds
-    candidateResponse = await candidate.respond(currentQuestion.questionText, conversation);
-    console.log(`[CANDIDATE]: ${candidateResponse}\n`);
-    conversation.push({ speaker: 'candidate', message: candidateResponse });
-    
-    // Submit answer
     const result = await orchestrator.submitAnswer(session.id, currentQuestion.id, candidateResponse);
     
     if (result.finalReport) {
-      console.log('\n--- Final Report Received ---');
       if (result.closure) {
         console.log(`[INTERVIEWER - Closure]: ${result.closure}`);
         conversation.push({ speaker: 'interviewer', message: result.closure });
@@ -336,63 +357,124 @@ async function runInterviewTest() {
     
     if (result.nextQuestion) {
       questionCount++;
+      let response = '';
+      if (result.reflection) response += result.reflection + ' ';
+      response += result.nextQuestion.questionText;
       
-      // Build the interviewer's response
-      let interviewerResponse = '';
-      if (result.reflection) {
-        interviewerResponse += result.reflection + ' ';
-      }
-      interviewerResponse += result.nextQuestion.questionText;
-      
-      console.log(`[INTERVIEWER - Q${questionCount}]: ${interviewerResponse}`);
+      console.log(`[INTERVIEWER - Q${questionCount}]: ${response}`);
       conversation.push({ 
         speaker: 'interviewer', 
-        message: interviewerResponse,
+        message: response,
         questionNumber: questionCount
       });
     }
   }
   
-  // Evaluate the conversation
-  console.log('\n' + '='.repeat(80));
-  console.log('QUALITY EVALUATION');
-  console.log('='.repeat(80) + '\n');
-  
+  // Evaluate
   const evaluator = new QualityEvaluator();
-  const evaluation = await evaluator.evaluate(
-    conversation,
-    "Senior Data Scientist",
-    "Senior"
-  );
+  const evaluation = await evaluator.evaluate(conversation, "Senior Data Scientist", "Senior");
   
-  console.log('FLOW:');
-  console.log(`  Score: ${evaluation.flow.score}/10`);
-  console.log(`  Reasoning: ${evaluation.flow.reasoning}`);
+  console.log(`\n--- Iteration ${iteration} Scores ---`);
+  console.log(`Flow: ${evaluation.flow.score}/10 | Naturalness: ${evaluation.naturalness.score}/10 | Relevance: ${evaluation.relevance.score}/10`);
+  console.log(`Overall: ${evaluation.overallScore}/10`);
   
-  console.log('\nNATURALNESS:');
-  console.log(`  Score: ${evaluation.naturalness.score}/10`);
-  console.log(`  Reasoning: ${evaluation.naturalness.reasoning}`);
-  
-  console.log('\nRELEVANCE:');
-  console.log(`  Score: ${evaluation.relevance.score}/10`);
-  console.log(`  Reasoning: ${evaluation.relevance.reasoning}`);
-  
-  console.log('\nOVERALL:');
-  console.log(`  Score: ${evaluation.overallScore}/10`);
-  console.log(`  Summary: ${evaluation.summary}`);
-  
-  console.log('\n' + '='.repeat(80));
-  console.log('TEST COMPLETE');
-  console.log('='.repeat(80));
-  
-  return evaluation;
+  return { iteration, questionCount, conversation, evaluation };
 }
 
-// Run the test
-runInterviewTest()
-  .then(evaluation => {
-    process.exit(0);
-  })
+async function runAllIterations() {
+  console.log('\n' + '█'.repeat(80));
+  console.log('INTERVIEW QUALITY TEST - 5 ITERATIONS');
+  console.log('Candidate: Samvel Mkhitaryan, PhD (Senior Data Scientist at Rabobank)');
+  console.log('Position: Senior Data Scientist at DataViz Pro');
+  console.log('█'.repeat(80));
+  
+  const results: IterationResult[] = [];
+  
+  for (let i = 1; i <= 5; i++) {
+    try {
+      const result = await runSingleInterview(i);
+      results.push(result);
+      
+      // Brief pause between iterations
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error: any) {
+      console.error(`\nIteration ${i} failed:`, error.message);
+      if (error.message?.includes('Rate limit')) {
+        console.log('Rate limit hit - stopping test');
+        break;
+      }
+    }
+  }
+  
+  // Aggregate results
+  console.log('\n' + '█'.repeat(80));
+  console.log('AGGREGATE RESULTS');
+  console.log('█'.repeat(80));
+  
+  if (results.length === 0) {
+    console.log('No successful iterations');
+    return;
+  }
+  
+  const avgFlow = results.reduce((sum, r) => sum + r.evaluation.flow.score, 0) / results.length;
+  const avgNatural = results.reduce((sum, r) => sum + r.evaluation.naturalness.score, 0) / results.length;
+  const avgRelevance = results.reduce((sum, r) => sum + r.evaluation.relevance.score, 0) / results.length;
+  const avgOverall = results.reduce((sum, r) => sum + r.evaluation.overallScore, 0) / results.length;
+  
+  console.log(`\nAVERAGE SCORES (${results.length} iterations):`);
+  console.log(`  Flow:        ${avgFlow.toFixed(1)}/10`);
+  console.log(`  Naturalness: ${avgNatural.toFixed(1)}/10`);
+  console.log(`  Relevance:   ${avgRelevance.toFixed(1)}/10`);
+  console.log(`  Overall:     ${avgOverall.toFixed(1)}/10`);
+  
+  // Collect all improvements
+  const allImprovements = results.flatMap(r => r.evaluation.improvements);
+  const improvementCounts = new Map<string, number>();
+  allImprovements.forEach(imp => {
+    const key = imp.toLowerCase().slice(0, 50);
+    improvementCounts.set(key, (improvementCounts.get(key) || 0) + 1);
+  });
+  
+  console.log('\nTOP IMPROVEMENTS SUGGESTED:');
+  results.forEach((r, i) => {
+    console.log(`\n  Iteration ${i + 1}:`);
+    r.evaluation.improvements.forEach((imp, j) => {
+      console.log(`    ${j + 1}. ${imp}`);
+    });
+  });
+  
+  console.log('\nSUMMARIES:');
+  results.forEach((r, i) => {
+    console.log(`  [${i + 1}] ${r.evaluation.summary}`);
+  });
+  
+  // Check for CV knowledge usage
+  console.log('\n' + '-'.repeat(80));
+  console.log('CV KNOWLEDGE CHECK:');
+  console.log('-'.repeat(80));
+  
+  const cvKeywords = ['Rabobank', 'Maastricht', 'PhD', 'Fuzzy Cognitive Maps', 'FCMpy', 'UNICEF', 'UNFPA', 'RedKite', 'PySpark', 'Armenia'];
+  
+  results.forEach((r, i) => {
+    const interviewerMessages = r.conversation
+      .filter(t => t.speaker === 'interviewer')
+      .map(t => t.message)
+      .join(' ');
+    
+    const usedKeywords = cvKeywords.filter(kw => 
+      interviewerMessages.toLowerCase().includes(kw.toLowerCase())
+    );
+    
+    console.log(`  Iteration ${i + 1}: CV references used: ${usedKeywords.length > 0 ? usedKeywords.join(', ') : 'None detected'}`);
+  });
+  
+  console.log('\n' + '█'.repeat(80));
+  console.log('TEST COMPLETE');
+  console.log('█'.repeat(80));
+}
+
+runAllIterations()
+  .then(() => process.exit(0))
   .catch(error => {
     console.error('Test failed:', error);
     process.exit(1);
