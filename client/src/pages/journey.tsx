@@ -7,13 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { OfferLetter } from "@/components/OfferLetter";
 import { ModeBanner } from "@/components/ModeBanner";
 import type { OfferDetails } from "@shared/schema";
 import { 
   Briefcase, Calendar, Check, ChevronRight, Clock, FileText, MapPin, 
   MessageCircle, Play, Target, Users, ArrowRight, ArrowLeft,
-  Rocket, Trophy, Video, Building2
+  Rocket, Trophy, Video, Building2, Eye, Loader2, CheckCircle, AlertCircle, TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +53,7 @@ interface ApplicationStage {
   completedAt: string | null;
   score: number | null;
   feedback: string | null;
+  interviewSessionId: number | null;
 }
 
 interface JobApplication {
@@ -59,6 +67,192 @@ interface JobApplication {
   job: JobPosting;
   stages: ApplicationStage[];
   offerDetails: OfferDetails | null;
+}
+
+interface InterviewFeedbackData {
+  overallScore: number;
+  communicationScore: number;
+  technicalScore?: number;
+  problemSolvingScore: number;
+  cultureFitScore: number;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  hiringDecision: string;
+}
+
+interface FeedbackResponse {
+  feedback: InterviewFeedbackData;
+  session: {
+    interviewType: string;
+    targetRole: string;
+    completedAt: string;
+  };
+}
+
+function FeedbackModal({ 
+  isOpen, 
+  onClose, 
+  sessionId,
+  stageName
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  sessionId: number | null;
+  stageName: string;
+}) {
+  const { data, isLoading, error } = useQuery<FeedbackResponse>({
+    queryKey: [`/api/interviews/${sessionId}/feedback`],
+    enabled: isOpen && !!sessionId
+  });
+
+  const getHiringDecisionColor = (decision: string) => {
+    switch (decision) {
+      case 'strong_yes': return 'bg-green-100 text-green-800';
+      case 'yes': return 'bg-green-50 text-green-700';
+      case 'maybe': return 'bg-yellow-100 text-yellow-800';
+      case 'no': return 'bg-red-50 text-red-700';
+      case 'strong_no': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getHiringDecisionText = (decision: string) => {
+    switch (decision) {
+      case 'strong_yes': return 'Strong Hire';
+      case 'yes': return 'Hire';
+      case 'maybe': return 'Maybe';
+      case 'no': return 'No Hire';
+      case 'strong_no': return 'Strong No';
+      default: return decision;
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="dialog-feedback">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-blue-600" />
+            {stageName} - Interview Feedback
+          </DialogTitle>
+        </DialogHeader>
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        )}
+
+        {error && (
+          <div className="text-center py-8 text-gray-500">
+            <AlertCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <p>Unable to load feedback</p>
+          </div>
+        )}
+
+        {data?.feedback && (
+          <div className="space-y-6">
+            <div className="text-center py-4">
+              <div className="text-5xl font-bold text-blue-600 mb-2" data-testid="text-modal-overall-score">
+                {data.feedback.overallScore}
+              </div>
+              <p className="text-gray-500">Overall Score</p>
+              <div className={cn(
+                "inline-block px-4 py-2 rounded-full mt-3 font-medium",
+                getHiringDecisionColor(data.feedback.hiringDecision)
+              )} data-testid="text-modal-hiring-decision">
+                {getHiringDecisionText(data.feedback.hiringDecision)}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-xl font-semibold text-gray-900 dark:text-white" data-testid="text-modal-communication-score">
+                  {data.feedback.communicationScore}
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Communication</p>
+              </div>
+              {data.feedback.technicalScore !== null && data.feedback.technicalScore !== undefined && (
+                <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="text-xl font-semibold text-gray-900 dark:text-white" data-testid="text-modal-technical-score">
+                    {data.feedback.technicalScore}
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Technical</p>
+                </div>
+              )}
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {data.feedback.problemSolvingScore}
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Problem Solving</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {data.feedback.cultureFitScore}
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Culture Fit</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Summary</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{data.feedback.summary}</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                <h4 className="font-medium text-green-800 dark:text-green-300 flex items-center gap-2 mb-3">
+                  <CheckCircle className="h-4 w-4" />
+                  Strengths
+                </h4>
+                <ul className="space-y-2">
+                  {data.feedback.strengths.map((strength, i) => (
+                    <li key={i} className="text-sm text-green-700 dark:text-green-400 flex items-start gap-2">
+                      <span className="text-green-500 mt-1">•</span>
+                      {strength}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                <h4 className="font-medium text-amber-800 dark:text-amber-300 flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4" />
+                  Areas to Improve
+                </h4>
+                <ul className="space-y-2">
+                  {data.feedback.improvements.map((improvement, i) => (
+                    <li key={i} className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                      <span className="text-amber-500 mt-1">•</span>
+                      {improvement}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {data.feedback.recommendations.length > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-3">Recommendations</h4>
+                <ul className="space-y-2">
+                  {data.feedback.recommendations.map((rec, i) => (
+                    <li key={i} className="text-sm text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">{i + 1}.</span>
+                      {rec}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function getStatusColor(status: string): string {
@@ -156,11 +350,13 @@ function ApplicationListItem({
 function StageTimeline({ 
   stages, 
   currentIndex,
-  onStartInterview 
+  onStartInterview,
+  onViewFeedback
 }: { 
   stages: ApplicationStage[]; 
   currentIndex: number;
   onStartInterview: (stage: ApplicationStage) => void;
+  onViewFeedback: (stage: ApplicationStage) => void;
 }) {
   return (
     <div className="relative">
@@ -170,6 +366,7 @@ function StageTimeline({
         {stages.map((stage, index) => {
           const isCompleted = stage.status === 'completed' || stage.status === 'passed';
           const isCurrent = index === currentIndex && !isCompleted;
+          const hasFeedback = isCompleted && stage.interviewSessionId;
           
           return (
             <div key={stage.id} className="relative flex items-start gap-4">
@@ -205,22 +402,37 @@ function StageTimeline({
                     </div>
                   </div>
                   
-                  {isCompleted && stage.score && (
-                    <Badge variant="outline" className="text-green-600 border-green-200">
-                      {stage.score}%
-                    </Badge>
-                  )}
-                  
-                  {isCurrent && (
-                    <Button 
-                      size="sm"
-                      onClick={() => onStartInterview(stage)}
-                      data-testid={`button-start-interview-${stage.id}`}
-                    >
-                      <Play className="h-3 w-3 mr-1" />
-                      Start
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isCompleted && stage.score && (
+                      <Badge variant="outline" className="text-green-600 border-green-200">
+                        {stage.score}%
+                      </Badge>
+                    )}
+                    
+                    {hasFeedback && (
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onViewFeedback(stage)}
+                        data-testid={`button-view-feedback-${stage.id}`}
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        Feedback
+                      </Button>
+                    )}
+                    
+                    {isCurrent && (
+                      <Button 
+                        size="sm"
+                        onClick={() => onStartInterview(stage)}
+                        data-testid={`button-start-interview-${stage.id}`}
+                      >
+                        <Play className="h-3 w-3 mr-1" />
+                        Start
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 
                 {isCompleted && stage.feedback && (
@@ -248,8 +460,23 @@ function ApplicationDetail({
   onBack: () => void;
 }) {
   const [, navigate] = useLocation();
+  const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean; sessionId: number | null; stageName: string }>({
+    isOpen: false,
+    sessionId: null,
+    stageName: ''
+  });
   const completedStages = application.stages.filter(s => s.status === 'completed' || s.status === 'passed').length;
   const progressPercent = (completedStages / application.stages.length) * 100;
+
+  const handleViewFeedback = (stage: ApplicationStage) => {
+    if (stage.interviewSessionId) {
+      setFeedbackModal({
+        isOpen: true,
+        sessionId: stage.interviewSessionId,
+        stageName: stage.stageName
+      });
+    }
+  };
   
   return (
     <div className="h-full flex flex-col">
@@ -353,10 +580,18 @@ function ApplicationDetail({
               stages={application.stages} 
               currentIndex={application.currentStageIndex}
               onStartInterview={onStartInterview}
+              onViewFeedback={handleViewFeedback}
             />
           </div>
         </div>
       </ScrollArea>
+
+      <FeedbackModal
+        isOpen={feedbackModal.isOpen}
+        onClose={() => setFeedbackModal({ isOpen: false, sessionId: null, stageName: '' })}
+        sessionId={feedbackModal.sessionId}
+        stageName={feedbackModal.stageName}
+      />
     </div>
   );
 }
