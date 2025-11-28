@@ -280,6 +280,44 @@ export class InterviewOrchestrator {
   }
 
   /**
+   * Check if the candidate's response is a substantive answer about their background
+   * (not just "okay", "sure", or a brief acknowledgment)
+   */
+  private isSubstantiveBackgroundAnswer(response: string): boolean {
+    const lower = response.toLowerCase().trim();
+    const wordCount = response.split(/\s+/).length;
+    
+    // Too short to be a real answer
+    if (wordCount < 10) {
+      return false;
+    }
+    
+    // Check for background-related keywords that indicate they're actually answering
+    const backgroundKeywords = [
+      /i('m| am) (a |an |the |currently )/i,
+      /i (work|worked|have been|was|am) (at|in|as|for)/i,
+      /my (background|experience|role|job|career|work)/i,
+      /(years?|months?) (of )?(experience|in)/i,
+      /senior|junior|lead|manager|director|engineer|developer|scientist|analyst/i,
+      /team|company|organization|department/i,
+      /currently|previously|before|after/i,
+    ];
+    
+    for (const pattern of backgroundKeywords) {
+      if (pattern.test(response)) {
+        return true;
+      }
+    }
+    
+    // If it's reasonably long (20+ words), assume it's substantive
+    if (wordCount >= 20) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
    * Generate a warm, friendly response to conversational questions
    */
   private generateWarmResponse(response: string): string {
@@ -402,6 +440,84 @@ export class InterviewOrchestrator {
         const warmResponse = this.generateWarmResponse(candidateResponse);
         memory.preludeStep--; // Stay at current step to ask question after responding
         return { preludeMessage: warmResponse, preludeComplete: false };
+      }
+      
+      // Check if the candidate already provided a substantive background response
+      // The selfIntro ends with "could you tell me a bit about your background?"
+      // so if they gave a real answer, we should acknowledge it and move forward
+      const isSubstantiveBackgroundAnswer = this.isSubstantiveBackgroundAnswer(candidateResponse);
+      
+      if (isSubstantiveBackgroundAnswer) {
+        // They already answered the background question - store it and move to next question
+        memory.currentStage = "core";
+        
+        // Store the background question and their answer
+        const backgroundQuestion = "Could you tell me a bit about your background?";
+        memory.questions.push(backgroundQuestion);
+        memory.answers.push(candidateResponse);
+        
+        // Create the first question record with their answer
+        const question = await storage.createInterviewQuestion({
+          sessionId: session.id,
+          questionIndex: 0,
+          questionText: backgroundQuestion,
+          questionType: "opening",
+          expectedCriteria: this.getExpectedCriteria(config, 0),
+          candidateAnswer: candidateResponse,
+          answeredAt: new Date(),
+        });
+        
+        // Evaluate their background answer
+        const evaluation = await this.evaluator.evaluate(
+          config,
+          backgroundQuestion,
+          candidateResponse
+        );
+        
+        memory.scores.push(evaluation.score);
+        memory.evaluations.push(evaluation);
+        
+        // Update the question with evaluation
+        await storage.updateInterviewQuestion(question.id, {
+          score: evaluation.score,
+          feedback: evaluation.feedback,
+          strengths: evaluation.strengths,
+          improvements: evaluation.improvements,
+        });
+        
+        // Update session to move to next question
+        await storage.updateInterviewSession(session.id, {
+          currentQuestionIndex: 1,
+        });
+        
+        // Generate a reflection to acknowledge their answer
+        const reflectionText = await this.reflection.generate(candidateResponse, memory.lastReflection, "Sarah");
+        memory.lastReflection = reflectionText;
+        
+        // Generate the second question (since first was already answered)
+        const nextQuestionText = await this.questionGenerator.generate({
+          config,
+          questionIndex: 1,
+          previousQuestions: memory.questions,
+          previousAnswers: memory.answers,
+          previousScores: memory.scores,
+        });
+        
+        memory.questions.push(nextQuestionText);
+        
+        const nextQuestion = await storage.createInterviewQuestion({
+          sessionId: session.id,
+          questionIndex: 1,
+          questionText: nextQuestionText,
+          questionType: "core",
+          expectedCriteria: this.getExpectedCriteria(config, 1),
+        });
+        
+        return { 
+          firstQuestion: nextQuestion, 
+          preludeComplete: true,
+          // Include reflection to acknowledge their answer
+        };
       }
       
       // After intros are done, start the real interview
