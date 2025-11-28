@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -347,6 +347,7 @@ function SelectedOfferSummary({
 
 export default function NegotiationSimulator() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const applicationIdFromUrl = searchParams.get('applicationId');
@@ -368,7 +369,13 @@ export default function NegotiationSimulator() {
     queryKey: ["/api/user"],
   });
 
-  // Fetch all applications to find offers
+  // Dedicated query for direct applicationId links (works even before allApplications loads)
+  const { data: directApplication, isLoading: isLoadingDirect } = useQuery<ApplicationWithOffer>({
+    queryKey: [applicationIdFromUrl ? `/api/applications/${applicationIdFromUrl}` : null],
+    enabled: !!applicationIdFromUrl,
+  });
+
+  // Fetch all applications to find offers for the selection step
   const { data: allApplications = [], isLoading: isLoadingApplications } = useQuery<ApplicationWithOffer[]>({
     queryKey: [user?.id ? `/api/users/${user.id}/applications` : null],
     enabled: !!user?.id,
@@ -379,9 +386,11 @@ export default function NegotiationSimulator() {
     app => app.status === 'offer' && app.offerDetails
   );
 
-  // Get selected application
+  // Get selected application - prioritize direct query for URL-based selection
   const selectedApplication = selectedApplicationId 
-    ? applicationsWithOffers.find(app => app.id === selectedApplicationId) 
+    ? (directApplication?.id === selectedApplicationId 
+        ? directApplication 
+        : applicationsWithOffers.find(app => app.id === selectedApplicationId))
     : null;
 
   // Update config when application is selected
@@ -393,6 +402,13 @@ export default function NegotiationSimulator() {
       setCompanyRange(`${currentOffer} (current offer)`);
     }
   }, [selectedApplication]);
+
+  // Sync URL when selection changes (persist selection across refreshes)
+  useEffect(() => {
+    if (step === 'configure' && selectedApplicationId && !applicationIdFromUrl) {
+      navigate(`/negotiation?applicationId=${selectedApplicationId}`, { replace: true });
+    }
+  }, [step, selectedApplicationId, applicationIdFromUrl, navigate]);
 
   const { data: previousSessions = [] } = useQuery<Array<{ id: number; type: string; configuration?: { scenario?: string; targetAmount?: number }; score?: number }>>({
     queryKey: [`/api/user/${user?.id}/sessions`],
@@ -460,6 +476,8 @@ export default function NegotiationSimulator() {
 
   const handleChangeOffer = () => {
     setStep('select');
+    setSelectedApplicationId(null);
+    navigate('/negotiation', { replace: true });
   };
 
   // Show active session
@@ -470,14 +488,19 @@ export default function NegotiationSimulator() {
         onComplete={() => {
           setCurrentSession(null);
           setStep('select');
+          setSelectedApplicationId(null);
+          navigate('/negotiation', { replace: true });
           queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/sessions`] });
         }}
       />
     );
   }
 
-  // Loading state
-  if (isLoadingApplications) {
+  // Loading state - show for direct link loading or applications loading in selection step
+  const isLoading = (step === 'configure' && applicationIdFromUrl && isLoadingDirect) 
+    || (step === 'select' && isLoadingApplications);
+  
+  if (isLoading) {
     return (
       <div className="p-8">
         <div className="max-w-3xl mx-auto space-y-4">
