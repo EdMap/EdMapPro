@@ -1182,6 +1182,9 @@ export class InterviewOrchestrator {
     
     // Handle candidate's question if they asked one
     let candidateQuestionAnswerPrefix = '';
+    let responseAlreadyContainsQuestion = false;
+    let isElaborationOffer = false;
+    
     if (memory.pendingCandidateQuestion && triageDecision?.outcome === 'has_question') {
       // Generate answer to the candidate's question using response handler
       const answerResult = await responseHandler.handleResponse(
@@ -1203,12 +1206,20 @@ export class InterviewOrchestrator {
       );
       if (answerResult.response) {
         candidateQuestionAnswerPrefix = answerResult.response + ' ';
+        
+        // Check if this is an elaboration offer - if so, use the response alone
+        isElaborationOffer = answerResult.isElaborationOffer || false;
+        
+        // Also check if response ends with ? (fallback for normal questions with redirect)
+        const trimmedResponse = answerResult.response.trim();
+        responseAlreadyContainsQuestion = trimmedResponse.endsWith('?');
       }
       memory.pendingCandidateQuestion = undefined; // Clear after handling
     }
     
     // Generate next question based on triage decision and interview plan
     let nextQuestionText: string;
+    let pendingPlannedQuestion: PlannedQuestion | null = null;
     
     // Check if we should do a final wrapup (approaching max questions with good coverage)
     const sufficiency = this.calculateSufficiency(memory);
@@ -1224,10 +1235,10 @@ export class InterviewOrchestrator {
       memory.pendingFollowUp = undefined; // Clear after use
     } else if (memory.interviewPlan) {
       // Use the next planned question from the backlog
-      const nextPlanned = this.getNextPlannedQuestion(memory);
-      if (nextPlanned) {
-        nextQuestionText = nextPlanned.question;
-        this.markQuestionAsked(memory, nextPlanned.id);
+      pendingPlannedQuestion = this.getNextPlannedQuestion(memory);
+      if (pendingPlannedQuestion) {
+        nextQuestionText = pendingPlannedQuestion.question;
+        // Note: We'll mark this as asked ONLY after we confirm we're using it (see below)
       } else {
         // Fallback to dynamic generation if no more planned questions
         const prioritizedTopic = this.getPrioritizedTopic(memory);
@@ -1267,9 +1278,33 @@ export class InterviewOrchestrator {
       nextQuestionText = timePressurePrefix + nextQuestionText;
     }
     
-    // Prepend answer to candidate's question if they asked one
+    // Track whether we actually used the planned question
+    let usedPlannedQuestion = true;
+    
+    // Handle candidate's question answer:
+    // - If it's an elaboration offer, use just the response (let them elaborate first)
+    // - If response ends with ?, use just the response (it already prompts them)
+    // - Otherwise, prepend the answer to the next planned question
     if (candidateQuestionAnswerPrefix) {
-      nextQuestionText = candidateQuestionAnswerPrefix + nextQuestionText;
+      if (isElaborationOffer) {
+        // Candidate offered to elaborate - just acknowledge and let them continue
+        // Don't add another question, keep the planned question for after they elaborate
+        nextQuestionText = candidateQuestionAnswerPrefix.trim();
+        usedPlannedQuestion = false; // Keep the planned question pending
+      } else if (responseAlreadyContainsQuestion) {
+        // Our response already ends with a question - use it as-is without appending another
+        // This avoids redundant double-questions like "Could you walk me through it? Also, can you give an example?"
+        nextQuestionText = candidateQuestionAnswerPrefix.trim();
+        usedPlannedQuestion = false; // Keep the planned question pending
+      } else {
+        // Our response is a statement - prepend it to the planned question
+        nextQuestionText = candidateQuestionAnswerPrefix + nextQuestionText;
+      }
+    }
+    
+    // Mark the planned question as asked ONLY if we actually used it
+    if (usedPlannedQuestion && pendingPlannedQuestion) {
+      this.markQuestionAsked(memory, pendingPlannedQuestion.id);
     }
 
     memory.questions.push(nextQuestionText);

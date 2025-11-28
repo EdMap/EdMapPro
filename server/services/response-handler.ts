@@ -36,6 +36,35 @@ Response: "Great question! The team is about 8 people right now—a mix of senio
 Output ONLY your response (answer + redirect). Keep it under 4 sentences total.
 `);
 
+const answerElaborationOfferPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a friendly HR recruiter at {companyName} conducting an interview.
+
+The candidate is offering to elaborate on their previous answer. Accept their offer with a brief, encouraging response.
+
+YOUR LAST QUESTION WAS:
+"{lastQuestion}"
+
+WHAT THEY'RE OFFERING:
+"{candidateQuestion}"
+
+GUIDELINES:
+- Accept their offer warmly and briefly (1 sentence)
+- End with a period, NOT a question mark (the orchestrator will add the next question)
+- Don't add "please" or create a new question - just encourage them to continue
+
+GOOD EXAMPLES:
+- "Yes, I'd love to hear more about that."
+- "Absolutely, please go ahead."
+- "That sounds interesting—please continue."
+- "Yes, let's dive deeper into that."
+
+BAD EXAMPLES (don't do these):
+- "Yes, could you tell me more?" (ends with question)
+- "Sure! What specific challenges did you face?" (adds new question)
+
+Output ONLY your brief response (1 sentence, ending with a period).
+`);
+
 const clarifyQuestionPrompt = PromptTemplate.fromTemplate(`
 You are {interviewerName}, a friendly HR recruiter at {companyName}.
 
@@ -150,6 +179,7 @@ export class ResponseHandler {
     response: string;
     shouldProceedWithEvaluation: boolean;
     questionRepeated: boolean;
+    isElaborationOffer?: boolean;
   }> {
     const interviewerName = config.interviewerName || "Sarah";
     const companyName = config.companyName || "our company";
@@ -167,7 +197,40 @@ export class ResponseHandler {
         };
         
       case 'question_for_recruiter':
-        // Candidate asked a question - answer it and redirect
+        // Check if candidate is offering to elaborate (not asking a real question)
+        const candidateQ = (classification.candidateQuestion || classification.sanitizedText).toLowerCase();
+        const elaborationPatterns = [
+          'elaborate', 'more detail', 'go deeper', 'dive deeper', 'expand on',
+          'different example', 'another example', 'give you more', 'tell you more',
+          'share more', 'continue on', 'keep going', 'think of a different'
+        ];
+        const hasElaborationKeyword = elaborationPatterns.some(p => candidateQ.includes(p));
+        const hasOfferPhrase = (
+          candidateQ.includes('would you like me to') ||
+          candidateQ.includes('do you want me to') ||
+          candidateQ.includes('should i')
+        );
+        const isElaborationOffer = hasElaborationKeyword || (hasOfferPhrase && 
+          (candidateQ.includes('more') || candidateQ.includes('example') || candidateQ.includes('detail')));
+        
+        if (isElaborationOffer) {
+          // Use the elaboration prompt that doesn't add a redirect question
+          const elaborationPrompt = await answerElaborationOfferPrompt.format({
+            interviewerName,
+            companyName,
+            lastQuestion,
+            candidateQuestion: classification.candidateQuestion || classification.sanitizedText
+          });
+          const elaborationResponse = await this.model.invoke(elaborationPrompt);
+          return {
+            response: this.extractContent(elaborationResponse),
+            shouldProceedWithEvaluation: false,
+            questionRepeated: true,
+            isElaborationOffer: true  // Signal to orchestrator: don't add another question
+          };
+        }
+        
+        // Normal question - answer it and redirect
         const answerPrompt = await answerQuestionPrompt.format({
           interviewerName,
           companyName,
