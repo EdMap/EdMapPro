@@ -110,7 +110,7 @@ class SimulatedCandidate {
   constructor(name: string, cv: string) {
     this.profile = { name, cv };
     this.model = new ChatGroq({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       temperature: 0.8,
     });
   }
@@ -125,23 +125,21 @@ class SimulatedCandidate {
       .join('\n');
 
     const responseInstructions = {
-      'complete': `Give a COMPLETE, detailed answer with specific examples from your CV/experience. 
-        Provide concrete numbers, project names, or outcomes when possible.
-        Response should be 3-5 sentences with clear details.`,
+      'complete': `Give a COMPLETE answer with ONE specific example. 
+        Keep it SHORT: 2-3 sentences max. Be conversational, not formal.
+        Example: "Yes, I built a churn model at Rabobank using Python and scikit-learn. It reduced churn by 15%."`,
       
-      'vague': `Give a VAGUE answer that lacks specifics. Be general and non-committal.
-        Avoid concrete examples, numbers, or specific project details.
-        Response should be 1-2 short sentences that don't really answer the question.
-        Example: "I've done some work in that area" or "Yes, I have experience with that."`,
+      'vague': `Give a VAGUE, short answer. Be general and non-committal.
+        ONE sentence only. No specific examples or numbers.
+        Examples: "Yeah, I've worked with that before." or "I have some experience there."`,
       
-      'partial': `Give a PARTIAL answer that addresses part of the question but misses key aspects.
-        Mention something relevant but don't fully answer what was asked.
-        Response should be 2-3 sentences but leave obvious gaps.`,
+      'partial': `Give a PARTIAL answer - address part but miss something.
+        1-2 sentences. Mention something relevant but leave gaps.
+        Example: "I've used Python for ML projects." (missing which projects, outcomes)`,
       
-      'asks_question': `Instead of fully answering, ASK A CLARIFYING QUESTION back.
-        Show interest but seek more context before answering.
-        Can include a brief partial answer, then ask for clarification.
-        Example: "That's interesting - could you tell me more about the specific type of models you're looking for?"`,
+      'asks_question': `Ask a CLARIFYING QUESTION instead of answering.
+        1-2 sentences. Show interest but need more context.
+        Example: "What kind of scale are we talking about here?"`,
     };
 
     const prompt = `You are ${this.profile.name}, a candidate in a job interview for a Senior Data Scientist position.
@@ -172,7 +170,7 @@ class QualityEvaluator {
 
   constructor() {
     this.model = new ChatGroq({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       temperature: 0.2,
     });
   }
@@ -390,7 +388,7 @@ async function runAllIterations() {
   
   const results: IterationResult[] = [];
   
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 3; i++) {
     try {
       const result = await runSingleInterview(i);
       results.push(result);
