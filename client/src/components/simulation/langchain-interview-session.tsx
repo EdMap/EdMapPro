@@ -21,7 +21,10 @@ import {
   Trophy,
   TrendingUp,
   AlertCircle,
-  Loader2
+  Loader2,
+  MessageCircle,
+  ClipboardCheck,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +121,9 @@ export default function LangchainInterviewSession({
   const [finalReport, setFinalReport] = useState<FinalReport | null>(null);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   const [showPreparingFeedback, setShowPreparingFeedback] = useState(false);
+  const [showInterviewEndModal, setShowInterviewEndModal] = useState(false);
+  const [pendingFinalReport, setPendingFinalReport] = useState<FinalReport | null>(null);
+  const [showFeedbackBanner, setShowFeedbackBanner] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -200,14 +206,10 @@ export default function LangchainInterviewSession({
       const hasCandidateQuestionAnswer = result.candidateQuestionAnswer && result.candidateQuestionAnswer.trim().length > 0;
 
       if (result.finalReport) {
-        // Helper to show "Preparing feedback..." transition then final report
-        const showFeedbackTransition = (report: FinalReport) => {
-          setShowPreparingFeedback(true);
-          setTimeout(() => {
-            setShowPreparingFeedback(false);
-            setFinalReport(report);
-            setSession(prev => ({ ...prev, status: 'completed', overallScore: report.overallScore }));
-          }, 2500);
+        // Helper to show the interview end modal (instead of auto-transitioning)
+        const showEndModal = (report: FinalReport) => {
+          setPendingFinalReport(report);
+          setShowInterviewEndModal(true);
         };
         
         // Show candidate question answer first if present, then closure
@@ -223,15 +225,15 @@ export default function LangchainInterviewSession({
                 setTimeout(() => {
                   setShowTypingIndicator(false);
                   setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
-                  // Give user 4 seconds to read the closure message before transitioning
+                  // Show modal after a brief pause to let user read closure
                   setTimeout(() => {
-                    showFeedbackTransition(result.finalReport);
-                  }, 4000);
+                    showEndModal(result.finalReport);
+                  }, 2000);
                 }, 1200);
               }, 1000);
             } else {
               setTimeout(() => {
-                showFeedbackTransition(result.finalReport);
+                showEndModal(result.finalReport);
               }, 1500);
             }
           }, 1200);
@@ -240,13 +242,13 @@ export default function LangchainInterviewSession({
           setTimeout(() => {
             setShowTypingIndicator(false);
             setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
-            // Give user 4 seconds to read the closure message before transitioning
+            // Show modal after a brief pause to let user read closure
             setTimeout(() => {
-              showFeedbackTransition(result.finalReport);
-            }, 4000);
+              showEndModal(result.finalReport);
+            }, 2000);
           }, 1500);
         } else {
-          showFeedbackTransition(result.finalReport);
+          showEndModal(result.finalReport);
         }
       } else if (result.nextQuestion) {
         // Update session state immediately to avoid stale state
@@ -328,6 +330,26 @@ export default function LangchainInterviewSession({
       case 'no': return 'No - Not Recommended';
       case 'strong_no': return 'Strong No - Not a Fit';
       default: return decision;
+    }
+  };
+
+  // Handle "Stay in conversation" - dismiss modal and show banner
+  const handleStayInConversation = () => {
+    setShowInterviewEndModal(false);
+    setShowFeedbackBanner(true);
+  };
+
+  // Handle "View feedback" - transition to feedback report
+  const handleViewFeedback = () => {
+    setShowInterviewEndModal(false);
+    setShowFeedbackBanner(false);
+    if (pendingFinalReport) {
+      setShowPreparingFeedback(true);
+      setTimeout(() => {
+        setShowPreparingFeedback(false);
+        setFinalReport(pendingFinalReport);
+        setSession(prev => ({ ...prev, status: 'completed', overallScore: pendingFinalReport.overallScore }));
+      }, 2500);
     }
   };
 
@@ -474,9 +496,77 @@ export default function LangchainInterviewSession({
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] flex flex-col p-4">
+    <div className="h-[calc(100vh-80px)] flex flex-col p-4 relative">
+      {/* Interview End Modal */}
+      {showInterviewEndModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200"
+          data-testid="modal-interview-end"
+        >
+          <Card className="max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+            <CardContent className="pt-8 pb-6">
+              <div className="text-center space-y-6">
+                {/* Interviewer avatar */}
+                <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Bot className="h-10 w-10 text-blue-600" />
+                </div>
+                
+                {/* Heading */}
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold text-gray-900">Interview Complete</h2>
+                  <p className="text-gray-500 px-4">
+                    Great job! Take a moment to review your conversation, or jump straight to your feedback report.
+                  </p>
+                </div>
+                
+                {/* Action buttons */}
+                <div className="flex flex-col gap-3 pt-2">
+                  <Button 
+                    onClick={handleViewFeedback}
+                    size="lg"
+                    className="w-full"
+                    data-testid="button-view-feedback"
+                  >
+                    <ClipboardCheck className="h-5 w-5 mr-2" />
+                    View Feedback Report
+                  </Button>
+                  <Button 
+                    onClick={handleStayInConversation}
+                    variant="ghost"
+                    size="lg"
+                    className="w-full text-gray-600 hover:text-gray-900"
+                    data-testid="button-stay-in-chat"
+                  >
+                    <MessageCircle className="h-5 w-5 mr-2" />
+                    Stay in Conversation
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="flex-shrink-0 border-b">
+          {/* Feedback ready banner */}
+          {showFeedbackBanner && (
+            <div className="mb-3 -mt-2 -mx-2 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2 text-blue-700">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="text-sm font-medium">Your feedback report is ready!</span>
+              </div>
+              <Button 
+                onClick={handleViewFeedback}
+                size="sm"
+                variant="outline"
+                className="border-blue-200 text-blue-700 hover:bg-blue-100"
+                data-testid="button-view-feedback-banner"
+              >
+                View Report
+              </Button>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl">
@@ -569,14 +659,14 @@ export default function LangchainInterviewSession({
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your answer here... (Press Enter to send, Shift+Enter for new line)"
+              placeholder={showFeedbackBanner ? "Interview complete - view your feedback report above" : "Type your answer here... (Press Enter to send, Shift+Enter for new line)"}
               className="flex-1 min-h-[80px] resize-none"
-              disabled={isSubmitting}
+              disabled={isSubmitting || showFeedbackBanner}
               data-testid="input-answer"
             />
             <Button 
               onClick={handleSubmitAnswer}
-              disabled={!answer.trim() || isSubmitting}
+              disabled={!answer.trim() || isSubmitting || showFeedbackBanner}
               className="self-end"
               data-testid="button-submit-answer"
             >
