@@ -8,21 +8,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { OfferLetter } from "@/components/OfferLetter";
 import { ModeBanner } from "@/components/ModeBanner";
-import type { OfferDetails } from "@shared/schema";
+import type { OfferDetails, InterviewSession, InterviewQuestion, InterviewFeedback } from "@shared/schema";
 import { 
   Briefcase, Calendar, Check, ChevronRight, Clock, FileText, MapPin, 
   MessageCircle, Play, Target, Users, ArrowRight, ArrowLeft,
-  Rocket, Trophy, Video, Building2, Eye, Loader2, CheckCircle, AlertCircle, TrendingUp
+  Rocket, Trophy, Video, Building2, Eye, Loader2, CheckCircle, AlertCircle, TrendingUp,
+  History, Star, MessageSquare, Code, UserCheck, Timer, Award, ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface Company {
   id: number;
@@ -89,6 +98,42 @@ interface FeedbackResponse {
     targetRole: string;
     completedAt: string;
   };
+}
+
+// Interview History Types
+interface InterviewHistorySession {
+  id: number;
+  userId: number;
+  interviewType: string;
+  targetRole: string;
+  difficulty: string;
+  status: string;
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  overallScore: number | null;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+interface InterviewHistoryQuestion {
+  id: number;
+  sessionId: number;
+  questionIndex: number;
+  questionText: string;
+  questionType: string;
+  candidateAnswer: string | null;
+  score: number | null;
+  feedback: string | null;
+  strengths: string[];
+  improvements: string[];
+  askedAt: string;
+  answeredAt: string | null;
+}
+
+interface InterviewHistoryDetail {
+  session: InterviewHistorySession;
+  questions: InterviewHistoryQuestion[];
+  feedback: InterviewFeedbackData | null;
 }
 
 function FeedbackModal({ 
@@ -689,10 +734,596 @@ function LoadingSkeleton() {
   );
 }
 
+// Interview History Components
+function getInterviewTypeIcon(type: string) {
+  switch (type) {
+    case 'behavioral': return <Users className="h-4 w-4" />;
+    case 'technical': return <Code className="h-4 w-4" />;
+    case 'case_study': return <Target className="h-4 w-4" />;
+    default: return <MessageSquare className="h-4 w-4" />;
+  }
+}
+
+function getInterviewTypeLabel(type: string): string {
+  switch (type) {
+    case 'behavioral': return 'Behavioral';
+    case 'technical': return 'Technical';
+    case 'case_study': return 'Case Study';
+    default: return type;
+  }
+}
+
+function getRoleLabel(role: string): string {
+  switch (role) {
+    case 'developer': return 'Developer';
+    case 'pm': return 'Product Manager';
+    case 'designer': return 'Designer';
+    case 'data-scientist': return 'Data Scientist';
+    default: return role;
+  }
+}
+
+function getScoreColor(score: number | null): string {
+  if (!score) return 'text-gray-400';
+  if (score >= 80) return 'text-green-600 dark:text-green-400';
+  if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
+  return 'text-red-600 dark:text-red-400';
+}
+
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'completed':
+      return <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Completed</Badge>;
+    case 'in_progress':
+      return <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">In Progress</Badge>;
+    case 'abandoned':
+      return <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">Abandoned</Badge>;
+    default:
+      return <Badge>{status}</Badge>;
+  }
+}
+
+function InterviewSessionListItem({
+  session,
+  isSelected,
+  onClick
+}: {
+  session: InterviewHistorySession;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const startedAt = session.startedAt || session.startedAt;
+  const formattedDate = startedAt 
+    ? format(new Date(startedAt), 'MMM d, yyyy')
+    : 'Unknown';
+  const formattedTime = startedAt 
+    ? format(new Date(startedAt), 'h:mm a')
+    : '';
+  
+  const interviewType = session.interviewType || 'behavioral';
+  const targetRole = session.targetRole || 'developer';
+  const status = session.status || 'in_progress';
+  
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full text-left p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
+        isSelected && "bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary"
+      )}
+      data-testid={`interview-session-${session.id}`}
+    >
+      <div className="flex items-start gap-3">
+        <div className={cn(
+          "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+          status === 'completed' 
+            ? "bg-green-100 dark:bg-green-900/30 text-green-600" 
+            : "bg-gray-100 dark:bg-gray-800 text-gray-500"
+        )}>
+          {getInterviewTypeIcon(interviewType)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm">
+              {getInterviewTypeLabel(interviewType)} Interview
+            </h3>
+            {session.overallScore && (
+              <span className={cn("text-sm font-semibold", getScoreColor(session.overallScore))}>
+                {session.overallScore}%
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {getRoleLabel(targetRole)} • {formattedDate}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            {getStatusBadge(status)}
+            <span className="text-xs text-gray-400">{formattedTime}</span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function InterviewTranscript({ questions }: { questions: InterviewHistoryQuestion[] }) {
+  if (!questions.length) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No transcript available for this session
+      </div>
+    );
+  }
+  
+  return (
+    <Accordion type="single" collapsible className="space-y-2">
+      {questions.map((q, index) => (
+        <AccordionItem 
+          key={q.id} 
+          value={`q-${q.id}`}
+          className="border rounded-lg bg-white dark:bg-gray-800/50 overflow-hidden"
+        >
+          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-800">
+            <div className="flex items-start gap-3 text-left w-full pr-4">
+              <div className={cn(
+                "h-6 w-6 rounded-full flex items-center justify-center shrink-0 text-xs font-medium",
+                q.score && q.score >= 70 
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
+                  : q.score 
+                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+              )}>
+                {index + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                  {q.questionText}
+                </p>
+                {q.score && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Star className="h-3 w-3 text-yellow-500" />
+                    <span className="text-xs text-gray-500">{q.score}/100</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="space-y-4 pt-2">
+              {/* Candidate Answer */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Your Answer</span>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {q.candidateAnswer || <em className="text-gray-400">No answer recorded</em>}
+                </p>
+              </div>
+              
+              {/* Feedback */}
+              {q.feedback && (
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Feedback</span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{q.feedback}</p>
+                </div>
+              )}
+              
+              {/* Strengths & Improvements */}
+              <div className="grid grid-cols-2 gap-3">
+                {q.strengths && q.strengths.length > 0 && (
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-xs font-medium text-green-700 dark:text-green-300">Strengths</span>
+                    </div>
+                    <ul className="space-y-1">
+                      {q.strengths.map((s, i) => (
+                        <li key={i} className="text-xs text-green-700 dark:text-green-400">• {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {q.improvements && q.improvements.length > 0 && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <span className="text-xs font-medium text-amber-700 dark:text-amber-300">Improvements</span>
+                    </div>
+                    <ul className="space-y-1">
+                      {q.improvements.map((s, i) => (
+                        <li key={i} className="text-xs text-amber-700 dark:text-amber-400">• {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+}
+
+function InterviewSessionDetail({ 
+  sessionId,
+  onBack
+}: { 
+  sessionId: number;
+  onBack: () => void;
+}) {
+  const { data, isLoading } = useQuery<InterviewHistoryDetail>({
+    queryKey: [`/api/interviews/${sessionId}/detail`],
+    enabled: !!sessionId
+  });
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-500">
+        Interview session not found
+      </div>
+    );
+  }
+
+  const { session, questions = [], feedback } = data;
+  
+  // Add defensive guards for session properties
+  const interviewType = session?.interviewType || 'behavioral';
+  const targetRole = session?.targetRole || 'developer';
+  const status = session?.status || 'in_progress';
+  const startedAt = session?.startedAt;
+  const completedAt = session?.completedAt;
+  
+  const formattedDate = startedAt 
+    ? format(new Date(startedAt), 'MMMM d, yyyy')
+    : 'Unknown';
+  const duration = completedAt && startedAt
+    ? Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 60000)
+    : null;
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <button 
+          onClick={onBack}
+          className="md:hidden flex items-center gap-2 text-sm text-gray-500 mb-3"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to list
+        </button>
+        
+        <div className="flex items-start gap-4">
+          <div className={cn(
+            "h-14 w-14 rounded-xl flex items-center justify-center shrink-0",
+            status === 'completed'
+              ? "bg-green-100 dark:bg-green-900/30 text-green-600"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-500"
+          )}>
+            {getInterviewTypeIcon(interviewType)}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {getInterviewTypeLabel(interviewType)} Interview
+              </h2>
+              {getStatusBadge(status)}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {getRoleLabel(targetRole)} • {formattedDate}
+            </p>
+            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+              {duration && (
+                <span className="flex items-center gap-1">
+                  <Timer className="h-3 w-3" />
+                  {duration} min
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <MessageSquare className="h-3 w-3" />
+                {questions.length} questions
+              </span>
+              {session?.overallScore && (
+                <span className={cn("flex items-center gap-1 font-semibold", getScoreColor(session.overallScore))}>
+                  <Award className="h-3 w-3" />
+                  {session.overallScore}%
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Content Tabs */}
+      <div className="flex-1 overflow-hidden">
+        <Tabs defaultValue="transcript" className="h-full flex flex-col">
+          <div className="px-4 pt-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="transcript" data-testid="tab-transcript">Transcript</TabsTrigger>
+              <TabsTrigger value="insights" data-testid="tab-insights">Insights</TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <ScrollArea className="flex-1">
+            <TabsContent value="transcript" className="p-4 m-0">
+              <InterviewTranscript questions={questions} />
+            </TabsContent>
+            
+            <TabsContent value="insights" className="p-4 m-0">
+              {feedback ? (
+                <div className="space-y-6">
+                  {/* Overall Score Card */}
+                  <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Overall Performance</h3>
+                          <p className="text-sm text-gray-500">{feedback.summary}</p>
+                        </div>
+                        <div className={cn(
+                          "h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold",
+                          feedback.overallScore >= 80 ? "bg-green-100 text-green-700" :
+                          feedback.overallScore >= 60 ? "bg-yellow-100 text-yellow-700" :
+                          "bg-red-100 text-red-700"
+                        )}>
+                          {feedback.overallScore}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Score Breakdown */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <MessageSquare className="h-5 w-5 mx-auto mb-2 text-blue-500" />
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {feedback.communicationScore}
+                        </div>
+                        <div className="text-xs text-gray-500">Communication</div>
+                      </CardContent>
+                    </Card>
+                    {feedback.technicalScore && (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <Code className="h-5 w-5 mx-auto mb-2 text-purple-500" />
+                          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {feedback.technicalScore}
+                          </div>
+                          <div className="text-xs text-gray-500">Technical</div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <Target className="h-5 w-5 mx-auto mb-2 text-orange-500" />
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {feedback.problemSolvingScore}
+                        </div>
+                        <div className="text-xs text-gray-500">Problem Solving</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <Users className="h-5 w-5 mx-auto mb-2 text-green-500" />
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {feedback.cultureFitScore}
+                        </div>
+                        <div className="text-xs text-gray-500">Culture Fit</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  {/* Strengths & Improvements */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                      <h4 className="font-medium text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Strengths
+                      </h4>
+                      <ul className="space-y-2">
+                        {feedback.strengths.map((s, i) => (
+                          <li key={i} className="text-sm text-green-700 dark:text-green-400 flex items-start gap-2">
+                            <span className="text-green-500 mt-1">•</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                      <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-3 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Areas to Improve
+                      </h4>
+                      <ul className="space-y-2">
+                        {feedback.improvements.map((s, i) => (
+                          <li key={i} className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                            <span className="text-amber-500 mt-1">•</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  {/* Recommendations */}
+                  {feedback.recommendations.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                      <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-3">Recommendations</h4>
+                      <ul className="space-y-2">
+                        {feedback.recommendations.map((rec, i) => (
+                          <li key={i} className="text-sm text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                            <span className="text-blue-500 mt-1">{i + 1}.</span>
+                            {rec}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Award className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No insights available for this session</p>
+                  <p className="text-sm mt-1">Complete the interview to see your performance analysis</p>
+                </div>
+              )}
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+function InterviewHistoryPanel({ userId }: { userId: number }) {
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
+
+  const { data: sessions, isLoading } = useQuery<InterviewHistorySession[]>({
+    queryKey: ['/api/users', userId, 'interviews'],
+    enabled: !!userId
+  });
+
+  const filteredSessions = sessions?.filter(s => {
+    if (filter === 'all') return true;
+    return s.status === filter;
+  }) || [];
+
+  const stats = {
+    total: sessions?.length || 0,
+    completed: sessions?.filter(s => s.status === 'completed').length || 0,
+    avgScore: sessions?.filter(s => s.overallScore)
+      .reduce((acc, s, _, arr) => acc + (s.overallScore || 0) / arr.length, 0) || 0
+  };
+
+  const handleSelectSession = (id: number) => {
+    setSelectedSessionId(id);
+    setShowDetail(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!sessions || sessions.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="mx-auto h-20 w-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+            <History className="h-10 w-10 text-gray-400" />
+          </div>
+          <h3 className="font-semibold text-xl text-gray-900 dark:text-white mb-2">
+            No Interview History
+          </h3>
+          <p className="text-gray-500 max-w-md mx-auto mb-6">
+            Complete interviews to see your history here. Practice mode and journey interviews are both tracked.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex overflow-hidden">
+      {/* Left Panel - Session List */}
+      <div className={cn(
+        "w-full md:w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
+        showDetail && "hidden md:flex"
+      )}>
+        {/* Stats Bar */}
+        <div className="grid grid-cols-3 gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+          <div className="text-center">
+            <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.total}</div>
+            <div className="text-xs text-gray-500">Total</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-green-600">{stats.completed}</div>
+            <div className="text-xs text-gray-500">Completed</div>
+          </div>
+          <div className="text-center">
+            <div className={cn("text-lg font-bold", getScoreColor(stats.avgScore))}>
+              {stats.avgScore > 0 ? Math.round(stats.avgScore) : '-'}
+            </div>
+            <div className="text-xs text-gray-500">Avg Score</div>
+          </div>
+        </div>
+        
+        {/* Filter */}
+        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex gap-2">
+            {(['all', 'completed', 'in_progress'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "px-3 py-1 text-xs rounded-full transition-colors",
+                  filter === f 
+                    ? "bg-primary text-white" 
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                )}
+                data-testid={`filter-${f}`}
+              >
+                {f === 'all' ? 'All' : f === 'completed' ? 'Completed' : 'In Progress'}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <ScrollArea className="flex-1">
+          {filteredSessions.map((session) => (
+            <InterviewSessionListItem
+              key={session.id}
+              session={session}
+              isSelected={selectedSessionId === session.id}
+              onClick={() => handleSelectSession(session.id)}
+            />
+          ))}
+        </ScrollArea>
+      </div>
+      
+      {/* Right Panel - Session Detail */}
+      <div className={cn(
+        "flex-1 bg-gray-50 dark:bg-gray-900/50",
+        !showDetail && "hidden md:block"
+      )}>
+        {selectedSessionId ? (
+          <InterviewSessionDetail
+            sessionId={selectedSessionId}
+            onBack={() => setShowDetail(false)}
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center text-gray-500">
+            Select an interview to view details
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Journey() {
   const [, navigate] = useLocation();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [activeTab, setActiveTab] = useState<'applications' | 'history'>('applications');
   
   const { data: user } = useQuery<{ id: number }>({
     queryKey: ['/api/user'],
@@ -736,14 +1367,6 @@ export default function Journey() {
     );
   }
 
-  if (!applications || applications.length === 0) {
-    return (
-      <div className="h-[calc(100vh-64px)] flex">
-        <EmptyState />
-      </div>
-    );
-  }
-
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
       {/* Journey Mode Banner */}
@@ -751,52 +1374,102 @@ export default function Journey() {
         <ModeBanner mode="journey" variant="banner" />
       </div>
       
-      {/* Header */}
+      {/* Header with Tabs */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Job Journey</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Track applications and interview progress
-        </p>
-      </div>
-      
-      {/* Master-Detail Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Application List */}
-        <div className={cn(
-          "w-full md:w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
-          showDetail && "hidden md:flex"
-        )}>
-          <JourneyStats applications={applications} />
-          <ScrollArea className="flex-1">
-            {applications.map((application) => (
-              <ApplicationListItem
-                key={application.id}
-                application={application}
-                isSelected={selectedApplication?.id === application.id}
-                onClick={() => handleSelectApplication(application.id)}
-              />
-            ))}
-          </ScrollArea>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Job Journey</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Track applications and interview progress
+            </p>
+          </div>
         </div>
         
-        {/* Right Panel - Application Detail */}
-        <div className={cn(
-          "flex-1 bg-gray-50 dark:bg-gray-900/50",
-          !showDetail && "hidden md:block"
-        )}>
-          {selectedApplication ? (
-            <ApplicationDetail
-              application={selectedApplication}
-              onStartInterview={handleStartInterview}
-              onBack={() => setShowDetail(false)}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              Select an application to view details
-            </div>
-          )}
+        {/* Tab Navigation */}
+        <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+          <button
+            onClick={() => setActiveTab('applications')}
+            className={cn(
+              "px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2",
+              activeTab === 'applications'
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            )}
+            data-testid="tab-applications"
+          >
+            <Briefcase className="h-4 w-4" />
+            Applications
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={cn(
+              "px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2",
+              activeTab === 'history'
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            )}
+            data-testid="tab-history"
+          >
+            <History className="h-4 w-4" />
+            Interview History
+          </button>
         </div>
       </div>
+      
+      {/* Tab Content */}
+      {activeTab === 'applications' ? (
+        // Applications Tab Content
+        (!applications || applications.length === 0) ? (
+          <EmptyState />
+        ) : (
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Panel - Application List */}
+            <div className={cn(
+              "w-full md:w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
+              showDetail && "hidden md:flex"
+            )}>
+              <JourneyStats applications={applications} />
+              <ScrollArea className="flex-1">
+                {applications.map((application) => (
+                  <ApplicationListItem
+                    key={application.id}
+                    application={application}
+                    isSelected={selectedApplication?.id === application.id}
+                    onClick={() => handleSelectApplication(application.id)}
+                  />
+                ))}
+              </ScrollArea>
+            </div>
+            
+            {/* Right Panel - Application Detail */}
+            <div className={cn(
+              "flex-1 bg-gray-50 dark:bg-gray-900/50",
+              !showDetail && "hidden md:block"
+            )}>
+              {selectedApplication ? (
+                <ApplicationDetail
+                  application={selectedApplication}
+                  onStartInterview={handleStartInterview}
+                  onBack={() => setShowDetail(false)}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  Select an application to view details
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      ) : (
+        // Interview History Tab Content
+        user?.id ? (
+          <InterviewHistoryPanel userId={user.id} />
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            Loading user data...
+          </div>
+        )
+      )}
     </div>
   );
 }

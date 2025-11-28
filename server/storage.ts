@@ -21,6 +21,8 @@ import {
   type ApplicationStage, type InsertApplicationStage,
   type OfferDetails
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -1029,97 +1031,104 @@ export class MemStorage implements IStorage {
     return evaluation;
   }
 
-  // Interview session operations
+  // Interview session operations - Using PostgreSQL database for persistence
   async getInterviewSession(id: number): Promise<InterviewSession | undefined> {
-    return this.interviewSessionsMap.get(id);
+    const [session] = await db.select().from(interviewSessions).where(eq(interviewSessions.id, id));
+    return session || undefined;
   }
 
   async getUserInterviewSessions(userId: number): Promise<InterviewSession[]> {
-    return Array.from(this.interviewSessionsMap.values())
-      .filter(session => session.userId === userId)
-      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+    return await db.select()
+      .from(interviewSessions)
+      .where(eq(interviewSessions.userId, userId))
+      .orderBy(desc(interviewSessions.startedAt));
   }
 
   async createInterviewSession(insertSession: InsertInterviewSession): Promise<InterviewSession> {
-    const id = this.currentInterviewSessionId++;
-    const session: InterviewSession = {
-      ...insertSession,
-      id,
-      difficulty: insertSession.difficulty || "medium",
-      status: insertSession.status || "in_progress",
-      currentQuestionIndex: insertSession.currentQuestionIndex || 0,
-      totalQuestions: insertSession.totalQuestions || 5,
-      overallScore: insertSession.overallScore || null,
-      completedAt: insertSession.completedAt || null,
-      startedAt: new Date()
-    };
-    this.interviewSessionsMap.set(id, session);
+    const [session] = await db.insert(interviewSessions)
+      .values({
+        ...insertSession,
+        difficulty: insertSession.difficulty || "medium",
+        status: insertSession.status || "in_progress",
+        currentQuestionIndex: insertSession.currentQuestionIndex || 0,
+        totalQuestions: insertSession.totalQuestions || 5,
+      })
+      .returning();
     return session;
   }
 
   async updateInterviewSession(id: number, updates: Partial<InterviewSession>): Promise<InterviewSession | undefined> {
-    const session = this.interviewSessionsMap.get(id);
-    if (!session) return undefined;
-    
-    const updatedSession = { ...session, ...updates };
-    this.interviewSessionsMap.set(id, updatedSession);
-    return updatedSession;
+    const [updated] = await db.update(interviewSessions)
+      .set(updates)
+      .where(eq(interviewSessions.id, id))
+      .returning();
+    return updated || undefined;
   }
 
-  // Interview question operations
+  // Interview question operations - Using PostgreSQL database for persistence
   async getInterviewQuestion(id: number): Promise<InterviewQuestion | undefined> {
-    return this.interviewQuestionsMap.get(id);
+    const [question] = await db.select().from(interviewQuestions).where(eq(interviewQuestions.id, id));
+    if (!question) return undefined;
+    // Normalize jsonb arrays to ensure they're always arrays
+    return {
+      ...question,
+      strengths: Array.isArray(question.strengths) ? question.strengths : [],
+      improvements: Array.isArray(question.improvements) ? question.improvements : [],
+    };
   }
 
   async getInterviewQuestions(sessionId: number): Promise<InterviewQuestion[]> {
-    return Array.from(this.interviewQuestionsMap.values())
-      .filter(question => question.sessionId === sessionId)
-      .sort((a, b) => a.questionIndex - b.questionIndex);
+    const questions = await db.select()
+      .from(interviewQuestions)
+      .where(eq(interviewQuestions.sessionId, sessionId))
+      .orderBy(interviewQuestions.questionIndex);
+    
+    // Normalize jsonb arrays to ensure they're always arrays
+    return questions.map(q => ({
+      ...q,
+      strengths: Array.isArray(q.strengths) ? q.strengths : [],
+      improvements: Array.isArray(q.improvements) ? q.improvements : [],
+    }));
   }
 
   async createInterviewQuestion(insertQuestion: InsertInterviewQuestion): Promise<InterviewQuestion> {
-    const id = this.currentInterviewQuestionId++;
-    const question: InterviewQuestion = {
-      ...insertQuestion,
-      id,
-      candidateAnswer: insertQuestion.candidateAnswer || null,
-      score: insertQuestion.score || null,
-      feedback: insertQuestion.feedback || null,
-      strengths: insertQuestion.strengths || [],
-      improvements: insertQuestion.improvements || [],
-      answeredAt: insertQuestion.answeredAt || null,
-      askedAt: new Date()
-    };
-    this.interviewQuestionsMap.set(id, question);
+    const [question] = await db.insert(interviewQuestions)
+      .values({
+        ...insertQuestion,
+        strengths: insertQuestion.strengths || [],
+        improvements: insertQuestion.improvements || [],
+      })
+      .returning();
     return question;
   }
 
   async updateInterviewQuestion(id: number, updates: Partial<InterviewQuestion>): Promise<InterviewQuestion | undefined> {
-    const question = this.interviewQuestionsMap.get(id);
-    if (!question) return undefined;
-    
-    const updatedQuestion = { ...question, ...updates };
-    this.interviewQuestionsMap.set(id, updatedQuestion);
-    return updatedQuestion;
+    const [updated] = await db.update(interviewQuestions)
+      .set(updates)
+      .where(eq(interviewQuestions.id, id))
+      .returning();
+    return updated || undefined;
   }
 
-  // Interview feedback operations
+  // Interview feedback operations - Using PostgreSQL database for persistence
   async getInterviewFeedback(sessionId: number): Promise<InterviewFeedback | undefined> {
-    return Array.from(this.interviewFeedbackMap.values())
-      .find(feedback => feedback.sessionId === sessionId);
+    const [feedback] = await db.select()
+      .from(interviewFeedback)
+      .where(eq(interviewFeedback.sessionId, sessionId));
+    if (!feedback) return undefined;
+    // Normalize jsonb arrays to ensure they're always arrays
+    return {
+      ...feedback,
+      strengths: Array.isArray(feedback.strengths) ? feedback.strengths : [],
+      improvements: Array.isArray(feedback.improvements) ? feedback.improvements : [],
+      recommendations: Array.isArray(feedback.recommendations) ? feedback.recommendations : [],
+    };
   }
 
   async createInterviewFeedback(insertFeedback: InsertInterviewFeedback): Promise<InterviewFeedback> {
-    const id = this.currentInterviewFeedbackId++;
-    const feedback: InterviewFeedback = {
-      ...insertFeedback,
-      id,
-      technicalScore: insertFeedback.technicalScore || null,
-      problemSolvingScore: insertFeedback.problemSolvingScore || null,
-      cultureFitScore: insertFeedback.cultureFitScore || null,
-      createdAt: new Date()
-    };
-    this.interviewFeedbackMap.set(id, feedback);
+    const [feedback] = await db.insert(interviewFeedback)
+      .values(insertFeedback)
+      .returning();
     return feedback;
   }
 

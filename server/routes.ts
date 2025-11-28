@@ -779,6 +779,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get interview detail with transcript and feedback
+  app.get("/api/interviews/:sessionId/detail", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      const session = await storage.getInterviewSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Interview session not found" });
+      }
+      
+      const rawQuestions = await storage.getInterviewQuestions(sessionId);
+      const feedbackData = await storage.getInterviewFeedback(sessionId);
+      
+      // Ensure questions have proper array types for strengths/improvements
+      const questions = rawQuestions.map(q => ({
+        ...q,
+        strengths: Array.isArray(q.strengths) ? q.strengths : [],
+        improvements: Array.isArray(q.improvements) ? q.improvements : [],
+      }));
+      
+      // Format feedback to match frontend expectations
+      const formattedFeedback = feedbackData ? {
+        overallScore: feedbackData.overallScore,
+        communicationScore: feedbackData.communicationScore,
+        technicalScore: feedbackData.technicalScore,
+        problemSolvingScore: feedbackData.problemSolvingScore,
+        cultureFitScore: feedbackData.cultureFitScore,
+        summary: feedbackData.summary,
+        strengths: Array.isArray(feedbackData.strengths) ? feedbackData.strengths : [],
+        improvements: Array.isArray(feedbackData.improvements) ? feedbackData.improvements : [],
+        recommendations: Array.isArray(feedbackData.recommendations) ? feedbackData.recommendations : [],
+        hiringDecision: feedbackData.hiringDecision,
+      } : null;
+      
+      res.json({
+        session,
+        questions,
+        feedback: formattedFeedback
+      });
+    } catch (error) {
+      console.error("Failed to get interview detail:", error);
+      res.status(500).json({ message: "Failed to get interview detail: " + (error as Error).message });
+    }
+  });
+
   // ==================== JOB JOURNEY ROUTES ====================
 
   // Get all companies
