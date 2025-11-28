@@ -10,12 +10,17 @@ import {
   GreetingChain,
   IntroExchangeChain,
   SelfIntroChain,
+  PreparationPlannerChain,
+  TriageChain,
   InterviewConfig,
   QuestionContext,
   EvaluationResult,
   FollowUpDecision,
   FinalReport,
   InterviewStage,
+  InterviewPlan,
+  PlannedQuestion,
+  TriageDecision,
   getInterviewStage,
   getPreludeStage,
   shouldGenerateReflection,
@@ -87,6 +92,10 @@ interface ConversationMemory {
   coverage: CoverageTracker;
   totalQuestionsAsked: number;
   timeWarningGiven: boolean;
+  // Pre-planned interview structure
+  interviewPlan?: InterviewPlan;
+  currentQuestionId?: string; // ID of the question currently being asked
+  pendingFollowUp?: string; // Follow-up question to ask if response was partial/vague
 }
 
 export class InterviewOrchestrator {
@@ -101,6 +110,8 @@ export class InterviewOrchestrator {
   private greeting: GreetingChain;
   private introExchange: IntroExchangeChain;
   private selfIntro: SelfIntroChain;
+  private preparationPlanner: PreparationPlannerChain;
+  private triage: TriageChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -115,6 +126,8 @@ export class InterviewOrchestrator {
     this.greeting = new GreetingChain();
     this.introExchange = new IntroExchangeChain();
     this.selfIntro = new SelfIntroChain();
+    this.preparationPlanner = new PreparationPlannerChain();
+    this.triage = new TriageChain();
     this.memory = new Map();
   }
 
@@ -347,6 +360,67 @@ export class InterviewOrchestrator {
     return sufficiency.prioritizedGaps[0] || null;
   }
 
+  /**
+   * Get the next pending question from the interview plan
+   */
+  private getNextPlannedQuestion(memory: ConversationMemory): PlannedQuestion | null {
+    if (!memory.interviewPlan) return null;
+    
+    // Sort by priority and get first pending question
+    const pendingQuestions = memory.interviewPlan.questions
+      .filter(q => q.status === 'pending')
+      .sort((a, b) => a.priority - b.priority);
+    
+    return pendingQuestions[0] || null;
+  }
+
+  /**
+   * Get all remaining questions that haven't been asked or covered
+   */
+  private getRemainingQuestions(memory: ConversationMemory): PlannedQuestion[] {
+    if (!memory.interviewPlan) return [];
+    return memory.interviewPlan.questions.filter(q => q.status === 'pending');
+  }
+
+  /**
+   * Mark a question as asked
+   */
+  private markQuestionAsked(memory: ConversationMemory, questionId: string): void {
+    if (!memory.interviewPlan) return;
+    const question = memory.interviewPlan.questions.find(q => q.id === questionId);
+    if (question) {
+      question.status = 'asked';
+    }
+    memory.currentQuestionId = questionId;
+  }
+
+  /**
+   * Mark questions as proactively covered by the candidate
+   */
+  private markQuestionsAsCovered(memory: ConversationMemory, questionIds: string[]): void {
+    if (!memory.interviewPlan) return;
+    for (const id of questionIds) {
+      const question = memory.interviewPlan.questions.find(q => q.id === id);
+      if (question) {
+        question.status = 'covered_proactively';
+      }
+    }
+  }
+
+  /**
+   * Generate a natural acknowledgment when candidate covers planned questions
+   */
+  private generateProactiveCoverageAck(coveredQuestions: PlannedQuestion[]): string {
+    const acks = [
+      "That's great - you actually touched on something I was planning to ask about.",
+      "Perfect, that answers what I was going to ask next.",
+      "You're ahead of me - I was curious about that exact thing.",
+      "Excellent, you've covered what was next on my list.",
+      "That's helpful - you've addressed what I wanted to explore.",
+    ];
+    return acks[Math.floor(Math.random() * acks.length)];
+  }
+
   async startInterview(
     userId: number,
     interviewType: string,
@@ -390,6 +464,17 @@ export class InterviewOrchestrator {
       (interviewType === "behavioral" || interviewType === "recruiter_call");
     
     if (usePrelude && candidateName) {
+      // PREPARATION PHASE: Generate interview plan before starting
+      // This happens "behind the scenes" - the HR reviews CV and job before the call
+      console.log('[Interview Prep] Generating interview plan for', candidateName);
+      const plan = await this.preparationPlanner.generatePlan(config);
+      memory.interviewPlan = plan;
+      console.log('[Interview Prep] Plan ready:', {
+        strengths: plan.candidateStrengths.length,
+        concerns: plan.potentialConcerns.length,
+        questions: plan.questions.length,
+      });
+      
       // Start with greeting phase - don't generate questions yet
       const greetingText = await this.greeting.generate(config, candidateName);
       memory.currentStage = "greeting";
@@ -1040,6 +1125,34 @@ export class InterviewOrchestrator {
       memory.projectMentionCount = 0;
     }
     
+    // Use triage chain to evaluate response and decide next action
+    let triageDecision: TriageDecision | null = null;
+    let proactiveCoverageAck = '';
+    
+    if (memory.interviewPlan) {
+      const remainingQuestions = this.getRemainingQuestions(memory);
+      triageDecision = await this.triage.evaluate(
+        question.questionText,
+        sanitizedAnswer,
+        remainingQuestions
+      );
+      
+      // Handle proactive coverage - mark questions as covered
+      if (triageDecision.outcome === 'proactive_coverage' && triageDecision.coveredQuestionIds) {
+        this.markQuestionsAsCovered(memory, triageDecision.coveredQuestionIds);
+        const coveredQuestions = memory.interviewPlan.questions
+          .filter(q => triageDecision!.coveredQuestionIds?.includes(q.id));
+        proactiveCoverageAck = triageDecision.acknowledgment || 
+          this.generateProactiveCoverageAck(coveredQuestions);
+      }
+      
+      // If pending follow-up needed, store it
+      if ((triageDecision.outcome === 'partial' || triageDecision.outcome === 'vague') && 
+          triageDecision.followUpPrompt) {
+        memory.pendingFollowUp = triageDecision.followUpPrompt;
+      }
+    }
+    
     // Adaptive reflection: skip for wrapup answers, only ~40% for core with longer answers
     let reflectionText: string | undefined;
     if (answeredQuestionStage === "core" && shouldGenerateReflection(answer, answeredQuestionStage)) {
@@ -1048,15 +1161,21 @@ export class InterviewOrchestrator {
       memory.lastReflection = reflectionText;
     }
     
+    // Add proactive coverage acknowledgment to reflection if applicable
+    if (proactiveCoverageAck) {
+      reflectionText = reflectionText 
+        ? `${reflectionText} ${proactiveCoverageAck}`
+        : proactiveCoverageAck;
+    }
+    
     // Add time pressure messaging if we're running short
     let timePressurePrefix = '';
     if (wrapUpCheck.reason === 'time_pressure' && wrapUpCheck.message) {
       timePressurePrefix = wrapUpCheck.message + ' ';
     }
     
-    // Generate next question based on coverage gaps (prioritize uncovered areas)
+    // Generate next question based on triage decision and interview plan
     let nextQuestionText: string;
-    const prioritizedTopic = this.getPrioritizedTopic(memory);
     
     // Check if we should do a final wrapup (approaching max questions with good coverage)
     const sufficiency = this.calculateSufficiency(memory);
@@ -1066,8 +1185,32 @@ export class InterviewOrchestrator {
     if (shouldDoWrapup && !sufficiency.gaps.includes('logistics')) {
       // We have good coverage - do a natural wrapup
       nextQuestionText = await this.wrapup.generate(config);
+    } else if (memory.pendingFollowUp && triageDecision?.action === 'follow_up') {
+      // Use the follow-up question for partial/vague answers
+      nextQuestionText = memory.pendingFollowUp;
+      memory.pendingFollowUp = undefined; // Clear after use
+    } else if (memory.interviewPlan) {
+      // Use the next planned question from the backlog
+      const nextPlanned = this.getNextPlannedQuestion(memory);
+      if (nextPlanned) {
+        nextQuestionText = nextPlanned.question;
+        this.markQuestionAsked(memory, nextPlanned.id);
+      } else {
+        // Fallback to dynamic generation if no more planned questions
+        const prioritizedTopic = this.getPrioritizedTopic(memory);
+        nextQuestionText = await this.questionGenerator.generate({
+          config,
+          questionIndex: nextQuestionIndex,
+          previousQuestions: memory.questions,
+          previousAnswers: memory.answers,
+          previousScores: memory.scores,
+          activeProject: memory.activeProject,
+          prioritizedTopic: prioritizedTopic || undefined,
+        });
+      }
     } else {
-      // Generate a focused question based on coverage gaps
+      // Fallback: Generate a focused question based on coverage gaps
+      const prioritizedTopic = this.getPrioritizedTopic(memory);
       nextQuestionText = await this.questionGenerator.generate({
         config: {
           ...config,
