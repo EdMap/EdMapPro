@@ -86,9 +86,17 @@ export default function LangchainInterviewSession({
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion>(firstQuestion);
   const [answer, setAnswer] = useState("");
   
+  // Message type with evaluation and interim flag
+  type ChatMessage = {
+    role: 'interviewer' | 'candidate';
+    content: string;
+    evaluation?: any;
+    isInterim?: boolean; // Marks messages that triggered interim responses (not real answers)
+  };
+
   // Initialize messages: prelude messages (if any) OR introduction (legacy), then first question
-  const buildInitialMessages = (): Array<{role: 'interviewer' | 'candidate', content: string, evaluation?: any}> => {
-    const msgs: Array<{role: 'interviewer' | 'candidate', content: string, evaluation?: any}> = [];
+  const buildInitialMessages = (): Array<ChatMessage> => {
+    const msgs: Array<ChatMessage> = [];
     
     // Prefer prelude messages (properly attributed) over introduction string
     if (initialPreludeMessages && initialPreludeMessages.length > 0) {
@@ -128,26 +136,100 @@ export default function LangchainInterviewSession({
       return response.json();
     },
     onSuccess: (result) => {
-      setMessages(prev => {
-        const updated = [...prev];
-        const lastIndex = updated.length - 1;
-        if (updated[lastIndex].role === 'candidate') {
-          updated[lastIndex] = {
-            ...updated[lastIndex],
-            evaluation: result.evaluation
-          };
-        }
-        return updated;
-      });
+      // Handle interim responses (when AI responds to questions, confusion, comments, etc.)
+      if (result.interimResponse) {
+        // The AI is responding to a non-answer (question, confusion, etc.)
+        // The question is still pending - don't advance the interview
+        
+        // CRITICAL: Mark the last candidate message as interim IMMEDIATELY (before re-enabling input)
+        // This prevents a race where a fast follow-up answer gets incorrectly marked as interim
+        setMessages(prev => {
+          const updated = [...prev];
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if (updated[i].role === 'candidate' && !updated[i].isInterim) {
+              updated[i] = { ...updated[i], isInterim: true };
+              break;
+            }
+          }
+          return updated;
+        });
+        
+        // Now re-enable input so user can respond
+        setIsSubmitting(false);
+        setAnswer("");
+        
+        // Show typing indicator, then add the interim response
+        setShowTypingIndicator(true);
+        setTimeout(() => {
+          setShowTypingIndicator(false);
+          setMessages(prev => {
+            const updated = [...prev];
+            // Add interviewer's interim response
+            updated.push({ role: 'interviewer', content: result.interimResponse });
+            // If question should be repeated, also re-display it
+            if (result.questionRepeated && result.currentQuestionText) {
+              updated.push({ role: 'interviewer', content: result.currentQuestionText });
+            }
+            return updated;
+          });
+        }, 1200);
+        return;
+      }
+      
+      // Handle normal answer flow with evaluation
+      // Find the last candidate message that is NOT interim (skips messages that triggered interim responses)
+      if (result.evaluation) {
+        setMessages(prev => {
+          const updated = [...prev];
+          // Find the most recent candidate message that isn't interim to attach evaluation
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if (updated[i].role === 'candidate' && !updated[i].evaluation && !updated[i].isInterim) {
+              updated[i] = {
+                ...updated[i],
+                evaluation: result.evaluation
+              };
+              break;
+            }
+          }
+          return updated;
+        });
+      }
+
+      // Check if there's a candidate question answer to show (for mixed content)
+      const hasCandidateQuestionAnswer = result.candidateQuestionAnswer && result.candidateQuestionAnswer.trim().length > 0;
 
       if (result.finalReport) {
-        // Show closure message if available, then transition to report
-        if (result.closure) {
+        // Show candidate question answer first if present, then closure
+        if (hasCandidateQuestionAnswer) {
+          setShowTypingIndicator(true);
+          setTimeout(() => {
+            setShowTypingIndicator(false);
+            setMessages(prev => [...prev, { role: 'interviewer', content: result.candidateQuestionAnswer }]);
+            // Then show closure if available
+            if (result.closure) {
+              setTimeout(() => {
+                setShowTypingIndicator(true);
+                setTimeout(() => {
+                  setShowTypingIndicator(false);
+                  setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
+                  setTimeout(() => {
+                    setFinalReport(result.finalReport);
+                    setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+                  }, 2000);
+                }, 1200);
+              }, 1000);
+            } else {
+              setTimeout(() => {
+                setFinalReport(result.finalReport);
+                setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
+              }, 1000);
+            }
+          }, 1200);
+        } else if (result.closure) {
           setShowTypingIndicator(true);
           setTimeout(() => {
             setShowTypingIndicator(false);
             setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
-            // Wait a bit before showing the report
             setTimeout(() => {
               setFinalReport(result.finalReport);
               setSession(prev => ({ ...prev, status: 'completed', overallScore: result.finalReport.overallScore }));
@@ -164,22 +246,26 @@ export default function LangchainInterviewSession({
         
         setShowTypingIndicator(true);
         
-        // Show reflection first (if any), then the question - in a single update
+        // Show candidate question answer first (if any), then reflection, then question
         const hasReflection = result.reflection && result.reflection.trim().length > 0;
         
         setTimeout(() => {
           setShowTypingIndicator(false);
           
-          // Add both messages in a single state update to avoid race conditions
+          // Add all messages in a single state update to avoid race conditions
           setMessages(prev => {
             const newMessages = [...prev];
+            // Add candidate question answer first (if any)
+            if (hasCandidateQuestionAnswer) {
+              newMessages.push({ role: 'interviewer', content: result.candidateQuestionAnswer });
+            }
             if (hasReflection) {
               newMessages.push({ role: 'interviewer', content: result.reflection });
             }
             newMessages.push({ role: 'interviewer', content: result.nextQuestion.questionText });
             return newMessages;
           });
-        }, hasReflection ? 1500 : 1200);
+        }, hasCandidateQuestionAnswer ? 1800 : hasReflection ? 1500 : 1200);
       }
       
       setIsSubmitting(false);

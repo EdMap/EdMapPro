@@ -22,6 +22,8 @@ import {
 } from "./interview-chains";
 import { storage } from "../storage";
 import type { InterviewSession, InterviewQuestion } from "@shared/schema";
+import { responseClassifier, CandidateIntent, ClassificationResult } from "./response-classifier";
+import { responseHandler } from "./response-handler";
 
 export interface JobContext {
   companyName?: string;
@@ -46,6 +48,8 @@ interface ConversationMemory {
   candidateName?: string;
   candidateWentFirst?: boolean; // Track if candidate introduced themselves first
   awaitingCandidateIntro?: boolean; // Waiting for candidate to share their intro
+  lastQuestionAsked?: string; // Track the last question for response classification
+  lastCandidateIntent?: CandidateIntent; // Last classified intent
 }
 
 export class InterviewOrchestrator {
@@ -388,12 +392,18 @@ export class InterviewOrchestrator {
     questionId: number,
     answer: string
   ): Promise<{
-    evaluation: EvaluationResult;
-    decision: FollowUpDecision;
+    evaluation?: EvaluationResult;
+    decision?: FollowUpDecision;
     nextQuestion?: InterviewQuestion;
     reflection?: string;
     finalReport?: FinalReport;
     closure?: string;
+    // New fields for responsive handling
+    interimResponse?: string; // Response when not proceeding with evaluation
+    questionRepeated?: boolean; // Whether the same question should be re-asked
+    candidateIntent?: CandidateIntent;
+    currentQuestionText?: string; // The question that's still pending (for interim responses)
+    candidateQuestionAnswer?: string; // Answer to a question the candidate asked (for mixed content)
   }> {
     const session = await storage.getInterviewSession(sessionId);
     if (!session) {
@@ -407,11 +417,72 @@ export class InterviewOrchestrator {
 
     const memory = this.getMemory(sessionId);
     const config = this.getConfig(session, memory.jobContext);
+    
+    // Store the last question for classification context
+    memory.lastQuestionAsked = question.questionText;
+    
+    // Classify the candidate's response (synchronous - heuristics only, no LLM call)
+    const classification = responseClassifier.classify(
+      answer,
+      question.questionText,
+      config.jobTitle || config.targetRole
+    );
+    
+    memory.lastCandidateIntent = classification.intent;
+    
+    // Track any candidate question for later answering
+    let candidateQuestionAnswer: string | undefined;
+    
+    // Handle non-answer intents (pure questions, confusion, comments, etc.)
+    if (classification.intent !== 'substantive_answer') {
+      const handlerResult = await responseHandler.handleResponse(
+        classification,
+        question.questionText,
+        {
+          interviewerName: this.getInterviewerName(session.interviewType),
+          companyName: config.companyName,
+          companyDescription: config.companyDescription,
+          jobTitle: config.jobTitle,
+          jobRequirements: config.jobRequirements
+        }
+      );
+      
+      // If we shouldn't proceed with evaluation, return the interim response
+      if (!handlerResult.shouldProceedWithEvaluation) {
+        // Return the interim response along with the current question
+        // so the frontend knows what question is still pending
+        return {
+          interimResponse: handlerResult.response,
+          questionRepeated: handlerResult.questionRepeated,
+          candidateIntent: classification.intent,
+          // Include the current question so the frontend can track state
+          currentQuestionText: question.questionText
+        };
+      }
+    } else if (classification.candidateQuestion) {
+      // Mixed content: substantive answer WITH a question
+      // Generate an inline answer to include with the reflection
+      const handlerResult = await responseHandler.handleResponse(
+        { ...classification, intent: 'question_for_recruiter' }, // Force question handling
+        question.questionText,
+        {
+          interviewerName: this.getInterviewerName(session.interviewType),
+          companyName: config.companyName,
+          companyDescription: config.companyDescription,
+          jobTitle: config.jobTitle,
+          jobRequirements: config.jobRequirements
+        }
+      );
+      candidateQuestionAnswer = handlerResult.response;
+    }
+    
+    // Use sanitized text for evaluation (protects against injection)
+    const sanitizedAnswer = classification.sanitizedText;
 
     const evaluation = await this.evaluator.evaluate(
       config,
       question.questionText,
-      answer
+      sanitizedAnswer
     );
 
     memory.answers.push(answer);
@@ -463,7 +534,7 @@ export class InterviewOrchestrator {
 
       this.memory.delete(sessionId);
 
-      return { evaluation, decision, finalReport, closure: closureMessage };
+      return { evaluation, decision, finalReport, closure: closureMessage, candidateQuestionAnswer };
     }
 
     const nextQuestionIndex = session.currentQuestionIndex + 1;
@@ -522,7 +593,7 @@ export class InterviewOrchestrator {
       expectedCriteria: this.getExpectedCriteria(config, nextQuestionIndex),
     });
 
-    return { evaluation, decision, nextQuestion, reflection: reflectionText };
+    return { evaluation, decision, nextQuestion, reflection: reflectionText, candidateQuestionAnswer };
   }
 
   async generateFinalReport(sessionId: number): Promise<FinalReport> {
