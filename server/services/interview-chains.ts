@@ -1164,7 +1164,8 @@ export class EvaluatorChain {
     });
 
     try {
-      return JSON.parse(result);
+      const cleanedResult = stripMarkdownCodeBlocks(result);
+      return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Failed to parse evaluation result:", result);
       return {
@@ -1208,7 +1209,8 @@ export class FollowUpChain {
     });
 
     try {
-      return JSON.parse(result);
+      const cleanedResult = stripMarkdownCodeBlocks(result);
+      return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Failed to parse follow-up decision:", result);
       return {
@@ -1253,7 +1255,8 @@ export class ScoringChain {
     });
 
     try {
-      return JSON.parse(result);
+      const cleanedResult = stripMarkdownCodeBlocks(result);
+      return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Failed to parse final report:", result);
       const scaledScore = Math.round(averageScore * 10);
@@ -1356,6 +1359,19 @@ Examples of proactive coverage:
 Output ONLY the JSON object.
 `);
 
+function stripMarkdownCodeBlocks(text: string): string {
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.slice(7);
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.slice(3);
+  }
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.slice(0, -3);
+  }
+  return cleaned.trim();
+}
+
 export class PreparationPlannerChain {
   private chain: RunnableSequence;
 
@@ -1376,7 +1392,8 @@ export class PreparationPlannerChain {
     });
 
     try {
-      const parsed = JSON.parse(result);
+      const cleanedResult = stripMarkdownCodeBlocks(result);
+      const parsed = JSON.parse(cleanedResult);
       // Ensure all questions have proper status
       parsed.questions = parsed.questions.map((q: PlannedQuestion) => ({
         ...q,
@@ -1434,7 +1451,8 @@ export class TriageChain {
     });
 
     try {
-      return JSON.parse(result);
+      const cleanedResult = stripMarkdownCodeBlocks(result);
+      return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Failed to parse triage decision:", result);
       return {
