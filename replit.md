@@ -46,18 +46,29 @@ Preferred communication style: Simple, everyday language.
       - **Practice Mode** (Sidebar access): Standalone interviews for skill-building. Users can practice any role/type without prerequisites. Results tracked separately.
       - **Journey Mode** (Job Journey): Context-aware interviews tied to job applications. Auto-populated with company/role. Completion updates application progress and advances stages.
     - **Mode Detection**: Determined by URL parameters—stageId in URL = Journey Mode, no stageId = Practice Mode.
+    - **Two-Phase Agent Architecture**:
+      - **Phase 1 - Preparation** (Pre-interview): PreparationPlannerChain analyzes CV and job requirements to generate a tailored question backlog with priority scoring, assessment criteria tags, and depth targets. Identifies candidate strengths and concerns upfront.
+      - **Phase 2 - Conversation**: Adaptive interview flow with smart follow-ups and proactive answer detection.
+    - **Question Backlog System**: PlannedQuestion items with id, question text, criteria tags, priority (1-10), and status (pending/asked/covered_proactively).
     - **Dynamic Interview Completion**: Instead of fixed question counts, the HR agent continuously evaluates information sufficiency.
       - **Coverage Tracking**: Monitors 6 assessment criteria (background, skills, behavioral, motivation, culture_fit, logistics)
       - **Sufficiency Thresholds**: Critical areas need 60% coverage, overall 70% before natural wrap-up
       - **Maximum Questions**: Hard limit of 15 questions to prevent endless interviews
       - **Time-Pressure Awareness**: At 75% of limit with gaps remaining, agent acknowledges time constraints and prioritizes key questions
-      - **Prioritized Question Generation**: Questions target the least-covered assessment criteria
+    - **TriageChain Response Evaluation**: Classifies candidate responses into outcomes:
+      - **satisfied**: Answer complete - proceed to next planned question
+      - **partial**: Answer missing specifics - generate targeted follow-up
+      - **vague**: Answer too general - probe for concrete examples
+      - **proactive_coverage**: Candidate answered upcoming questions early - acknowledge and mark as covered
+      - **has_question**: Candidate asked a question - answer before continuing
+    - **Proactive Answer Detection**: When candidate provides information that covers upcoming backlog questions, agent acknowledges naturally and marks those questions as covered_proactively.
+    - **Smart Follow-ups**: For partial/vague answers, generates context-specific probes requesting examples or missing information before moving on.
     - **Adaptive Reflections**: Context-aware acknowledgments based on answer quality:
       - Detailed answers (~100+ chars): Specific acknowledgments (~40% of time during Core stage)
       - Brief answers: Short "Got it" / "Okay" responses
       - Wrapup stage: No reflections (direct transition to closure)
-    - **LangChain Chains**: Modular AI workflow with specialized chains (Question Generator, HR Question, Wrapup, Closure, Evaluator, Follow-up Decision, Reflection, Scoring).
-    - **Interview Orchestrator**: Coordinates chains, manages stage transitions, coverage tracking, and interview flow.
+    - **LangChain Chains**: Modular AI workflow with specialized chains (PreparationPlanner, Triage, Question Generator, HR Question, Wrapup, Closure, Evaluator, Follow-up Decision, Reflection, Scoring).
+    - **Interview Orchestrator**: Coordinates chains, manages stage transitions, coverage tracking, question backlog, and interview flow.
     - **Interview Types**: Behavioral, Technical, and Case Study interviews.
     - **Role-Based Preparation**: Practice for Developer, Product Manager, Designer roles.
     - **Real-time Evaluation**: Immediate feedback with scores, strengths, and improvement areas.
