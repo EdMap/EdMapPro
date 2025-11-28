@@ -199,12 +199,13 @@ export default function InterviewSimulator() {
   useEffect(() => {
     if (user && applicationStageId && !autoStarted && !activeSession) {
       setAutoStarted(true);
+      // For Journey mode, don't send totalQuestions - let the backend decide
+      // based on interview type (7 for HR/behavioral, 5 for technical)
       startInterviewMutation.mutate({
         userId: user.id,
         interviewType,
         targetRole,
         difficulty,
-        totalQuestions: totalQuestions[0],
         applicationStageId,
       });
     }
@@ -213,14 +214,23 @@ export default function InterviewSimulator() {
   const handleStartInterview = () => {
     if (!user) return;
 
-    startInterviewMutation.mutate({
+    // For Journey mode, don't send totalQuestions - let the backend decide
+    // For Practice mode, send the user-selected totalQuestions
+    const mutationData: any = {
       userId: user.id,
       interviewType,
       targetRole,
       difficulty,
-      totalQuestions: totalQuestions[0],
-      applicationStageId: applicationStageId || undefined,
-    });
+    };
+    
+    if (applicationStageId) {
+      mutationData.applicationStageId = applicationStageId;
+    } else {
+      // Only include totalQuestions for Practice mode
+      mutationData.totalQuestions = totalQuestions[0];
+    }
+
+    startInterviewMutation.mutate(mutationData);
   };
 
   // Show loading if in Journey mode and interview is starting
