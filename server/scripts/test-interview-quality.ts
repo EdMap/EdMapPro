@@ -388,7 +388,7 @@ async function runAllIterations() {
   
   const results: IterationResult[] = [];
   
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 1; i++) {
     try {
       const result = await runSingleInterview(i);
       results.push(result);
