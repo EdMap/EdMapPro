@@ -189,6 +189,37 @@ export interface FinalReport {
   hiringDecision: string;
 }
 
+// Pre-conversation preparation types
+export type AssessmentCriterion = 'background' | 'skills' | 'behavioral' | 'motivation' | 'culture_fit' | 'logistics';
+
+export interface PlannedQuestion {
+  id: string;
+  question: string;
+  criterion: AssessmentCriterion;
+  priority: number; // 1 = highest priority
+  rationale: string;
+  desiredDepth: 'brief' | 'detailed' | 'in-depth';
+  status: 'pending' | 'asked' | 'covered_proactively' | 'skipped';
+  keywords: string[]; // For detecting proactive coverage
+}
+
+export interface InterviewPlan {
+  candidateStrengths: string[];
+  areasToProbe: string[];
+  potentialConcerns: string[];
+  questions: PlannedQuestion[];
+}
+
+// Enhanced follow-up decision with more nuanced outcomes
+export interface TriageDecision {
+  outcome: 'satisfied' | 'partial' | 'vague' | 'has_question' | 'proactive_coverage';
+  action: 'proceed_next' | 'follow_up' | 'answer_then_proceed' | 'acknowledge_coverage';
+  reason: string;
+  followUpPrompt?: string; // Specific follow-up if needed
+  coveredQuestionIds?: string[]; // Questions proactively covered by this answer
+  acknowledgment?: string; // Natural acknowledgment for proactive coverage
+}
+
 const introductionPrompt = PromptTemplate.fromTemplate(`
 You are {interviewerName}, a friendly {interviewerRole} at {companyName}.
 
@@ -1237,6 +1268,179 @@ export class ScoringChain {
         improvements: ["Review individual feedback"],
         recommendations: ["Consider practicing with more mock interviews"],
         hiringDecision: scaledScore >= 70 ? "yes" : scaledScore >= 50 ? "maybe" : "no",
+      };
+    }
+  }
+}
+
+// Pre-conversation preparation prompt
+const preparationPlannerPrompt = PromptTemplate.fromTemplate(`
+You are an experienced HR recruiter preparing for an interview. Before starting, you review the job requirements and candidate's CV to plan your questions strategically.
+
+JOB TITLE: {jobTitle}
+COMPANY: {companyName}
+
+JOB REQUIREMENTS:
+{jobRequirements}
+
+CANDIDATE'S CV:
+{candidateCv}
+
+Analyze this information and create an interview plan. Your goal is to:
+1. Identify the candidate's strengths that match the role
+2. Find areas that need deeper exploration
+3. Note any potential concerns or gaps
+4. Prepare tailored questions that flow naturally
+
+Output a JSON object with this structure:
+{{
+  "candidateStrengths": ["strength1", "strength2", ...],
+  "areasToProbe": ["area1", "area2", ...],
+  "potentialConcerns": ["concern1", ...],
+  "questions": [
+    {{
+      "id": "q1",
+      "question": "Your first question - make it natural, not robotic",
+      "criterion": "background|skills|behavioral|motivation|culture_fit|logistics",
+      "priority": 1,
+      "rationale": "Why you're asking this",
+      "desiredDepth": "brief|detailed|in-depth",
+      "keywords": ["keyword1", "keyword2"]
+    }},
+    ...more questions (5-8 total)
+  ]
+}}
+
+IMPORTANT:
+- Questions should feel conversational, not like a checklist
+- Reference specific things from their CV when relevant
+- Include keywords that would indicate the candidate has covered this topic
+- Priority 1 = must ask, Priority 2 = important, Priority 3 = if time permits
+- Balance across criteria: background, skills, behavioral, motivation
+- Always include at least one logistics question (availability/location)
+
+Output ONLY the JSON object, no other text.
+`);
+
+// Response triage prompt - decides how to proceed after each answer
+const triagePrompt = PromptTemplate.fromTemplate(`
+You are an HR recruiter evaluating a candidate's response to decide your next action.
+
+QUESTION ASKED: {questionAsked}
+CANDIDATE'S RESPONSE: {candidateResponse}
+
+REMAINING PLANNED QUESTIONS:
+{remainingQuestions}
+
+Analyze the response and decide:
+1. Was the answer complete and specific? (satisfied)
+2. Did they partially answer but miss key aspects? (partial)
+3. Was the answer too vague or generic? (vague)
+4. Did they ask you a question? (has_question)
+5. Did they proactively cover topics from your remaining questions? (proactive_coverage)
+
+Output a JSON object:
+{{
+  "outcome": "satisfied|partial|vague|has_question|proactive_coverage",
+  "action": "proceed_next|follow_up|answer_then_proceed|acknowledge_coverage",
+  "reason": "Brief explanation",
+  "followUpPrompt": "If partial/vague, what specific follow-up to ask",
+  "coveredQuestionIds": ["q2", "q3"] or null,
+  "acknowledgment": "If proactive coverage, a natural acknowledgment like 'That actually touches on what I was going to ask next!'"
+}}
+
+Examples of proactive coverage:
+- If Q2 was about Python experience and they mentioned Python in their background answer
+- If you planned to ask about teamwork and they shared a collaboration story unprompted
+
+Output ONLY the JSON object.
+`);
+
+export class PreparationPlannerChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      preparationPlannerPrompt,
+      questionModel,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generatePlan(config: InterviewConfig): Promise<InterviewPlan> {
+    const result = await this.chain.invoke({
+      jobTitle: config.jobTitle || config.targetRole,
+      companyName: config.companyName || "the company",
+      jobRequirements: config.jobRequirements || "Standard requirements for this role",
+      candidateCv: config.candidateCv || "No CV provided",
+    });
+
+    try {
+      const parsed = JSON.parse(result);
+      // Ensure all questions have proper status
+      parsed.questions = parsed.questions.map((q: PlannedQuestion) => ({
+        ...q,
+        status: 'pending' as const,
+      }));
+      return parsed;
+    } catch (error) {
+      console.error("Failed to parse interview plan:", result);
+      // Return a minimal default plan
+      return {
+        candidateStrengths: [],
+        areasToProbe: ["background", "skills", "motivation"],
+        potentialConcerns: [],
+        questions: [
+          {
+            id: "q1",
+            question: "Could you tell me a bit about your background?",
+            criterion: "background" as AssessmentCriterion,
+            priority: 1,
+            rationale: "Opening question to understand their experience",
+            desiredDepth: "detailed" as const,
+            status: "pending" as const,
+            keywords: ["experience", "background", "worked", "role"],
+          },
+        ],
+      };
+    }
+  }
+}
+
+export class TriageChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      triagePrompt,
+      questionModel,
+      new StringOutputParser(),
+    ]);
+  }
+
+  async evaluate(
+    questionAsked: string,
+    candidateResponse: string,
+    remainingQuestions: PlannedQuestion[]
+  ): Promise<TriageDecision> {
+    const formattedQuestions = remainingQuestions
+      .map(q => `[${q.id}] ${q.question} (keywords: ${q.keywords.join(", ")})`)
+      .join("\n");
+
+    const result = await this.chain.invoke({
+      questionAsked,
+      candidateResponse,
+      remainingQuestions: formattedQuestions || "No remaining planned questions",
+    });
+
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      console.error("Failed to parse triage decision:", result);
+      return {
+        outcome: "satisfied",
+        action: "proceed_next",
+        reason: "Proceeding to next question",
       };
     }
   }
