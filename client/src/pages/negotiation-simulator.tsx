@@ -155,23 +155,36 @@ function OfferSelectionStep({
   selectedOfferId,
   onSelectOffer,
   onContinue,
-  onPracticeMode
+  onPracticeMode,
+  isJourneyMode = false
 }: { 
   offers: ApplicationWithOffer[];
   selectedOfferId: number | null;
   onSelectOffer: (id: number) => void;
   onContinue: () => void;
   onPracticeMode: () => void;
+  isJourneyMode?: boolean;
 }) {
   return (
     <div className="p-8">
       <div className="max-w-3xl mx-auto">
+        {/* Journey Mode Banner for selection step */}
+        {isJourneyMode && (
+          <ModeBanner 
+            mode="journey" 
+            variant="banner"
+          />
+        )}
+
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Negotiation Simulator
+            {isJourneyMode ? "Select Your Offer" : "Negotiation Simulator"}
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Select an offer to negotiate, or start a practice session with custom scenarios.
+            {isJourneyMode 
+              ? "Choose which offer you'd like to negotiate as part of your job journey."
+              : "Select an offer to negotiate, or start a practice session with custom scenarios."
+            }
           </p>
         </div>
 
@@ -208,19 +221,22 @@ function OfferSelectionStep({
               className="flex-1"
               data-testid="button-continue-with-offer"
             >
-              Negotiate This Offer
+              {isJourneyMode ? "Continue with This Offer" : "Negotiate This Offer"}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           )}
-          <Button
-            size="lg"
-            variant={offers.length > 0 ? "outline" : "default"}
-            onClick={onPracticeMode}
-            className={offers.length === 0 ? "flex-1" : ""}
-            data-testid="button-practice-mode"
-          >
-            {offers.length > 0 ? "Practice Mode Instead" : "Start Practice Session"}
-          </Button>
+          {/* Only show practice mode option when not in journey mode */}
+          {!isJourneyMode && (
+            <Button
+              size="lg"
+              variant={offers.length > 0 ? "outline" : "default"}
+              onClick={onPracticeMode}
+              className={offers.length === 0 ? "flex-1" : ""}
+              data-testid="button-practice-mode"
+            >
+              {offers.length > 0 ? "Practice Mode Instead" : "Start Practice Session"}
+            </Button>
+          )}
         </div>
 
         {offers.length === 0 && (
@@ -234,7 +250,7 @@ function OfferSelectionStep({
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
                 Complete your interview stages in the Job Journey to receive offers. 
-                In the meantime, you can practice negotiation with custom scenarios.
+                {!isJourneyMode && " In the meantime, you can practice negotiation with custom scenarios."}
               </p>
             </CardContent>
           </Card>
@@ -347,6 +363,7 @@ export default function NegotiationSimulator() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const applicationIdFromUrl = searchParams.get('applicationId');
+  const journeyModeFromUrl = searchParams.get('journeyMode');
   
   // Step management: 'select' | 'configure' | 'session'
   const [step, setStep] = useState<'select' | 'configure' | 'session'>(
@@ -400,11 +417,17 @@ export default function NegotiationSimulator() {
   }, [selectedApplication]);
 
   // Sync URL when selection changes (persist selection across refreshes)
+  // Preserve journeyMode if it was set
   useEffect(() => {
     if (step === 'configure' && selectedApplicationId && !applicationIdFromUrl) {
-      navigate(`/negotiation?applicationId=${selectedApplicationId}`, { replace: true });
+      const params = new URLSearchParams();
+      if (journeyModeFromUrl) {
+        params.set('journeyMode', journeyModeFromUrl);
+      }
+      params.set('applicationId', String(selectedApplicationId));
+      navigate(`/negotiation?${params.toString()}`, { replace: true });
     }
-  }, [step, selectedApplicationId, applicationIdFromUrl, navigate]);
+  }, [step, selectedApplicationId, applicationIdFromUrl, journeyModeFromUrl, navigate]);
 
   const { data: previousSessions = [] } = useQuery<Array<{ id: number; type: string; configuration?: { scenario?: string; targetAmount?: number }; score?: number }>>({
     queryKey: [`/api/user/${user?.id}/sessions`],
@@ -473,7 +496,12 @@ export default function NegotiationSimulator() {
   const handleChangeOffer = () => {
     setStep('select');
     setSelectedApplicationId(null);
-    navigate('/negotiation', { replace: true });
+    // Preserve journey mode when changing offers
+    if (journeyModeFromUrl) {
+      navigate(`/negotiation?journeyMode=${journeyModeFromUrl}`, { replace: true });
+    } else {
+      navigate('/negotiation', { replace: true });
+    }
   };
 
   // Show active session
@@ -485,15 +513,22 @@ export default function NegotiationSimulator() {
           setCurrentSession(null);
           setStep('select');
           setSelectedApplicationId(null);
-          navigate('/negotiation', { replace: true });
+          // Preserve journey mode when session completes - redirect to journey page
+          if (journeyModeFromUrl || applicationIdFromUrl) {
+            navigate('/', { replace: true });
+          } else {
+            navigate('/negotiation', { replace: true });
+          }
           queryClient.invalidateQueries({ queryKey: [`/api/user/${user?.id}/sessions`] });
         }}
       />
     );
   }
 
-  // Loading state - show for direct link loading or applications loading in selection step
-  const isLoading = (step === 'configure' && applicationIdFromUrl && isLoadingDirect) 
+  // Loading state - show for direct link loading (journey mode) or applications loading in selection step
+  // Include journeyModeFromUrl to ensure we show loading for any Journey mode entry
+  const isJourneyEntryLoading = (applicationIdFromUrl || journeyModeFromUrl) && isLoadingDirect;
+  const isLoading = (step === 'configure' && isJourneyEntryLoading) 
     || (step === 'select' && isLoadingApplications);
   
   if (isLoading) {
@@ -515,6 +550,9 @@ export default function NegotiationSimulator() {
     );
   }
 
+  // Determine if we're in Journey mode based on URL params (source of truth)
+  const isJourneyMode = !!journeyModeFromUrl || !!applicationIdFromUrl || !!selectedApplicationId;
+
   // Offer Selection Step
   if (step === 'select') {
     return (
@@ -524,6 +562,7 @@ export default function NegotiationSimulator() {
         onSelectOffer={handleSelectOffer}
         onContinue={handleContinueWithOffer}
         onPracticeMode={handlePracticeMode}
+        isJourneyMode={isJourneyMode}
       />
     );
   }
@@ -532,9 +571,9 @@ export default function NegotiationSimulator() {
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Mode Banner */}
+        {/* Mode Banner - use URL params to determine mode even before data loads */}
         <ModeBanner 
-          mode={selectedApplication ? "journey" : "practice"} 
+          mode={isJourneyMode ? "journey" : "practice"} 
           variant="banner"
           context={selectedApplication ? {
             companyName: selectedApplication.job.company.name,
@@ -543,7 +582,7 @@ export default function NegotiationSimulator() {
         />
 
         {/* Back button for practice mode */}
-        {!selectedApplication && (
+        {!isJourneyMode && (
           <button
             onClick={() => setStep('select')}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-4"
@@ -565,10 +604,10 @@ export default function NegotiationSimulator() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-              {selectedApplication ? "Configure Negotiation" : "Practice Negotiation"}
+              {isJourneyMode ? "Configure Negotiation" : "Practice Negotiation"}
             </CardTitle>
             <CardDescription>
-              {selectedApplication 
+              {isJourneyMode 
                 ? "Customize your negotiation parameters before starting"
                 : "Build your negotiation skills with sample scenarios"
               }

@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ModeBanner } from "@/components/ModeBanner";
 import { 
   Search, Briefcase, MessageCircle, Handshake, Users, Check, Lock, 
   ChevronRight, Zap, Target, TrendingUp, Flame, Star
@@ -15,6 +16,7 @@ interface JobApplication {
   currentStageIndex: number;
   appliedAt?: string | null;
   stages: { status: string; score?: number | null; completedAt?: string | null }[];
+  offerDetails?: any;
 }
 
 interface Phase {
@@ -48,7 +50,10 @@ export default function JourneyMap() {
   const applicationsInProgress = applications.filter(
     a => a.status === "submitted" || a.status === "interviewing"
   ).length;
-  const applicationsWithOffers = applications.filter(a => a.status === "offer").length;
+  const offersApplications = applications.filter(a => a.status === "offer");
+  const applicationsWithOffers = offersApplications.length;
+  // Get first application with offer for navigation
+  const firstOfferApplication = offersApplications[0];
   const totalInterviewsCompleted = applications.reduce(
     (acc, app) => acc + app.stages.filter(s => s.status === "completed" || s.status === "passed").length,
     0
@@ -161,7 +166,10 @@ export default function JourneyMap() {
         { label: "Offers Received", value: applicationsWithOffers },
         { label: "Status", value: applicationsWithOffers > 0 ? "Ready" : "Awaiting Offers" },
       ],
-      href: getPhaseStatus("negotiations") !== "locked" ? "/negotiation" : undefined,
+      // Pass full Journey context params when navigating
+      href: getPhaseStatus("negotiations") !== "locked" 
+        ? (firstOfferApplication ? `/negotiation?journeyMode=configure&applicationId=${firstOfferApplication.id}` : "/negotiation")
+        : undefined,
       action: getPhaseStatus("negotiations") !== "locked" ? "Start" : "Unlock",
     },
     {
@@ -183,6 +191,12 @@ export default function JourneyMap() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
       <div className="max-w-6xl mx-auto">
+        {/* Journey Mode Banner */}
+        <ModeBanner 
+          mode="journey" 
+          variant="banner"
+        />
+
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">

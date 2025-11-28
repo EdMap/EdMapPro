@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OfferLetter } from "@/components/OfferLetter";
+import { ModeBanner } from "@/components/ModeBanner";
 import type { OfferDetails } from "@shared/schema";
 import { 
   Briefcase, Calendar, Check, ChevronRight, Clock, FileText, MapPin, 
@@ -510,6 +511,11 @@ export default function Journey() {
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
+      {/* Journey Mode Banner */}
+      <div className="p-4 pb-0 bg-white dark:bg-gray-900">
+        <ModeBanner mode="journey" variant="banner" />
+      </div>
+      
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Job Journey</h1>

@@ -65,8 +65,8 @@ const navigationItems = [
 
 // Paths that can be in Journey mode when they have specific URL params
 const journeyModeIndicators: Record<string, string[]> = {
-  "/interview": ["stageId"],
-  "/negotiation": ["applicationId"],
+  "/interview": ["stageId", "journeyMode"],
+  "/negotiation": ["applicationId", "journeyMode"],
 };
 
 export default function Sidebar() {
