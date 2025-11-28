@@ -199,6 +199,39 @@ export class ResponseHandler {
       case 'question_for_recruiter':
         // Check if candidate is offering to elaborate (not asking a real question)
         const candidateQ = (classification.candidateQuestion || classification.sanitizedText).toLowerCase();
+        
+        // First, check if they're asking the INTERVIEWER to do something (not an offer)
+        // e.g., "Could you elaborate?" or "Can you explain what you mean?"
+        const askingInterviewer = (
+          candidateQ.includes('could you') ||
+          candidateQ.includes('can you') ||
+          candidateQ.includes('would you ') || // Note: space to avoid matching "would you like me to"
+          candidateQ.includes('what do you mean') ||
+          candidateQ.includes('what does that mean') ||
+          candidateQ.includes('what exactly')
+        );
+        
+        // If they're asking the interviewer something, it's NOT an elaboration offer
+        if (askingInterviewer) {
+          // This is a real question directed at the interviewer - answer it
+          const answerPrompt = await answerQuestionPrompt.format({
+            interviewerName,
+            companyName,
+            companyDescription,
+            jobTitle,
+            jobRequirements,
+            lastQuestion,
+            candidateQuestion: classification.candidateQuestion || classification.sanitizedText
+          });
+          const answerResponse = await this.model.invoke(answerPrompt);
+          return {
+            response: this.extractContent(answerResponse),
+            shouldProceedWithEvaluation: false,
+            questionRepeated: true
+          };
+        }
+        
+        // Check if candidate is offering to elaborate themselves
         const elaborationPatterns = [
           'elaborate', 'more detail', 'go deeper', 'dive deeper', 'expand on',
           'different example', 'another example', 'give you more', 'tell you more',
@@ -210,8 +243,8 @@ export class ResponseHandler {
           candidateQ.includes('do you want me to') ||
           candidateQ.includes('should i')
         );
-        const isElaborationOffer = hasElaborationKeyword || (hasOfferPhrase && 
-          (candidateQ.includes('more') || candidateQ.includes('example') || candidateQ.includes('detail')));
+        const isElaborationOffer = (hasOfferPhrase && hasElaborationKeyword) || 
+          (hasOfferPhrase && (candidateQ.includes('more') || candidateQ.includes('example') || candidateQ.includes('detail')));
         
         if (isElaborationOffer) {
           // Use the elaboration prompt that doesn't add a redirect question
