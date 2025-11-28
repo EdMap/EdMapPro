@@ -334,7 +334,7 @@ function ApplicationDetail({
                     </p>
                   </div>
                   <Button 
-                    onClick={() => navigate('/negotiation')}
+                    onClick={() => navigate(`/negotiation?applicationId=${application.id}`)}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     Practice Negotiation
