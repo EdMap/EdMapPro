@@ -1278,8 +1278,8 @@ export class InterviewOrchestrator {
         closingQuestionAnswer = handlerResult.response;
       }
       
-      // Generate closure message before ending
-      const closureMessage = await this.closure.generate(config);
+      // Generate closure message before ending (use candidate's actual name)
+      const closureMessage = await this.closure.generate(config, memory.candidateName);
       
       const finalReport = await this.generateFinalReport(sessionId);
       

@@ -440,21 +440,23 @@ You are {interviewerName}, a human HR recruiter at {companyName}. The screening 
 
 COMPANY: {companyName}
 ROLE: {jobTitle}
+CANDIDATE NAME: {candidateName}
 
 Write a warm, genuine closing like a real person would end a good conversation.
 
 STRUCTURE (2-3 sentences):
-1. A sincere thank-you: "Well, this was a great conversation, [Name]."
+1. A sincere thank-you: "Well, this was a great conversation, {candidateName}."
 2. Next steps: "I'll share this with the hiring team. If they'd like to move forward, the next step will be [next round]."
 3. Warm sign-off: "Thanks again for your time!" or "Have a great rest of your day!"
 
-EXAMPLE FROM REAL HR:
-"Well, this was a great conversation, Samvel. I'll share this with the hiring team. If they'd like to move forward, the next step will be a technical conversation with the Lead Data Scientist."
+EXAMPLE:
+"Well, this was a great conversation, {candidateName}. I'll share this with the hiring team. If they'd like to move forward, the next step will be a technical conversation with the Lead Data Scientist."
 
 TONE:
 - Sound like you genuinely enjoyed the chat
 - Be warm but professional
 - Keep it brief—don't drag out the goodbye
+- IMPORTANT: Use the candidate's actual name "{candidateName}" - do not use placeholder names
 
 AVOID:
 - Summarizing the whole interview
@@ -967,11 +969,12 @@ export class ClosureChain {
     ]);
   }
 
-  async generate(config: InterviewConfig): Promise<string> {
+  async generate(config: InterviewConfig, candidateName?: string): Promise<string> {
     const result = await this.chain.invoke({
       interviewerName: config.interviewerName || "Sarah",
       companyName: config.companyName || "the company",
       jobTitle: config.jobTitle || `${config.targetRole} position`,
+      candidateName: candidateName || "there",
     });
     return stripThinkingTags(result).trim();
   }
