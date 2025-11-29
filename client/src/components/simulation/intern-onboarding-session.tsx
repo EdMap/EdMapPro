@@ -35,7 +35,19 @@ import {
   Lightbulb,
   ArrowRight,
   Monitor,
-  Rocket
+  Rocket,
+  Folder,
+  FolderOpen,
+  File,
+  Terminal,
+  Play,
+  Check,
+  X,
+  Sun,
+  Clipboard,
+  GitCommit,
+  GitPullRequest,
+  PenLine
 } from "lucide-react";
 
 interface InternOnboardingSessionProps {
@@ -44,7 +56,8 @@ interface InternOnboardingSessionProps {
   onComplete: () => void;
 }
 
-type ViewMode = 'overview' | 'team-intro' | 'documentation' | 'comprehension-check';
+type ViewMode = 'overview' | 'team-intro' | 'documentation' | 'comprehension-check' | 
+  'day2-standup' | 'day2-codebase' | 'day2-code-fix' | 'day2-git' | 'day2-reflection';
 
 interface TeamMember {
   name: string;
@@ -70,6 +83,19 @@ export default function InternOnboardingSession({ session, project, onComplete }
   const [showDay2Preview, setShowDay2Preview] = useState(false);
   const [activeDocTab, setActiveDocTab] = useState<string>('product');
   
+  // Day 2 state
+  const [standupComplete, setStandupComplete] = useState(false);
+  const [codebaseExplored, setCodebaseExplored] = useState(false);
+  const [codeFixComplete, setCodeFixComplete] = useState(false);
+  const [gitWorkflowComplete, setGitWorkflowComplete] = useState(false);
+  const [reflectionComplete, setReflectionComplete] = useState(false);
+  const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [codeInputs, setCodeInputs] = useState<Record<string, string>>({});
+  const [gitStep, setGitStep] = useState(0);
+  const [gitCommands, setGitCommands] = useState<string[]>([]);
+  const [commitMessage, setCommitMessage] = useState("");
+  const [reflectionText, setReflectionText] = useState("");
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -83,20 +109,32 @@ export default function InternOnboardingSession({ session, project, onComplete }
   const dayProgress = calculateDayProgress();
 
   function calculateDayProgress() {
-    if (currentDay !== 1) return 0;
+    if (currentDay === 1) {
+      const totalIntros = teamMembers.length;
+      const completedIntros = Object.values(introProgress).filter(Boolean).length;
+      const introWeight = 50;
+      const docsWeight = 30;
+      const comprehensionWeight = 20;
+      
+      let progress = 0;
+      progress += (completedIntros / totalIntros) * introWeight;
+      if (docsRead) progress += docsWeight;
+      if (comprehensionComplete) progress += comprehensionWeight;
+      
+      return Math.round(progress);
+    }
     
-    const totalIntros = teamMembers.length;
-    const completedIntros = Object.values(introProgress).filter(Boolean).length;
-    const introWeight = 50;
-    const docsWeight = 30;
-    const comprehensionWeight = 20;
+    if (currentDay === 2) {
+      let progress = 0;
+      if (standupComplete) progress += 20;
+      if (codebaseExplored) progress += 15;
+      if (codeFixComplete) progress += 30;
+      if (gitWorkflowComplete) progress += 25;
+      if (reflectionComplete) progress += 10;
+      return progress;
+    }
     
-    let progress = 0;
-    progress += (completedIntros / totalIntros) * introWeight;
-    if (docsRead) progress += docsWeight;
-    if (comprehensionComplete) progress += comprehensionWeight;
-    
-    return Math.round(progress);
+    return 0;
   }
 
   const { data: interactions, isLoading: interactionsLoading } = useQuery({
@@ -339,6 +377,739 @@ export default function InternOnboardingSession({ session, project, onComplete }
               </div>
             </CardContent>
           </Card>
+        )}
+      </div>
+    );
+  }
+
+  function renderDay2Overview() {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Bug className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <CardTitle className="text-xl text-orange-900">
+                  Day 2: Your First Ticket
+                </CardTitle>
+                <CardDescription className="text-orange-700">
+                  Time to fix the timezone bug!
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-orange-800">
+              Today you'll experience the full developer workflow: standup, code exploration, making a fix, and submitting your first PR.
+            </p>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Today's Activities
+          </h3>
+          
+          <div className="grid gap-3">
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                standupComplete ? 'border-green-200 bg-green-50' : ''
+              }`}
+              onClick={() => setViewMode('day2-standup')}
+              data-testid="card-day2-standup"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Sun className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Morning Standup</h4>
+                      <p className="text-sm text-gray-600">
+                        Sync with Sarah on your ticket
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {standupComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                codebaseExplored ? 'border-green-200 bg-green-50' : ''
+              } ${!standupComplete ? 'opacity-60' : ''}`}
+              onClick={() => standupComplete && setViewMode('day2-codebase')}
+              data-testid="card-day2-codebase"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <FolderOpen className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Explore the Codebase</h4>
+                      <p className="text-sm text-gray-600">
+                        Find the timezone utility file
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!standupComplete && <Badge variant="outline" className="text-xs">Complete standup first</Badge>}
+                    {codebaseExplored && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                codeFixComplete ? 'border-green-200 bg-green-50' : ''
+              } ${!codebaseExplored ? 'opacity-60' : ''}`}
+              onClick={() => codebaseExplored && setViewMode('day2-code-fix')}
+              data-testid="card-day2-code-fix"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Code className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Fix the Code</h4>
+                      <p className="text-sm text-gray-600">
+                        Make the timezone fix
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!codebaseExplored && <Badge variant="outline" className="text-xs">Explore codebase first</Badge>}
+                    {codeFixComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                gitWorkflowComplete ? 'border-green-200 bg-green-50' : ''
+              } ${!codeFixComplete ? 'opacity-60' : ''}`}
+              onClick={() => codeFixComplete && setViewMode('day2-git')}
+              data-testid="card-day2-git"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <GitBranch className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Git Workflow</h4>
+                      <p className="text-sm text-gray-600">
+                        Branch, commit, and create PR
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!codeFixComplete && <Badge variant="outline" className="text-xs">Fix code first</Badge>}
+                    {gitWorkflowComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                reflectionComplete ? 'border-green-200 bg-green-50' : ''
+              } ${!gitWorkflowComplete ? 'opacity-60' : ''}`}
+              onClick={() => gitWorkflowComplete && setViewMode('day2-reflection')}
+              data-testid="card-day2-reflection"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                      <PenLine className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Day 2 Reflection</h4>
+                      <p className="text-sm text-gray-600">
+                        What will you confirm with QA tomorrow?
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!gitWorkflowComplete && <Badge variant="outline" className="text-xs">Complete git workflow first</Badge>}
+                    {reflectionComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderDay2Standup() {
+    const sarah = teamMembers.find(m => m.name === 'Sarah') || teamMembers[0];
+    
+    return (
+      <div className="h-full flex flex-col">
+        <Card className="mb-4 bg-yellow-50 border-yellow-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Sun className="h-6 w-6 text-yellow-600" />
+              <div>
+                <p className="font-medium text-yellow-900">Morning Standup with Sarah</p>
+                <p className="text-sm text-yellow-700">
+                  Share what you'll be working on and get clarity on the ticket requirements.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <ScrollArea className="flex-1 pr-4 mb-4">
+          <div className="space-y-4">
+            {filteredInteractions.length === 0 && (
+              <div className="bg-white border rounded-lg p-4 shadow-sm">
+                <p className="text-xs font-medium text-blue-600 mb-1">Sarah</p>
+                <p className="text-gray-800">
+                  Good morning! Ready for standup? Tell me - what are you planning to work on today, and do you have any questions about the timezone bug ticket?
+                </p>
+              </div>
+            )}
+            {filteredInteractions.map((interaction: any, idx: number) => (
+              <div
+                key={idx}
+                className={`flex ${interaction.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    interaction.sender === 'You'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white border shadow-sm'
+                  }`}
+                >
+                  {interaction.sender !== 'You' && (
+                    <p className="text-xs font-medium text-blue-600 mb-1">{interaction.sender}</p>
+                  )}
+                  <p className={interaction.sender === 'You' ? 'text-white' : 'text-gray-800'}>
+                    {interaction.content}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {typingIndicator && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-lg px-4 py-2">
+                  <p className="text-sm text-gray-500">{typingIndicator} is typing...</p>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Share your plan for the day..."
+              className="min-h-[60px] resize-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              data-testid="input-standup-message"
+            />
+            <Button 
+              onClick={handleSendMessage}
+              disabled={!message.trim() || sendMessageMutation.isPending}
+              data-testid="button-send-standup"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {filteredInteractions.length >= 2 && (
+            <Button 
+              className="w-full"
+              onClick={() => {
+                setStandupComplete(true);
+                setViewMode('overview');
+              }}
+              data-testid="button-complete-standup"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Complete Standup
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderDay2Codebase() {
+    const fileStructure = [
+      { name: 'client', type: 'folder', children: [
+        { name: 'src', type: 'folder', children: [
+          { name: 'components', type: 'folder', children: [
+            { name: 'TransactionList.tsx', type: 'file', highlight: true }
+          ]},
+          { name: 'utils', type: 'folder', children: [
+            { name: 'dateFormatters.ts', type: 'file', highlight: true, target: true }
+          ]}
+        ]}
+      ]},
+      { name: 'server', type: 'folder', children: [
+        { name: 'routes', type: 'folder' },
+        { name: 'services', type: 'folder' }
+      ]},
+      { name: 'shared', type: 'folder', children: [
+        { name: 'types', type: 'folder', children: [
+          { name: 'merchant.ts', type: 'file' }
+        ]}
+      ]}
+    ];
+
+    const renderFileTree = (items: any[], depth = 0) => {
+      return items.map((item, idx) => (
+        <div key={idx} style={{ marginLeft: depth * 16 }}>
+          <div 
+            className={`flex items-center gap-2 py-1 px-2 rounded cursor-pointer hover:bg-gray-100 ${
+              item.highlight ? 'bg-yellow-50' : ''
+            } ${item.target && currentFile === item.name ? 'bg-blue-100 border-l-2 border-blue-500' : ''}`}
+            onClick={() => {
+              if (item.type === 'file') {
+                setCurrentFile(item.name);
+                if (item.target) {
+                  setCodebaseExplored(true);
+                }
+              }
+            }}
+            data-testid={`file-${item.name}`}
+          >
+            {item.type === 'folder' ? (
+              <FolderOpen className="h-4 w-4 text-blue-500" />
+            ) : (
+              <File className={`h-4 w-4 ${item.highlight ? 'text-orange-500' : 'text-gray-500'}`} />
+            )}
+            <span className={`text-sm ${item.highlight ? 'font-medium text-orange-700' : 'text-gray-700'}`}>
+              {item.name}
+            </span>
+            {item.target && <Badge className="ml-2 text-xs bg-orange-100 text-orange-700">Fix here</Badge>}
+          </div>
+          {item.children && renderFileTree(item.children, depth + 1)}
+        </div>
+      ));
+    };
+
+    return (
+      <div className="space-y-4">
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <FolderOpen className="h-6 w-6 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-900">Explore the Codebase</p>
+                <p className="text-sm text-blue-700">
+                  Navigate to <code className="bg-blue-100 px-1 rounded">dateFormatters.ts</code> - that's where the timezone fix needs to happen.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Terminal className="h-4 w-4" />
+              merchant-dashboard/
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 rounded-lg p-3 font-mono text-sm">
+              {renderFileTree(fileStructure)}
+            </div>
+          </CardContent>
+        </Card>
+
+        {currentFile === 'dateFormatters.ts' && (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-green-800">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">Found it!</span>
+              </div>
+              <p className="text-sm text-green-700 mt-1">
+                This is where dates are formatted for display. You'll fix the timezone handling here.
+              </p>
+              <Button 
+                className="mt-3"
+                onClick={() => setViewMode('overview')}
+                data-testid="button-continue-to-fix"
+              >
+                Continue to Fix Code
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  function renderDay2CodeFix() {
+    const codeTemplate = `export function formatTransactionDate(
+  timestamp: string,
+  merchantTimezone: string = 'UTC'
+): string {
+  const date = new Date(timestamp);
+  
+  // TODO: Convert to merchant's timezone
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: ___BLANK_1___  // Fill in the timezone
+  };
+  
+  return date.toLocaleString('en-US', options);
+}`;
+
+    const isCorrect = codeInputs['blank1']?.toLowerCase().trim() === 'merchanttimezone';
+    
+    return (
+      <div className="space-y-4">
+        <Card className="bg-purple-50 border-purple-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Code className="h-6 w-6 text-purple-600" />
+              <div>
+                <p className="font-medium text-purple-900">Fix the Timezone Bug</p>
+                <p className="text-sm text-purple-700">
+                  Complete the code by filling in the missing value. The function should use the merchant's timezone, not UTC.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <File className="h-4 w-4" />
+              client/src/utils/dateFormatters.ts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400 overflow-x-auto">
+              <pre className="whitespace-pre-wrap">
+{`export function formatTransactionDate(
+  timestamp: string,
+  merchantTimezone: string = 'UTC'
+): string {
+  const date = new Date(timestamp);
+  
+  // TODO: Convert to merchant's timezone
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: `}<span className="inline-flex items-center bg-gray-800 border border-gray-600 rounded px-1">
+                  <input
+                    type="text"
+                    value={codeInputs['blank1'] || ''}
+                    onChange={(e) => setCodeInputs(prev => ({ ...prev, blank1: e.target.value }))}
+                    placeholder="???"
+                    className="bg-transparent text-yellow-400 w-32 outline-none font-mono"
+                    data-testid="input-code-blank"
+                  />
+                </span>{`  // Fill in the timezone
+  };
+  
+  return date.toLocaleString('en-US', options);
+}`}
+              </pre>
+            </div>
+            
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Hint:</strong> Look at the function parameter - what variable holds the merchant's timezone preference?
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {codeInputs['blank1'] && (
+          <Card className={isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                {isCorrect ? (
+                  <>
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <span className="font-medium text-green-800">Correct!</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="h-5 w-5 text-red-600" />
+                    <span className="font-medium text-red-800">Not quite - check the function parameter name</span>
+                  </>
+                )}
+              </div>
+              {isCorrect && (
+                <>
+                  <p className="text-sm text-green-700 mt-1">
+                    By using <code className="bg-green-100 px-1 rounded">merchantTimezone</code>, transactions will now display in the merchant's local time!
+                  </p>
+                  <Button 
+                    className="mt-3"
+                    onClick={() => {
+                      setCodeFixComplete(true);
+                      setViewMode('overview');
+                    }}
+                    data-testid="button-code-fix-complete"
+                  >
+                    Continue to Git Workflow
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  function renderDay2Git() {
+    const gitSteps = [
+      { command: 'git checkout -b fix/timezone-display', description: 'Create a new branch for your fix' },
+      { command: 'git add .', description: 'Stage your changes' },
+      { command: 'git commit -m "..."', description: 'Commit with a descriptive message' },
+      { command: 'git push origin fix/timezone-display', description: 'Push to remote' }
+    ];
+
+    const handleGitCommand = () => {
+      if (gitStep < gitSteps.length) {
+        const expectedCommand = gitSteps[gitStep].command;
+        const userCommand = gitCommands[gitStep] || '';
+        
+        if (gitStep === 2) {
+          if (userCommand.startsWith('git commit -m') && commitMessage.trim()) {
+            setGitStep(prev => prev + 1);
+          }
+        } else if (userCommand.trim() === expectedCommand) {
+          setGitStep(prev => prev + 1);
+        }
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <GitBranch className="h-6 w-6 text-green-600" />
+              <div>
+                <p className="font-medium text-green-900">Git Workflow</p>
+                <p className="text-sm text-green-700">
+                  Now let's commit your fix and create a pull request. Follow the commands below.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Terminal className="h-4 w-4" />
+              Terminal
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm space-y-3">
+              {gitSteps.map((step, idx) => (
+                <div key={idx} className={idx > gitStep ? 'opacity-40' : ''}>
+                  <p className="text-gray-400 text-xs mb-1"># {step.description}</p>
+                  {idx < gitStep ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">$</span>
+                      <span className="text-white">{gitCommands[idx] || step.command}</span>
+                      <Check className="h-4 w-4 text-green-400 ml-2" />
+                    </div>
+                  ) : idx === gitStep ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">$</span>
+                      <input
+                        type="text"
+                        value={gitCommands[idx] || ''}
+                        onChange={(e) => {
+                          const newCommands = [...gitCommands];
+                          newCommands[idx] = e.target.value;
+                          setGitCommands(newCommands);
+                        }}
+                        placeholder={step.command}
+                        className="bg-transparent text-white flex-1 outline-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleGitCommand();
+                        }}
+                        data-testid={`input-git-step-${idx}`}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">$</span>
+                      <span className="text-gray-600">{step.command}</span>
+                    </div>
+                  )}
+                  
+                  {idx === 2 && gitStep === 2 && (
+                    <div className="mt-2 ml-4">
+                      <p className="text-gray-400 text-xs mb-1">Enter your commit message:</p>
+                      <Textarea
+                        value={commitMessage}
+                        onChange={(e) => setCommitMessage(e.target.value)}
+                        placeholder="Fix timezone display in transaction list"
+                        className="bg-gray-800 border-gray-700 text-white min-h-[60px]"
+                        data-testid="input-commit-message"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {gitStep >= gitSteps.length && (
+                <div className="border-t border-gray-700 pt-3 mt-3">
+                  <div className="flex items-center gap-2 text-green-400">
+                    <GitPullRequest className="h-4 w-4" />
+                    <span>Ready to create Pull Request!</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {gitStep < gitSteps.length && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Current step:</strong> {gitSteps[gitStep].description}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Type the command and press Enter
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {gitStep >= gitSteps.length && (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-green-800">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">Git workflow complete!</span>
+              </div>
+              <p className="text-sm text-green-700 mt-1">
+                Your PR is ready for review. Sarah will look at it tomorrow during code review!
+              </p>
+              <Button 
+                className="mt-3"
+                onClick={() => {
+                  setGitWorkflowComplete(true);
+                  setViewMode('overview');
+                }}
+                data-testid="button-git-complete"
+              >
+                Continue to Reflection
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  function renderDay2Reflection() {
+    return (
+      <div className="space-y-4">
+        <Card className="bg-indigo-50 border-indigo-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <PenLine className="h-6 w-6 text-indigo-600" />
+              <div>
+                <p className="font-medium text-indigo-900">Day 2 Reflection</p>
+                <p className="text-sm text-indigo-700">
+                  Great work today! Before wrapping up, think about what you'd like to confirm with QA tomorrow.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">What will you confirm with Alex (QA) tomorrow?</CardTitle>
+            <CardDescription>
+              Think about edge cases, testing scenarios, or anything you're unsure about.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={reflectionText}
+              onChange={(e) => setReflectionText(e.target.value)}
+              placeholder="For example: I want to confirm that the timezone fix works for merchants in different timezones, especially those with daylight saving time..."
+              className="min-h-[120px]"
+              data-testid="input-reflection"
+            />
+            
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 font-medium mb-2">Good things to think about:</p>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Edge cases (daylight saving time, international date line)</li>
+                <li>• Different timezone formats</li>
+                <li>• How the fix affects date filters</li>
+                <li>• Mobile vs desktop display</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {reflectionText.length >= 20 && (
+          <Button 
+            className="w-full"
+            onClick={() => {
+              setReflectionComplete(true);
+              setViewMode('overview');
+            }}
+            data-testid="button-complete-day2"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Complete Day 2
+          </Button>
         )}
       </div>
     );
@@ -1009,12 +1780,20 @@ git push origin fix/timezone-display`}</pre>
               </div>
             </div>
 
-            <DialogFooter>
-              <Button onClick={() => {
+            <DialogFooter className="flex gap-2 sm:gap-2">
+              <Button variant="outline" onClick={() => {
                 setShowDay2Preview(false);
                 setViewMode('overview');
-              }} data-testid="button-got-it">
-                Got it! Back to Day 1 Overview
+              }} data-testid="button-stay-day1">
+                Stay on Day 1
+              </Button>
+              <Button onClick={() => {
+                setShowDay2Preview(false);
+                setCurrentDay(2);
+                setViewMode('overview');
+              }} data-testid="button-start-day2">
+                <Rocket className="h-4 w-4 mr-2" />
+                Start Day 2
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1251,10 +2030,16 @@ git push origin fix/timezone-display`}</pre>
             <div className="lg:col-span-2 flex flex-col h-full overflow-hidden">
               <Card className="flex-1 flex flex-col overflow-hidden">
                 <CardContent className="flex-1 overflow-y-auto p-6">
-                  {viewMode === 'overview' && renderOverview()}
+                  {viewMode === 'overview' && currentDay === 1 && renderOverview()}
+                  {viewMode === 'overview' && currentDay === 2 && renderDay2Overview()}
                   {viewMode === 'team-intro' && renderTeamIntroView()}
                   {viewMode === 'documentation' && renderDocumentation()}
                   {viewMode === 'comprehension-check' && renderComprehensionCheck()}
+                  {viewMode === 'day2-standup' && renderDay2Standup()}
+                  {viewMode === 'day2-codebase' && renderDay2Codebase()}
+                  {viewMode === 'day2-code-fix' && renderDay2CodeFix()}
+                  {viewMode === 'day2-git' && renderDay2Git()}
+                  {viewMode === 'day2-reflection' && renderDay2Reflection()}
                 </CardContent>
               </Card>
             </div>
