@@ -1253,7 +1253,7 @@ function InterviewHistoryPanel({ userId }: { userId: number }) {
     <div className="flex-1 flex overflow-hidden">
       {/* Left Panel - Session List */}
       <div className={cn(
-        "w-full md:w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
+        "w-full md:w-80 md:min-w-80 md:max-w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
         showDetail && "hidden md:flex"
       )}>
         {/* Stats Bar */}
@@ -1309,7 +1309,7 @@ function InterviewHistoryPanel({ userId }: { userId: number }) {
       
       {/* Right Panel - Session Detail */}
       <div className={cn(
-        "flex-1 bg-gray-50 dark:bg-gray-900/50",
+        "flex-1 min-w-0 overflow-hidden bg-gray-50 dark:bg-gray-900/50",
         !showDetail && "hidden md:block"
       )}>
         {selectedSessionId ? (
@@ -1433,7 +1433,7 @@ export default function Journey() {
           <div className="flex-1 flex overflow-hidden">
             {/* Left Panel - Application List */}
             <div className={cn(
-              "w-full md:w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
+              "w-full md:w-80 md:min-w-80 md:max-w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
               showDetail && "hidden md:flex"
             )}>
               <JourneyStats applications={applications} />
@@ -1451,7 +1451,7 @@ export default function Journey() {
             
             {/* Right Panel - Application Detail */}
             <div className={cn(
-              "flex-1 bg-gray-50 dark:bg-gray-900/50",
+              "flex-1 min-w-0 overflow-hidden bg-gray-50 dark:bg-gray-900/50",
               !showDetail && "hidden md:block"
             )}>
               {selectedApplication ? (
