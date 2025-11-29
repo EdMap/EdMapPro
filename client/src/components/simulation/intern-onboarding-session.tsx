@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -146,6 +146,19 @@ function FloatingTeamChat({
     return colors[name] || 'bg-gray-500';
   };
 
+  // Get avatar URL for team member using DiceBear API
+  const getAvatarUrl = (name: string) => {
+    const avatarSeeds: Record<string, { seed: string; style: string }> = {
+      'Sarah': { seed: 'sarah-tech-lead', style: 'avataaars' },
+      'Marcus': { seed: 'marcus-senior-dev', style: 'avataaars' },
+      'Priya': { seed: 'priya-product-mgr', style: 'avataaars' },
+      'Alex': { seed: 'alex-qa-engineer', style: 'avataaars' },
+      'Jordan': { seed: 'jordan-intern', style: 'avataaars' }
+    };
+    const config = avatarSeeds[name] || { seed: name, style: 'avataaars' };
+    return `https://api.dicebear.com/7.x/${config.style}/svg?seed=${config.seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+  };
+
   return (
     <>
       {/* Floating Chat Button - Bottom right corner (FAB style) */}
@@ -194,8 +207,9 @@ function FloatingTeamChat({
                 }`}
                 data-testid={`button-chat-member-${member.name.toLowerCase()}`}
               >
-                <Avatar className={`h-8 w-8 ${getMemberColor(member.name)}`}>
-                  <AvatarFallback className="text-white text-xs">
+                <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
+                  <AvatarImage src={getAvatarUrl(member.name)} alt={member.name} />
+                  <AvatarFallback className={`text-white text-xs ${getMemberColor(member.name)}`}>
                     {getInitials(member.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -229,20 +243,23 @@ function FloatingTeamChat({
                 {filteredMessages.map((interaction: any, idx: number) => (
                   <div
                     key={idx}
-                    className={`flex ${interaction.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-2 ${interaction.sender === 'You' ? 'justify-end' : 'justify-start'}`}
                   >
+                    {interaction.sender !== 'You' && (
+                      <Avatar className="h-7 w-7 flex-shrink-0">
+                        <AvatarImage src={getAvatarUrl(interaction.sender)} alt={interaction.sender} />
+                        <AvatarFallback className={`text-white text-xs ${getMemberColor(interaction.sender)}`}>
+                          {getInitials(interaction.sender)}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div
-                      className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                      className={`max-w-[80%] rounded-lg px-3 py-2 ${
                         interaction.sender === 'You'
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-100 dark:bg-gray-700'
                       }`}
                     >
-                      {interaction.sender !== 'You' && (
-                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">
-                          {interaction.sender}
-                        </p>
-                      )}
                       <p className={`text-sm ${interaction.sender === 'You' ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>
                         {interaction.content}
                       </p>
@@ -354,6 +371,32 @@ export default function InternOnboardingSession({
   const teamMembers: TeamMember[] = project.teamStructure || [];
   const scenarioScript = project.scenarioScript || {};
   const projectInfo = requirements.project || {};
+
+  // Avatar helper functions
+  const getTeamAvatarUrl = (name: string) => {
+    const avatarSeeds: Record<string, { seed: string; style: string }> = {
+      'Sarah': { seed: 'sarah-tech-lead', style: 'avataaars' },
+      'Marcus': { seed: 'marcus-senior-dev', style: 'avataaars' },
+      'Priya': { seed: 'priya-product-mgr', style: 'avataaars' },
+      'Alex': { seed: 'alex-qa-engineer', style: 'avataaars' },
+      'Jordan': { seed: 'jordan-intern', style: 'avataaars' }
+    };
+    const config = avatarSeeds[name] || { seed: name, style: 'avataaars' };
+    return `https://api.dicebear.com/7.x/${config.style}/svg?seed=${config.seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+  };
+
+  const getTeamMemberColor = (name: string) => {
+    const colors: Record<string, string> = {
+      'Sarah': 'bg-blue-500',
+      'Marcus': 'bg-green-500',
+      'Priya': 'bg-purple-500',
+      'Alex': 'bg-orange-500',
+      'Jordan': 'bg-teal-500'
+    };
+    return colors[name] || 'bg-gray-500';
+  };
+
+  const getTeamMemberInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
 
   const currentDayData = dailyStructure.find((d: any) => d.day === currentDay) || dailyStructure[0];
   const dayProgress = calculateDayProgress();
@@ -1120,7 +1163,10 @@ export default function InternOnboardingSession({
         <Card className="mb-4 bg-yellow-50 border-yellow-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Sun className="h-6 w-6 text-yellow-600" />
+              <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+                <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                <AvatarFallback className="bg-blue-500 text-white">S</AvatarFallback>
+              </Avatar>
               <div>
                 <p className="font-medium text-yellow-900">Morning Standup with Sarah</p>
                 <p className="text-sm text-yellow-700">
@@ -1678,9 +1724,10 @@ export default function InternOnboardingSession({
               Back
             </Button>
             <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-purple-100 text-purple-700">
-                  {selectedMember.name.charAt(0)}
+              <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
+                <AvatarImage src={getTeamAvatarUrl(selectedMember.name)} alt={selectedMember.name} />
+                <AvatarFallback className={`text-white text-xs ${getTeamMemberColor(selectedMember.name)}`}>
+                  {getTeamMemberInitials(selectedMember.name)}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -1796,9 +1843,10 @@ export default function InternOnboardingSession({
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-purple-100 text-purple-700">
-                        {member.name.charAt(0)}
+                    <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+                      <AvatarImage src={getTeamAvatarUrl(member.name)} alt={member.name} />
+                      <AvatarFallback className={`text-white ${getTeamMemberColor(member.name)}`}>
+                        {getTeamMemberInitials(member.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -2305,8 +2353,9 @@ git push origin fix/timezone-display`}</pre>
         <Card className="mb-4 bg-blue-50 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-blue-100 text-blue-700">S</AvatarFallback>
+              <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+                <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                <AvatarFallback className="bg-blue-500 text-white">S</AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-medium text-blue-900">Comprehension Check with Sarah</p>
