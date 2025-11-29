@@ -78,15 +78,20 @@ Preferred communication style: Simple, everyday language.
 - **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work.
     - **Multi-Character AI Team**: 4-6 AI teammates with distinct roles, personalities, and expertise.
     - **Role-Based Practice**: Users can practice as Developer, Product Manager, Designer, QA Engineer, or DevOps Engineer.
-    - **Project Scenarios**: Includes pre-configured projects like "Task Management App" and "PulseOps IQ Enterprise Feature".
+    - **Project Scenarios**: Includes pre-configured projects like "Task Management App", "PulseOps IQ Enterprise Feature", and "NovaPay Intern Onboarding".
     - **Dynamic Collaboration**: Multi-channel communication (chat, standups, code reviews, email) and interactive project artifacts.
     - **Workspace Orchestrator**: Manages AI personas, orchestrates conversations, and evaluates user actions.
     - **Workspace Dashboard**: Provides progress overview, active session management, and performance visualizations.
     - **Enterprise Feature Scenario (PulseOps IQ)**: Simulates adding features to an enterprise codebase with a multi-phase workflow, simulated codebase explorer, and comprehensive PM documentation.
+    - **Intern Onboarding Scenario (NovaPay)**: 5-day intern onboarding journey with Day 1 featuring team introductions, documentation reading, and comprehension check with Sarah. Uses `InternOnboardingSession` component with day-based navigation, 1:1 team intro chats, and progress tracking.
     - **Chat Enhancements**: `@mention` autocomplete, smart message routing, realistic AI response delays, auto-scroll, and real-time typing indicators.
     - **Phase Guidance System**: Interactive "What to Do Now" panel with objectives checklist and smart phase progression.
     - **Direct Messaging (DM) Feature**: 1-on-1 private conversations with individual AI teammates.
     - **Document Viewer System**: PM documentation opens in new browser tabs for focused reading. Requirements tab displays a document explorer with 10 clickable document cards (Executive Summary, Feature Requirements, Stakeholder Analysis, User Stories, Success Metrics, Roadmap Context, Competitive Analysis, Go-to-Market Strategy, Risk Assessment, Resource Planning). Clean, distraction-free viewing experience without sidebar/header.
+    - **Specialized Session Components**: 
+      - `WorkspaceSession`: Generic workspace simulation
+      - `EnterpriseFeatureSession`: For enterprise-scale feature work (PulseOps IQ)
+      - `InternOnboardingSession`: For intern onboarding flows (NovaPay, category: 'intern-onboarding')
 
 ### UI/UX Decisions
 - Fixed sidebar navigation with responsive header.
