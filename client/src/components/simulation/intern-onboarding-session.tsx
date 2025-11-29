@@ -1311,7 +1311,7 @@ export default function InternOnboardingSession({ session, project, onComplete }
   function handleFinishDocs() {
     if (!allSectionsRead) return;
     setDocsRead(true);
-    setShowDay2Preview(true);
+    setViewMode('overview');
   }
 
   function renderDocumentation() {
@@ -1726,8 +1726,8 @@ git push origin fix/timezone-display`}</pre>
           >
             {allSectionsRead ? (
               <>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                I've Read Everything - Show Me Day 2 Preview
+                <Users className="h-4 w-4 mr-2" />
+                Done Reading - Continue to Meet the Team
               </>
             ) : (
               <>
@@ -1738,58 +1738,53 @@ git push origin fix/timezone-display`}</pre>
           </Button>
         </div>
 
+        {/* Day 2 Preview Dialog - triggered after comprehension check */}
         <Dialog open={showDay2Preview} onOpenChange={setShowDay2Preview}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Rocket className="h-5 w-5 text-orange-500" />
-                Ready for Day 2!
+                <Sparkles className="h-5 w-5 text-green-500" />
+                Day 1 Complete!
               </DialogTitle>
               <DialogDescription>
-                Here's what you'll be working on tomorrow.
+                Great job! You've completed your first day at NovaPay.
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4 py-4">
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                    <div>
+                      <p className="font-semibold text-green-900">What you accomplished today:</p>
+                      <ul className="text-sm text-green-800 mt-2 space-y-1">
+                        <li>• Read through onboarding documentation</li>
+                        <li>• Met all your teammates</li>
+                        <li>• Checked in with Sarah</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="bg-orange-50 border-orange-200">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <Bug className="h-6 w-6 text-orange-600" />
                     <div>
-                      <p className="font-semibold text-orange-900">Your First Ticket</p>
+                      <p className="font-semibold text-orange-900">Coming up on Day 2:</p>
                       <p className="text-sm text-orange-800 mt-1">
-                        Fix timezone display in TransactionList so merchants see times in their local timezone, not UTC.
+                        Your first ticket! Fix the timezone display bug so merchants see times in their local timezone.
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <div className="space-y-2">
-                <p className="font-medium text-gray-900">Tomorrow's Goals:</p>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
-                    Set up your development environment
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
-                    Reproduce the timezone bug locally
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
-                    Implement the fix in dateFormatters.ts
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
-                    Create your first Pull Request
-                  </li>
-                </ul>
-              </div>
-
               <div className="p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Pro tip:</strong> If you get stuck, message Sarah or check the codebase for similar date handling patterns.
+                  <strong>Pro tip:</strong> If you get stuck tomorrow, message Sarah or check the codebase for similar date handling patterns.
                 </p>
               </div>
             </div>
@@ -1798,8 +1793,9 @@ git push origin fix/timezone-display`}</pre>
               <Button variant="outline" onClick={() => {
                 setShowDay2Preview(false);
                 setViewMode('overview');
-              }} data-testid="button-stay-day1">
-                Stay on Day 1
+              }} data-testid="button-wrap-up">
+                <Clock className="h-4 w-4 mr-2" />
+                Wrap Up for Today
               </Button>
               <Button onClick={() => {
                 setShowDay2Preview(false);
@@ -1909,18 +1905,17 @@ git push origin fix/timezone-display`}</pre>
             </Button>
           </div>
           
-          {filteredInteractions.length >= 4 && (
+          {filteredInteractions.length >= 4 && !comprehensionComplete && (
             <Button 
-              variant="outline"
               className="w-full"
               onClick={() => {
                 setComprehensionComplete(true);
-                setViewMode('overview');
+                setShowDay2Preview(true);
               }}
               data-testid="button-complete-comprehension"
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
-              Complete Comprehension Check
+              Complete Day 1
             </Button>
           )}
         </div>
