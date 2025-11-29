@@ -399,13 +399,15 @@ export default function InternOnboardingSession({
   const getTeamMemberInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
 
   const currentDayData = dailyStructure.find((d: any) => d.day === currentDay) || dailyStructure[0];
-  const dayProgress = calculateDayProgress();
+  
+  const teamMembersToMeet = teamMembers.filter((m: TeamMember) => m.name !== 'Sarah');
+  const completedIntroCount = teamMembersToMeet.filter((m: TeamMember) => introProgress[m.name]).length;
+  const allTeamMet = completedIntroCount === teamMembersToMeet.length;
 
   function calculateDayProgress() {
     if (currentDay === 1) {
-      const totalIntros = teamMembers.length;
-      const completedIntros = Object.values(introProgress).filter(Boolean).length;
-      // New weights: Docs 30%, Team 40%, Comprehension 30%
+      const totalIntros = teamMembersToMeet.length;
+      const completedIntros = completedIntroCount;
       const docsWeight = 30;
       const introWeight = 40;
       const comprehensionWeight = 30;
@@ -430,6 +432,8 @@ export default function InternOnboardingSession({
     
     return 0;
   }
+
+  const dayProgress = calculateDayProgress();
 
   // Helper to get today's activities based on current day
   function getDayActivities(): string[] {
@@ -885,7 +889,7 @@ export default function InternOnboardingSession({
             {/* Step 2: Meet the Team - Unlocks after docs */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
-                Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'border-green-200 bg-green-50' : ''
+                allTeamMet ? 'border-green-200 bg-green-50' : ''
               } ${!docsRead ? 'opacity-60' : ''}`}
               onClick={() => docsRead && setViewMode('team-intro')}
               data-testid="card-team-intros"
@@ -912,7 +916,7 @@ export default function InternOnboardingSession({
                     )}
                     {docsRead && (
                       <Badge variant="outline">
-                        {Object.values(introProgress).filter(Boolean).length}/{teamMembers.length}
+                        {completedIntroCount}/{teamMembersToMeet.length}
                       </Badge>
                     )}
                     <ChevronRight className="h-5 w-5 text-gray-400" />
@@ -921,30 +925,30 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
-            {/* Step 3: Comprehension Check - Unlocks after meeting all team members */}
+            {/* Step 3: Check in with Sarah - Unlocks after meeting all team members */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 comprehensionComplete ? 'border-green-200 bg-green-50' : ''
-              } ${Object.values(introProgress).filter(Boolean).length !== teamMembers.length ? 'opacity-60' : ''}`}
-              onClick={() => Object.values(introProgress).filter(Boolean).length === teamMembers.length && setViewMode('comprehension-check')}
+              } ${!allTeamMet ? 'opacity-60' : ''}`}
+              onClick={() => allTeamMet && setViewMode('comprehension-check')}
               data-testid="card-comprehension-check"
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>3</div>
-                    <div className={`p-2 rounded-lg ${Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                      <MessageSquare className={`h-5 w-5 ${Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${allTeamMet ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>3</div>
+                    <div className={`p-2 rounded-lg ${allTeamMet ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                      <MessageSquare className={`h-5 w-5 ${allTeamMet ? 'text-blue-600' : 'text-gray-400'}`} />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Comprehension Check</h4>
+                      <h4 className="font-medium text-gray-900">Check in with Sarah</h4>
                       <p className="text-sm text-gray-600">
-                        Chat with Sarah about what you learned
+                        Share what you've learned with your lead
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {Object.values(introProgress).filter(Boolean).length !== teamMembers.length && (
+                    {!allTeamMet && (
                       <Badge variant="outline" className="text-xs">
                         Meet the team first
                       </Badge>
@@ -1826,12 +1830,15 @@ export default function InternOnboardingSession({
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Your Team</h3>
           <Badge variant="outline">
-            {Object.values(introProgress).filter(Boolean).length}/{teamMembers.length} introduced
+            {completedIntroCount}/{teamMembersToMeet.length} introduced
           </Badge>
         </div>
+        <p className="text-sm text-gray-500">
+          Meet your teammates! Sarah (your lead) will check in with you after you've read the docs.
+        </p>
         
         <div className="grid gap-3">
-          {teamMembers.map((member: TeamMember, idx: number) => (
+          {teamMembersToMeet.map((member: TeamMember, idx: number) => (
             <Card 
               key={idx}
               className={`cursor-pointer transition-all hover:shadow-md ${
@@ -2531,7 +2538,7 @@ git push origin fix/timezone-display`}</pre>
                       <div key={idx} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 className={`h-4 w-4 mt-0.5 ${
                           (idx === 0 && docsRead) ||
-                          (idx === 1 && Object.values(introProgress).filter(Boolean).length === teamMembers.length) ||
+                          (idx === 1 && allTeamMet) ||
                           (idx === 2 && comprehensionComplete)
                             ? 'text-green-600'
                             : 'text-gray-300'
@@ -2669,20 +2676,23 @@ git push origin fix/timezone-display`}</pre>
         </DialogContent>
       </Dialog>
 
-      {/* Floating Team Chat - available from any view */}
-      <FloatingTeamChat
-        isOpen={floatingChatOpen}
-        onToggle={handleFloatingChatToggle}
-        teamMembers={teamMembers}
-        activeChatMember={floatingChatMember}
-        onSelectMember={setFloatingChatMember}
-        message={floatingChatMessage}
-        onMessageChange={setFloatingChatMessage}
-        onSendMessage={handleFloatingChatSend}
-        isSending={floatingChatMutation.isPending}
-        interactions={Array.isArray(interactions) ? interactions : []}
-        typingIndicator={floatingTypingIndicator}
-      />
+      {/* Floating Team Chat - hidden during structured conversations */}
+      {/* Hide during: team-intro (has its own chat), comprehension-check (Sarah chat), day2-standup (Sarah chat) */}
+      {!['team-intro', 'comprehension-check', 'day2-standup'].includes(viewMode) && (
+        <FloatingTeamChat
+          isOpen={floatingChatOpen}
+          onToggle={handleFloatingChatToggle}
+          teamMembers={teamMembers}
+          activeChatMember={floatingChatMember}
+          onSelectMember={setFloatingChatMember}
+          message={floatingChatMessage}
+          onMessageChange={setFloatingChatMessage}
+          onSendMessage={handleFloatingChatSend}
+          isSending={floatingChatMutation.isPending}
+          interactions={Array.isArray(interactions) ? interactions : []}
+          typingIndicator={floatingTypingIndicator}
+        />
+      )}
     </div>
   );
 }
