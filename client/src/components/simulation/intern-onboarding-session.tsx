@@ -2357,20 +2357,21 @@ git push origin fix/timezone-display`}</pre>
 
   function renderComprehensionCheck() {
     const sarah = teamMembers.find(m => m.name === 'Sarah') || teamMembers[0];
+    const isUserMessage = (sender: string) => sender === 'You' || sender === 'User';
     
     return (
       <div className="h-full flex flex-col">
-        <Card className="mb-4 bg-blue-50 border-blue-200">
+        <Card className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+              <Avatar className="h-12 w-12 ring-2 ring-white shadow-md">
                 <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
-                <AvatarFallback className="bg-blue-500 text-white">S</AvatarFallback>
+                <AvatarFallback className="bg-blue-500 text-white font-semibold">S</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium text-blue-900">Comprehension Check with Sarah</p>
+                <p className="font-semibold text-blue-900">Check in with Sarah</p>
                 <p className="text-sm text-blue-700">
-                  Sarah will ask you some questions about what you've read. Answer naturally - this is a conversation, not a test!
+                  Share what you've learned from the documentation. This is a casual chat, not a test!
                 </p>
               </div>
             </div>
@@ -2378,43 +2379,68 @@ git push origin fix/timezone-display`}</pre>
         </Card>
 
         <ScrollArea className="flex-1 pr-4 mb-4">
-          <div className="space-y-4">
+          <div className="space-y-4 px-1">
             {filteredInteractions.length === 0 && (
-              <div className="bg-white border rounded-lg p-4 shadow-sm">
-                <p className="text-xs font-medium text-purple-600 mb-1">Sarah</p>
-                <p className="text-gray-800">
-                  Hey! I see you've been reading through the docs. Before we get you started on anything, I just want to make sure we're on the same page. What's your understanding of what our Merchant Dashboard does?
-                </p>
+              <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8 mt-1 ring-1 ring-gray-200 shadow-sm flex-shrink-0">
+                  <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                  <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 max-w-[85%]">
+                  <p className="text-xs font-medium text-blue-600 mb-1">Sarah</p>
+                  <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <p className="text-gray-800 leading-relaxed">
+                      Hey! I see you've been reading through the docs. Before we get you started on anything, I just want to make sure we're on the same page. What's your understanding of what our Merchant Dashboard does?
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
             {filteredInteractions.map((interaction: any, idx: number) => (
               <div
                 key={idx}
-                className={`flex ${interaction.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${isUserMessage(interaction.sender) ? 'justify-end' : 'items-start gap-3'}`}
                 data-testid={`comprehension-message-${idx}`}
               >
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    interaction.sender === 'You'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white border shadow-sm'
-                  }`}
-                >
-                  {interaction.sender !== 'You' && (
-                    <p className="text-xs font-medium text-purple-600 mb-1">
-                      {interaction.sender}
-                    </p>
+                {!isUserMessage(interaction.sender) && (
+                  <Avatar className="h-8 w-8 mt-1 ring-1 ring-gray-200 shadow-sm flex-shrink-0">
+                    <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                    <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
+                  </Avatar>
+                )}
+                <div className={`flex flex-col ${isUserMessage(interaction.sender) ? 'items-end' : 'flex-1 max-w-[85%]'}`}>
+                  {!isUserMessage(interaction.sender) && (
+                    <p className="text-xs font-medium text-blue-600 mb-1">Sarah</p>
                   )}
-                  <p className={interaction.sender === 'You' ? 'text-white' : 'text-gray-800'}>
-                    {interaction.content}
-                  </p>
+                  <div
+                    className={`px-4 py-3 ${
+                      isUserMessage(interaction.sender)
+                        ? 'bg-blue-600 text-white rounded-2xl rounded-br-sm max-w-[85%] shadow-sm'
+                        : 'bg-white border border-gray-200 rounded-2xl rounded-tl-sm shadow-sm'
+                    }`}
+                  >
+                    <p className={`leading-relaxed ${isUserMessage(interaction.sender) ? 'text-white' : 'text-gray-800'}`}>
+                      {interaction.content}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
             {typingIndicator && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg px-4 py-2">
-                  <p className="text-sm text-gray-500">{typingIndicator} is typing...</p>
+              <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8 mt-1 ring-1 ring-gray-200 shadow-sm flex-shrink-0">
+                  <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                  <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <p className="text-xs font-medium text-blue-600 mb-1">Sarah</p>
+                  <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -2422,13 +2448,13 @@ git push origin fix/timezone-display`}</pre>
           </div>
         </ScrollArea>
 
-        <div className="space-y-3">
+        <div className="space-y-3 bg-gray-50 -mx-4 -mb-4 px-4 py-4 border-t">
           <div className="flex gap-2">
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your response..."
-              className="min-h-[60px] resize-none"
+              placeholder="Type your response to Sarah..."
+              className="min-h-[60px] resize-none bg-white border-gray-300 focus:border-blue-400 focus:ring-blue-400"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -2440,6 +2466,7 @@ git push origin fix/timezone-display`}</pre>
             <Button 
               onClick={() => handleSendMessage(sarah)}
               disabled={!message.trim() || sendMessageMutation.isPending}
+              className="px-4"
               data-testid="button-send-comprehension-message"
             >
               <Send className="h-4 w-4" />
@@ -2448,7 +2475,7 @@ git push origin fix/timezone-display`}</pre>
           
           {filteredInteractions.length >= 4 && !comprehensionComplete && (
             <Button 
-              className="w-full"
+              className="w-full bg-green-600 hover:bg-green-700"
               onClick={() => {
                 setComprehensionComplete(true);
                 setShowDay2Preview(true);
