@@ -159,17 +159,53 @@ export default function InternOnboardingSession({ session, project, onComplete }
       });
       return response.json();
     },
+    onMutate: async (userMessage: string) => {
+      // Cancel any outgoing refetches so they don't overwrite optimistic update
+      await queryClient.cancelQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
+      
+      // Snapshot previous value
+      const previousInteractions = queryClient.getQueryData(['/api/workspace', session.id, 'interactions']);
+      
+      // Optimistically add user's message immediately
+      const channel = selectedMember ? `dm-${selectedMember.name}` : 'team-chat';
+      const optimisticMessage = {
+        id: `temp-${Date.now()}`,
+        sessionId: session.id,
+        channel,
+        sender: 'You',
+        senderRole: 'Intern',
+        content: userMessage,
+        createdAt: new Date().toISOString(),
+        isOptimistic: true
+      };
+      
+      queryClient.setQueryData(
+        ['/api/workspace', session.id, 'interactions'],
+        (old: any[] | undefined) => [...(old || []), optimisticMessage]
+      );
+      
+      // Clear input immediately for snappy feel
+      setMessage("");
+      
+      return { previousInteractions };
+    },
     onSuccess: () => {
       setTypingIndicator(null);
       queryClient.invalidateQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
-      setMessage("");
       
       if (selectedMember && !introProgress[selectedMember.name]) {
         setIntroProgress(prev => ({ ...prev, [selectedMember.name]: true }));
       }
     },
-    onError: () => {
+    onError: (_err, _userMessage, context) => {
       setTypingIndicator(null);
+      // Rollback on error
+      if (context?.previousInteractions) {
+        queryClient.setQueryData(
+          ['/api/workspace', session.id, 'interactions'],
+          context.previousInteractions
+        );
+      }
     }
   });
 
