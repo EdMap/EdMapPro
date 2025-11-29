@@ -1074,26 +1074,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } else {
-        // Default stages based on role
-        const defaultStages = job.role === 'developer' 
-          ? [
-              { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
-              { order: 2, name: 'Technical Screen', type: 'technical' },
-              { order: 3, name: 'Coding Interview', type: 'technical' },
-              { order: 4, name: 'System Design', type: 'technical' },
-              { order: 5, name: 'Team Fit', type: 'behavioral' },
-            ]
-          : job.role === 'pm'
-          ? [
-              { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
-              { order: 2, name: 'Hiring Manager', type: 'behavioral' },
-              { order: 3, name: 'Product Case', type: 'case_study' },
-            ]
-          : [
-              { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
-              { order: 2, name: 'Skills Interview', type: 'behavioral' },
-              { order: 3, name: 'Team Fit', type: 'behavioral' },
-            ];
+        // Check if this is an intern position (simplified 2-stage pipeline)
+        const isIntern = job.title.toLowerCase().includes('intern');
+        
+        // Default stages based on role and level
+        let defaultStages;
+        
+        if (isIntern) {
+          // Intern positions: 2-stage pipeline
+          defaultStages = [
+            { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
+            { order: 2, name: 'Team Interview', type: 'behavioral' },
+          ];
+        } else if (job.role === 'developer') {
+          defaultStages = [
+            { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
+            { order: 2, name: 'Technical Screen', type: 'technical' },
+            { order: 3, name: 'Coding Interview', type: 'technical' },
+            { order: 4, name: 'System Design', type: 'technical' },
+            { order: 5, name: 'Team Fit', type: 'behavioral' },
+          ];
+        } else if (job.role === 'pm') {
+          defaultStages = [
+            { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
+            { order: 2, name: 'Hiring Manager', type: 'behavioral' },
+            { order: 3, name: 'Product Case', type: 'case_study' },
+          ];
+        } else {
+          defaultStages = [
+            { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
+            { order: 2, name: 'Skills Interview', type: 'behavioral' },
+            { order: 3, name: 'Team Fit', type: 'behavioral' },
+          ];
+        }
 
         for (const stage of defaultStages) {
           await storage.createApplicationStage({

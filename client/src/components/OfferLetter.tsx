@@ -30,6 +30,9 @@ interface OfferLetterProps {
   job: JobPosting;
   candidateName: string;
   onProceedToNegotiation: () => void;
+  onAcceptOffer?: () => void;
+  onDeclineOffer?: () => void;
+  isLoading?: boolean;
 }
 
 function formatCurrency(amount: number): string {
@@ -67,7 +70,7 @@ function calculateTotalComp(offer: OfferDetails): {
   };
 }
 
-export function OfferLetter({ offer, company, job, candidateName, onProceedToNegotiation }: OfferLetterProps) {
+export function OfferLetter({ offer, company, job, candidateName, onProceedToNegotiation, onAcceptOffer, onDeclineOffer, isLoading }: OfferLetterProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const comp = calculateTotalComp(offer);
   
@@ -124,10 +127,12 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
             <Button 
               variant="outline"
               size="sm"
+              onClick={onDeclineOffer}
+              disabled={isLoading}
               className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
               data-testid="button-decline"
             >
-              Decline
+              {isLoading ? 'Processing...' : 'Decline'}
             </Button>
             <Button 
               onClick={onProceedToNegotiation}
@@ -140,10 +145,12 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
             <Button 
               variant="outline"
               size="sm"
-              className="border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+              onClick={onAcceptOffer}
+              disabled={isLoading}
+              className="border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
               data-testid="button-accept"
             >
-              Accept
+              {isLoading ? 'Processing...' : 'Accept Offer'}
             </Button>
           </div>
         </div>
@@ -289,6 +296,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
           <Separator />
           
           {/* Benefits & Perks */}
+          {offer.benefits && (
           <div>
             <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Heart className="h-5 w-5 text-red-500" />
@@ -296,6 +304,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {offer.benefits.healthInsurance && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
@@ -303,6 +312,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
                   <p className="text-xs text-gray-500 dark:text-gray-400">{offer.benefits.healthInsurance}</p>
                 </div>
               </div>
+              )}
               
               {offer.benefits.dentalVision && (
                 <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -314,7 +324,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
                 </div>
               )}
               
-              {offer.benefits.retirement401k.available && (
+              {offer.benefits.retirement401k?.available && (
                 <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
@@ -326,18 +336,23 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
                 </div>
               )}
               
+              {offer.benefits.pto && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white text-sm">Paid Time Off</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {offer.benefits.pto.type === 'unlimited' 
-                      ? 'Unlimited PTO policy' 
-                      : `${offer.benefits.pto.days} days per year`}
+                    {typeof offer.benefits.pto === 'string' 
+                      ? offer.benefits.pto
+                      : offer.benefits.pto.type === 'unlimited' 
+                        ? 'Unlimited PTO policy' 
+                        : `${offer.benefits.pto.days} days per year`}
                   </p>
                 </div>
               </div>
+              )}
               
+              {offer.benefits.remote && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
@@ -351,8 +366,9 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
                   </p>
                 </div>
               </div>
+              )}
               
-              {offer.benefits.otherBenefits.slice(0, 3).map((benefit, index) => (
+              {offer.benefits.otherBenefits?.slice(0, 3).map((benefit, index) => (
                 <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
@@ -362,6 +378,7 @@ export function OfferLetter({ offer, company, job, candidateName, onProceedToNeg
               ))}
             </div>
           </div>
+          )}
           
           <Separator />
           

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -300,6 +301,81 @@ function FeedbackModal({
   );
 }
 
+function CelebrationModal({
+  isOpen,
+  onClose,
+  company,
+  job,
+  startDate,
+  onStartOnboarding
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  company: { name: string; logo: string | null };
+  job: { title: string; role: string };
+  startDate: string;
+  onStartOnboarding: () => void;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg text-center" data-testid="dialog-celebration">
+        <div className="py-6">
+          {/* Confetti/celebration visual */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/30 dark:to-emerald-800/30 animate-pulse" />
+            </div>
+            <div className="relative flex items-center justify-center">
+              <div className="h-24 w-24 rounded-2xl bg-white dark:bg-gray-800 shadow-lg flex items-center justify-center text-4xl font-bold text-primary border-4 border-green-500">
+                {company.name.charAt(0)}
+              </div>
+            </div>
+          </div>
+          
+          {/* Celebration text */}
+          <div className="space-y-2 mb-6">
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+              Offer Accepted! 🎉
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              Welcome to <span className="font-semibold text-primary">{company.name}</span>
+            </p>
+            <p className="text-gray-500 dark:text-gray-500">
+              {job.title}
+            </p>
+          </div>
+          
+          {/* Start date */}
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-6">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Your start date</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-celebration-start-date">
+              {startDate}
+            </p>
+          </div>
+          
+          {/* CTA */}
+          <Button 
+            onClick={onStartOnboarding}
+            size="lg"
+            className="w-full h-14 text-lg font-semibold bg-green-600 hover:bg-green-700"
+            data-testid="button-start-onboarding"
+          >
+            <Rocket className="h-5 w-5 mr-2" />
+            Start Onboarding Journey
+          </Button>
+          
+          <button
+            onClick={onClose}
+            className="mt-4 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            I'll start later
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function getStatusColor(status: string): string {
   switch (status) {
     case "submitted": return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
@@ -498,11 +574,13 @@ function StageTimeline({
 function ApplicationDetail({ 
   application,
   onStartInterview,
-  onBack
+  onBack,
+  userId
 }: { 
   application: JobApplication;
   onStartInterview: (stage: ApplicationStage) => void;
   onBack: () => void;
+  userId?: number;
 }) {
   const [, navigate] = useLocation();
   const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean; sessionId: number | null; stageName: string }>({
@@ -510,8 +588,24 @@ function ApplicationDetail({
     sessionId: null,
     stageName: ''
   });
+  const [celebrationModal, setCelebrationModal] = useState(false);
+  
   const completedStages = application.stages.filter(s => s.status === 'completed' || s.status === 'passed').length;
   const progressPercent = (completedStages / application.stages.length) * 100;
+
+  // Mutation to update application status
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      const response = await apiRequest('PATCH', `/api/applications/${application.id}`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate the applications query to refetch
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/applications`] });
+      }
+    }
+  });
 
   const handleViewFeedback = (stage: ApplicationStage) => {
     if (stage.interviewSessionId) {
@@ -520,6 +614,34 @@ function ApplicationDetail({
         sessionId: stage.interviewSessionId,
         stageName: stage.stageName
       });
+    }
+  };
+
+  const handleAcceptOffer = () => {
+    // Update status to accepted and show celebration
+    updateStatusMutation.mutate('accepted', {
+      onSuccess: () => {
+        setCelebrationModal(true);
+      }
+    });
+  };
+
+  const handleDeclineOffer = () => {
+    if (confirm('Are you sure you want to decline this offer? This action cannot be undone.')) {
+      updateStatusMutation.mutate('declined');
+    }
+  };
+
+  const handleStartOnboarding = () => {
+    setCelebrationModal(false);
+    // Navigate to workspace with the company context
+    // For NovaPay intern, go to the intern onboarding journey
+    const companyName = application.job.company.name.toLowerCase();
+    if (companyName.includes('novapay')) {
+      navigate('/workspace/journey');
+    } else {
+      // For other companies, pass context via query params
+      navigate(`/workspace?companyId=${application.job.company.id}&role=${application.job.role}`);
     }
   };
   
@@ -590,6 +712,9 @@ function ApplicationDetail({
               }}
               candidateName="Test User"
               onProceedToNegotiation={() => navigate(`/negotiation?applicationId=${application.id}`)}
+              onAcceptOffer={handleAcceptOffer}
+              onDeclineOffer={handleDeclineOffer}
+              isLoading={updateStatusMutation.isPending}
             />
           )}
           
@@ -636,6 +761,15 @@ function ApplicationDetail({
         onClose={() => setFeedbackModal({ isOpen: false, sessionId: null, stageName: '' })}
         sessionId={feedbackModal.sessionId}
         stageName={feedbackModal.stageName}
+      />
+
+      <CelebrationModal
+        isOpen={celebrationModal}
+        onClose={() => setCelebrationModal(false)}
+        company={application.job.company}
+        job={{ title: application.job.title, role: application.job.role }}
+        startDate={application.offerDetails?.startDate || 'TBD'}
+        onStartOnboarding={handleStartOnboarding}
       />
     </div>
   );
@@ -1461,6 +1595,7 @@ export default function Journey() {
                   application={selectedApplication}
                   onStartInterview={handleStartInterview}
                   onBack={() => setShowDetail(false)}
+                  userId={user?.id}
                 />
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-500">
