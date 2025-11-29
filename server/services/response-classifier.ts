@@ -210,7 +210,7 @@ export class ResponseClassifier {
     const wordCount = trimmed.split(/\s+/).length;
     
     // === MINIMAL RESPONSES (1-4 words, common acknowledgments and refusals) ===
-    if (wordCount <= 4 && /^(yes|no|ok|okay|sure|yep|nope|yeah|nah|fine|good|great|thanks|right|correct|exactly|not really|i can'?t|i don'?t|none|nothing|no idea|i guess|hmm+|um+)\.?$/i.test(lower)) {
+    if (wordCount <= 4 && /^(yes|no|np|n\/a|na|ok|okay|sure|yep|nope|yeah|nah|fine|good|great|thanks|right|correct|exactly|not really|i can'?t|i don'?t|none|nothing|no idea|i guess|idk|dunno|hmm+|um+|uh+|er+|ah+|meh|whatever|skip|pass|next)\.?$/i.test(lower)) {
       return 'minimal_response';
     }
     

@@ -1278,6 +1278,51 @@ export class EvaluatorChain {
     question: string,
     answer: string
   ): Promise<EvaluationResult> {
+    // CRITICAL: Pre-check for non-answers and very short responses
+    // This prevents the LLM from hallucinating content that wasn't there
+    const trimmedAnswer = answer.trim().toLowerCase();
+    const wordCount = answer.trim().split(/\s+/).length;
+    
+    // Detect non-answers: single words, refusals, or meaningless responses
+    const nonAnswerPatterns = [
+      /^(no|nope|nah|np|n\/a|na|idk|dunno|nothing|none|skip|pass|next)\.?$/i,
+      /^not really\.?$/i,
+      /^i (don'?t|cant|can'?t|won'?t|cannot) (know|say|tell|answer|remember|recall|think of).*$/i,
+      /^(um+|uh+|hmm+|er+|ah+)\.?$/i,
+    ];
+    
+    const isNonAnswer = nonAnswerPatterns.some(p => p.test(trimmedAnswer));
+    const isTooShort = wordCount <= 3 && !trimmedAnswer.includes(' '); // Single word or very short
+    
+    if (isNonAnswer || (isTooShort && wordCount === 1)) {
+      console.log('[Evaluator] Detected non-answer or too short response:', answer);
+      return {
+        score: 1,
+        feedback: "Your response was too brief to evaluate. Please provide a detailed answer with specific examples from your experience.",
+        strengths: [],
+        improvements: [
+          "Share specific examples from your work",
+          "Explain your thought process or approach",
+          "Include relevant details and context"
+        ],
+      };
+    }
+    
+    // Very brief answers (2-5 words) should get low scores
+    if (wordCount <= 5) {
+      console.log('[Evaluator] Very brief response detected:', answer);
+      return {
+        score: 2,
+        feedback: "Your response was very brief. Consider sharing specific projects, challenges, or accomplishments to demonstrate your experience.",
+        strengths: [],
+        improvements: [
+          "Provide more context about your experience",
+          "Include specific examples or metrics",
+          "Explain the impact of your work"
+        ],
+      };
+    }
+    
     const result = await this.chain.invoke({
       interviewType: config.interviewType,
       targetRole: config.targetRole,
