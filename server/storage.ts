@@ -829,7 +829,7 @@ export class MemStorage implements IStorage {
             {
               day: 1,
               theme: 'Welcome aboard',
-              activities: ['Meet the team in 1:1 chats', 'Read onboarding docs', 'Comprehension check with Sarah'],
+              activities: ['Read onboarding docs', 'Meet the team in 1:1 chats', 'Comprehension check with Sarah'],
               overnightEvent: 'Priya assigns first ticket'
             },
             {

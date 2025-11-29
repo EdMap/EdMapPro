@@ -1939,8 +1939,8 @@ git push origin fix/timezone-display`}</pre>
                     {currentDayData?.activities?.map((activity: string, idx: number) => (
                       <div key={idx} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 className={`h-4 w-4 mt-0.5 ${
-                          (idx === 0 && Object.keys(introProgress).length > 0) ||
-                          (idx === 1 && docsRead) ||
+                          (idx === 0 && docsRead) ||
+                          (idx === 1 && Object.values(introProgress).filter(Boolean).length === teamMembers.length) ||
                           (idx === 2 && comprehensionComplete)
                             ? 'text-green-600'
                             : 'text-gray-300'
