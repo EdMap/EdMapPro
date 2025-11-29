@@ -1,0 +1,47 @@
+
+I know that it’s probably an edge case but perhaps we can refine it. Here’s the latest interview content. 
+Great! To get us started, I'll give you a quick overview of the role and then would love to hear more about you. We're hiring a Senior Data Scientist to design and train machine learning models for anomaly detection and forecasting—using Python, scikit-learn, TensorFlow, or PyTorch—and collaborate with engineers to integrate these models into production systems. Before we dive deeper, could you tell me a bit about your background?
+
+I'm a snr. DS at a bank.
+
+To get us started, could you tell me a bit about your background and what brought you to the field of data science?
+
+
+Can you share a specific example of your data science journey or relevant experience?
+
+Hmm. it was a short one. I was just lucky to land in a job.
+Score:
+ 
+2/10
+Your response was brief but honest. To stand out, structure your answer with a specific project, your role, and measurable impact using the STAR method (Situation, Task, Action, Result).
+
+Can you give me a specific example of a data science project you worked on?
+
+Not really
+Score:
+ 
+2/10
+It's okay to be honest, but interviewers need concrete examples. Practice articulating a specific project to demonstrate your skills.
+
+Can you give me a specific example of a data science project you worked on?
+
+not really
+Score:
+ 
+3/10
+It’s great that you’re honest about your experiences, but interviewers need concrete examples to assess your skills. Next time, prepare a brief story about a past project, even if it’s academic or personal.
+
+Can you give me a specific example of that?
+ Can you give me a specific example of that?
+
+no
+
+Got it! Could you share a specific example of that?
+
+nope
+Score:
+ 
+2/10
+It's great you're aware of areas to improve! Next time, use the STAR method to structure a specific example from your past projects.
+
+Well, this was a great conversation, [Name]. I'll share this with the hiring team. If they'd like to move forward, the next step will be a technical discussion with the Lead Data Scientist. Have a great rest of your day!

@@ -209,8 +209,13 @@ export class ResponseClassifier {
     // Count words
     const wordCount = trimmed.split(/\s+/).length;
     
-    // === MINIMAL RESPONSES (1-3 words, common acknowledgments) ===
-    if (wordCount <= 3 && /^(yes|no|ok|okay|sure|yep|nope|yeah|nah|fine|good|great|thanks|right|correct|exactly)\.?$/i.test(lower)) {
+    // === MINIMAL RESPONSES (1-4 words, common acknowledgments and refusals) ===
+    if (wordCount <= 4 && /^(yes|no|ok|okay|sure|yep|nope|yeah|nah|fine|good|great|thanks|right|correct|exactly|not really|i can'?t|i don'?t|none|nothing|no idea|i guess|hmm+|um+)\.?$/i.test(lower)) {
+      return 'minimal_response';
+    }
+    
+    // === NEGATIVE REFUSALS (candidate can't provide what was asked) ===
+    if (wordCount <= 8 && /^(not really|i (can'?t|don'?t|haven'?t)|no[,.]? (i (can'?t|don'?t)|not really)|i don'?t (have|know|remember|think)|none (that i|come to)|nothing (comes|specific)|can'?t think of)/i.test(lower)) {
       return 'minimal_response';
     }
     

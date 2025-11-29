@@ -122,6 +122,8 @@ interface ConversationMemory {
   telemetry: SessionTelemetry;
   // Track question repeats to prevent infinite loops (max 2 repeats before moving on)
   currentQuestionRepeatCount: number;
+  // Track consecutive minimal/negative responses to force topic change
+  consecutiveMinimalResponses: number;
 }
 
 export class InterviewOrchestrator {
@@ -201,6 +203,7 @@ export class InterviewOrchestrator {
         preludeResponses: [],
         telemetry: this.initializeTelemetry(),
         currentQuestionRepeatCount: 0,
+        consecutiveMinimalResponses: 0,
       });
     }
     return this.memory.get(sessionId)!;
@@ -1295,6 +1298,26 @@ export class InterviewOrchestrator {
       memory.projectMentionCount = 0;
     }
     
+    // Track consecutive minimal/negative responses to prevent infinite probing
+    const MAX_CONSECUTIVE_MINIMAL = 2;
+    const isMinimalResponse = classification.intent === 'minimal_response';
+    
+    if (isMinimalResponse) {
+      memory.consecutiveMinimalResponses++;
+      console.log(`[Interview] Minimal response detected (${memory.consecutiveMinimalResponses}/${MAX_CONSECUTIVE_MINIMAL})`);
+    } else {
+      // Reset counter on substantive response
+      memory.consecutiveMinimalResponses = 0;
+    }
+    
+    // Force skip follow-ups after too many minimal responses
+    const shouldForceNewTopic = memory.consecutiveMinimalResponses >= MAX_CONSECUTIVE_MINIMAL;
+    if (shouldForceNewTopic) {
+      console.log('[Interview] Forcing new topic after consecutive minimal responses');
+      memory.pendingFollowUp = undefined; // Clear any pending follow-up
+      memory.consecutiveMinimalResponses = 0; // Reset counter
+    }
+    
     // Use triage chain to evaluate response and decide next action
     let triageDecision: TriageDecision | null = null;
     let proactiveCoverageAck = '';
@@ -1316,9 +1339,9 @@ export class InterviewOrchestrator {
           this.generateProactiveCoverageAck(coveredQuestions);
       }
       
-      // If pending follow-up needed, store it
+      // If pending follow-up needed, store it (unless forced to skip due to consecutive minimal responses)
       if ((triageDecision.outcome === 'partial' || triageDecision.outcome === 'vague') && 
-          triageDecision.followUpPrompt) {
+          triageDecision.followUpPrompt && !shouldForceNewTopic) {
         memory.pendingFollowUp = triageDecision.followUpPrompt;
       }
       
