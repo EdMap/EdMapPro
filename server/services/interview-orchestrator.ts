@@ -1257,9 +1257,30 @@ export class InterviewOrchestrator {
     // UNIFIED CHAIN PATH: Single LLM call per turn (feature flagged)
     // =========================================================================
     if (USE_UNIFIED_CHAIN && memory.interviewPlan) {
-      console.log('[Interview] Using unified chain for natural conversation flow');
+      console.log('[Telemetry] Chain activation:', {
+        chainType: 'unified',
+        featureFlag: USE_UNIFIED_CHAIN,
+        hasInterviewPlan: !!memory.interviewPlan,
+        mode: session.mode,
+        sessionId,
+        questionIndex: session.currentQuestionIndex,
+        questionsAsked: memory.totalQuestionsAsked,
+        reason: 'Journey mode with interview plan - using single LLM call per turn',
+      });
       return this.processAnswerUnified(sessionId, questionId, answer, session, question);
     }
+    
+    // Log when legacy chain is used and why
+    console.log('[Telemetry] Chain activation:', {
+      chainType: 'legacy',
+      featureFlag: USE_UNIFIED_CHAIN,
+      hasInterviewPlan: !!memory.interviewPlan,
+      mode: session.mode,
+      sessionId,
+      reason: !USE_UNIFIED_CHAIN 
+        ? 'Feature flag disabled' 
+        : 'No interview plan (practice mode or technical interview)',
+    });
 
     // =========================================================================
     // LEGACY PATH: Multi-chain fragmented approach (kept for fallback)
@@ -1321,6 +1342,43 @@ export class InterviewOrchestrator {
     const shouldEndInterview = wrapUpCheck.shouldEnd || decision.action === "end_interview";
     
     if (shouldEndInterview) {
+      // Calculate backlog metrics for legacy path (may not have interview plan)
+      const pendingQuestionsLegacy = memory.interviewPlan?.questions.filter(q => q.status === 'pending').length || 0;
+      const coveredQuestionsLegacy = memory.interviewPlan?.questions.filter(q => q.status === 'covered_proactively').length || 0;
+      const askedQuestionsLegacy = memory.interviewPlan?.questions.filter(q => q.status === 'asked').length || 0;
+      
+      // Log wrap-up telemetry for legacy path
+      console.log('[Telemetry] Wrap-up triggered:', {
+        sessionId,
+        trigger: 'legacy_chain_decision',
+        reason: wrapUpCheck.reason,
+        questionsAsked: memory.totalQuestionsAsked,
+        finalCoverage: {
+          overall: Math.round(
+            (memory.coverage.background.score + memory.coverage.skills.score + 
+             memory.coverage.behavioral.score + memory.coverage.motivation.score +
+             memory.coverage.culture_fit.score + memory.coverage.logistics.score) / 6 * 100
+          ) / 100,
+          background: Math.round(memory.coverage.background.score * 100) / 100,
+          skills: Math.round(memory.coverage.skills.score * 100) / 100,
+          behavioral: Math.round(memory.coverage.behavioral.score * 100) / 100,
+          motivation: Math.round(memory.coverage.motivation.score * 100) / 100,
+          culture_fit: Math.round(memory.coverage.culture_fit.score * 100) / 100,
+          logistics: Math.round(memory.coverage.logistics.score * 100) / 100,
+        },
+        backlogStatus: {
+          pending: pendingQuestionsLegacy,
+          asked: askedQuestionsLegacy,
+          coveredProactively: coveredQuestionsLegacy,
+          total: memory.interviewPlan?.questions.length || 0,
+          hasInterviewPlan: !!memory.interviewPlan,
+        },
+        avgScore: memory.scores.length > 0 
+          ? Math.round((memory.scores.reduce((a, b) => a + b, 0) / memory.scores.length) * 10) / 10
+          : 0,
+        sessionDurationMs: Date.now() - memory.telemetry.startedAt,
+      });
+      
       // Check if the candidate asked a question (e.g., when wrapup asked "do you have questions?")
       // We should answer their question before closing
       let closingQuestionAnswer: string | undefined;
@@ -1788,8 +1846,8 @@ export class InterviewOrchestrator {
       content: answer,
     });
 
-    // Build coverage status for the unified chain
-    const coverageStatus = {
+    // Capture coverage BEFORE this turn for telemetry
+    const coverageBefore = {
       background: memory.coverage.background.score,
       skills: memory.coverage.skills.score,
       behavioral: memory.coverage.behavioral.score,
@@ -1797,6 +1855,12 @@ export class InterviewOrchestrator {
       culture_fit: memory.coverage.culture_fit.score,
       logistics: memory.coverage.logistics.score,
     };
+    
+    // Calculate overall coverage before
+    const overallBefore = Object.values(coverageBefore).reduce((a, b) => a + b, 0) / 6;
+
+    // Build coverage status for the unified chain
+    const coverageStatus = coverageBefore;
 
     // Call the unified chain
     const turnResult = await this.unifiedTurn.processTurn({
@@ -1844,6 +1908,41 @@ export class InterviewOrchestrator {
       );
       memory.coverage[criterion].questionsAsked++;
     }
+    
+    // Capture coverage AFTER this turn for telemetry
+    const coverageAfter = {
+      background: memory.coverage.background.score,
+      skills: memory.coverage.skills.score,
+      behavioral: memory.coverage.behavioral.score,
+      motivation: memory.coverage.motivation.score,
+      culture_fit: memory.coverage.culture_fit.score,
+      logistics: memory.coverage.logistics.score,
+    };
+    const overallAfter = Object.values(coverageAfter).reduce((a, b) => a + b, 0) / 6;
+    
+    // Log coverage telemetry with deltas
+    console.log('[Telemetry] Coverage update:', {
+      sessionId,
+      turn: memory.totalQuestionsAsked,
+      criterionUpdated: criterion,
+      contributionAdded: turnResult.evaluation.coverageContribution,
+      before: {
+        overall: Math.round(overallBefore * 100) / 100,
+        ...Object.fromEntries(
+          Object.entries(coverageBefore).map(([k, v]) => [k, Math.round(v * 100) / 100])
+        ),
+      },
+      after: {
+        overall: Math.round(overallAfter * 100) / 100,
+        ...Object.fromEntries(
+          Object.entries(coverageAfter).map(([k, v]) => [k, Math.round(v * 100) / 100])
+        ),
+      },
+      delta: {
+        overall: Math.round((overallAfter - overallBefore) * 100) / 100,
+        [criterion]: Math.round(turnResult.evaluation.coverageContribution * 100) / 100,
+      },
+    });
 
     // Mark covered questions from backlog
     if (turnResult.coveredQuestionIds.length > 0 && memory.interviewPlan) {
@@ -1883,6 +1982,36 @@ export class InterviewOrchestrator {
 
     // Handle wrap-up
     if (turnResult.actionType === 'wrap_up') {
+      // Log wrap-up telemetry
+      const pendingQuestions = memory.interviewPlan?.questions.filter(q => q.status === 'pending').length || 0;
+      const coveredQuestions = memory.interviewPlan?.questions.filter(q => q.status === 'covered_proactively').length || 0;
+      const askedQuestions = memory.interviewPlan?.questions.filter(q => q.status === 'asked').length || 0;
+      
+      console.log('[Telemetry] Wrap-up triggered:', {
+        sessionId,
+        trigger: 'unified_chain_decision',
+        questionsAsked: memory.totalQuestionsAsked,
+        finalCoverage: {
+          overall: Math.round(overallAfter * 100) / 100,
+          background: Math.round(coverageAfter.background * 100) / 100,
+          skills: Math.round(coverageAfter.skills * 100) / 100,
+          behavioral: Math.round(coverageAfter.behavioral * 100) / 100,
+          motivation: Math.round(coverageAfter.motivation * 100) / 100,
+          culture_fit: Math.round(coverageAfter.culture_fit * 100) / 100,
+          logistics: Math.round(coverageAfter.logistics * 100) / 100,
+        },
+        backlogStatus: {
+          pending: pendingQuestions,
+          asked: askedQuestions,
+          coveredProactively: coveredQuestions,
+          total: memory.interviewPlan?.questions.length || 0,
+        },
+        avgScore: memory.scores.length > 0 
+          ? Math.round((memory.scores.reduce((a, b) => a + b, 0) / memory.scores.length) * 10) / 10
+          : 0,
+        sessionDurationMs: Date.now() - memory.telemetry.startedAt,
+      });
+      
       const finalReport = await this.generateFinalReport(sessionId);
 
       await storage.updateInterviewSession(sessionId, {
