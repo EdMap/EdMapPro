@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Send, 
@@ -18,11 +20,22 @@ import {
   FileText,
   MessageSquare,
   ChevronRight,
+  ChevronDown,
   Calendar,
   BookOpen,
   Coffee,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  Store,
+  CreditCard,
+  Globe,
+  Bug,
+  GitBranch,
+  Code,
+  Lightbulb,
+  ArrowRight,
+  Monitor,
+  Rocket
 } from "lucide-react";
 
 interface InternOnboardingSessionProps {
@@ -51,6 +64,11 @@ export default function InternOnboardingSession({ session, project, onComplete }
   const [docsRead, setDocsRead] = useState(false);
   const [comprehensionComplete, setComprehensionComplete] = useState(false);
   const [typingIndicator, setTypingIndicator] = useState<string | null>(null);
+  
+  const [docSectionsRead, setDocSectionsRead] = useState<Record<string, boolean>>({});
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [showDay2Preview, setShowDay2Preview] = useState(false);
+  const [activeDocTab, setActiveDocTab] = useState<string>('product');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -490,94 +508,487 @@ export default function InternOnboardingSession({ session, project, onComplete }
     );
   }
 
+  function toggleSection(section: string, open: boolean) {
+    setExpandedSections(prev => ({ ...prev, [section]: open }));
+    if (open) {
+      setDocSectionsRead(prev => ({ ...prev, [section]: true }));
+    }
+  }
+
+  const allSectionsRead = Boolean(
+    docSectionsRead['product'] && 
+    docSectionsRead['users'] && 
+    docSectionsRead['bug'] && 
+    docSectionsRead['setup']
+  );
+
+  function handleFinishDocs() {
+    if (!allSectionsRead) return;
+    setDocsRead(true);
+    setShowDay2Preview(true);
+  }
+
   function renderDocumentation() {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Project: {projectInfo.name || 'Merchant Dashboard'}
-            </CardTitle>
-            <CardDescription>
-              {projectInfo.description || 'Admin panel where small business owners view their transactions, payouts, and account settings'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Tech Stack</h4>
-              <div className="flex flex-wrap gap-2">
-                {(projectInfo.techStack || ['React', 'Node.js', 'PostgreSQL', 'TypeScript']).map((tech: string, idx: number) => (
-                  <Badge key={idx} variant="secondary">{tech}</Badge>
-                ))}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Day 1 Onboarding Docs
+          </h3>
+          <Badge variant={allSectionsRead ? "default" : "outline"} className={allSectionsRead ? "bg-green-600" : ""}>
+            {Object.keys(docSectionsRead).length}/4 sections
+          </Badge>
+        </div>
+
+        <Tabs value={activeDocTab} onValueChange={setActiveDocTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="product" className="flex items-center gap-2" data-testid="tab-product">
+              <Store className="h-4 w-4" />
+              Product & Users
+              {docSectionsRead['product'] && docSectionsRead['users'] && (
+                <CheckCircle2 className="h-3 w-3 text-green-600 ml-1" />
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="mission" className="flex items-center gap-2" data-testid="tab-mission">
+              <Target className="h-4 w-4" />
+              Your Mission
+              {docSectionsRead['bug'] && docSectionsRead['setup'] && (
+                <CheckCircle2 className="h-3 w-3 text-green-600 ml-1" />
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="product" className="space-y-4 mt-4">
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-900">TL;DR</p>
+                    <p className="text-sm text-blue-800">
+                      Merchant Dashboard helps small business owners track their money. You'll be fixing a timezone bug in the Transactions page.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Collapsible open={expandedSections['product']} onOpenChange={(open) => toggleSection('product', open)}>
+              <Card>
+                <CollapsibleTrigger className="w-full" data-testid="section-product">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Store className="h-4 w-4 text-purple-600" />
+                        What is Merchant Dashboard?
+                        {docSectionsRead['product'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      </CardTitle>
+                      {expandedSections['product'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-4">
+                    <p className="text-gray-700">
+                      <strong>Merchant Dashboard</strong> is the admin panel where NovaPay's business customers manage their payment operations. Think of it as their "mission control" for money.
+                    </p>
+                    
+                    <div className="grid gap-3">
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <CreditCard className="h-5 w-5 text-green-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Transactions</p>
+                          <p className="text-sm text-gray-600">View all customer payments, refunds, and chargebacks in real-time</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Payouts</p>
+                          <p className="text-sm text-gray-600">See when money hits their bank account (usually every 2 business days)</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <FileText className="h-5 w-5 text-orange-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Settings</p>
+                          <p className="text-sm text-gray-600">Update bank details, business info, and notification preferences</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <span className="text-sm text-gray-500">Tech:</span>
+                      {['React', 'Node.js', 'PostgreSQL', 'TypeScript'].map((tech, idx) => (
+                        <Badge key={idx} variant="secondary">{tech}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            <Collapsible open={expandedSections['users']} onOpenChange={(open) => toggleSection('users', open)}>
+              <Card>
+                <CollapsibleTrigger className="w-full" data-testid="section-users">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Users className="h-4 w-4 text-purple-600" />
+                        Who Uses It?
+                        {docSectionsRead['users'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      </CardTitle>
+                      {expandedSections['users'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-4">
+                    <Card className="bg-amber-50 border-amber-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <Avatar className="h-12 w-12 bg-amber-100">
+                            <AvatarFallback className="text-amber-700 text-lg">M</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold text-amber-900">Meet Maria - Coffee Shop Owner</p>
+                            <p className="text-sm text-amber-800 mt-1">
+                              Maria runs "Bean There" in Austin, TX. Every morning she checks her dashboard to see yesterday's sales, verify tips were processed correctly, and confirm her weekly payout is on schedule.
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <Badge variant="outline" className="text-xs">Small Business</Badge>
+                              <Badge variant="outline" className="text-xs">50-100 transactions/day</Badge>
+                              <Badge variant="outline" className="text-xs">CST Timezone</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <div>
+                      <p className="font-medium text-gray-900 mb-2">Maria's Daily Workflow:</p>
+                      <ol className="space-y-2 text-sm text-gray-700">
+                        <li className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">1</span>
+                          Opens dashboard, checks total sales from yesterday
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">2</span>
+                          Filters transactions by payment type (card vs cash)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">3</span>
+                          Checks if Friday's payout arrived in her bank
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">4</span>
+                          Downloads weekly report for her accountant
+                        </li>
+                      </ol>
+                    </div>
+
+                    <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                      <p className="text-sm text-red-800">
+                        <strong>The Problem:</strong> Maria is in Austin (CST) but transactions show in UTC. A sale at 8pm Monday shows as 2am Tuesday - confusing her daily reconciliation!
+                      </p>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </TabsContent>
+
+          <TabsContent value="mission" className="space-y-4 mt-4">
+            <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Target className="h-5 w-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-orange-900">Your Mission</p>
+                    <p className="text-sm text-orange-800">
+                      Fix the timezone bug so Maria sees transactions in her local time, not server time. You'll work on this starting Day 2.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Collapsible open={expandedSections['bug']} onOpenChange={(open) => toggleSection('bug', open)}>
+              <Card>
+                <CollapsibleTrigger className="w-full" data-testid="section-bug">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Bug className="h-4 w-4 text-red-600" />
+                        The Timezone Bug
+                        {docSectionsRead['bug'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      </CardTitle>
+                      {expandedSections['bug'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                        <p className="text-xs font-medium text-red-600 mb-1">CURRENT (Bug)</p>
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-8 w-8 text-red-400" />
+                          <div>
+                            <p className="font-mono text-sm">Feb 15, 02:30 AM</p>
+                            <p className="text-xs text-red-600">Shows UTC time</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-xs font-medium text-green-600 mb-1">EXPECTED (Fixed)</p>
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-8 w-8 text-green-400" />
+                          <div>
+                            <p className="font-mono text-sm">Feb 14, 08:30 PM</p>
+                            <p className="text-xs text-green-600">Shows merchant's local time</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="font-medium text-gray-900 mb-2">What's Happening:</p>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        <li className="flex items-start gap-2">
+                          <span className="text-red-500 mt-1">1.</span>
+                          <span>Transaction timestamps are stored in UTC (correct)</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-red-500 mt-1">2.</span>
+                          <span>Frontend displays them as-is without conversion (bug)</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-red-500 mt-1">3.</span>
+                          <span>Merchant's timezone preference is ignored</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <p className="font-medium text-blue-900 mb-2">Files You'll Touch:</p>
+                      <div className="font-mono text-xs space-y-1 text-blue-800">
+                        <p>client/src/components/TransactionList.tsx</p>
+                        <p>client/src/utils/dateFormatters.ts</p>
+                        <p>shared/types/merchant.ts</p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <p className="font-medium text-green-900 mb-1">Success Criteria:</p>
+                      <ul className="text-sm text-green-800 space-y-1">
+                        <li>• Transactions display in merchant's configured timezone</li>
+                        <li>• Date filters work correctly with local dates</li>
+                        <li>• Existing tests pass + new timezone tests added</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            <Collapsible open={expandedSections['setup']} onOpenChange={(open) => toggleSection('setup', open)}>
+              <Card>
+                <CollapsibleTrigger className="w-full" data-testid="section-setup">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <GitBranch className="h-4 w-4 text-purple-600" />
+                        How We Work
+                        {docSectionsRead['setup'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      </CardTitle>
+                      {expandedSections['setup'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-4">
+                    <div>
+                      <p className="font-medium text-gray-900 mb-3">Development Workflow:</p>
+                      <div className="flex items-center gap-2 flex-wrap text-sm">
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <span>1</span> Pick ticket
+                        </Badge>
+                        <ArrowRight className="h-3 w-3 text-gray-400" />
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <span>2</span> Branch
+                        </Badge>
+                        <ArrowRight className="h-3 w-3 text-gray-400" />
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <span>3</span> Code
+                        </Badge>
+                        <ArrowRight className="h-3 w-3 text-gray-400" />
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <span>4</span> PR
+                        </Badge>
+                        <ArrowRight className="h-3 w-3 text-gray-400" />
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <span>5</span> Review
+                        </Badge>
+                        <ArrowRight className="h-3 w-3 text-gray-400" />
+                        <Badge variant="outline" className="flex items-center gap-1 bg-green-50">
+                          <span>6</span> Merge
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400">
+                      <pre className="whitespace-pre-wrap">{`# Your first commands tomorrow:
+git checkout -b fix/timezone-display
+npm install
+npm run dev
+
+# When ready to submit:
+git add .
+git commit -m "Fix timezone display in transactions"
+git push origin fix/timezone-display`}</pre>
+                    </div>
+
+                    <div>
+                      <p className="font-medium text-gray-900 mb-2">Who to Ask:</p>
+                      <div className="grid gap-2 text-sm">
+                        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs bg-blue-100 text-blue-700">S</AvatarFallback>
+                          </Avatar>
+                          <span><strong>Sarah</strong> - Code questions, PR reviews</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs bg-pink-100 text-pink-700">P</AvatarFallback>
+                          </Avatar>
+                          <span><strong>Priya</strong> - Requirements, user context</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs bg-green-100 text-green-700">M</AvatarFallback>
+                          </Avatar>
+                          <span><strong>Marcus</strong> - Architecture, tricky bugs</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs bg-orange-100 text-orange-700">A</AvatarFallback>
+                          </Avatar>
+                          <span><strong>Alex</strong> - Testing, QA process</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <p className="font-medium text-purple-900 mb-2">Team Norms:</p>
+                      <ul className="text-sm text-purple-800 space-y-1">
+                        <li>• <strong>Standup at 10am</strong> - Quick sync on progress</li>
+                        <li>• <strong>Ask early</strong> - Stuck for 15 min? Ask for help</li>
+                        <li>• <strong>Reviews = learning</strong> - Feedback is about code, not you</li>
+                        <li>• <strong>Document as you go</strong> - Comments save future headaches</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </TabsContent>
+        </Tabs>
+
+        <div className="pt-4 space-y-3">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>Reading progress</span>
+            <span>{Object.keys(docSectionsRead).length} of 4 sections completed</span>
+          </div>
+          <Progress value={(Object.keys(docSectionsRead).length / 4) * 100} className="h-2" />
+          
+          <Button 
+            className="w-full"
+            onClick={handleFinishDocs}
+            disabled={!allSectionsRead}
+            data-testid="button-finish-reading"
+          >
+            {allSectionsRead ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                I've Read Everything - Show Me Day 2 Preview
+              </>
+            ) : (
+              <>
+                <BookOpen className="h-4 w-4 mr-2" />
+                Read all 4 sections to continue
+              </>
+            )}
+          </Button>
+        </div>
+
+        <Dialog open={showDay2Preview} onOpenChange={setShowDay2Preview}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Rocket className="h-5 w-5 text-orange-500" />
+                Ready for Day 2!
+              </DialogTitle>
+              <DialogDescription>
+                Here's what you'll be working on tomorrow.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <Card className="bg-orange-50 border-orange-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Bug className="h-6 w-6 text-orange-600" />
+                    <div>
+                      <p className="font-semibold text-orange-900">Your First Ticket</p>
+                      <p className="text-sm text-orange-800 mt-1">
+                        Fix timezone display in TransactionList so merchants see times in their local timezone, not UTC.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-2">
+                <p className="font-medium text-gray-900">Tomorrow's Goals:</p>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
+                    Set up your development environment
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
+                    Reproduce the timezone bug locally
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
+                    Implement the fix in dateFormatters.ts
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-gray-400" />
+                    Create your first Pull Request
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Pro tip:</strong> If you get stuck, message Sarah or check the codebase for similar date handling patterns.
+                </p>
               </div>
             </div>
 
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Project Structure</h4>
-              <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400">
-                <pre>{`merchant-dashboard/
-├── client/          # React frontend
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── utils/
-├── server/          # Node.js backend
-│   ├── routes/
-│   ├── services/
-│   └── db/
-├── shared/          # Shared types
-└── README.md`}</pre>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Development Workflow</h4>
-              <ol className="list-decimal list-inside space-y-2 text-gray-700">
-                <li>Pick up a ticket from the sprint board</li>
-                <li>Create a feature branch: <code className="bg-gray-100 px-1 rounded">git checkout -b feature/your-feature</code></li>
-                <li>Make your changes and test locally</li>
-                <li>Push and create a Pull Request</li>
-                <li>Address code review feedback</li>
-                <li>Merge when approved</li>
-              </ol>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Team Norms</h4>
-              <ul className="space-y-2 text-gray-700">
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 font-bold mt-1">•</span>
-                  <span><strong>Daily standup</strong> at 10am - share what you're working on</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 font-bold mt-1">•</span>
-                  <span><strong>Ask questions early</strong> - we'd rather help you unblock than have you stuck</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 font-bold mt-1">•</span>
-                  <span><strong>Code reviews are collaborative</strong> - feedback is about the code, not you</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 font-bold mt-1">•</span>
-                  <span><strong>Document your work</strong> - future you will thank present you</span>
-                </li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Button 
-          className="w-full"
-          onClick={() => {
-            setDocsRead(true);
-            setViewMode('overview');
-          }}
-          data-testid="button-finish-reading"
-        >
-          <CheckCircle2 className="h-4 w-4 mr-2" />
-          I've Read the Documentation
-        </Button>
+            <DialogFooter>
+              <Button onClick={() => {
+                setShowDay2Preview(false);
+                setViewMode('overview');
+              }} data-testid="button-got-it">
+                Got it! Back to Day 1 Overview
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
