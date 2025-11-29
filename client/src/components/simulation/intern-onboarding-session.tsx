@@ -1317,6 +1317,28 @@ export default function InternOnboardingSession({ session, project, onComplete }
   function renderDocumentation() {
     return (
       <div className="space-y-4" ref={docsScrollRef}>
+        {/* Welcome Card */}
+        <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-purple-900">Welcome to your first day!</p>
+                <p className="text-sm text-purple-800 mt-1">
+                  Before you meet the team, take 5-10 minutes to read through these onboarding docs. 
+                  You'll learn what NovaPay does and what you'll be working on this week.
+                </p>
+                <div className="flex items-center gap-2 mt-2 text-xs text-purple-600">
+                  <Clock className="h-3 w-3" />
+                  <span>4 short sections to read</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
@@ -1737,77 +1759,6 @@ git push origin fix/timezone-display`}</pre>
             )}
           </Button>
         </div>
-
-        {/* Day 2 Preview Dialog - triggered after comprehension check */}
-        <Dialog open={showDay2Preview} onOpenChange={setShowDay2Preview}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-green-500" />
-                Day 1 Complete!
-              </DialogTitle>
-              <DialogDescription>
-                Great job! You've completed your first day at NovaPay.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
-                    <div>
-                      <p className="font-semibold text-green-900">What you accomplished today:</p>
-                      <ul className="text-sm text-green-800 mt-2 space-y-1">
-                        <li>• Read through onboarding documentation</li>
-                        <li>• Met all your teammates</li>
-                        <li>• Checked in with Sarah</li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-orange-50 border-orange-200">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Bug className="h-6 w-6 text-orange-600" />
-                    <div>
-                      <p className="font-semibold text-orange-900">Coming up on Day 2:</p>
-                      <p className="text-sm text-orange-800 mt-1">
-                        Your first ticket! Fix the timezone display bug so merchants see times in their local timezone.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Pro tip:</strong> If you get stuck tomorrow, message Sarah or check the codebase for similar date handling patterns.
-                </p>
-              </div>
-            </div>
-
-            <DialogFooter className="flex gap-2 sm:gap-2">
-              <Button variant="outline" onClick={() => {
-                setShowDay2Preview(false);
-                setViewMode('overview');
-              }} data-testid="button-wrap-up">
-                <Clock className="h-4 w-4 mr-2" />
-                Wrap Up for Today
-              </Button>
-              <Button onClick={() => {
-                setShowDay2Preview(false);
-                setCurrentDay(2);
-                setViewMode('overview');
-              }} data-testid="button-start-day2">
-                <Rocket className="h-4 w-4 mr-2" />
-                Start Day 2
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     );
   }
@@ -2055,6 +2006,77 @@ git push origin fix/timezone-display`}</pre>
           </div>
         </div>
       </div>
+
+      {/* Day 1 Complete Dialog - triggered after comprehension check */}
+      <Dialog open={showDay2Preview} onOpenChange={setShowDay2Preview}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-green-500" />
+              Day 1 Complete!
+            </DialogTitle>
+            <DialogDescription>
+              Great job! You've completed your first day at NovaPay.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-900">What you accomplished today:</p>
+                    <ul className="text-sm text-green-800 mt-2 space-y-1">
+                      <li>• Read through onboarding documentation</li>
+                      <li>• Met all your teammates</li>
+                      <li>• Checked in with Sarah</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-orange-50 border-orange-200">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Bug className="h-6 w-6 text-orange-600" />
+                  <div>
+                    <p className="font-semibold text-orange-900">Coming up on Day 2:</p>
+                    <p className="text-sm text-orange-800 mt-1">
+                      Your first ticket! Fix the timezone display bug so merchants see times in their local timezone.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Pro tip:</strong> If you get stuck tomorrow, message Sarah or check the codebase for similar date handling patterns.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => {
+              setShowDay2Preview(false);
+              setViewMode('overview');
+            }} data-testid="button-wrap-up">
+              <Clock className="h-4 w-4 mr-2" />
+              Wrap Up for Today
+            </Button>
+            <Button onClick={() => {
+              setShowDay2Preview(false);
+              setCurrentDay(2);
+              setViewMode('overview');
+            }} data-testid="button-start-day2">
+              <Rocket className="h-4 w-4 mr-2" />
+              Start Day 2
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
