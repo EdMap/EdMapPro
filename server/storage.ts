@@ -763,6 +763,123 @@ export class MemStorage implements IStorage {
         },
         difficulty: 'senior',
         estimatedDuration: 55
+      },
+      // NovaPay Intern Onboarding - 42 London Block 1
+      {
+        name: 'NovaPay - Intern Onboarding',
+        description: 'Your first week as a software engineering intern at NovaPay, a fintech startup building payment solutions for small businesses.',
+        category: 'intern-onboarding',
+        teamStructure: [
+          {
+            name: 'Sarah',
+            role: 'Engineering Lead',
+            personality: 'calm, thorough, high standards but supportive',
+            expertise: ['React', 'Node.js', 'TypeScript', 'code-review', 'mentoring'],
+            availability: 'usually',
+            bio: 'Sarah has been at NovaPay for 3 years and built most of the Merchant Dashboard. She loves mentoring new engineers and believes everyone deserves patient guidance.'
+          },
+          {
+            name: 'Marcus',
+            role: 'Senior Developer',
+            personality: 'friendly, slightly impatient, pragmatic',
+            expertise: ['Node.js', 'PostgreSQL', 'API-design', 'debugging'],
+            availability: 'usually',
+            bio: 'Marcus is a senior dev who joined from a big tech company. He\'s direct and efficient - sometimes his Slack messages feel terse, but he means well.'
+          },
+          {
+            name: 'Priya',
+            role: 'Product Manager',
+            personality: 'organized, clear communicator, deadline-aware',
+            expertise: ['product-strategy', 'agile', 'stakeholder-management', 'sprint-planning'],
+            availability: 'usually',
+            bio: 'Priya runs the daily standups and keeps the team on track. She\'s great at explaining why features matter to the business.'
+          },
+          {
+            name: 'Alex',
+            role: 'QA Engineer',
+            personality: 'detail-oriented, finds edge cases, helpful',
+            expertise: ['testing', 'bug-reporting', 'edge-cases', 'user-flows'],
+            availability: 'always',
+            bio: 'Alex catches bugs before they reach production. They\'ll give you detailed bug reports and help you understand what went wrong.'
+          },
+          {
+            name: 'Jordan',
+            role: 'Fellow Intern',
+            personality: 'eager, occasionally asks for help, peer support',
+            expertise: ['React', 'learning', 'asking-questions'],
+            availability: 'always',
+            bio: 'Jordan started 2 weeks before you. They remember what it\'s like to be new and are happy to share what they\'ve learned.'
+          }
+        ],
+        requirements: {
+          scenario: 'intern-first-week',
+          project: {
+            name: 'Merchant Dashboard',
+            description: 'Admin panel where small business owners view their transactions, payouts, and account settings',
+            techStack: ['React', 'Node.js', 'PostgreSQL', 'TypeScript']
+          },
+          learningObjectives: [
+            'Navigate async communication (Slack, standups)',
+            'Understand team roles and who to ask for what',
+            'Follow a ticket from assignment to merge',
+            'Handle code review feedback gracefully',
+            'Ask good questions'
+          ],
+          dailyStructure: [
+            {
+              day: 1,
+              theme: 'Welcome aboard',
+              activities: ['Meet the team in 1:1 chats', 'Read onboarding docs', 'Comprehension check with Sarah'],
+              overnightEvent: 'Priya assigns first ticket'
+            },
+            {
+              day: 2,
+              theme: 'Your first ticket',
+              activities: ['Read ticket', 'Ask clarifying questions', 'Start working', 'Push initial commit'],
+              overnightEvent: 'Sarah leaves code review comments'
+            },
+            {
+              day: 3,
+              theme: 'Code review culture',
+              activities: ['Address PR feedback', 'Learn review etiquette', 'Push revision'],
+              overnightEvent: 'Alex reports edge case bug'
+            },
+            {
+              day: 4,
+              theme: 'Documentation',
+              activities: ['Write README section', 'Submit for review', 'Revise based on feedback'],
+              overnightEvent: 'Alex assigns bug ticket'
+            },
+            {
+              day: 5,
+              theme: 'Bug fix + wrap-up',
+              activities: ['Debug and fix issue', 'Get feedback from Alex', 'Final 1:1 evaluation with Sarah'],
+              overnightEvent: null
+            }
+          ]
+        },
+        scenarioScript: {
+          onboarding: [
+            { from: 'Priya', time: 1, message: 'Welcome to NovaPay! 🎉 I\'m Priya, the PM for the Merchant Dashboard team. Take your time getting settled - Sarah will walk you through everything.' },
+            { from: 'Sarah', time: 2, message: 'Hey! Welcome aboard. I\'ll be your main point of contact this week. Let\'s do quick 1:1s with everyone so you can put faces to names. Start by reading the project README, and then we\'ll chat about what you understood.' },
+            { from: 'Jordan', time: 3, message: 'Hey! I\'m Jordan, also an intern here. Started 2 weeks ago. If you have any "dumb questions" you don\'t want to ask Sarah, feel free to ping me 😄' }
+          ],
+          firstTicket: [
+            { from: 'Priya', time: 1, message: 'Good morning! I\'ve assigned your first ticket: fixing a timezone display bug in the transaction list. It\'s a small one - perfect for getting familiar with the codebase.' },
+            { from: 'Marcus', time: 5, message: 'The timezone logic is in utils/formatDate.js if you need it. Let me know if you get stuck.' }
+          ],
+          codeReview: [
+            { from: 'Sarah', time: 1, message: 'Nice work on the fix! I left a couple of comments on your PR. Nothing major - just some suggestions for optimization. Take a look when you get a chance.' }
+          ],
+          documentation: [
+            { from: 'Sarah', time: 1, message: 'Today I\'d like you to update the README with local testing instructions. It\'s a great way to solidify your understanding of the dev environment.' }
+          ],
+          bugFix: [
+            { from: 'Alex', time: 1, message: 'Found an edge case! When merchants select "Last 7 days" in UTC+12, we\'re showing 8 days. Screenshot attached. Can you take a look?' }
+          ]
+        },
+        difficulty: 'intern',
+        estimatedDuration: 30
       }
     ];
 

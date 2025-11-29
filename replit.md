@@ -111,3 +111,39 @@ Preferred communication style: Simple, everyday language.
 ### Development Tools
 - **Replit Integration**: Development environment optimizations.
 - **Vite**: For fast development and optimized builds.
+
+## B2B Customer: 42 London Integration
+
+### Curriculum Alignment (3 Blocks)
+EdMap is being tailored for 42 London coding school with curriculum-aligned journeys:
+
+- **Block 1** (Unix, Shell, Git, C basics): Intern-level positions, learn company processes and soft skills
+- **Block 2** (Advanced C/C++, Data Structures): More advanced workspace scenarios (TBD)
+- **Block 3** (Specialization): Help students experiment with tracks (Web, Cybersecurity, AI/ML, Mobile, DevOps) before choosing
+
+### Block 1 Design: "First Week as an Intern"
+
+**Structure:** 5-day journey, 30-60 min daily sessions with overnight events
+
+**Company Profile: NovaPay** (Fintech startup, first of several company profiles)
+- **Team:** Sarah (Lead), Marcus (Senior Dev), Priya (PM), Alex (QA), Jordan (Fellow Intern)
+- **Project:** Merchant Dashboard improvements
+- **Tech Stack:** Node.js, React, PostgreSQL
+
+**Daily Flow:**
+| Day | Focus | Key Activities |
+|-----|-------|----------------|
+| 1 | Onboarding | 1:1 intros with team, read project docs, comprehension check with Sarah |
+| 2 | First Ticket | Timezone bug fix, Git workflow, asking questions |
+| 3 | Code Review | Respond to Sarah's PR feedback, revise code |
+| 4 | Documentation | Write README section, receive feedback |
+| 5 | Bug Fix + Wrap-up | Fix edge case bug, final evaluation with Sarah |
+
+**Task Types (Phased Build):**
+- Phase 1: Code Review conversations, Documentation writing
+- Phase 2: Git command simulator, File explorer with edits
+- Phase 3: Real GitHub integration
+
+### Future Enhancements (Backlog)
+- **Multi-dimension Negotiation:** Allow users to select and negotiate multiple dimensions (salary, start date, remote flexibility, mentorship, learning budget) with current/goal values for each. Seniority-based recommendations for relevant dimensions.
+- **Additional Company Profiles:** ShieldOps (Cybersecurity), Synth.ai (AI/ML), PocketApp (Mobile), CloudForge (DevOps)
