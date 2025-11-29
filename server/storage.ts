@@ -1156,62 +1156,63 @@ export class MemStorage implements IStorage {
     return feedback;
   }
 
-  // Company operations
+  // Company operations - DATABASE PERSISTED
   async getCompanies(): Promise<Company[]> {
-    return Array.from(this.companiesMap.values());
+    return await db.select().from(companies);
   }
 
   async getCompany(id: number): Promise<Company | undefined> {
-    return this.companiesMap.get(id);
+    const results = await db.select().from(companies)
+      .where(eq(companies.id, id));
+    return results[0];
   }
 
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
-    const id = this.currentCompanyId++;
-    const company: Company = {
+    const results = await db.insert(companies).values({
       ...insertCompany,
-      id,
       logo: insertCompany.logo || null,
       values: insertCompany.values || [],
       benefits: insertCompany.benefits || [],
       interviewStyle: insertCompany.interviewStyle || 'balanced',
       createdAt: new Date()
-    };
-    this.companiesMap.set(id, company);
-    return company;
+    }).returning();
+    return results[0];
   }
 
-  // Job posting operations
+  // Job posting operations - DATABASE PERSISTED
   async getJobPostings(filters?: { companyId?: number; role?: string; isActive?: boolean }): Promise<JobPosting[]> {
-    let postings = Array.from(this.jobPostingsMap.values());
+    let results = await db.select().from(jobPostings);
     if (filters?.companyId) {
-      postings = postings.filter(p => p.companyId === filters.companyId);
+      results = results.filter(p => p.companyId === filters.companyId);
     }
     if (filters?.role) {
-      postings = postings.filter(p => p.role === filters.role);
+      results = results.filter(p => p.role === filters.role);
     }
     if (filters?.isActive !== undefined) {
-      postings = postings.filter(p => p.isActive === filters.isActive);
+      results = results.filter(p => p.isActive === filters.isActive);
     }
-    return postings;
+    return results;
   }
 
   async getJobPosting(id: number): Promise<JobPosting | undefined> {
-    return this.jobPostingsMap.get(id);
+    const results = await db.select().from(jobPostings)
+      .where(eq(jobPostings.id, id));
+    return results[0];
   }
 
   async getJobPostingWithCompany(id: number): Promise<(JobPosting & { company: Company }) | undefined> {
-    const posting = this.jobPostingsMap.get(id);
+    const postingResults = await db.select().from(jobPostings)
+      .where(eq(jobPostings.id, id));
+    const posting = postingResults[0];
     if (!posting) return undefined;
-    const company = this.companiesMap.get(posting.companyId);
+    const company = await this.getCompany(posting.companyId);
     if (!company) return undefined;
     return { ...posting, company };
   }
 
   async createJobPosting(insertPosting: InsertJobPosting): Promise<JobPosting> {
-    const id = this.currentJobPostingId++;
-    const posting: JobPosting = {
+    const results = await db.insert(jobPostings).values({
       ...insertPosting,
-      id,
       employmentType: insertPosting.employmentType || 'full-time',
       salaryMin: insertPosting.salaryMin || null,
       salaryMax: insertPosting.salaryMax || null,
@@ -1222,9 +1223,8 @@ export class MemStorage implements IStorage {
       interviewStages: insertPosting.interviewStages || 3,
       isActive: insertPosting.isActive !== false,
       postedAt: new Date()
-    };
-    this.jobPostingsMap.set(id, posting);
-    return posting;
+    }).returning();
+    return results[0];
   }
 
   // Job glossary operations
@@ -1248,22 +1248,23 @@ export class MemStorage implements IStorage {
     return glossaryTerm;
   }
 
-  // Job application operations
+  // Job application operations - DATABASE PERSISTED
   async getJobApplications(userId: number): Promise<JobApplication[]> {
-    return Array.from(this.jobApplicationsMap.values())
-      .filter(app => app.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const results = await db.select().from(jobApplications)
+      .where(eq(jobApplications.userId, userId))
+      .orderBy(desc(jobApplications.createdAt));
+    return results;
   }
 
   async getJobApplication(id: number): Promise<JobApplication | undefined> {
-    return this.jobApplicationsMap.get(id);
+    const results = await db.select().from(jobApplications)
+      .where(eq(jobApplications.id, id));
+    return results[0];
   }
 
   async createJobApplication(insertApplication: InsertJobApplication): Promise<JobApplication> {
-    const id = this.currentJobApplicationId++;
-    const application: JobApplication = {
+    const results = await db.insert(jobApplications).values({
       ...insertApplication,
-      id,
       status: insertApplication.status || 'draft',
       cvFileName: insertApplication.cvFileName || null,
       cvContent: insertApplication.cvContent || null,
@@ -1275,17 +1276,16 @@ export class MemStorage implements IStorage {
       appliedAt: insertApplication.appliedAt || null,
       updatedAt: new Date(),
       createdAt: new Date()
-    };
-    this.jobApplicationsMap.set(id, application);
-    return application;
+    }).returning();
+    return results[0];
   }
 
   async updateJobApplication(id: number, updates: Partial<JobApplication>): Promise<JobApplication | undefined> {
-    const application = this.jobApplicationsMap.get(id);
-    if (!application) return undefined;
-    const updated = { ...application, ...updates, updatedAt: new Date() };
-    this.jobApplicationsMap.set(id, updated);
-    return updated;
+    const results = await db.update(jobApplications)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(jobApplications.id, id))
+      .returning();
+    return results[0];
   }
 
   // Interview template operations
@@ -1318,27 +1318,29 @@ export class MemStorage implements IStorage {
     return template;
   }
 
-  // Application stage operations
+  // Application stage operations - DATABASE PERSISTED
   async getApplicationStages(applicationId: number): Promise<ApplicationStage[]> {
-    return Array.from(this.applicationStagesMap.values())
-      .filter(stage => stage.applicationId === applicationId)
-      .sort((a, b) => a.stageOrder - b.stageOrder);
+    const results = await db.select().from(applicationStages)
+      .where(eq(applicationStages.applicationId, applicationId))
+      .orderBy(applicationStages.stageOrder);
+    return results;
   }
 
   async getApplicationStage(id: number): Promise<ApplicationStage | undefined> {
-    return this.applicationStagesMap.get(id);
+    const results = await db.select().from(applicationStages)
+      .where(eq(applicationStages.id, id));
+    return results[0];
   }
 
   async getApplicationStageByInterviewSession(interviewSessionId: number): Promise<ApplicationStage | undefined> {
-    const stages = Array.from(this.applicationStagesMap.values());
-    return stages.find(stage => stage.interviewSessionId === interviewSessionId);
+    const results = await db.select().from(applicationStages)
+      .where(eq(applicationStages.interviewSessionId, interviewSessionId));
+    return results[0];
   }
 
   async createApplicationStage(insertStage: InsertApplicationStage): Promise<ApplicationStage> {
-    const id = this.currentApplicationStageId++;
-    const stage: ApplicationStage = {
+    const results = await db.insert(applicationStages).values({
       ...insertStage,
-      id,
       status: insertStage.status || 'pending',
       interviewSessionId: insertStage.interviewSessionId || null,
       scheduledAt: insertStage.scheduledAt || null,
@@ -1347,20 +1349,28 @@ export class MemStorage implements IStorage {
       feedback: insertStage.feedback || null,
       recruiterNotes: insertStage.recruiterNotes || null,
       createdAt: new Date()
-    };
-    this.applicationStagesMap.set(id, stage);
-    return stage;
+    }).returning();
+    return results[0];
   }
 
   async updateApplicationStage(id: number, updates: Partial<ApplicationStage>): Promise<ApplicationStage | undefined> {
-    const stage = this.applicationStagesMap.get(id);
-    if (!stage) return undefined;
-    const updated = { ...stage, ...updates };
-    this.applicationStagesMap.set(id, updated);
-    return updated;
+    const results = await db.update(applicationStages)
+      .set(updates)
+      .where(eq(applicationStages.id, id))
+      .returning();
+    return results[0];
   }
 
   private async seedJobJourneyData() {
+    // Check if data already exists in database - skip seeding if so
+    const existingCompanies = await this.getCompanies();
+    if (existingCompanies.length > 0) {
+      console.log('Job journey data already exists in database, skipping seed...');
+      return;
+    }
+    
+    console.log('Seeding job journey data to database...');
+    
     // Seed companies
     const companySeedData = [
       {
@@ -1847,8 +1857,8 @@ export class MemStorage implements IStorage {
     }
 
     // Seed a completed Data Scientist application with all stages passed
-    // Find the Data Scientist job posting at DataViz Pro
-    const allPostings = Array.from(this.jobPostingsMap.values());
+    // Find the Data Scientist job posting at DataViz Pro from database
+    const allPostings = await this.getJobPostings();
     const dataSciPosting = allPostings.find(p => p.title === 'Senior Data Scientist' && p.role === 'data-scientist');
     
     if (dataSciPosting) {
