@@ -117,7 +117,7 @@ export default function WorkspacePractice() {
   });
 
   const { data: progressData, isLoading: progressLoading } = useQuery({
-    queryKey: ['/api/workspace/progress', (user as any)?.id, 'practice'],
+    queryKey: [`/api/workspace/progress/${(user as any)?.id}/practice`],
     enabled: !!(user as any)?.id,
   });
 
@@ -128,7 +128,9 @@ export default function WorkspacePractice() {
     },
     onSuccess: (session) => {
       setActiveSession(session);
-      queryClient.invalidateQueries({ queryKey: ['/api/workspace/progress'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => (query.queryKey[0] as string)?.startsWith('/api/workspace/progress')
+      });
     },
   });
 
@@ -150,7 +152,7 @@ export default function WorkspacePractice() {
   const handleStartPractice = async () => {
     if (!selectedProject || !selectedRole || !selectedScenario || !user) return;
 
-    await createSessionMutation.mutateAsync({
+    const session = await createSessionMutation.mutateAsync({
       userId: (user as any).id,
       type: 'workspace',
       status: 'active',
@@ -171,6 +173,34 @@ export default function WorkspacePractice() {
       },
       messages: []
     });
+
+    // Save initial progress record immediately so session appears in "My Practice Sessions"
+    try {
+      const progressResponse = await apiRequest("POST", "/api/workspace/progress", {
+        sessionId: session.id,
+        userId: (user as any).id,
+        projectId: selectedProject.id,
+        role: selectedRole,
+        mode: 'practice',
+        currentDay: selectedScenario.day,
+        scenarioId: selectedScenario.id,
+        dayProgress: {},
+        overallProgress: 0,
+        status: 'in_progress'
+      });
+      const progressData = await progressResponse.json();
+      
+      // Update active session with saved progress ID
+      setActiveSession({
+        ...session,
+        configuration: {
+          ...session.configuration,
+          savedProgressId: progressData.id
+        }
+      });
+    } catch (error) {
+      console.error('Failed to save initial progress:', error);
+    }
   };
 
   const handleResumePractice = (progress: any, project: any) => {
@@ -203,7 +233,9 @@ export default function WorkspacePractice() {
     setSelectedRole('');
     setSelectedScenario(null);
     setWizardStep('project');
-    queryClient.invalidateQueries({ queryKey: ['/api/workspace/progress'] });
+    queryClient.invalidateQueries({ 
+      predicate: (query) => (query.queryKey[0] as string)?.startsWith('/api/workspace/progress')
+    });
   };
 
   const handleBack = () => {

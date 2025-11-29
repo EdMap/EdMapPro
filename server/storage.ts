@@ -936,7 +936,22 @@ export class MemStorage implements IStorage {
   }
 
   async getSimulationSession(id: number): Promise<SimulationSession | undefined> {
-    return this.sessions.get(id);
+    // Check memory first
+    const memorySession = this.sessions.get(id);
+    if (memorySession) return memorySession;
+    
+    // Fallback to database
+    try {
+      const [dbSession] = await db.select().from(simulationSessions).where(eq(simulationSessions.id, id));
+      if (dbSession) {
+        // Cache in memory
+        this.sessions.set(dbSession.id, dbSession);
+        return dbSession;
+      }
+    } catch (error) {
+      console.error('Failed to fetch session from database:', error);
+    }
+    return undefined;
   }
 
   async getUserSimulationSessions(userId: number, type?: string): Promise<SimulationSession[]> {
@@ -946,28 +961,62 @@ export class MemStorage implements IStorage {
   }
 
   async createSimulationSession(insertSession: InsertSimulationSession): Promise<SimulationSession> {
-    const id = this.currentSessionId++;
-    const session: SimulationSession = {
-      ...insertSession,
-      id,
-      startedAt: new Date(),
-      completedAt: null,
-      score: null,
-      feedback: null,
-      duration: null,
-      status: insertSession.status || 'active',
-      messages: insertSession.messages || []
-    };
-    this.sessions.set(id, session);
-    return session;
+    // Insert into database first to get a valid ID for foreign key references
+    try {
+      const [dbSession] = await db.insert(simulationSessions).values({
+        userId: insertSession.userId,
+        type: insertSession.type,
+        status: insertSession.status || 'active',
+        configuration: insertSession.configuration,
+        messages: insertSession.messages || [],
+      }).returning();
+      
+      const session: SimulationSession = {
+        ...dbSession,
+        startedAt: dbSession.startedAt,
+        completedAt: dbSession.completedAt,
+        score: dbSession.score,
+        feedback: dbSession.feedback,
+        duration: dbSession.duration
+      };
+      
+      // Also store in memory for fast access
+      this.sessions.set(session.id, session);
+      return session;
+    } catch (error) {
+      console.error('Failed to create session in database:', error);
+      // Fallback to memory-only (will break FK constraints for workspace_progress)
+      const id = this.currentSessionId++;
+      const session: SimulationSession = {
+        ...insertSession,
+        id,
+        startedAt: new Date(),
+        completedAt: null,
+        score: null,
+        feedback: null,
+        duration: null,
+        status: insertSession.status || 'active',
+        messages: insertSession.messages || []
+      };
+      this.sessions.set(id, session);
+      return session;
+    }
   }
 
   async updateSimulationSession(id: number, updates: Partial<SimulationSession>): Promise<SimulationSession | undefined> {
-    const session = this.sessions.get(id);
+    const session = await this.getSimulationSession(id);
     if (!session) return undefined;
     
     const updatedSession = { ...session, ...updates };
     this.sessions.set(id, updatedSession);
+    
+    // Also update in database
+    try {
+      await db.update(simulationSessions).set(updates).where(eq(simulationSessions.id, id));
+    } catch (error) {
+      console.error('Failed to update session in database:', error);
+    }
+    
     return updatedSession;
   }
 
@@ -1015,15 +1064,36 @@ export class MemStorage implements IStorage {
   }
 
   async createWorkspaceProject(insertProject: InsertWorkspaceProject): Promise<WorkspaceProject> {
-    const id = this.currentProjectId++;
-    const project: WorkspaceProject = {
-      ...insertProject,
-      id,
-      scenarioScript: insertProject.scenarioScript || null,
-      createdAt: new Date()
-    };
-    this.workspaceProjects.set(id, project);
-    return project;
+    // Insert into database first to get a valid ID for foreign key references
+    try {
+      const [dbProject] = await db.insert(workspaceProjects).values({
+        name: insertProject.name,
+        description: insertProject.description,
+        difficulty: insertProject.difficulty,
+        category: insertProject.category,
+        estimatedDuration: insertProject.estimatedDuration,
+        techStack: insertProject.techStack,
+        teamStructure: insertProject.teamStructure,
+        requirements: insertProject.requirements,
+        scenarioScript: insertProject.scenarioScript || null
+      }).returning();
+      
+      // Also store in memory for fast access
+      this.workspaceProjects.set(dbProject.id, dbProject);
+      return dbProject;
+    } catch (error) {
+      console.error('Failed to create workspace project in database:', error);
+      // Fallback to memory-only
+      const id = this.currentProjectId++;
+      const project: WorkspaceProject = {
+        ...insertProject,
+        id,
+        scenarioScript: insertProject.scenarioScript || null,
+        createdAt: new Date()
+      };
+      this.workspaceProjects.set(id, project);
+      return project;
+    }
   }
 
   // Workspace role operations
