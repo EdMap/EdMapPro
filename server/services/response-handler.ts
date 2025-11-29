@@ -320,10 +320,16 @@ export class ResponseHandler {
           candidateResponse: classification.sanitizedText
         });
         const minimalResponse = await this.model.invoke(minimalPrompt);
+        const minimalResponseText = this.extractContent(minimalResponse);
+        
+        // If our response already ends with a question or offers a choice,
+        // don't also repeat the original question - wait for user to respond
+        const responseEndsWithQuestion = minimalResponseText.trim().endsWith('?');
+        
         return {
-          response: this.extractContent(minimalResponse),
+          response: minimalResponseText,
           shouldProceedWithEvaluation: false,
-          questionRepeated: true
+          questionRepeated: !responseEndsWithQuestion  // Only repeat if we didn't ask a new question
         };
         
       case 'prompt_injection':
