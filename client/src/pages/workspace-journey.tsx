@@ -78,6 +78,21 @@ export default function WorkspaceJourney() {
   const handleStartJourney = async (project: any) => {
     if (!user) return;
 
+    // Check if there's already an existing journey for this project
+    const existingProgress = Array.isArray(progressData) 
+      ? progressData.find((p: any) => 
+          p.projectId === project.id && 
+          p.mode === 'journey' &&
+          p.status === 'in_progress'
+        )
+      : null;
+
+    if (existingProgress) {
+      // Resume existing journey instead of creating a new one
+      handleResumeSession(existingProgress, project);
+      return;
+    }
+
     const session = await createSessionMutation.mutateAsync({
       userId: (user as any).id,
       type: 'workspace',
