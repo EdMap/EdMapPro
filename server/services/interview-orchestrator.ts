@@ -120,6 +120,8 @@ interface ConversationMemory {
   pendingCandidateQuestion?: string; // Question the candidate asked that needs answering
   // Session telemetry for dynamic completion
   telemetry: SessionTelemetry;
+  // Track question repeats to prevent infinite loops (max 2 repeats before moving on)
+  currentQuestionRepeatCount: number;
 }
 
 export class InterviewOrchestrator {
@@ -198,6 +200,7 @@ export class InterviewOrchestrator {
         timeWarningGiven: false,
         preludeResponses: [],
         telemetry: this.initializeTelemetry(),
+        currentQuestionRepeatCount: 0,
       });
     }
     return this.memory.get(sessionId)!;
@@ -1118,15 +1121,39 @@ export class InterviewOrchestrator {
       
       // If we shouldn't proceed with evaluation, return the interim response
       if (!handlerResult.shouldProceedWithEvaluation) {
-        // Return the interim response along with the current question
-        // so the frontend knows what question is still pending
-        return {
-          interimResponse: handlerResult.response,
-          questionRepeated: handlerResult.questionRepeated,
-          candidateIntent: classification.intent,
-          // Include the current question so the frontend can track state
-          currentQuestionText: question.questionText
-        };
+        // Track question repeats to prevent infinite loops
+        if (handlerResult.questionRepeated) {
+          memory.currentQuestionRepeatCount++;
+          
+          // After 2 repeats, force move to the next question
+          const MAX_QUESTION_REPEATS = 2;
+          if (memory.currentQuestionRepeatCount >= MAX_QUESTION_REPEATS) {
+            // Reset repeat counter and proceed with low-score evaluation
+            memory.currentQuestionRepeatCount = 0;
+            
+            // Treat repeated refusals as a minimal answer and proceed
+            // The evaluation will score this appropriately low
+            // Don't return here - fall through to normal evaluation flow
+          } else {
+            // Return the interim response along with the current question
+            // so the frontend knows what question is still pending
+            return {
+              interimResponse: handlerResult.response,
+              questionRepeated: handlerResult.questionRepeated,
+              candidateIntent: classification.intent,
+              // Include the current question so the frontend can track state
+              currentQuestionText: question.questionText
+            };
+          }
+        } else {
+          // Non-repeated interim (like clarification) - return as normal
+          return {
+            interimResponse: handlerResult.response,
+            questionRepeated: handlerResult.questionRepeated,
+            candidateIntent: classification.intent,
+            currentQuestionText: question.questionText
+          };
+        }
       }
     } else if (classification.candidateQuestion) {
       // Mixed content: substantive answer WITH a question
@@ -1447,6 +1474,9 @@ export class InterviewOrchestrator {
     }
 
     memory.questions.push(nextQuestionText);
+    
+    // Reset repeat counter when moving to a new question
+    memory.currentQuestionRepeatCount = 0;
 
     const nextQuestion = await storage.createInterviewQuestion({
       sessionId,
