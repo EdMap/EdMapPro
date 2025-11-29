@@ -47,7 +47,9 @@ import {
   Clipboard,
   GitCommit,
   GitPullRequest,
-  PenLine
+  PenLine,
+  MessageCircle,
+  Minimize2
 } from "lucide-react";
 
 interface DayProgress {
@@ -85,6 +87,220 @@ interface TeamMember {
   bio?: string;
 }
 
+// Floating Team Chat Component
+interface FloatingTeamChatProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  teamMembers: TeamMember[];
+  activeChatMember: TeamMember | null;
+  onSelectMember: (member: TeamMember) => void;
+  message: string;
+  onMessageChange: (message: string) => void;
+  onSendMessage: () => void;
+  isSending: boolean;
+  interactions: any[];
+  typingIndicator: string | null;
+}
+
+function FloatingTeamChat({
+  isOpen,
+  onToggle,
+  teamMembers,
+  activeChatMember,
+  onSelectMember,
+  message,
+  onMessageChange,
+  onSendMessage,
+  isSending,
+  interactions,
+  typingIndicator
+}: FloatingTeamChatProps) {
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (isOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [interactions, isOpen]);
+
+  const filteredMessages = activeChatMember 
+    ? interactions.filter((i: any) => 
+        i.channel === `dm-${activeChatMember.name}` || 
+        (i.sender === activeChatMember.name && i.channel === 'dm-You') ||
+        i.channel === `floating-dm-${activeChatMember.name}`
+      )
+    : [];
+
+  // Get initials for avatar
+  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
+
+  // Get color for member
+  const getMemberColor = (name: string) => {
+    const colors: Record<string, string> = {
+      'Sarah': 'bg-blue-500',
+      'Marcus': 'bg-green-500',
+      'Priya': 'bg-purple-500',
+      'Alex': 'bg-orange-500',
+      'Jordan': 'bg-teal-500'
+    };
+    return colors[name] || 'bg-gray-500';
+  };
+
+  return (
+    <>
+      {/* Floating Chat Button - Bottom right corner (FAB style) */}
+      <button
+        onClick={onToggle}
+        className={`fixed right-6 bottom-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-200 ${
+          isOpen 
+            ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300' 
+            : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105'
+        }`}
+        data-testid="button-floating-chat"
+      >
+        <MessageCircle className="h-5 w-5" />
+        {!isOpen && <span className="text-sm font-medium">Ask Team</span>}
+      </button>
+
+      {/* Chat Panel - Bottom right, partial height */}
+      <div 
+        className={`fixed right-6 bottom-20 w-80 sm:w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-all duration-300 ease-in-out rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col ${
+          isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4 pointer-events-none'
+        }`}
+        style={{ height: 'clamp(420px, 70vh, 640px)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-blue-600" />
+            Team Chat
+          </h3>
+          <Button variant="ghost" size="sm" onClick={onToggle} data-testid="button-close-chat">
+            <Minimize2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Team Member Tabs */}
+        <div className="p-2 border-b dark:border-gray-700">
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {teamMembers.slice(0, 5).map((member) => (
+              <button
+                key={member.name}
+                onClick={() => onSelectMember(member)}
+                className={`flex flex-col items-center p-2 rounded-lg min-w-[60px] transition-colors ${
+                  activeChatMember?.name === member.name
+                    ? 'bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                data-testid={`button-chat-member-${member.name.toLowerCase()}`}
+              >
+                <Avatar className={`h-8 w-8 ${getMemberColor(member.name)}`}>
+                  <AvatarFallback className="text-white text-xs">
+                    {getInitials(member.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-300 truncate w-full text-center">
+                  {member.name.split(' ')[0]}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Chat Content */}
+        {activeChatMember ? (
+          <div className="flex flex-col flex-1 min-h-0">
+            {/* Active member info */}
+            <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 border-b dark:border-gray-700">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{activeChatMember.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{activeChatMember.role}</p>
+            </div>
+
+            {/* Messages */}
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-3">
+                {filteredMessages.length === 0 && (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Send a message to {activeChatMember.name}</p>
+                    <p className="text-xs mt-1">Ask for help or clarification</p>
+                  </div>
+                )}
+                {filteredMessages.map((interaction: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className={`flex ${interaction.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                        interaction.sender === 'You'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700'
+                      }`}
+                    >
+                      {interaction.sender !== 'You' && (
+                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">
+                          {interaction.sender}
+                        </p>
+                      )}
+                      <p className={`text-sm ${interaction.sender === 'You' ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>
+                        {interaction.content}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {typingIndicator && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{typingIndicator} is typing...</p>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Input */}
+            <div className="p-3 border-t dark:border-gray-700">
+              <div className="flex gap-2">
+                <Textarea
+                  value={message}
+                  onChange={(e) => onMessageChange(e.target.value)}
+                  placeholder={`Ask ${activeChatMember.name}...`}
+                  className="min-h-[50px] max-h-[100px] resize-none text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      onSendMessage();
+                    }
+                  }}
+                  data-testid="input-floating-chat"
+                />
+                <Button 
+                  size="sm"
+                  onClick={onSendMessage}
+                  disabled={!message.trim() || isSending}
+                  className="self-end"
+                  data-testid="button-send-floating-chat"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center flex-1 text-gray-500 dark:text-gray-400">
+            <div className="text-center">
+              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Select a teammate to chat</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function InternOnboardingSession({ 
   session, 
   project, 
@@ -120,6 +336,12 @@ export default function InternOnboardingSession({
   const [gitCommands, setGitCommands] = useState<string[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
   const [reflectionText, setReflectionText] = useState("");
+  
+  // Floating chat state
+  const [floatingChatOpen, setFloatingChatOpen] = useState(false);
+  const [floatingChatMember, setFloatingChatMember] = useState<TeamMember | null>(null);
+  const [floatingChatMessage, setFloatingChatMessage] = useState("");
+  const [floatingTypingIndicator, setFloatingTypingIndicator] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docsScrollRef = useRef<HTMLDivElement>(null);
@@ -236,6 +458,76 @@ export default function InternOnboardingSession({
       }
     }
   });
+
+  // Floating chat mutation - separate from main chat to avoid state conflicts
+  const floatingChatMutation = useMutation({
+    mutationFn: async (userMessage: string) => {
+      if (!floatingChatMember) return;
+      
+      const channel = `dm-${floatingChatMember.name}`;
+      setFloatingTypingIndicator(floatingChatMember.name);
+      
+      const response = await apiRequest("POST", `/api/workspace/${session.id}/action`, {
+        type: 'send-message',
+        channel,
+        data: { content: userMessage }
+      });
+      return response.json();
+    },
+    onMutate: async (userMessage: string) => {
+      if (!floatingChatMember) return;
+      
+      await queryClient.cancelQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
+      const previousInteractions = queryClient.getQueryData(['/api/workspace', session.id, 'interactions']);
+      
+      const channel = `dm-${floatingChatMember.name}`;
+      const optimisticMessage = {
+        id: `temp-floating-${Date.now()}`,
+        sessionId: session.id,
+        channel,
+        sender: 'You',
+        senderRole: 'Intern',
+        content: userMessage,
+        createdAt: new Date().toISOString(),
+        isOptimistic: true
+      };
+      
+      queryClient.setQueryData(
+        ['/api/workspace', session.id, 'interactions'],
+        (old: any[] | undefined) => [...(old || []), optimisticMessage]
+      );
+      
+      setFloatingChatMessage("");
+      return { previousInteractions };
+    },
+    onSuccess: () => {
+      setFloatingTypingIndicator(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
+    },
+    onError: (_err, _userMessage, context) => {
+      setFloatingTypingIndicator(null);
+      if (context?.previousInteractions) {
+        queryClient.setQueryData(
+          ['/api/workspace', session.id, 'interactions'],
+          context.previousInteractions
+        );
+      }
+    }
+  });
+
+  const handleFloatingChatSend = () => {
+    if (!floatingChatMessage.trim() || floatingChatMutation.isPending || !floatingChatMember) return;
+    floatingChatMutation.mutate(floatingChatMessage);
+  };
+
+  const handleFloatingChatToggle = () => {
+    setFloatingChatOpen(!floatingChatOpen);
+    // Default to Sarah (team lead) if no member selected
+    if (!floatingChatOpen && !floatingChatMember && teamMembers.length > 0) {
+      const sarah = teamMembers.find(m => m.name === 'Sarah') || teamMembers[0];
+      setFloatingChatMember(sarah);
+    }
+  };
 
   const saveProgressMutation = useMutation({
     mutationFn: async (progressData: any) => {
@@ -2252,6 +2544,21 @@ git push origin fix/timezone-display`}</pre>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Team Chat - available from any view */}
+      <FloatingTeamChat
+        isOpen={floatingChatOpen}
+        onToggle={handleFloatingChatToggle}
+        teamMembers={teamMembers}
+        activeChatMember={floatingChatMember}
+        onSelectMember={setFloatingChatMember}
+        message={floatingChatMessage}
+        onMessageChange={setFloatingChatMessage}
+        onSendMessage={handleFloatingChatSend}
+        isSending={floatingChatMutation.isPending}
+        interactions={Array.isArray(interactions) ? interactions : []}
+        typingIndicator={floatingTypingIndicator}
+      />
     </div>
   );
 }
