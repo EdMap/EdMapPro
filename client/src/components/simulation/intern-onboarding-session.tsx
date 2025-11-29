@@ -503,11 +503,12 @@ export default function InternOnboardingSession({
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (userMessage: string) => {
-      const channel = selectedMember ? `dm-${selectedMember.name}` : 'team-chat';
+    mutationFn: async ({ userMessage, targetMember }: { userMessage: string; targetMember?: TeamMember }) => {
+      const member = targetMember || selectedMember;
+      const channel = member ? `dm-${member.name}` : 'team-chat';
       
-      if (selectedMember) {
-        setTypingIndicator(selectedMember.name);
+      if (member) {
+        setTypingIndicator(member.name);
       }
       
       const response = await apiRequest("POST", `/api/workspace/${session.id}/action`, {
@@ -520,7 +521,7 @@ export default function InternOnboardingSession({
       });
       return response.json();
     },
-    onMutate: async (userMessage: string) => {
+    onMutate: async ({ userMessage, targetMember }: { userMessage: string; targetMember?: TeamMember }) => {
       // Cancel any outgoing refetches so they don't overwrite optimistic update
       await queryClient.cancelQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
       
@@ -528,7 +529,8 @@ export default function InternOnboardingSession({
       const previousInteractions = queryClient.getQueryData(['/api/workspace', session.id, 'interactions']);
       
       // Optimistically add user's message immediately
-      const channel = selectedMember ? `dm-${selectedMember.name}` : 'team-chat';
+      const member = targetMember || selectedMember;
+      const channel = member ? `dm-${member.name}` : 'team-chat';
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
         sessionId: session.id,
@@ -548,17 +550,18 @@ export default function InternOnboardingSession({
       // Clear input immediately for snappy feel
       setMessage("");
       
-      return { previousInteractions };
+      return { previousInteractions, member };
     },
-    onSuccess: () => {
+    onSuccess: (_data, _variables, context) => {
       setTypingIndicator(null);
       queryClient.invalidateQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
       
-      if (selectedMember && !introProgress[selectedMember.name]) {
-        setIntroProgress(prev => ({ ...prev, [selectedMember.name]: true }));
+      const member = context?.member;
+      if (member && !introProgress[member.name]) {
+        setIntroProgress(prev => ({ ...prev, [member.name]: true }));
       }
     },
-    onError: (_err, _userMessage, context) => {
+    onError: (_err, _variables, context) => {
       setTypingIndicator(null);
       // Rollback on error
       if (context?.previousInteractions) {
@@ -791,9 +794,9 @@ export default function InternOnboardingSession({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [interactions]);
 
-  function handleSendMessage() {
+  function handleSendMessage(targetMember?: TeamMember) {
     if (!message.trim() || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate(message);
+    sendMessageMutation.mutate({ userMessage: message, targetMember });
   }
 
   function startTeamIntro(member: TeamMember) {
@@ -1239,7 +1242,7 @@ export default function InternOnboardingSession({
               data-testid="input-standup-message"
             />
             <Button 
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage()}
               disabled={!message.trim() || sendMessageMutation.isPending}
               data-testid="button-send-standup"
             >
@@ -1814,7 +1817,7 @@ export default function InternOnboardingSession({
               data-testid="input-message"
             />
             <Button 
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage()}
               disabled={!message.trim() || sendMessageMutation.isPending}
               data-testid="button-send-message"
             >
@@ -2429,16 +2432,13 @@ git push origin fix/timezone-display`}</pre>
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSendMessage();
+                  handleSendMessage(sarah);
                 }
               }}
               data-testid="input-comprehension-message"
             />
             <Button 
-              onClick={() => {
-                setSelectedMember(sarah);
-                handleSendMessage();
-              }}
+              onClick={() => handleSendMessage(sarah)}
               disabled={!message.trim() || sendMessageMutation.isPending}
               data-testid="button-send-comprehension-message"
             >
