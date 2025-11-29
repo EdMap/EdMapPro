@@ -112,13 +112,14 @@ export default function InternOnboardingSession({ session, project, onComplete }
     if (currentDay === 1) {
       const totalIntros = teamMembers.length;
       const completedIntros = Object.values(introProgress).filter(Boolean).length;
-      const introWeight = 50;
+      // New weights: Docs 30%, Team 40%, Comprehension 30%
       const docsWeight = 30;
-      const comprehensionWeight = 20;
+      const introWeight = 40;
+      const comprehensionWeight = 30;
       
       let progress = 0;
-      progress += (completedIntros / totalIntros) * introWeight;
       if (docsRead) progress += docsWeight;
+      progress += (completedIntros / totalIntros) * introWeight;
       if (comprehensionComplete) progress += comprehensionWeight;
       
       return Math.round(progress);
