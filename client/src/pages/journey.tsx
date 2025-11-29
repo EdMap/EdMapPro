@@ -869,9 +869,11 @@ function InterviewTranscript({ questions }: { questions: InterviewHistoryQuestio
                 "h-6 w-6 rounded-full flex items-center justify-center shrink-0 text-xs font-medium",
                 q.score && q.score >= 7 
                   ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
-                  : q.score 
+                  : q.score && q.score >= 5
                     ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                    : q.score
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400"
+                      : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
               )}>
                 {index + 1}
               </div>
@@ -880,10 +882,9 @@ function InterviewTranscript({ questions }: { questions: InterviewHistoryQuestio
                   {q.questionText}
                 </p>
                 {q.score && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <Star className="h-3 w-3 text-yellow-500" />
-                    <span className="text-xs text-gray-500">{q.score}/10</span>
-                  </div>
+                  <Badge variant={q.score >= 7 ? "default" : q.score >= 5 ? "secondary" : "destructive"} className="mt-1">
+                    {q.score}/10
+                  </Badge>
                 )}
               </div>
             </div>
