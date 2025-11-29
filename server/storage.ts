@@ -226,6 +226,13 @@ export class MemStorage implements IStorage {
   }
 
   private async seedWorkspaceData() {
+    // Check if workspace projects already exist in database - skip seeding if so
+    const existingProjects = await db.select().from(workspaceProjects).limit(1);
+    if (existingProjects.length > 0) {
+      console.log('Workspace data already exists in database, skipping seed...');
+      return;
+    }
+
     // Seed roles
     const roles = [
       {
@@ -1056,11 +1063,25 @@ export class MemStorage implements IStorage {
 
   // Workspace project operations
   async getWorkspaceProjects(): Promise<WorkspaceProject[]> {
-    return Array.from(this.workspaceProjects.values());
+    // Query from database to ensure we get all projects
+    try {
+      const dbProjects = await db.select().from(workspaceProjects);
+      return dbProjects;
+    } catch (error) {
+      console.error('Failed to get workspace projects from database:', error);
+      return Array.from(this.workspaceProjects.values());
+    }
   }
 
   async getWorkspaceProject(id: number): Promise<WorkspaceProject | undefined> {
-    return this.workspaceProjects.get(id);
+    // Query from database first
+    try {
+      const [dbProject] = await db.select().from(workspaceProjects).where(eq(workspaceProjects.id, id));
+      return dbProject;
+    } catch (error) {
+      console.error('Failed to get workspace project from database:', error);
+      return this.workspaceProjects.get(id);
+    }
   }
 
   async createWorkspaceProject(insertProject: InsertWorkspaceProject): Promise<WorkspaceProject> {
