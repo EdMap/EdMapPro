@@ -60,6 +60,7 @@ interface DayProgress {
   codeFixComplete?: boolean;
   gitWorkflowComplete?: boolean;
   reflectionComplete?: boolean;
+  codeInputs?: Record<string, string>;
 }
 
 interface InternOnboardingSessionProps {
@@ -114,7 +115,7 @@ export default function InternOnboardingSession({
   const [gitWorkflowComplete, setGitWorkflowComplete] = useState(savedProgress?.gitWorkflowComplete || false);
   const [reflectionComplete, setReflectionComplete] = useState(savedProgress?.reflectionComplete || false);
   const [currentFile, setCurrentFile] = useState<string | null>(null);
-  const [codeInputs, setCodeInputs] = useState<Record<string, string>>({});
+  const [codeInputs, setCodeInputs] = useState<Record<string, string>>(savedProgress?.codeInputs || {});
   const [gitStep, setGitStep] = useState(0);
   const [gitCommands, setGitCommands] = useState<string[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
@@ -269,7 +270,8 @@ export default function InternOnboardingSession({
       codebaseExplored,
       codeFixComplete,
       gitWorkflowComplete,
-      reflectionComplete
+      reflectionComplete,
+      codeInputs
     },
     overallProgress: dayProgress,
     status: dayProgress === 100 ? 'completed' : 'in_progress'
@@ -329,7 +331,7 @@ export default function InternOnboardingSession({
       return;
     }
     saveProgress();
-  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, codebaseExplored, codeFixComplete, gitWorkflowComplete, reflectionComplete, currentDay]);
+  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, codebaseExplored, codeFixComplete, gitWorkflowComplete, reflectionComplete, codeInputs, currentDay]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
