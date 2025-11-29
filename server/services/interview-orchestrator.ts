@@ -942,6 +942,18 @@ export class InterviewOrchestrator {
       // This prevents the interviewer from repeating the same question
       memory.currentStage = "core";
       
+      // IMPORTANT: Mark any "background" criterion questions in the interview plan as "asked"
+      // since the self-intro already covers this topic
+      if (memory.interviewPlan) {
+        const backgroundQuestions = memory.interviewPlan.questions.filter(
+          q => q.criterion === 'background' && q.status === 'pending'
+        );
+        for (const q of backgroundQuestions) {
+          q.status = 'asked';
+          console.log('[Prelude] Marked planned background question as asked:', q.id);
+        }
+      }
+      
       // Store the background question and their answer
       const backgroundQuestion = "Could you tell me a bit about your background?";
       memory.questions.push(backgroundQuestion);
@@ -967,6 +979,10 @@ export class InterviewOrchestrator {
       
       memory.scores.push(evaluation.score);
       memory.evaluations.push(evaluation);
+      
+      // Update coverage tracking for background criterion
+      this.updateCoverage(memory, backgroundQuestion, candidateResponse, evaluation.score);
+      memory.totalQuestionsAsked++;
       
       // Update the question with evaluation
       await storage.updateInterviewQuestion(question.id, {
