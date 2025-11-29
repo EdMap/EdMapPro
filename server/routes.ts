@@ -399,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/workspace/:sessionId/action", async (req, res) => {
     try {
       const sessionId = parseInt(req.params.sessionId);
-      const { type, channel, data } = req.body;
+      const { type, channel, data, currentDay, dayActivities, completedActivities } = req.body;
       
       const session = await storage.getSimulationSession(sessionId);
       if (!session) {
@@ -430,7 +430,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentSprint: config.sprintPhase || 'sprint',
         teamMembers: project.teamStructure as any[],
         userRole: config.activeRole,
-        phase: config.sprintPhase || 'sprint'
+        phase: config.sprintPhase || 'sprint',
+        currentDay: currentDay,
+        dayActivities: dayActivities,
+        completedActivities: completedActivities
       };
 
       // Evaluate user action

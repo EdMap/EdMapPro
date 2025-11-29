@@ -388,6 +388,67 @@ export default function InternOnboardingSession({
     return 0;
   }
 
+  // Helper to get today's activities based on current day
+  function getDayActivities(): string[] {
+    if (currentDay === 1) {
+      return [
+        'Meet the team (1-on-1 introductions with Sarah, Marcus, Priya, Alex, Jordan)',
+        'Read project documentation (Product & Users, Your Mission)',
+        'Comprehension check with Sarah'
+      ];
+    }
+    if (currentDay === 2) {
+      return [
+        'Morning standup with Sarah',
+        'Explore the codebase and find dateFormatters.ts',
+        'Fix the timezone bug in the merchant dashboard',
+        'Complete Git workflow (branch, commit, push)',
+        'End-of-day reflection'
+      ];
+    }
+    if (currentDay === 3) {
+      return [
+        'Respond to Sarah\'s code review feedback',
+        'Revise and update your code based on feedback'
+      ];
+    }
+    if (currentDay === 4) {
+      return [
+        'Write README documentation section',
+        'Get feedback on documentation'
+      ];
+    }
+    if (currentDay === 5) {
+      return [
+        'Fix edge case bug',
+        'Final evaluation with Sarah'
+      ];
+    }
+    return [];
+  }
+
+  // Helper to get completed activities based on current state
+  function getCompletedActivities(): string[] {
+    const completed: string[] = [];
+    
+    if (currentDay === 1) {
+      if (docsRead) completed.push('Read project documentation');
+      const introsCompleted = Object.entries(introProgress).filter(([_, done]) => done).map(([name]) => `Met ${name}`);
+      completed.push(...introsCompleted);
+      if (comprehensionComplete) completed.push('Completed comprehension check');
+    }
+    
+    if (currentDay === 2) {
+      if (standupComplete) completed.push('Morning standup completed');
+      if (codebaseExplored) completed.push('Explored codebase and found dateFormatters.ts');
+      if (codeFixComplete) completed.push('Fixed the timezone bug');
+      if (gitWorkflowComplete) completed.push('Completed Git workflow');
+      if (reflectionComplete) completed.push('Completed end-of-day reflection');
+    }
+    
+    return completed;
+  }
+
   const { data: interactions, isLoading: interactionsLoading } = useQuery({
     queryKey: ['/api/workspace', session.id, 'interactions'],
     queryFn: () => fetch(`/api/workspace/${session.id}/interactions`).then(res => res.json()),
@@ -405,7 +466,10 @@ export default function InternOnboardingSession({
       const response = await apiRequest("POST", `/api/workspace/${session.id}/action`, {
         type: 'send-message',
         channel,
-        data: { content: userMessage }
+        data: { content: userMessage },
+        currentDay,
+        dayActivities: getDayActivities(),
+        completedActivities: getCompletedActivities()
       });
       return response.json();
     },
@@ -470,7 +534,10 @@ export default function InternOnboardingSession({
       const response = await apiRequest("POST", `/api/workspace/${session.id}/action`, {
         type: 'send-message',
         channel,
-        data: { content: userMessage }
+        data: { content: userMessage },
+        currentDay,
+        dayActivities: getDayActivities(),
+        completedActivities: getCompletedActivities()
       });
       return response.json();
     },

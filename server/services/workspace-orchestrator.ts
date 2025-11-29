@@ -19,6 +19,9 @@ export interface WorkspaceContext {
   teamMembers: TeamMember[];
   userRole: string;
   phase: string; // 'onboarding', 'sprint', 'retro'
+  currentDay?: number; // Day 1, Day 2, etc. for intern onboarding
+  dayActivities?: string[]; // What the user should be doing today
+  completedActivities?: string[]; // What the user has already done today
 }
 
 export interface ChannelMessage {
@@ -327,10 +330,24 @@ Format as JSON:
   ): string {
     const recentHistory = history.slice(-5).map(m => `${m.sender}: ${m.content}`).join('\n');
     
+    // Build day context for intern onboarding
+    let dayContext = '';
+    if (context.currentDay) {
+      dayContext = `\nIntern's Current Day: Day ${context.currentDay} of their onboarding week`;
+      
+      if (context.dayActivities && context.dayActivities.length > 0) {
+        dayContext += `\nToday's activities for the intern: ${context.dayActivities.join(', ')}`;
+      }
+      
+      if (context.completedActivities && context.completedActivities.length > 0) {
+        dayContext += `\nAlready completed today: ${context.completedActivities.join(', ')}`;
+      }
+    }
+    
     return `You are ${member.name}, a ${member.personality} ${member.role} working on ${context.projectName}.
 
 Project: ${context.projectDescription}
-Current Phase: ${context.phase}
+Current Phase: ${context.phase}${dayContext}
 Channel: ${channel}
 Your expertise: ${member.expertise.join(', ')}
 
@@ -339,7 +356,7 @@ ${recentHistory || 'No previous messages'}
 
 User (${context.userRole}): ${userMessage}
 
-Respond naturally and helpfully as ${member.name}. Keep it conversational and realistic. ${channel === 'standup' ? 'Keep it brief and focused.' : channel === 'email' ? 'Be professional and structured.' : 'Be casual and collaborative.'}`;
+Respond naturally and helpfully as ${member.name}. Keep it conversational and realistic. Be aware of what day of onboarding the intern is on and what they should be working on. ${channel === 'standup' ? 'Keep it brief and focused.' : channel === 'email' ? 'Be professional and structured.' : 'Be casual and collaborative.'}`;
   }
 
   private getSystemPrompt(member: TeamMember, channel: string): string {
