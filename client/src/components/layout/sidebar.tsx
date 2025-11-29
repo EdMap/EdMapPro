@@ -9,10 +9,19 @@ import {
   TrendingUp, 
   Settings,
   Briefcase,
-  Route
+  Route,
+  History
 } from "lucide-react";
 
-const navigationItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  section: string;
+  children?: NavItem[];
+}
+
+const navigationItems: NavItem[] = [
   {
     title: "My Journey",
     href: "/",
@@ -35,7 +44,15 @@ const navigationItems = [
     title: "Interview Practice", 
     href: "/interview",
     icon: MessageCircle,
-    section: "practice"
+    section: "practice",
+    children: [
+      {
+        title: "Practice History",
+        href: "/interview/history",
+        icon: History,
+        section: "practice"
+      }
+    ]
   },
   {
     title: "Negotiation Practice",
@@ -85,10 +102,10 @@ export default function Sidebar() {
     }
     acc[item.section].push(item);
     return acc;
-  }, {} as Record<string, typeof navigationItems>);
+  }, {} as Record<string, NavItem[]>);
 
   // Determine which item should be active
-  const getIsActive = (item: typeof navigationItems[0]) => {
+  const getIsActive = (item: NavItem) => {
     // If we're in Journey mode on a simulator page, highlight "Application Details" instead
     if (isInJourneyMode && item.href === "/journey") {
       return true;
@@ -99,8 +116,19 @@ export default function Sidebar() {
       return false;
     }
     
-    // Normal path matching
-    return location === item.href;
+    // Normal path matching - also check if we're on a child route
+    if (location === item.href) return true;
+    
+    // Check if any child is active (for parent highlighting)
+    if (item.children?.some(child => location === child.href)) return true;
+    
+    return false;
+  };
+  
+  // Check if a parent item should be expanded (has active child or is active itself)
+  const shouldExpand = (item: NavItem) => {
+    if (!item.children) return false;
+    return location.startsWith(item.href);
   };
 
   return (
@@ -128,22 +156,53 @@ export default function Sidebar() {
             {items.map((item) => {
               const Icon = item.icon;
               const isActive = getIsActive(item);
+              const isExpanded = shouldExpand(item);
               
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "simulation-nav-item",
-                    isActive && "active"
+                <div key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "simulation-nav-item",
+                      isActive && "active"
+                    )}
+                  >
+                    <Icon className={cn(
+                      "w-4 h-4",
+                      isActive ? "text-blue-600" : "text-gray-500"
+                    )} />
+                    <span>{item.title}</span>
+                  </Link>
+                  
+                  {/* Nested children - always visible when parent exists */}
+                  {item.children && (
+                    <div className="ml-4 border-l border-gray-200">
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon;
+                        const isChildActive = location === child.href;
+                        
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={cn(
+                              "simulation-nav-item pl-4 text-sm",
+                              isChildActive && "active"
+                            )}
+                          >
+                            <ChildIcon className={cn(
+                              "w-3.5 h-3.5",
+                              isChildActive ? "text-blue-600" : "text-gray-400"
+                            )} />
+                            <span className={cn(
+                              isChildActive ? "text-blue-600" : "text-gray-600"
+                            )}>{child.title}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   )}
-                >
-                  <Icon className={cn(
-                    "w-4 h-4",
-                    isActive ? "text-blue-600" : "text-gray-500"
-                  )} />
-                  <span>{item.title}</span>
-                </Link>
+                </div>
               );
             })}
           </div>

@@ -22,7 +22,7 @@ import {
   type OfferDetails
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -75,7 +75,7 @@ export interface IStorage {
   
   // Interview session operations
   getInterviewSession(id: number): Promise<InterviewSession | undefined>;
-  getUserInterviewSessions(userId: number): Promise<InterviewSession[]>;
+  getUserInterviewSessions(userId: number, mode?: 'practice' | 'journey'): Promise<InterviewSession[]>;
   createInterviewSession(session: InsertInterviewSession): Promise<InterviewSession>;
   updateInterviewSession(id: number, updates: Partial<InterviewSession>): Promise<InterviewSession | undefined>;
   
@@ -1052,7 +1052,16 @@ export class MemStorage implements IStorage {
     return session || undefined;
   }
 
-  async getUserInterviewSessions(userId: number): Promise<InterviewSession[]> {
+  async getUserInterviewSessions(userId: number, mode?: 'practice' | 'journey'): Promise<InterviewSession[]> {
+    if (mode) {
+      return await db.select()
+        .from(interviewSessions)
+        .where(and(
+          eq(interviewSessions.userId, userId),
+          eq(interviewSessions.mode, mode)
+        ))
+        .orderBy(desc(interviewSessions.startedAt));
+    }
     return await db.select()
       .from(interviewSessions)
       .where(eq(interviewSessions.userId, userId))

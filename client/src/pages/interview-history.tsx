@@ -55,8 +55,9 @@ interface InterviewQuestion {
 export default function InterviewHistory() {
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   
+  // Fetch practice-only interviews
   const { data: sessions, isLoading: sessionsLoading } = useQuery<InterviewSession[]>({
-    queryKey: ['/api/users/1/interviews']
+    queryKey: ['/api/users/1/interviews?mode=practice']
   });
 
   const { data: feedbackData, isLoading: feedbackLoading } = useQuery<{
@@ -277,13 +278,21 @@ export default function InterviewHistory() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Interview History</h1>
-            <p className="text-gray-600 mt-1">View your past interview sessions and feedback</p>
+            <h1 className="text-2xl font-bold text-gray-900">Practice History</h1>
+            <p className="text-gray-600 mt-1">Track your interview practice sessions and progress</p>
           </div>
           <Link href="/interview">
             <Button data-testid="button-new-interview">
-              New Interview
+              New Practice
             </Button>
+          </Link>
+        </div>
+        
+        {/* Cross-link to Journey interviews */}
+        <div className="mb-6 text-sm text-gray-500">
+          Looking for job application interviews?{' '}
+          <Link href="/journey" className="text-blue-600 hover:underline">
+            View Journey History →
           </Link>
         </div>
 
@@ -291,10 +300,10 @@ export default function InterviewHistory() {
           <Card>
             <CardContent className="py-12 text-center">
               <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No completed interviews yet</h3>
-              <p className="text-gray-500 mb-6">Start practicing to build your interview history</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No practice sessions yet</h3>
+              <p className="text-gray-500 mb-6">Start your first practice interview to build your history</p>
               <Link href="/interview">
-                <Button data-testid="button-start-first-interview">Start Your First Interview</Button>
+                <Button data-testid="button-start-first-interview">Start Your First Practice</Button>
               </Link>
             </CardContent>
           </Card>

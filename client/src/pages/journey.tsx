@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1193,8 +1193,9 @@ function InterviewHistoryPanel({ userId }: { userId: number }) {
   const [showDetail, setShowDetail] = useState(false);
   const [filter, setFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
 
+  // Fetch journey-only interviews (tied to job applications)
   const { data: sessions, isLoading } = useQuery<InterviewHistorySession[]>({
-    queryKey: [`/api/users/${userId}/interviews`],
+    queryKey: [`/api/users/${userId}/interviews?mode=journey`],
     enabled: !!userId
   });
 
@@ -1231,10 +1232,16 @@ function InterviewHistoryPanel({ userId }: { userId: number }) {
             <History className="h-10 w-10 text-gray-400" />
           </div>
           <h3 className="font-semibold text-xl text-gray-900 dark:text-white mb-2">
-            No Interview History
+            No Job Interviews Yet
           </h3>
-          <p className="text-gray-500 max-w-md mx-auto mb-6">
-            Complete interviews to see your history here. Practice mode and journey interviews are both tracked.
+          <p className="text-gray-500 max-w-md mx-auto mb-4">
+            Complete interviews from your job applications to see them here.
+          </p>
+          <p className="text-sm text-gray-400">
+            Looking for practice sessions?{' '}
+            <Link href="/interview/history" className="text-blue-600 hover:underline">
+              View Practice History →
+            </Link>
           </p>
         </div>
       </div>

@@ -188,6 +188,8 @@ export const interviewSessions = pgTable("interview_sessions", {
   targetRole: text("target_role").notNull(), // 'developer', 'pm', 'designer', 'data-scientist'
   difficulty: text("difficulty").notNull().default('medium'), // 'easy', 'medium', 'hard'
   status: text("status").notNull().default('in_progress'), // 'in_progress', 'completed', 'abandoned'
+  mode: text("mode").notNull().default('practice'), // 'practice' or 'journey'
+  applicationStageId: integer("application_stage_id"), // Links to application_stages for journey mode
   currentQuestionIndex: integer("current_question_index").notNull().default(0),
   totalQuestions: integer("total_questions").notNull().default(5),
   overallScore: integer("overall_score"), // 0-100

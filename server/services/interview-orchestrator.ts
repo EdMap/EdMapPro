@@ -557,7 +557,9 @@ export class InterviewOrchestrator {
     difficulty: string = "medium",
     totalQuestions: number = 5,
     jobContext?: JobContext,
-    candidateName?: string
+    candidateName?: string,
+    mode: 'practice' | 'journey' = 'practice',
+    applicationStageId?: number
   ): Promise<{ 
     session: InterviewSession; 
     firstQuestion?: InterviewQuestion; 
@@ -573,6 +575,8 @@ export class InterviewOrchestrator {
       totalQuestions,
       status: "in_progress",
       currentQuestionIndex: 0,
+      mode,
+      applicationStageId: applicationStageId || null,
     });
 
     const config = this.getConfig(session, jobContext);

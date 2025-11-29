@@ -612,6 +612,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Technical interviews can be shorter (5) as they're more focused
       const defaultQuestionCount = interviewType === 'behavioral' || interviewType === 'hr' ? 7 : 5;
       
+      // Determine mode based on whether this is linked to an application stage
+      const mode = applicationStageId ? 'journey' : 'practice';
+      
       const result = await interviewOrchestrator.startInterview(
         userId,
         interviewType,
@@ -619,7 +622,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         difficulty || "medium",
         totalQuestions || defaultQuestionCount,
         jobContext,
-        candidateName
+        candidateName,
+        mode,
+        applicationStageId
       );
       
       // If this interview is for an application stage, link them
@@ -768,11 +773,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user's interview history
+  // Get user's interview history (supports mode filtering via query param)
   app.get("/api/users/:userId/interviews", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const sessions = await storage.getUserInterviewSessions(userId);
+      const mode = req.query.mode as 'practice' | 'journey' | undefined;
+      const sessions = await storage.getUserInterviewSessions(userId, mode);
       res.json(sessions);
     } catch (error) {
       res.status(500).json({ message: "Failed to get interview history: " + (error as Error).message });
