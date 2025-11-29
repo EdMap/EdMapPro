@@ -84,6 +84,11 @@ Preferred communication style: Simple, everyday language.
     - **Workspace Dashboard**: Provides progress overview, active session management, and performance visualizations.
     - **Enterprise Feature Scenario (PulseOps IQ)**: Simulates adding features to an enterprise codebase with a multi-phase workflow, simulated codebase explorer, and comprehensive PM documentation.
     - **Intern Onboarding Scenario (NovaPay)**: 5-day intern onboarding journey with Day 1 featuring team introductions, documentation reading, and comprehension check with Sarah. Uses `InternOnboardingSession` component with day-based navigation, 1:1 team intro chats, and progress tracking.
+      - **Day 1 Documentation UX**: Tabbed layout with progressive disclosure:
+        - Tab 1 "Product & Users": TL;DR card, "What is Merchant Dashboard?" (features), "Who Uses It?" (Maria persona card with workflow)
+        - Tab 2 "Your Mission": TL;DR mission card, "The Timezone Bug" (before/after visual), "How We Work" (dev workflow, team contacts)
+        - Collapsible sections with completion tracking (4/4 required)
+        - Day 2 Preview modal shows after completing all sections
     - **Chat Enhancements**: `@mention` autocomplete, smart message routing, realistic AI response delays, auto-scroll, and real-time typing indicators.
     - **Phase Guidance System**: Interactive "What to Do Now" panel with objectives checklist and smart phase progression.
     - **Direct Messaging (DM) Feature**: 1-on-1 private conversations with individual AI teammates.
