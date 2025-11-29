@@ -324,12 +324,14 @@ export default function WorkspaceJourney() {
           </div>
         )}
 
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {inProgressJourneys.length > 0 ? 'Start a New Journey' : 'Choose Your Journey'}
-          </h2>
+        {/* Only show "Start a New Journey" section if no active journeys - Journey mode is one company at a time */}
+        {inProgressJourneys.length === 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Choose Your Journey
+            </h2>
           
-          {projectsLoading ? (
+            {projectsLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
               <p className="mt-4 text-gray-600">Loading journeys...</p>
@@ -421,7 +423,8 @@ export default function WorkspaceJourney() {
               )}
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
 
       <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
