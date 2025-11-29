@@ -52,8 +52,8 @@ export default function WorkspaceJourney() {
       const response = await apiRequest("POST", "/api/sessions", config);
       return response.json();
     },
-    onSuccess: (session) => {
-      setActiveSession(session);
+    onSuccess: () => {
+      // Don't set activeSession here - let handleStartJourney do it after progress is created
       queryClient.invalidateQueries({ 
         predicate: (query) => (query.queryKey[0] as string)?.startsWith('/api/workspace/progress')
       });
@@ -113,7 +113,8 @@ export default function WorkspaceJourney() {
       messages: []
     });
     
-    // Save initial progress record immediately so session appears in "Continue Your Journey"
+    // Save initial progress record BEFORE setting activeSession
+    // This ensures the component receives savedProgressId at mount time
     try {
       const progressResponse = await apiRequest("POST", "/api/workspace/progress", {
         sessionId: session.id,
@@ -126,21 +127,23 @@ export default function WorkspaceJourney() {
         overallProgress: 0,
         status: 'in_progress'
       });
-      const progressData = await progressResponse.json();
+      const savedProgress = await progressResponse.json();
       
-      // Update active session with saved progress ID
+      // Set project first, then activeSession with savedProgressId included
+      setSelectedProject(project);
       setActiveSession({
         ...session,
         configuration: {
           ...session.configuration,
-          savedProgressId: progressData.id
+          savedProgressId: savedProgress.id
         }
       });
     } catch (error) {
       console.error('Failed to save initial progress:', error);
+      // Still set the session even if progress save fails
+      setSelectedProject(project);
+      setActiveSession(session);
     }
-    
-    setSelectedProject(project);
   };
 
   const handleResumeSession = (progress: any, project: any) => {
