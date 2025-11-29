@@ -320,7 +320,14 @@ export default function InternOnboardingSession({
     }
   };
 
+  const isInitialMount = useRef(true);
+  
   useEffect(() => {
+    // Skip auto-save on initial mount - progress is already created by handleStartPractice/handleStartJourney
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     saveProgress();
   }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, codebaseExplored, codeFixComplete, gitWorkflowComplete, reflectionComplete, currentDay]);
 

@@ -152,6 +152,23 @@ export default function WorkspacePractice() {
   const handleStartPractice = async () => {
     if (!selectedProject || !selectedRole || !selectedScenario || !user) return;
 
+    // Check if there's already an existing session with the same project, role, and day
+    const existingProgress = Array.isArray(progressData) 
+      ? progressData.find((p: any) => 
+          p.projectId === selectedProject.id && 
+          p.role === selectedRole && 
+          p.currentDay === selectedScenario.day &&
+          p.mode === 'practice' &&
+          p.status === 'in_progress'
+        )
+      : null;
+
+    if (existingProgress) {
+      // Resume existing session instead of creating a new one
+      handleResumePractice(existingProgress, selectedProject);
+      return;
+    }
+
     const session = await createSessionMutation.mutateAsync({
       userId: (user as any).id,
       type: 'workspace',
