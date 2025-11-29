@@ -358,21 +358,21 @@ function ApplicationListItem({
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
+        "w-full text-left p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors overflow-hidden",
         isSelected && "bg-primary/5 dark:bg-primary/10 border-l-2 border-l-primary"
       )}
       data-testid={`list-item-${application.id}`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 overflow-hidden">
         <div className="h-10 w-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-lg font-semibold text-primary shrink-0">
           {application.job.company.name.charAt(0)}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm">
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm flex-1 min-w-0">
               {application.job.title}
             </h3>
-            <Badge className={cn(getStatusColor(application.status), "text-xs shrink-0")}>
+            <Badge className={cn(getStatusColor(application.status), "text-xs shrink-0 whitespace-nowrap")}>
               {application.status === 'offer' ? '🎉 Offer' : application.status}
             </Badge>
           </div>
@@ -653,7 +653,7 @@ function JourneyStats({ applications }: { applications: JobApplication[] }) {
   };
   
   return (
-    <div className="grid grid-cols-4 gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+    <div className="grid grid-cols-4 gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 overflow-hidden shrink-0">
       <div className="text-center">
         <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.totalApplications}</div>
         <div className="text-xs text-gray-500">Apps</div>
@@ -1433,25 +1433,29 @@ export default function Journey() {
           <div className="flex-1 flex overflow-hidden">
             {/* Left Panel - Application List */}
             <div className={cn(
-              "w-full md:w-80 md:min-w-80 md:max-w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
+              "w-full md:w-80 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col",
               showDetail && "hidden md:flex"
-            )}>
+            )}
+            style={{ maxWidth: '320px' }}
+            >
               <JourneyStats applications={applications} />
               <ScrollArea className="flex-1">
-                {applications.map((application) => (
-                  <ApplicationListItem
-                    key={application.id}
-                    application={application}
-                    isSelected={selectedApplication?.id === application.id}
-                    onClick={() => handleSelectApplication(application.id)}
-                  />
-                ))}
+                <div className="overflow-hidden">
+                  {applications.map((application) => (
+                    <ApplicationListItem
+                      key={application.id}
+                      application={application}
+                      isSelected={selectedApplication?.id === application.id}
+                      onClick={() => handleSelectApplication(application.id)}
+                    />
+                  ))}
+                </div>
               </ScrollArea>
             </div>
             
             {/* Right Panel - Application Detail */}
             <div className={cn(
-              "flex-1 min-w-0 overflow-hidden bg-gray-50 dark:bg-gray-900/50",
+              "flex-1 min-w-0 bg-gray-50 dark:bg-gray-900/50",
               !showDetail && "hidden md:block"
             )}>
               {selectedApplication ? (
