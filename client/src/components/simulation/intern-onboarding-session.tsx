@@ -68,6 +68,7 @@ interface InternOnboardingSessionProps {
   onComplete: () => void;
   mode?: 'practice' | 'journey';
   savedProgress?: DayProgress;
+  savedProgressId?: number;
   initialDay?: number;
 }
 
@@ -89,6 +90,7 @@ export default function InternOnboardingSession({
   onComplete,
   mode = 'journey',
   savedProgress,
+  savedProgressId,
   initialDay
 }: InternOnboardingSessionProps) {
   const [currentDay, setCurrentDay] = useState(initialDay || 1);
@@ -120,8 +122,9 @@ export default function InternOnboardingSession({
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docsScrollRef = useRef<HTMLDivElement>(null);
-  const progressIdRef = useRef<number | null>(null);
+  const progressIdRef = useRef<number | null>(savedProgressId || null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef<any>(null);
 
   const requirements = project.requirements || {};
   const dailyStructure = requirements.dailyStructure || [];
@@ -255,31 +258,66 @@ export default function InternOnboardingSession({
     }
   });
 
+  const buildProgressData = () => ({
+    currentDay,
+    dayProgress: {
+      docsRead,
+      introProgress,
+      comprehensionComplete,
+      docSectionsRead,
+      standupComplete,
+      codebaseExplored,
+      codeFixComplete,
+      gitWorkflowComplete,
+      reflectionComplete
+    },
+    overallProgress: dayProgress,
+    status: dayProgress === 100 ? 'completed' : 'in_progress'
+  });
+
   const saveProgress = () => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     
+    const progressData = buildProgressData();
+    pendingSaveRef.current = progressData;
+    
     saveTimeoutRef.current = setTimeout(() => {
-      const currentProgress = {
-        currentDay,
-        dayProgress: {
-          docsRead,
-          introProgress,
-          comprehensionComplete,
-          docSectionsRead,
-          standupComplete,
-          codebaseExplored,
-          codeFixComplete,
-          gitWorkflowComplete,
-          reflectionComplete
-        },
-        overallProgress: dayProgress,
-        status: dayProgress === 100 ? 'completed' : 'in_progress'
-      };
-      
-      saveProgressMutation.mutate(currentProgress);
+      saveProgressMutation.mutate(progressData);
+      pendingSaveRef.current = null;
     }, 1000);
+  };
+
+  const flushPendingSave = async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    
+    if (pendingSaveRef.current) {
+      try {
+        const progressData = pendingSaveRef.current;
+        if (progressIdRef.current) {
+          await apiRequest("PATCH", `/api/workspace/progress/${progressIdRef.current}`, progressData);
+        } else {
+          const response = await apiRequest("POST", `/api/workspace/progress`, {
+            sessionId: session.id,
+            userId: 1,
+            projectId: project.id,
+            role: session.configuration?.activeRole || 'Developer',
+            mode: mode,
+            currentDay,
+            ...progressData
+          });
+          const result = await response.json();
+          progressIdRef.current = result.id;
+        }
+        pendingSaveRef.current = null;
+      } catch (error) {
+        console.error('Failed to flush pending save:', error);
+      }
+    }
   };
 
   useEffect(() => {
@@ -287,10 +325,17 @@ export default function InternOnboardingSession({
   }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, codebaseExplored, codeFixComplete, gitWorkflowComplete, reflectionComplete, currentDay]);
 
   useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        flushPendingSave();
       }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      flushPendingSave();
     };
   }, []);
 

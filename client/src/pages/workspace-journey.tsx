@@ -113,6 +113,7 @@ export default function WorkspaceJourney() {
         scenarioScript: project.scenarioScript,
         mode: 'journey',
         savedProgress: progress.dayProgress,
+        savedProgressId: progress.id,
         currentDay: progress.currentDay
       }
     });
@@ -165,6 +166,7 @@ export default function WorkspaceJourney() {
           onComplete={handleSessionComplete}
           mode="journey"
           savedProgress={config?.savedProgress}
+          savedProgressId={config?.savedProgressId}
           initialDay={config?.currentDay}
         />
       );

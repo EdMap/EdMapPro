@@ -191,6 +191,7 @@ export default function WorkspacePractice() {
         mode: 'practice',
         scenarioId: progress.scenarioId,
         savedProgress: progress.dayProgress,
+        savedProgressId: progress.id,
         currentDay: progress.currentDay
       }
     });
@@ -238,6 +239,7 @@ export default function WorkspacePractice() {
           onComplete={handleSessionComplete}
           mode="practice"
           savedProgress={config?.savedProgress}
+          savedProgressId={config?.savedProgressId}
           initialDay={config?.currentDay || config?.startDay}
         />
       );
