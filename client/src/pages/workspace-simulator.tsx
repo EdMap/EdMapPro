@@ -9,6 +9,7 @@ import { Briefcase, Users, Target, Clock, Code, Palette, TestTube, Server, Wrenc
 import WorkspaceSession from "@/components/simulation/workspace-session";
 import WorkspaceDashboard from "@/components/simulation/workspace-dashboard";
 import EnterpriseFeatureSession from "@/components/simulation/enterprise-feature-session";
+import InternOnboardingSession from "@/components/simulation/intern-onboarding-session";
 
 export default function WorkspaceSimulator() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -48,10 +49,14 @@ export default function WorkspaceSimulator() {
       configuration: {
         projectId: selectedProject.id,
         projectName: selectedProject.name,
+        projectCategory: selectedProject.category,
+        projectDescription: selectedProject.description,
         activeRole: selectedRole,
         sprintPhase: 'onboarding',
         teamMembers: selectedProject.teamStructure,
-        duration: selectedProject.estimatedDuration
+        duration: selectedProject.estimatedDuration,
+        requirements: selectedProject.requirements,
+        scenarioScript: selectedProject.scenarioScript
       },
       messages: []
     });
@@ -77,6 +82,7 @@ export default function WorkspaceSimulator() {
 
   const getDifficultyColor = (difficulty: string) => {
     const colors: Record<string, string> = {
+      'intern': 'bg-blue-100 text-blue-800',
       'junior': 'bg-green-100 text-green-800',
       'mid': 'bg-yellow-100 text-yellow-800',
       'senior': 'bg-red-100 text-red-800'
@@ -85,14 +91,42 @@ export default function WorkspaceSimulator() {
   };
 
   if (activeSession) {
-    // Check if this is an enterprise feature scenario
-    const isEnterpriseFeature = activeSession.configuration?.projectName?.includes('PulseOps IQ');
+    const config = activeSession.configuration;
     
-    if (isEnterpriseFeature && selectedProject) {
+    // Check if this is an enterprise feature scenario
+    const isEnterpriseFeature = config?.projectName?.includes('PulseOps IQ');
+    
+    // Check if this is an intern onboarding scenario (check both session config and selected project)
+    const isInternOnboarding = config?.projectCategory === 'intern-onboarding' || 
+                               selectedProject?.category === 'intern-onboarding';
+    
+    // Get project data - prefer selectedProject, but can reconstruct from session config
+    const projectData = selectedProject || {
+      id: config?.projectId,
+      name: config?.projectName,
+      description: config?.projectDescription,
+      category: config?.projectCategory,
+      teamStructure: config?.teamMembers,
+      estimatedDuration: config?.duration,
+      requirements: config?.requirements || {},
+      scenarioScript: config?.scenarioScript || {}
+    };
+    
+    if (isEnterpriseFeature) {
       return (
         <EnterpriseFeatureSession
           session={activeSession}
-          project={selectedProject}
+          project={selectedProject || projectData}
+          onComplete={handleSessionComplete}
+        />
+      );
+    }
+    
+    if (isInternOnboarding) {
+      return (
+        <InternOnboardingSession
+          session={activeSession}
+          project={selectedProject || projectData}
           onComplete={handleSessionComplete}
         />
       );
