@@ -124,6 +124,8 @@ interface ConversationMemory {
   currentQuestionRepeatCount: number;
   // Track consecutive minimal/negative responses to force topic change
   consecutiveMinimalResponses: number;
+  // Flag to force switching to a completely different topic after repeated refusals
+  forceTopicSwitch?: boolean;
 }
 
 export class InterviewOrchestrator {
@@ -1327,6 +1329,10 @@ export class InterviewOrchestrator {
       console.log('[Interview] Forcing new topic after consecutive minimal responses');
       memory.pendingFollowUp = undefined; // Clear any pending follow-up
       memory.consecutiveMinimalResponses = 0; // Reset counter
+      
+      // Track that we need to switch to a completely different topic
+      // Avoid asking for "examples" or "details" about the same area
+      memory.forceTopicSwitch = true;
     }
     
     // Use triage chain to evaluate response and decide next action
@@ -1429,16 +1435,27 @@ export class InterviewOrchestrator {
     const isNearingEnd = memory.totalQuestionsAsked >= SUFFICIENCY_CONFIG.maxQuestions - 2;
     const shouldDoWrapup = isNearingEnd || (sufficiency.overall >= 0.65 && sufficiency.criticalMet);
     
+    // If forceTopicSwitch is set, we need to pick a completely different topic
+    // Skip background/skills questions and move to motivation, culture_fit, or logistics
+    let forcedTopic: AssessmentCriterion | undefined;
+    if (memory.forceTopicSwitch) {
+      console.log('[Interview] Force topic switch - avoiding example/detail questions');
+      // Pick a topic that hasn't been heavily covered yet
+      const softTopics: AssessmentCriterion[] = ['motivation', 'culture_fit', 'logistics'];
+      forcedTopic = softTopics.find(t => memory.coverage[t].score < 0.5) || 'motivation';
+      memory.forceTopicSwitch = false; // Reset the flag
+    }
+    
     if (shouldDoWrapup && !sufficiency.gaps.includes('logistics')) {
       // We have good coverage - do a natural wrapup
       nextQuestionText = await this.wrapup.generate(config);
-    } else if (memory.pendingFollowUp && triageDecision?.action === 'follow_up') {
-      // Use the follow-up question for partial/vague answers
+    } else if (memory.pendingFollowUp && triageDecision?.action === 'follow_up' && !forcedTopic) {
+      // Use the follow-up question for partial/vague answers (unless forcing topic switch)
       nextQuestionText = memory.pendingFollowUp;
       memory.pendingFollowUp = undefined; // Clear after use
       memory.telemetry.followUpsUsed++; // Track follow-up usage for telemetry
-    } else if (memory.interviewPlan) {
-      // Use the next planned question from the backlog
+    } else if (memory.interviewPlan && !forcedTopic) {
+      // Use the next planned question from the backlog (unless forcing topic switch)
       pendingPlannedQuestion = this.getNextPlannedQuestion(memory);
       if (pendingPlannedQuestion) {
         nextQuestionText = pendingPlannedQuestion.question;
@@ -1457,8 +1474,8 @@ export class InterviewOrchestrator {
         });
       }
     } else {
-      // Fallback: Generate a focused question based on coverage gaps
-      const prioritizedTopic = this.getPrioritizedTopic(memory);
+      // Fallback: Generate a focused question based on coverage gaps or forced topic
+      const prioritizedTopic = forcedTopic || this.getPrioritizedTopic(memory);
       nextQuestionText = await this.questionGenerator.generate({
         config: {
           ...config,
