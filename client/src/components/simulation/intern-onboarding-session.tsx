@@ -71,6 +71,7 @@ export default function InternOnboardingSession({ session, project, onComplete }
   const [activeDocTab, setActiveDocTab] = useState<string>('product');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const docsScrollRef = useRef<HTMLDivElement>(null);
 
   const requirements = project.requirements || {};
   const dailyStructure = requirements.dailyStructure || [];
@@ -530,7 +531,7 @@ export default function InternOnboardingSession({ session, project, onComplete }
 
   function renderDocumentation() {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" ref={docsScrollRef}>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
@@ -697,6 +698,35 @@ export default function InternOnboardingSession({ session, project, onComplete }
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+
+            {docSectionsRead['product'] && docSectionsRead['users'] && (
+              <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 mt-4">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-orange-900">Section Complete!</p>
+                        <p className="text-sm text-orange-700">2 of 4 sections done. Ready to learn about your mission?</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        setActiveDocTab('mission');
+                        setTimeout(() => {
+                          docsScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 50);
+                      }}
+                      className="bg-orange-600 hover:bg-orange-700"
+                      data-testid="button-continue-mission"
+                    >
+                      Continue to Your Mission
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="mission" className="space-y-4 mt-4">
