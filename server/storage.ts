@@ -791,6 +791,21 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.users.set(id, user);
+    
+    // Also sync user to database for foreign key constraints (interview_sessions, etc.)
+    try {
+      await db.insert(users).values({
+        id: user.id,
+        username: user.username,
+        password: user.password,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      }).onConflictDoNothing();
+    } catch (error) {
+      console.log('User already exists in database or sync failed:', error);
+    }
+    
     return user;
   }
 
