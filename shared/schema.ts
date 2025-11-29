@@ -161,6 +161,34 @@ export const insertWorkspaceEvaluationSchema = createInsertSchema(workspaceEvalu
   createdAt: true,
 });
 
+// Workspace Progress Tracking - persists day-level progress for simulations
+export const workspaceProgress = pgTable("workspace_progress", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => simulationSessions.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  projectId: integer("project_id").references(() => workspaceProjects.id).notNull(),
+  role: text("role").notNull(),
+  mode: text("mode").notNull().default('journey'), // 'practice' or 'journey'
+  currentDay: integer("current_day").notNull().default(1),
+  scenarioId: text("scenario_id"), // For practice mode: specific day/scenario selected
+  dayProgress: jsonb("day_progress").notNull().default('{}'), // Day-specific progress: {docsRead, introProgress, comprehensionComplete, etc.}
+  overallProgress: integer("overall_progress").notNull().default(0), // 0-100
+  status: text("status").notNull().default('in_progress'), // 'in_progress', 'completed', 'abandoned'
+  score: integer("score"), // Final score for completed sessions
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertWorkspaceProgressSchema = createInsertSchema(workspaceProgress).omit({
+  id: true,
+  startedAt: true,
+  lastActivityAt: true,
+});
+
+export type WorkspaceProgress = typeof workspaceProgress.$inferSelect;
+export type InsertWorkspaceProgress = z.infer<typeof insertWorkspaceProgressSchema>;
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type SimulationSession = typeof simulationSessions.$inferSelect;

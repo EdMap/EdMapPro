@@ -10,7 +10,9 @@ import {
   Settings,
   Briefcase,
   Route,
-  History
+  History,
+  Rocket,
+  Target
 } from "lucide-react";
 
 interface NavItem {
@@ -41,6 +43,12 @@ const navigationItems: NavItem[] = [
     section: "journey"
   },
   {
+    title: "Workspace",
+    href: "/workspace/journey",
+    icon: Rocket,
+    section: "journey"
+  },
+  {
     title: "Interview Practice", 
     href: "/interview",
     icon: MessageCircle,
@@ -62,8 +70,8 @@ const navigationItems: NavItem[] = [
   },
   {
     title: "Workspace Practice",
-    href: "/workspace",
-    icon: Users,
+    href: "/workspace/practice",
+    icon: Target,
     section: "practice"
   },
   {

@@ -7,7 +7,8 @@ import JourneyMap from "@/pages/journey-map";
 import InterviewSimulator from "@/pages/interview-simulator";
 import InterviewHistory from "@/pages/interview-history";
 import NegotiationSimulator from "@/pages/negotiation-simulator";
-import WorkspaceSimulator from "@/pages/workspace-simulator";
+import WorkspaceJourney from "@/pages/workspace-journey";
+import WorkspacePractice from "@/pages/workspace-practice";
 import DocumentViewer from "@/pages/document-viewer";
 import Progress from "@/pages/progress";
 import JobBoard from "@/pages/job-board";
@@ -37,7 +38,8 @@ function Router() {
       <Route path="/interview" component={InterviewSimulator} />
       <Route path="/interview/history" component={InterviewHistory} />
       <Route path="/negotiation" component={NegotiationSimulator} />
-      <Route path="/workspace" component={WorkspaceSimulator} />
+      <Route path="/workspace/journey" component={WorkspaceJourney} />
+      <Route path="/workspace/practice" component={WorkspacePractice} />
       <Route path="/progress" component={Progress} />
       <Route component={NotFound} />
     </Switch>

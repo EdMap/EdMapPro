@@ -50,10 +50,25 @@ import {
   PenLine
 } from "lucide-react";
 
+interface DayProgress {
+  docsRead?: boolean;
+  introProgress?: Record<string, boolean>;
+  comprehensionComplete?: boolean;
+  docSectionsRead?: Record<string, boolean>;
+  standupComplete?: boolean;
+  codebaseExplored?: boolean;
+  codeFixComplete?: boolean;
+  gitWorkflowComplete?: boolean;
+  reflectionComplete?: boolean;
+}
+
 interface InternOnboardingSessionProps {
   session: any;
   project: any;
   onComplete: () => void;
+  mode?: 'practice' | 'journey';
+  savedProgress?: DayProgress;
+  initialDay?: number;
 }
 
 type ViewMode = 'overview' | 'team-intro' | 'documentation' | 'comprehension-check' | 
@@ -68,27 +83,34 @@ interface TeamMember {
   bio?: string;
 }
 
-export default function InternOnboardingSession({ session, project, onComplete }: InternOnboardingSessionProps) {
-  const [currentDay, setCurrentDay] = useState(1);
+export default function InternOnboardingSession({ 
+  session, 
+  project, 
+  onComplete,
+  mode = 'journey',
+  savedProgress,
+  initialDay
+}: InternOnboardingSessionProps) {
+  const [currentDay, setCurrentDay] = useState(initialDay || 1);
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [message, setMessage] = useState("");
-  const [introProgress, setIntroProgress] = useState<Record<string, boolean>>({});
-  const [docsRead, setDocsRead] = useState(false);
-  const [comprehensionComplete, setComprehensionComplete] = useState(false);
+  const [introProgress, setIntroProgress] = useState<Record<string, boolean>>(savedProgress?.introProgress || {});
+  const [docsRead, setDocsRead] = useState(savedProgress?.docsRead || false);
+  const [comprehensionComplete, setComprehensionComplete] = useState(savedProgress?.comprehensionComplete || false);
   const [typingIndicator, setTypingIndicator] = useState<string | null>(null);
   
-  const [docSectionsRead, setDocSectionsRead] = useState<Record<string, boolean>>({});
+  const [docSectionsRead, setDocSectionsRead] = useState<Record<string, boolean>>(savedProgress?.docSectionsRead || {});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [showDay2Preview, setShowDay2Preview] = useState(false);
   const [activeDocTab, setActiveDocTab] = useState<string>('product');
   
   // Day 2 state
-  const [standupComplete, setStandupComplete] = useState(false);
-  const [codebaseExplored, setCodebaseExplored] = useState(false);
-  const [codeFixComplete, setCodeFixComplete] = useState(false);
-  const [gitWorkflowComplete, setGitWorkflowComplete] = useState(false);
-  const [reflectionComplete, setReflectionComplete] = useState(false);
+  const [standupComplete, setStandupComplete] = useState(savedProgress?.standupComplete || false);
+  const [codebaseExplored, setCodebaseExplored] = useState(savedProgress?.codebaseExplored || false);
+  const [codeFixComplete, setCodeFixComplete] = useState(savedProgress?.codeFixComplete || false);
+  const [gitWorkflowComplete, setGitWorkflowComplete] = useState(savedProgress?.gitWorkflowComplete || false);
+  const [reflectionComplete, setReflectionComplete] = useState(savedProgress?.reflectionComplete || false);
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [codeInputs, setCodeInputs] = useState<Record<string, string>>({});
   const [gitStep, setGitStep] = useState(0);
@@ -98,6 +120,8 @@ export default function InternOnboardingSession({ session, project, onComplete }
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docsScrollRef = useRef<HTMLDivElement>(null);
+  const progressIdRef = useRef<number | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const requirements = project.requirements || {};
   const dailyStructure = requirements.dailyStructure || [];
@@ -208,6 +232,67 @@ export default function InternOnboardingSession({ session, project, onComplete }
       }
     }
   });
+
+  const saveProgressMutation = useMutation({
+    mutationFn: async (progressData: any) => {
+      if (progressIdRef.current) {
+        const response = await apiRequest("PATCH", `/api/workspace/progress/${progressIdRef.current}`, progressData);
+        return response.json();
+      } else {
+        const response = await apiRequest("POST", `/api/workspace/progress`, {
+          sessionId: session.id,
+          userId: 1,
+          projectId: project.id,
+          role: session.configuration?.activeRole || 'Developer',
+          mode: mode,
+          currentDay,
+          ...progressData
+        });
+        const result = await response.json();
+        progressIdRef.current = result.id;
+        return result;
+      }
+    }
+  });
+
+  const saveProgress = () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      const currentProgress = {
+        currentDay,
+        dayProgress: {
+          docsRead,
+          introProgress,
+          comprehensionComplete,
+          docSectionsRead,
+          standupComplete,
+          codebaseExplored,
+          codeFixComplete,
+          gitWorkflowComplete,
+          reflectionComplete
+        },
+        overallProgress: dayProgress,
+        status: dayProgress === 100 ? 'completed' : 'in_progress'
+      };
+      
+      saveProgressMutation.mutate(currentProgress);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    saveProgress();
+  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, codebaseExplored, codeFixComplete, gitWorkflowComplete, reflectionComplete, currentDay]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (viewMode === 'overview' && scenarioScript.onboarding) {

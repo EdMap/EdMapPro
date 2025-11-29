@@ -495,6 +495,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // Workspace Progress API Endpoints
+  // ============================================
+
+  // Get workspace progress for a user
+  app.get("/api/workspace/progress/:userId/:mode?", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const mode = req.params.mode as 'practice' | 'journey' | undefined;
+      const progress = await storage.getWorkspaceProgress(userId, mode);
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get workspace progress: " + (error as Error).message });
+    }
+  });
+
+  // Get workspace progress by session
+  app.get("/api/workspace/progress/session/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const progress = await storage.getWorkspaceProgressBySession(sessionId);
+      res.json(progress || null);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get workspace progress: " + (error as Error).message });
+    }
+  });
+
+  // Create or update workspace progress
+  app.post("/api/workspace/progress", async (req, res) => {
+    try {
+      const progressData = req.body;
+      const progress = await storage.createWorkspaceProgress(progressData);
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create workspace progress: " + (error as Error).message });
+    }
+  });
+
+  // Update workspace progress
+  app.patch("/api/workspace/progress/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const progress = await storage.updateWorkspaceProgress(id, updates);
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update workspace progress: " + (error as Error).message });
+    }
+  });
+
+  // Restart workspace progress (for Full Journey mode)
+  app.post("/api/workspace/progress/:sessionId/restart", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const progress = await storage.restartWorkspaceProgress(sessionId);
+      if (!progress) {
+        return res.status(404).json({ message: "Progress not found" });
+      }
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to restart workspace progress: " + (error as Error).message });
+    }
+  });
+
   // Generate session feedback
   app.post("/api/sessions/:sessionId/feedback", async (req, res) => {
     try {

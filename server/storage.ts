@@ -1,6 +1,7 @@
 import { 
   users, simulationSessions, userProgress,
   workspaceProjects, workspaceRoles, workspaceArtifacts, workspaceTasks, workspaceInteractions, workspaceEvaluations,
+  workspaceProgress,
   interviewSessions, interviewQuestions, interviewFeedback,
   companies, jobPostings, jobGlossary, jobApplications, interviewTemplates, applicationStages,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
@@ -10,6 +11,7 @@ import {
   type WorkspaceTask, type InsertWorkspaceTask,
   type WorkspaceInteraction, type InsertWorkspaceInteraction,
   type WorkspaceEvaluation, type InsertWorkspaceEvaluation,
+  type WorkspaceProgress, type InsertWorkspaceProgress,
   type InterviewSession, type InsertInterviewSession,
   type InterviewQuestion, type InsertInterviewQuestion,
   type InterviewFeedback, type InsertInterviewFeedback,
@@ -122,6 +124,13 @@ export interface IStorage {
   getApplicationStageByInterviewSession(interviewSessionId: number): Promise<ApplicationStage | undefined>;
   createApplicationStage(stage: InsertApplicationStage): Promise<ApplicationStage>;
   updateApplicationStage(id: number, updates: Partial<ApplicationStage>): Promise<ApplicationStage | undefined>;
+  
+  // Workspace progress operations
+  getWorkspaceProgress(userId: number, mode?: 'practice' | 'journey'): Promise<WorkspaceProgress[]>;
+  getWorkspaceProgressBySession(sessionId: number): Promise<WorkspaceProgress | undefined>;
+  createWorkspaceProgress(progress: InsertWorkspaceProgress): Promise<WorkspaceProgress>;
+  updateWorkspaceProgress(id: number, updates: Partial<WorkspaceProgress>): Promise<WorkspaceProgress | undefined>;
+  restartWorkspaceProgress(sessionId: number): Promise<WorkspaceProgress | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -1474,6 +1483,70 @@ export class MemStorage implements IStorage {
     const results = await db.update(applicationStages)
       .set(updates)
       .where(eq(applicationStages.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Workspace progress operations
+  async getWorkspaceProgress(userId: number, mode?: 'practice' | 'journey'): Promise<WorkspaceProgress[]> {
+    if (mode) {
+      const results = await db.select().from(workspaceProgress)
+        .where(and(
+          eq(workspaceProgress.userId, userId),
+          eq(workspaceProgress.mode, mode)
+        ))
+        .orderBy(desc(workspaceProgress.lastActivityAt));
+      return results;
+    }
+    const results = await db.select().from(workspaceProgress)
+      .where(eq(workspaceProgress.userId, userId))
+      .orderBy(desc(workspaceProgress.lastActivityAt));
+    return results;
+  }
+
+  async getWorkspaceProgressBySession(sessionId: number): Promise<WorkspaceProgress | undefined> {
+    const results = await db.select().from(workspaceProgress)
+      .where(eq(workspaceProgress.sessionId, sessionId));
+    return results[0];
+  }
+
+  async createWorkspaceProgress(insertProgress: InsertWorkspaceProgress): Promise<WorkspaceProgress> {
+    const results = await db.insert(workspaceProgress).values({
+      ...insertProgress,
+      mode: insertProgress.mode || 'journey',
+      currentDay: insertProgress.currentDay || 1,
+      dayProgress: insertProgress.dayProgress || {},
+      overallProgress: insertProgress.overallProgress || 0,
+      status: insertProgress.status || 'in_progress',
+      startedAt: new Date(),
+      lastActivityAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateWorkspaceProgress(id: number, updates: Partial<WorkspaceProgress>): Promise<WorkspaceProgress | undefined> {
+    const results = await db.update(workspaceProgress)
+      .set({
+        ...updates,
+        lastActivityAt: new Date()
+      })
+      .where(eq(workspaceProgress.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async restartWorkspaceProgress(sessionId: number): Promise<WorkspaceProgress | undefined> {
+    const results = await db.update(workspaceProgress)
+      .set({
+        currentDay: 1,
+        dayProgress: {},
+        overallProgress: 0,
+        status: 'in_progress',
+        score: null,
+        completedAt: null,
+        lastActivityAt: new Date()
+      })
+      .where(eq(workspaceProgress.sessionId, sessionId))
       .returning();
     return results[0];
   }
