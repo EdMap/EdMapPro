@@ -1650,3 +1650,209 @@ export class TriageChain {
     }
   }
 }
+
+// =============================================================================
+// UNIFIED INTERVIEW TURN CHAIN
+// =============================================================================
+// This replaces the fragmented multi-chain approach (TriageChain, ReflectionChain, 
+// QuestionGeneratorChain, EvaluatorChain, FollowUpChain) with a single contextful call
+// per conversation turn. Inspired by the simpler workspace chat architecture that
+// lets the LLM handle natural conversation flow.
+
+export interface UnifiedTurnInput {
+  interviewerName: string;
+  interviewerRole: string;
+  companyName: string;
+  companyDescription: string;
+  jobTitle: string;
+  jobRequirements: string;
+  candidateName: string;
+  conversationHistory: Array<{ role: 'interviewer' | 'candidate'; content: string }>;
+  questionBacklog: PlannedQuestion[];
+  coverageStatus: {
+    background: number;
+    skills: number;
+    behavioral: number;
+    motivation: number;
+    culture_fit: number;
+    logistics: number;
+  };
+  questionsAskedCount: number;
+  maxQuestions: number;
+  lastQuestionId?: string;
+}
+
+export interface UnifiedTurnOutput {
+  response: string;
+  actionType: 'continue' | 'follow_up' | 'wrap_up' | 'answer_question';
+  questionId?: string;
+  evaluation: {
+    score: number;
+    strengths: string[];
+    areasToImprove: string[];
+    criterionCovered: AssessmentCriterion;
+    coverageContribution: number;
+  };
+  coveredQuestionIds: string[];
+  candidateAskedQuestion?: boolean;
+  wrapUpReason?: string;
+}
+
+const unifiedTurnPrompt = PromptTemplate.fromTemplate(`
+You are {interviewerName}, a {interviewerRole} at {companyName}, conducting a screening interview.
+
+CONTEXT:
+- Company: {companyName}
+- Job Title: {jobTitle}
+- Candidate: {candidateName}
+- Questions Asked: {questionsAskedCount}/{maxQuestions}
+
+JOB REQUIREMENTS:
+{jobRequirements}
+
+QUESTION BACKLOG (prioritized):
+{questionBacklog}
+
+CURRENT COVERAGE LEVELS (0-1 scale):
+{coverageStatus}
+
+CONVERSATION SO FAR:
+{conversationHistory}
+
+---
+
+The candidate just responded. As a natural conversationalist, you need to:
+1. Process their response (evaluate quality, extract key information)
+2. Respond naturally (acknowledge if appropriate, then continue)
+3. Decide what to do next (follow-up, new question, or wrap up)
+
+INTERVIEW FLOW GUIDELINES:
+- Short/vague answers: Probe once for specifics, then move on if still vague
+- Good answers: Brief acknowledgment (~30% of time) then next question
+- Detailed answers: Genuine appreciation, then transition
+- Candidate asks question: Answer briefly, then continue with your agenda
+- Near max questions with gaps: Mention time and prioritize key areas
+- Good coverage achieved: Begin natural wrap-up
+
+NATURAL CONVERSATION RULES:
+- Don't robotically evaluate out loud - be conversational
+- Acknowledgments should be brief and varied: "That's helpful", "I see", "Thanks for that"
+- Transitions should feel natural, not scripted
+- If they covered something from the backlog proactively, note it naturally
+- Match their energy - if they're enthusiastic, reflect that slightly
+
+WRAP-UP CRITERIA (do this when ANY is true):
+- Questions asked >= {maxQuestions} - 1
+- All critical areas (background, skills, motivation) have coverage >= 0.6
+- Candidate seems fatigued or giving consistently short answers
+
+When wrapping up, ask if they have questions for you, thank them, and mention next steps.
+
+OUTPUT FORMAT:
+Return a JSON object with:
+{{
+  "response": "Your natural response as the interviewer",
+  "actionType": "continue|follow_up|wrap_up|answer_question",
+  "questionId": "ID of backlog question you're asking (if applicable)",
+  "evaluation": {{
+    "score": 1-10,
+    "strengths": ["strength1", "strength2"],
+    "areasToImprove": ["area1"],
+    "criterionCovered": "background|skills|behavioral|motivation|culture_fit|logistics",
+    "coverageContribution": 0.0-0.3
+  }},
+  "coveredQuestionIds": ["q2", "q5"],
+  "candidateAskedQuestion": false,
+  "wrapUpReason": "only if actionType is wrap_up"
+}}
+
+Output ONLY valid JSON.
+`);
+
+export class UnifiedInterviewTurnChain {
+  private chain: RunnableSequence;
+
+  constructor() {
+    this.chain = RunnableSequence.from([
+      unifiedTurnPrompt,
+      new ChatGroq({
+        model: MODEL_NAME,
+        temperature: 0.7, // Slightly higher for more natural conversation
+        topP: 0.95,
+        apiKey: process.env.GROQ_API_KEY,
+      }),
+      new StringOutputParser(),
+    ]);
+  }
+
+  async processTurn(input: UnifiedTurnInput): Promise<UnifiedTurnOutput> {
+    const formattedHistory = input.conversationHistory
+      .slice(-8) // Keep last 8 exchanges for context
+      .map(msg => `${msg.role === 'interviewer' ? input.interviewerName : input.candidateName}: ${msg.content}`)
+      .join('\n');
+
+    const formattedBacklog = input.questionBacklog
+      .filter(q => q.status === 'pending')
+      .slice(0, 6) // Show top 6 pending questions
+      .map(q => `[${q.id}] (${q.criterion}, P${q.priority}) ${q.question}`)
+      .join('\n');
+
+    const formattedCoverage = Object.entries(input.coverageStatus)
+      .map(([key, value]) => `- ${key}: ${(value * 100).toFixed(0)}%`)
+      .join('\n');
+
+    const result = await this.chain.invoke({
+      interviewerName: input.interviewerName,
+      interviewerRole: input.interviewerRole,
+      companyName: input.companyName,
+      companyDescription: input.companyDescription,
+      jobTitle: input.jobTitle,
+      jobRequirements: input.jobRequirements,
+      candidateName: input.candidateName,
+      conversationHistory: formattedHistory,
+      questionBacklog: formattedBacklog || 'No remaining questions',
+      coverageStatus: formattedCoverage,
+      questionsAskedCount: input.questionsAskedCount,
+      maxQuestions: input.maxQuestions,
+      lastQuestionId: input.lastQuestionId || 'none',
+    });
+
+    try {
+      const cleanedResult = stripMarkdownCodeBlocks(result);
+      const parsed = JSON.parse(cleanedResult);
+      
+      // Ensure required fields have defaults
+      return {
+        response: parsed.response || "I appreciate that. Let me ask you something else.",
+        actionType: parsed.actionType || 'continue',
+        questionId: parsed.questionId,
+        evaluation: {
+          score: parsed.evaluation?.score || 5,
+          strengths: parsed.evaluation?.strengths || [],
+          areasToImprove: parsed.evaluation?.areasToImprove || [],
+          criterionCovered: parsed.evaluation?.criterionCovered || 'background',
+          coverageContribution: parsed.evaluation?.coverageContribution || 0.1,
+        },
+        coveredQuestionIds: parsed.coveredQuestionIds || [],
+        candidateAskedQuestion: parsed.candidateAskedQuestion || false,
+        wrapUpReason: parsed.wrapUpReason,
+      };
+    } catch (error) {
+      console.error("Failed to parse unified turn response:", result);
+      // Fallback response
+      return {
+        response: "Thank you for sharing that. Could you tell me more about your experience?",
+        actionType: 'continue',
+        evaluation: {
+          score: 5,
+          strengths: [],
+          areasToImprove: [],
+          criterionCovered: 'background',
+          coverageContribution: 0.1,
+        },
+        coveredQuestionIds: [],
+        candidateAskedQuestion: false,
+      };
+    }
+  }
+}

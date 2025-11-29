@@ -12,6 +12,9 @@ import {
   SelfIntroChain,
   PreparationPlannerChain,
   TriageChain,
+  UnifiedInterviewTurnChain,
+  UnifiedTurnInput,
+  UnifiedTurnOutput,
   InterviewConfig,
   QuestionContext,
   EvaluationResult,
@@ -27,6 +30,8 @@ import {
   shouldGenerateReflection,
   getStageSettings,
 } from "./interview-chains";
+
+const USE_UNIFIED_CHAIN = true;
 import { storage } from "../storage";
 import type { InterviewSession, InterviewQuestion } from "@shared/schema";
 import { responseClassifier, CandidateIntent, ClassificationResult } from "./response-classifier";
@@ -126,6 +131,8 @@ interface ConversationMemory {
   consecutiveMinimalResponses: number;
   // Flag to force switching to a completely different topic after repeated refusals
   forceTopicSwitch?: boolean;
+  // Unified chain: conversation history for context
+  conversationHistory: Array<{ role: 'interviewer' | 'candidate'; content: string }>;
 }
 
 export class InterviewOrchestrator {
@@ -142,6 +149,7 @@ export class InterviewOrchestrator {
   private selfIntro: SelfIntroChain;
   private preparationPlanner: PreparationPlannerChain;
   private triage: TriageChain;
+  private unifiedTurn: UnifiedInterviewTurnChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -158,6 +166,7 @@ export class InterviewOrchestrator {
     this.selfIntro = new SelfIntroChain();
     this.preparationPlanner = new PreparationPlannerChain();
     this.triage = new TriageChain();
+    this.unifiedTurn = new UnifiedInterviewTurnChain();
     this.memory = new Map();
   }
 
@@ -206,6 +215,7 @@ export class InterviewOrchestrator {
         telemetry: this.initializeTelemetry(),
         currentQuestionRepeatCount: 0,
         consecutiveMinimalResponses: 0,
+        conversationHistory: [],
       });
     }
     return this.memory.get(sessionId)!;
@@ -618,6 +628,12 @@ export class InterviewOrchestrator {
       memory.currentStage = "greeting";
       memory.preludeStep = 0;
       
+      // Track interviewer's greeting in conversation history (for unified chain)
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: greetingText,
+      });
+      
       return { 
         session, 
         greeting: greetingText,
@@ -850,6 +866,12 @@ export class InterviewOrchestrator {
 
     // Store the candidate's response
     memory.preludeResponses.push(candidateResponse);
+    
+    // Track candidate's response in conversation history (for unified chain)
+    memory.conversationHistory.push({
+      role: 'candidate',
+      content: candidateResponse,
+    });
 
     // Advance prelude step
     memory.preludeStep++;
@@ -858,6 +880,13 @@ export class InterviewOrchestrator {
       // Step 1: After greeting, propose introductions
       const introExchangeText = await this.introExchange.generate(config, candidateResponse);
       memory.currentStage = "intro_exchange";
+      
+      // Track interviewer's response in conversation history
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: introExchangeText,
+      });
+      
       return { preludeMessage: introExchangeText, preludeComplete: false };
     }
 
@@ -871,6 +900,13 @@ export class InterviewOrchestrator {
         // Acknowledge their intro and give role overview
         const selfIntroText = await this.selfIntro.generate(config);
         const ackAndIntro = `Thanks for sharing that! ${selfIntroText}`;
+        
+        // Track interviewer's response in conversation history
+        memory.conversationHistory.push({
+          role: 'interviewer',
+          content: ackAndIntro,
+        });
+        
         return { preludeMessage: ackAndIntro, preludeComplete: false };
       }
       
@@ -882,6 +918,13 @@ export class InterviewOrchestrator {
         // Answer their question and then proceed with role overview
         const warmResponse = await this.generateWarmResponseWithIntro(candidateResponse, config);
         // Don't decrement - we're answering and proceeding to role overview in one message
+        
+        // Track interviewer's response in conversation history
+        memory.conversationHistory.push({
+          role: 'interviewer',
+          content: warmResponse,
+        });
+        
         return { preludeMessage: warmResponse, preludeComplete: false };
       }
       
@@ -893,6 +936,13 @@ export class InterviewOrchestrator {
         const ackMessage = "Of course, please go ahead! I'd love to hear about you first.";
         memory.awaitingCandidateIntro = true;
         memory.preludeStep = 1; // Stay at step 1 so next increment brings us back to step 2
+        
+        // Track interviewer's response in conversation history
+        memory.conversationHistory.push({
+          role: 'interviewer',
+          content: ackMessage,
+        });
+        
         return { preludeMessage: ackMessage, preludeComplete: false };
       }
       
@@ -924,6 +974,13 @@ export class InterviewOrchestrator {
       
       // Default: interviewer goes first with role overview
       const selfIntroText = await this.selfIntro.generate(config);
+      
+      // Track interviewer's response in conversation history
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: selfIntroText,
+      });
+      
       return { preludeMessage: selfIntroText, preludeComplete: false };
     }
 
@@ -1195,6 +1252,18 @@ export class InterviewOrchestrator {
         candidateQuestionAnswer = handlerResult.response;
       }
     }
+
+    // =========================================================================
+    // UNIFIED CHAIN PATH: Single LLM call per turn (feature flagged)
+    // =========================================================================
+    if (USE_UNIFIED_CHAIN && memory.interviewPlan) {
+      console.log('[Interview] Using unified chain for natural conversation flow');
+      return this.processAnswerUnified(sessionId, questionId, answer, session, question);
+    }
+
+    // =========================================================================
+    // LEGACY PATH: Multi-chain fragmented approach (kept for fallback)
+    // =========================================================================
     
     // Use sanitized text for evaluation (protects against injection)
     const sanitizedAnswer = classification.sanitizedText;
@@ -1667,6 +1736,197 @@ export class InterviewOrchestrator {
       default:
         return "Alex";
     }
+  }
+
+  private getInterviewerRole(interviewType: string): string {
+    switch (interviewType) {
+      case "behavioral":
+      case "recruiter_call":
+        return "HR Recruiter";
+      case "technical":
+        return "Engineering Manager";
+      case "system-design":
+        return "Senior Architect";
+      case "case-study":
+        return "Business Analyst";
+      default:
+        return "Hiring Manager";
+    }
+  }
+
+  /**
+   * Process a conversation turn using the unified chain (single LLM call per turn).
+   * This replaces the fragmented multi-chain approach with a more natural flow.
+   */
+  private async processAnswerUnified(
+    sessionId: number,
+    questionId: number,
+    answer: string,
+    session: InterviewSession,
+    question: InterviewQuestion
+  ): Promise<{
+    evaluation?: EvaluationResult;
+    decision?: FollowUpDecision;
+    nextQuestion?: InterviewQuestion;
+    reflection?: string;
+    finalReport?: FinalReport;
+    closure?: string;
+    pacing?: {
+      elapsedMinutes: number;
+      progressPercent: number;
+      status: 'starting' | 'on_track' | 'mid_interview' | 'wrapping_soon' | 'overtime';
+    };
+  }> {
+    const memory = this.getMemory(sessionId);
+    const config = this.getConfig(session, memory.jobContext);
+    const interviewerName = this.getInterviewerName(session.interviewType);
+    const interviewerRole = this.getInterviewerRole(session.interviewType);
+
+    // Add candidate's answer to conversation history
+    memory.conversationHistory.push({
+      role: 'candidate',
+      content: answer,
+    });
+
+    // Build coverage status for the unified chain
+    const coverageStatus = {
+      background: memory.coverage.background.score,
+      skills: memory.coverage.skills.score,
+      behavioral: memory.coverage.behavioral.score,
+      motivation: memory.coverage.motivation.score,
+      culture_fit: memory.coverage.culture_fit.score,
+      logistics: memory.coverage.logistics.score,
+    };
+
+    // Call the unified chain
+    const turnResult = await this.unifiedTurn.processTurn({
+      interviewerName,
+      interviewerRole,
+      companyName: config.companyName || 'the company',
+      companyDescription: config.companyDescription || '',
+      jobTitle: config.jobTitle || config.targetRole,
+      jobRequirements: config.jobRequirements || '',
+      candidateName: memory.candidateName || 'Candidate',
+      conversationHistory: memory.conversationHistory,
+      questionBacklog: memory.interviewPlan?.questions || [],
+      coverageStatus,
+      questionsAskedCount: memory.totalQuestionsAsked,
+      maxQuestions: config.stageSettings?.maxQuestions || 12,
+      lastQuestionId: memory.currentQuestionId,
+    });
+
+    console.log('[Unified Chain] Turn result:', {
+      actionType: turnResult.actionType,
+      questionId: turnResult.questionId,
+      score: turnResult.evaluation.score,
+      criterion: turnResult.evaluation.criterionCovered,
+    });
+
+    // Update memory with evaluation
+    const evaluation: EvaluationResult = {
+      score: turnResult.evaluation.score,
+      feedback: `Score: ${turnResult.evaluation.score}/10`,
+      strengths: turnResult.evaluation.strengths,
+      improvements: turnResult.evaluation.areasToImprove,
+      projectMentioned: null,
+    };
+
+    memory.answers.push(answer);
+    memory.scores.push(evaluation.score);
+    memory.evaluations.push(evaluation);
+    memory.totalQuestionsAsked++;
+
+    // Update coverage from unified chain's evaluation
+    const criterion = turnResult.evaluation.criterionCovered;
+    if (memory.coverage[criterion]) {
+      memory.coverage[criterion].score = Math.min(1, 
+        memory.coverage[criterion].score + turnResult.evaluation.coverageContribution
+      );
+      memory.coverage[criterion].questionsAsked++;
+    }
+
+    // Mark covered questions from backlog
+    if (turnResult.coveredQuestionIds.length > 0 && memory.interviewPlan) {
+      for (const id of turnResult.coveredQuestionIds) {
+        const q = memory.interviewPlan.questions.find(q => q.id === id);
+        if (q) q.status = 'covered_proactively';
+      }
+    }
+
+    // Mark the question as asked if applicable
+    if (turnResult.questionId && memory.interviewPlan) {
+      const q = memory.interviewPlan.questions.find(q => q.id === turnResult.questionId);
+      if (q) {
+        q.status = 'asked';
+        memory.currentQuestionId = turnResult.questionId;
+      }
+    }
+
+    // Update telemetry
+    this.updateTelemetry(memory, evaluation.score);
+
+    // Add interviewer's response to conversation history
+    memory.conversationHistory.push({
+      role: 'interviewer',
+      content: turnResult.response,
+    });
+
+    // Save evaluation to database
+    await storage.updateInterviewQuestion(questionId, {
+      candidateAnswer: answer,
+      score: evaluation.score,
+      feedback: evaluation.feedback,
+      strengths: evaluation.strengths,
+      improvements: evaluation.improvements,
+      answeredAt: new Date(),
+    });
+
+    // Handle wrap-up
+    if (turnResult.actionType === 'wrap_up') {
+      const finalReport = await this.generateFinalReport(sessionId);
+
+      await storage.updateInterviewSession(sessionId, {
+        status: "completed",
+        overallScore: finalReport.overallScore,
+        completedAt: new Date(),
+      });
+
+      this.memory.delete(sessionId);
+
+      return {
+        evaluation,
+        finalReport,
+        closure: turnResult.response,
+      };
+    }
+
+    // Continue with next question
+    const nextQuestionIndex = session.currentQuestionIndex + 1;
+
+    await storage.updateInterviewSession(sessionId, {
+      currentQuestionIndex: nextQuestionIndex,
+    });
+
+    // Create next question record
+    const nextQuestion = await storage.createInterviewQuestion({
+      sessionId: session.id,
+      questionIndex: nextQuestionIndex,
+      questionText: turnResult.response,
+      questionType: turnResult.actionType === 'follow_up' ? 'follow_up' : 'core',
+      expectedCriteria: this.getExpectedCriteria(config, nextQuestionIndex),
+    });
+
+    memory.questions.push(turnResult.response);
+    memory.currentStage = 'core';
+
+    return {
+      evaluation,
+      nextQuestion,
+      decision: {
+        action: turnResult.actionType === 'follow_up' ? 'follow_up' : 'next_question',
+        reason: 'Unified chain decision',
+      },
+    };
   }
 }
 
