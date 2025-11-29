@@ -76,6 +76,11 @@ Preferred communication style: Simple, everyday language.
     - **AI Backend**: Powered by Groq (llama-3.3-70b-versatile) for fast, high-quality responses.
     - **Navigation**: Practice Mode returns to interview page for new sessions; Journey Mode redirects to journey page with updated application status.
 - **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work.
+    - **Dual-Mode Architecture**:
+      - **Journey Mode** (`/workspace/journey`): Linear 5-day progression, one company at a time, immersive story-driven experience. Blue accent theme.
+      - **Practice Mode** (`/workspace/practice`): Flexible skill drills, select specific days, practice with multiple companies simultaneously. Teal accent theme. 3-step wizard (Project → Role → Scenario).
+    - **Progress Persistence**: Auto-saves progress to database on state changes. Debounced saves with visibility change/unmount flush. Resume/restart functionality on both modes.
+    - **Database Schema**: `workspace_progress` table tracks sessionId, projectId, role, mode, currentDay, dayProgress (JSON), overallProgress, status.
     - **Multi-Character AI Team**: 4-6 AI teammates with distinct roles, personalities, and expertise.
     - **Role-Based Practice**: Users can practice as Developer, Product Manager, Designer, QA Engineer, or DevOps Engineer.
     - **Project Scenarios**: Includes pre-configured projects like "Task Management App", "PulseOps IQ Enterprise Feature", and "NovaPay Intern Onboarding".
