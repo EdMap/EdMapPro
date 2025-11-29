@@ -39,7 +39,95 @@ export interface WorkspaceAction {
 
 export class WorkspaceOrchestrator {
   private conversationMemory: Map<string, ChannelMessage[]> = new Map();
+  private closedChannels: Map<string, boolean> = new Map();
   private maxMemoryPerChannel = 15;
+
+  /**
+   * Detect if user is trying to close/wrap-up the conversation
+   */
+  private detectClosureIntent(userMessage: string, conversationHistory: ChannelMessage[] = []): { isClosing: boolean; isFinal: boolean } {
+    const message = userMessage.toLowerCase().trim();
+    
+    // Strong closure signals - user is definitely done
+    const strongClosurePatterns = [
+      /^thanks\.?$/i,
+      /^thank you\.?$/i,
+      /^perfect\.? thanks\.?$/i,
+      /^perfect,? thank(s| you)\.?$/i,
+      /^great,? thanks\.?$/i,
+      /^awesome,? thanks\.?$/i,
+      /^cool,? thanks\.?$/i,
+      /^sounds good,? thanks\.?$/i,
+      /^got it,? thanks\.?$/i,
+      /^okay,? thanks\.?$/i,
+      /^ok,? thanks\.?$/i,
+      /^that'?s? (all|it)\.?$/i,
+      /^nothing else\.?$/i,
+      /^no(pe)?,? (that'?s?|i'?m?) (all|good|fine)\.?$/i,
+      /^(i'?m? )?(all )?good\.? thanks\.?$/i,
+      /^no more questions\.?$/i,
+      /^no questions\.?$/i,
+    ];
+
+    // Check for strong closure - these should end the conversation
+    for (const pattern of strongClosurePatterns) {
+      if (pattern.test(message)) {
+        return { isClosing: true, isFinal: true };
+      }
+    }
+
+    // Moderate closure signals - user seems to be wrapping up
+    const moderateClosurePatterns = [
+      /thanks (a lot|so much|very much)/i,
+      /thank you (so|very) much/i,
+      /appreciate (it|that|your help)/i,
+      /happy to be (here|part of|on)/i,
+      /looking forward to/i,
+      /see you tomorrow/i,
+      /talk (to you )?later/i,
+      /have a (good|great|nice)/i,
+    ];
+
+    // Check conversation history for previous closure attempts
+    const recentMessages = conversationHistory.slice(-4);
+    const userClosureAttempts = recentMessages.filter(m => 
+      m.sender === 'User' && 
+      (moderateClosurePatterns.some(p => p.test(m.content.toLowerCase())) ||
+       strongClosurePatterns.some(p => p.test(m.content.toLowerCase().trim())))
+    ).length;
+
+    // If user has already tried to close once and is saying thanks again, it's final
+    if (userClosureAttempts >= 1) {
+      for (const pattern of moderateClosurePatterns) {
+        if (pattern.test(message)) {
+          return { isClosing: true, isFinal: true };
+        }
+      }
+    }
+
+    // First moderate closure - acknowledge but don't force end
+    for (const pattern of moderateClosurePatterns) {
+      if (pattern.test(message)) {
+        return { isClosing: true, isFinal: false };
+      }
+    }
+
+    return { isClosing: false, isFinal: false };
+  }
+
+  /**
+   * Get a brief farewell response without calling Groq
+   */
+  private getFarewellResponse(teamMember: TeamMember): string {
+    const farewells = [
+      `You're all set! Have a great rest of your day, and I'll see you tomorrow. 👋`,
+      `Perfect! Don't hesitate to reach out if anything comes up. See you tomorrow!`,
+      `Sounds good! Enjoy the rest of your day - we'll pick up tomorrow. 👍`,
+      `Great! Take care and see you at tomorrow's check-in.`,
+      `All good! Rest up and we'll dive in more tomorrow. Welcome to the team! 🎉`,
+    ];
+    return farewells[Math.floor(Math.random() * farewells.length)];
+  }
 
   /**
    * Generate AI team member response in a specific channel
@@ -51,7 +139,29 @@ export class WorkspaceOrchestrator {
     channel: string,
     conversationHistory: ChannelMessage[] = []
   ): Promise<{ content: string; metadata?: any }> {
-    const prompt = this.buildTeamMemberPrompt(teamMember, context, userMessage, channel, conversationHistory);
+    // Check if this channel was already closed
+    const channelKey = `${channel}`;
+    if (this.closedChannels.get(channelKey)) {
+      // User is re-engaging after closure - check if it's substantive
+      const closureCheck = this.detectClosureIntent(userMessage, conversationHistory);
+      if (closureCheck.isClosing) {
+        // Still trying to close, give brief response
+        return { content: this.getFarewellResponse(teamMember), metadata: { closed: true } };
+      }
+      // Substantive message - reopen the channel
+      this.closedChannels.set(channelKey, false);
+    }
+
+    // Check for closure intent
+    const closureIntent = this.detectClosureIntent(userMessage, conversationHistory);
+    
+    if (closureIntent.isFinal) {
+      // User is definitely done - give brief farewell and mark channel closed
+      this.closedChannels.set(channelKey, true);
+      return { content: this.getFarewellResponse(teamMember), metadata: { closed: true } };
+    }
+
+    const prompt = this.buildTeamMemberPrompt(teamMember, context, userMessage, channel, conversationHistory, closureIntent.isClosing);
 
     try {
       if (!process.env.GROQ_API_KEY) {
@@ -63,7 +173,7 @@ export class WorkspaceOrchestrator {
         messages: [
           {
             role: "system",
-            content: this.getSystemPrompt(teamMember, channel)
+            content: this.getSystemPrompt(teamMember, channel, closureIntent.isClosing)
           },
           {
             role: "user",
@@ -326,7 +436,8 @@ Format as JSON:
     context: WorkspaceContext,
     userMessage: string,
     channel: string,
-    history: ChannelMessage[]
+    history: ChannelMessage[],
+    isClosing: boolean = false
   ): string {
     const recentHistory = history.slice(-5).map(m => `${m.sender}: ${m.content}`).join('\n');
     
@@ -343,6 +454,14 @@ Format as JSON:
         dayContext += `\nAlready completed today: ${context.completedActivities.join(', ')}`;
       }
     }
+
+    // Add closure guidance if user seems to be wrapping up
+    let closureGuidance = '';
+    if (isClosing) {
+      closureGuidance = `
+
+IMPORTANT: The user seems to be wrapping up this conversation (they've expressed gratitude, said thanks, or indicated they're done). Keep your response BRIEF (1-2 sentences max). Simply acknowledge their message warmly and wish them well. Do NOT ask follow-up questions or extend the conversation. Let them go gracefully.`;
+    }
     
     return `You are ${member.name}, a ${member.personality} ${member.role} working on ${context.projectName}.
 
@@ -356,10 +475,10 @@ ${recentHistory || 'No previous messages'}
 
 User (${context.userRole}): ${userMessage}
 
-Respond naturally and helpfully as ${member.name}. Keep it conversational and realistic. Be aware of what day of onboarding the intern is on and what they should be working on. ${channel === 'standup' ? 'Keep it brief and focused.' : channel === 'email' ? 'Be professional and structured.' : 'Be casual and collaborative.'}`;
+Respond naturally and helpfully as ${member.name}. Keep it conversational and realistic. Be aware of what day of onboarding the intern is on and what they should be working on. ${channel === 'standup' ? 'Keep it brief and focused.' : channel === 'email' ? 'Be professional and structured.' : 'Be casual and collaborative.'}${closureGuidance}`;
   }
 
-  private getSystemPrompt(member: TeamMember, channel: string): string {
+  private getSystemPrompt(member: TeamMember, channel: string, isClosing: boolean = false): string {
     const channelGuidance = {
       chat: 'casual, quick, collaborative',
       email: 'professional, structured, detailed',
@@ -367,7 +486,13 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
       'code-review': 'technical, constructive, specific'
     };
 
-    return `You are ${member.name}, a ${member.personality} ${member.role}. Communicate in a ${channelGuidance[channel as keyof typeof channelGuidance] || 'professional'} manner. Be helpful, realistic, and stay in character.`;
+    let basePrompt = `You are ${member.name}, a ${member.personality} ${member.role}. Communicate in a ${channelGuidance[channel as keyof typeof channelGuidance] || 'professional'} manner. Be helpful, realistic, and stay in character.`;
+    
+    if (isClosing) {
+      basePrompt += ` The user is wrapping up the conversation - keep your response very brief (1-2 sentences). Don't ask new questions or extend the conversation.`;
+    }
+    
+    return basePrompt;
   }
 
   private getFallbackResponse(member: TeamMember, userMessage: string, channel: string): { content: string; metadata: any } {
