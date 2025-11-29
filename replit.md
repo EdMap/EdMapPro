@@ -37,6 +37,12 @@ Preferred communication style: Simple, everyday language.
     - **Application Flow**: Apply with cover letter, track progress through interview stages, receive AI-generated feedback.
     - **Journey Timeline**: Dashboard showing all applications, current stage, next actions, and completion status.
     - **Stage Progression**: Automatic advancement through interview stages based on completion and scores.
+    - **Intern Interview Pipeline**: Simplified 2-stage pipeline for intern positions (Recruiter Screen + Team Interview) vs full 5-stage pipeline for senior roles.
+    - **Offer Acceptance Flow**: 
+      - OfferLetter component with Accept/Decline buttons (loading states during mutation)
+      - CelebrationModal with confetti animation on offer acceptance
+      - "Start Onboarding Journey" CTA navigates to Workspace Simulator
+      - Application status persisted via PATCH /api/applications/:id
     - **Company Variety**: Multiple seed companies (startups, mid-size, enterprise) with different interview pipelines.
     - **Interview Integration**: Seamless link from Journey page to Interview Simulator via URL parameters (stageId, type, role).
     - **Database Schema**: Companies, JobPostings, JobGlossary, JobApplications, InterviewTemplates, ApplicationStages.
