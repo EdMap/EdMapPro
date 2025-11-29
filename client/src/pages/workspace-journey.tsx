@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,10 @@ import {
   ChevronRight,
   Calendar,
   CheckCircle2,
-  Circle
+  Circle,
+  Lock,
+  Briefcase,
+  ArrowRight
 } from "lucide-react";
 import {
   AlertDialog,
@@ -29,6 +33,7 @@ import {
 import InternOnboardingSession from "@/components/simulation/intern-onboarding-session";
 
 export default function WorkspaceJourney() {
+  const [, navigate] = useLocation();
   const [activeSession, setActiveSession] = useState<any>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
@@ -46,6 +51,15 @@ export default function WorkspaceJourney() {
     queryKey: [`/api/workspace/progress/${(user as any)?.id}/journey`],
     enabled: !!(user as any)?.id,
   });
+
+  // Fetch user's accepted job applications to gate workspace access
+  const { data: applications = [], isLoading: applicationsLoading } = useQuery<any[]>({
+    queryKey: [`/api/users/${(user as any)?.id}/applications`],
+    enabled: !!(user as any)?.id,
+  });
+
+  // Filter to only accepted applications
+  const acceptedApplications = applications.filter((app: any) => app.status === 'accepted');
 
   const createSessionMutation = useMutation({
     mutationFn: async (config: any) => {
@@ -334,15 +348,76 @@ export default function WorkspaceJourney() {
               Choose Your Journey
             </h2>
           
-            {projectsLoading ? (
+            {projectsLoading || applicationsLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
               <p className="mt-4 text-gray-600">Loading journeys...</p>
             </div>
+          ) : acceptedApplications.length === 0 ? (
+            // No accepted offers - show locked state with guidance
+            <Card className="border-gray-200 bg-gray-50">
+              <CardContent className="p-8">
+                <div className="text-center">
+                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Lock className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Complete Your Job Journey First
+                  </h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    The Workspace Journey unlocks after you've successfully completed the interview process and accepted a job offer.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-xs font-medium text-blue-600">1</span>
+                      </div>
+                      <span>Apply for jobs</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-xs font-medium text-blue-600">2</span>
+                      </div>
+                      <span>Pass interviews</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-xs font-medium text-blue-600">3</span>
+                      </div>
+                      <span>Accept offer</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
+                    <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      </div>
+                      <span>Start onboarding</span>
+                    </div>
+                  </div>
+                  
+                  <Button onClick={() => navigate('/jobs')} data-testid="button-go-to-jobs">
+                    <Briefcase className="h-4 w-4 mr-2" />
+                    Browse Job Openings
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid gap-6">
               {journeyProjects.map((project: any) => {
                 const hasActiveJourney = inProgressJourneys.some((p: any) => p.projectId === project.id);
+                // Check if user has an accepted offer that matches this project's company
+                // For NovaPay projects, check if any accepted application is for NovaPay
+                const projectCompanyName = project.name.toLowerCase();
+                const hasMatchingOffer = acceptedApplications.some((app: any) => 
+                  app.job?.company?.name?.toLowerCase().includes('novapay') && projectCompanyName.includes('novapay')
+                );
+                
+                if (!hasMatchingOffer) return null;
                 
                 return (
                   <Card 
