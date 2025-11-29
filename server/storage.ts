@@ -1438,6 +1438,18 @@ export class MemStorage implements IStorage {
         values: ['Empower data democratization', 'Customer obsession', 'Bias for speed', 'Continuous learning', 'Inclusive excellence'],
         benefits: ['Competitive salary + equity', 'Unlimited PTO', 'Health insurance (medical, dental, vision)', 'Learning budget $2k/year', 'Remote work flexibility', 'Team offsites 2x/year'],
         interviewStyle: 'balanced'
+      },
+      // 42 London Block 1 Companies
+      {
+        name: 'NovaPay',
+        logo: '💳',
+        industry: 'fintech',
+        size: 'startup',
+        description: 'NovaPay is a fast-growing fintech startup building a payment platform for small businesses. We help merchants accept payments, manage transactions, and grow their business with simple, powerful tools.',
+        culture: 'Fast-paced but supportive. We move quickly but never break payments. Great place to learn - seniors love mentoring and everyone\'s voice matters.',
+        values: ['Move fast, don\'t break payments', 'Mentorship matters', 'Simple beats clever', 'Customer empathy'],
+        benefits: ['Competitive salary', 'Equity for all', 'Flexible hours', 'Learning budget', 'Team lunches'],
+        interviewStyle: 'casual'
       }
     ];
 
@@ -1727,6 +1739,39 @@ export class MemStorage implements IStorage {
         ],
         highlightedTerms: ['machine learning', 'anomaly detection', 'forecasting', 'A/B testing', 'model training'],
         interviewStages: 5
+      },
+      // NovaPay - Software Engineering Intern (42 London Block 1)
+      {
+        companyId: createdCompanies[6].id,
+        title: 'Software Engineering Intern',
+        role: 'developer',
+        seniority: 'intern',
+        department: 'Engineering',
+        location: 'London, UK (Hybrid)',
+        salaryMin: 25000,
+        salaryMax: 30000,
+        description: 'Join NovaPay\'s engineering team as an intern and get hands-on experience building payment infrastructure. You\'ll work alongside senior engineers, participate in code reviews, and contribute to real features used by thousands of merchants. Perfect for coding bootcamp students ready to experience professional software development.',
+        responsibilities: [
+          'Contribute to the Merchant Dashboard - our React-based admin panel',
+          'Fix bugs and implement small features with guidance from senior engineers',
+          'Participate in daily standups and team rituals',
+          'Write clean, tested code following our engineering standards',
+          'Learn Git workflows, code review practices, and agile development'
+        ],
+        requirements: [
+          'Currently enrolled in a coding bootcamp or computer science program',
+          'Basic understanding of programming concepts (variables, loops, functions)',
+          'Familiarity with Git and command line basics',
+          'Eagerness to learn and receive feedback',
+          'Strong communication skills'
+        ],
+        niceToHave: [
+          'Experience with C or shell scripting',
+          'Personal projects on GitHub',
+          'Interest in fintech or payments'
+        ],
+        highlightedTerms: ['code reviews', 'Git workflows', 'agile development', 'Merchant Dashboard', 'standups'],
+        interviewStages: 2
       }
     ];
 
