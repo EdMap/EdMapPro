@@ -1194,7 +1194,7 @@ function InterviewHistoryPanel({ userId }: { userId: number }) {
   const [filter, setFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
 
   const { data: sessions, isLoading } = useQuery<InterviewHistorySession[]>({
-    queryKey: ['/api/users', userId, 'interviews'],
+    queryKey: [`/api/users/${userId}/interviews`],
     enabled: !!userId
   });
 
