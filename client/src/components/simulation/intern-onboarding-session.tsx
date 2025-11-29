@@ -2443,7 +2443,8 @@ git push origin fix/timezone-display`}</pre>
               </div>
               <Progress value={dayProgress} className="h-2" />
             </div>
-            {dayProgress >= 80 && currentDay < 5 && (
+            {/* Only show "Continue to next day" in journey mode, and only for implemented days (1-2) */}
+            {dayProgress >= 80 && currentDay < 5 && mode === 'journey' && currentDay < 2 && (
               <Button 
                 size="sm"
                 onClick={() => setCurrentDay(currentDay + 1)}
@@ -2452,6 +2453,13 @@ git push origin fix/timezone-display`}</pre>
                 Continue to Day {currentDay + 1}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
+            )}
+            {/* Show completion message when day is complete in practice mode */}
+            {dayProgress >= 80 && mode === 'practice' && (
+              <Badge className="bg-green-100 text-green-800">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Day Complete!
+              </Badge>
             )}
           </div>
         </div>
