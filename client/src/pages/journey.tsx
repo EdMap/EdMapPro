@@ -1295,7 +1295,7 @@ function InterviewHistoryPanel({ userId }: { userId: number }) {
           </div>
         </div>
         
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {filteredSessions.map((session) => (
             <InterviewSessionListItem
               key={session.id}
@@ -1304,12 +1304,12 @@ function InterviewHistoryPanel({ userId }: { userId: number }) {
               onClick={() => handleSelectSession(session.id)}
             />
           ))}
-        </ScrollArea>
+        </div>
       </div>
       
       {/* Right Panel - Session Detail */}
       <div className={cn(
-        "flex-1 min-w-0 overflow-hidden bg-gray-50 dark:bg-gray-900/50",
+        "flex-1 min-w-0 bg-gray-50 dark:bg-gray-900/50",
         !showDetail && "hidden md:block"
       )}>
         {selectedSessionId ? (
@@ -1439,18 +1439,16 @@ export default function Journey() {
             style={{ maxWidth: '320px' }}
             >
               <JourneyStats applications={applications} />
-              <ScrollArea className="flex-1">
-                <div className="overflow-hidden">
-                  {applications.map((application) => (
-                    <ApplicationListItem
-                      key={application.id}
-                      application={application}
-                      isSelected={selectedApplication?.id === application.id}
-                      onClick={() => handleSelectApplication(application.id)}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
+              <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                {applications.map((application) => (
+                  <ApplicationListItem
+                    key={application.id}
+                    application={application}
+                    isSelected={selectedApplication?.id === application.id}
+                    onClick={() => handleSelectApplication(application.id)}
+                  />
+                ))}
+              </div>
             </div>
             
             {/* Right Panel - Application Detail */}
