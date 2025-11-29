@@ -765,8 +765,8 @@ function getRoleLabel(role: string): string {
 
 function getScoreColor(score: number | null): string {
   if (!score) return 'text-gray-400';
-  if (score >= 80) return 'text-green-600 dark:text-green-400';
-  if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
+  if (score >= 8) return 'text-green-600 dark:text-green-400';
+  if (score >= 6) return 'text-yellow-600 dark:text-yellow-400';
   return 'text-red-600 dark:text-red-400';
 }
 
@@ -867,7 +867,7 @@ function InterviewTranscript({ questions }: { questions: InterviewHistoryQuestio
             <div className="flex items-start gap-3 text-left w-full pr-4">
               <div className={cn(
                 "h-6 w-6 rounded-full flex items-center justify-center shrink-0 text-xs font-medium",
-                q.score && q.score >= 70 
+                q.score && q.score >= 7 
                   ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
                   : q.score 
                     ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400"
@@ -882,7 +882,7 @@ function InterviewTranscript({ questions }: { questions: InterviewHistoryQuestio
                 {q.score && (
                   <div className="flex items-center gap-2 mt-1">
                     <Star className="h-3 w-3 text-yellow-500" />
-                    <span className="text-xs text-gray-500">{q.score}/100</span>
+                    <span className="text-xs text-gray-500">{q.score}/10</span>
                   </div>
                 )}
               </div>
