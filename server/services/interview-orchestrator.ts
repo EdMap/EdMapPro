@@ -937,107 +937,102 @@ export class InterviewOrchestrator {
         return { preludeMessage: warmResponse, preludeComplete: false };
       }
       
-      // Check if the candidate already provided a substantive background response
-      // The selfIntro ends with "could you tell me a bit about your background?"
-      // so if they gave a real answer, we should acknowledge it and move forward
-      const isSubstantiveBackgroundAnswer = this.isSubstantiveBackgroundAnswer(candidateResponse);
+      // The self-intro ALWAYS ends with "could you tell me a bit about your background?"
+      // So we ALWAYS treat the candidate's response as an answer to that question
+      // This prevents the interviewer from repeating the same question
+      memory.currentStage = "core";
       
-      if (isSubstantiveBackgroundAnswer) {
-        // They already answered the background question - store it and move to next question
-        memory.currentStage = "core";
+      // Store the background question and their answer
+      const backgroundQuestion = "Could you tell me a bit about your background?";
+      memory.questions.push(backgroundQuestion);
+      memory.answers.push(candidateResponse);
+      
+      // Create the first question record with their answer
+      const question = await storage.createInterviewQuestion({
+        sessionId: session.id,
+        questionIndex: 0,
+        questionText: backgroundQuestion,
+        questionType: "opening",
+        expectedCriteria: this.getExpectedCriteria(config, 0),
+        candidateAnswer: candidateResponse,
+        answeredAt: new Date(),
+      });
+      
+      // Evaluate their background answer
+      const evaluation = await this.evaluator.evaluate(
+        config,
+        backgroundQuestion,
+        candidateResponse
+      );
+      
+      memory.scores.push(evaluation.score);
+      memory.evaluations.push(evaluation);
+      
+      // Update the question with evaluation
+      await storage.updateInterviewQuestion(question.id, {
+        score: evaluation.score,
+        feedback: evaluation.feedback,
+        strengths: evaluation.strengths,
+        improvements: evaluation.improvements,
+      });
+      
+      // Update session to move to next question
+      await storage.updateInterviewSession(session.id, {
+        currentQuestionIndex: 1,
+      });
+      
+      // Check if the answer was brief - if so, ask a follow-up for more details
+      // rather than jumping to a completely new topic
+      const wordCount = candidateResponse.split(/\s+/).length;
+      const isBriefAnswer = wordCount < 10;
+      
+      if (isBriefAnswer) {
+        // Generate a natural follow-up to get more details about their background
+        const followUpQuestion = "Thanks for sharing that! Could you tell me a bit more about your current role and what you've been working on?";
         
-        // Store the background question and their answer
-        const backgroundQuestion = "Could you tell me a bit about your background?";
-        memory.questions.push(backgroundQuestion);
-        memory.answers.push(candidateResponse);
+        memory.questions.push(followUpQuestion);
         
-        // Create the first question record with their answer
-        const question = await storage.createInterviewQuestion({
-          sessionId: session.id,
-          questionIndex: 0,
-          questionText: backgroundQuestion,
-          questionType: "opening",
-          expectedCriteria: this.getExpectedCriteria(config, 0),
-          candidateAnswer: candidateResponse,
-          answeredAt: new Date(),
-        });
-        
-        // Evaluate their background answer
-        const evaluation = await this.evaluator.evaluate(
-          config,
-          backgroundQuestion,
-          candidateResponse
-        );
-        
-        memory.scores.push(evaluation.score);
-        memory.evaluations.push(evaluation);
-        
-        // Update the question with evaluation
-        await storage.updateInterviewQuestion(question.id, {
-          score: evaluation.score,
-          feedback: evaluation.feedback,
-          strengths: evaluation.strengths,
-          improvements: evaluation.improvements,
-        });
-        
-        // Update session to move to next question
-        await storage.updateInterviewSession(session.id, {
-          currentQuestionIndex: 1,
-        });
-        
-        // Generate a reflection to acknowledge their answer
-        const reflectionText = await this.reflection.generate(candidateResponse, memory.lastReflection, "Sarah");
-        memory.lastReflection = reflectionText;
-        
-        // Generate the second question (since first was already answered)
-        const nextQuestionText = await this.questionGenerator.generate({
-          config,
-          questionIndex: 1,
-          previousQuestions: memory.questions,
-          previousAnswers: memory.answers,
-          previousScores: memory.scores,
-        });
-        
-        memory.questions.push(nextQuestionText);
-        
-        const nextQuestion = await storage.createInterviewQuestion({
+        const followUpQuestionRecord = await storage.createInterviewQuestion({
           sessionId: session.id,
           questionIndex: 1,
-          questionText: nextQuestionText,
+          questionText: followUpQuestion,
           questionType: "core",
           expectedCriteria: this.getExpectedCriteria(config, 1),
         });
         
         return { 
-          firstQuestion: nextQuestion, 
+          firstQuestion: followUpQuestionRecord, 
           preludeComplete: true,
-          // Include reflection to acknowledge their answer
         };
       }
       
-      // After intros are done, start the real interview
-      memory.currentStage = "opening";
+      // Substantive answer - generate a reflection and move to next topic
+      const reflectionText = await this.reflection.generate(candidateResponse, memory.lastReflection, "Sarah");
+      memory.lastReflection = reflectionText;
       
-      // Generate the first real interview question
-      const questionText = await this.questionGenerator.generate({
+      // Generate the second question (since first was already answered well)
+      const nextQuestionText = await this.questionGenerator.generate({
         config,
-        questionIndex: 0,
+        questionIndex: 1,
         previousQuestions: memory.questions,
         previousAnswers: memory.answers,
         previousScores: memory.scores,
       });
-
-      memory.questions.push(questionText);
-
-      const question = await storage.createInterviewQuestion({
+      
+      memory.questions.push(nextQuestionText);
+      
+      const nextQuestion = await storage.createInterviewQuestion({
         sessionId: session.id,
-        questionIndex: 0,
-        questionText,
-        questionType: "opening",
-        expectedCriteria: this.getExpectedCriteria(config, 0),
+        questionIndex: 1,
+        questionText: nextQuestionText,
+        questionType: "core",
+        expectedCriteria: this.getExpectedCriteria(config, 1),
       });
-
-      return { firstQuestion: question, preludeComplete: true };
+      
+      return { 
+        firstQuestion: nextQuestion, 
+        preludeComplete: true,
+      };
     }
 
     // Should not reach here
