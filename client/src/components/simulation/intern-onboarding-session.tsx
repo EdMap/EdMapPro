@@ -274,36 +274,7 @@ export default function InternOnboardingSession({ session, project, onComplete }
           </h3>
           
           <div className="grid gap-3">
-            <Card 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                Object.keys(introProgress).length > 0 ? 'border-green-200 bg-green-50' : ''
-              }`}
-              onClick={() => setViewMode('team-intro')}
-              data-testid="card-team-intros"
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Users className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">Meet the Team</h4>
-                      <p className="text-sm text-gray-600">
-                        1:1 introductions with your teammates
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      {Object.values(introProgress).filter(Boolean).length}/{teamMembers.length}
-                    </Badge>
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+            {/* Step 1: Documentation - Always available first */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 docsRead ? 'border-green-200 bg-green-50' : ''
@@ -314,13 +285,14 @@ export default function InternOnboardingSession({ session, project, onComplete }
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">1</div>
                     <div className="p-2 bg-orange-100 rounded-lg">
                       <BookOpen className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900">Read Onboarding Docs</h4>
                       <p className="text-sm text-gray-600">
-                        Project README and team guidelines
+                        Learn about the product and your mission
                       </p>
                     </div>
                   </div>
@@ -332,18 +304,59 @@ export default function InternOnboardingSession({ session, project, onComplete }
               </CardContent>
             </Card>
 
+            {/* Step 2: Meet the Team - Unlocks after docs */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'border-green-200 bg-green-50' : ''
+              } ${!docsRead ? 'opacity-60' : ''}`}
+              onClick={() => docsRead && setViewMode('team-intro')}
+              data-testid="card-team-intros"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${docsRead ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>2</div>
+                    <div className={`p-2 rounded-lg ${docsRead ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                      <Users className={`h-5 w-5 ${docsRead ? 'text-purple-600' : 'text-gray-400'}`} />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Meet the Team</h4>
+                      <p className="text-sm text-gray-600">
+                        1:1 introductions with your teammates
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!docsRead && (
+                      <Badge variant="outline" className="text-xs">
+                        Read docs first
+                      </Badge>
+                    )}
+                    {docsRead && (
+                      <Badge variant="outline">
+                        {Object.values(introProgress).filter(Boolean).length}/{teamMembers.length}
+                      </Badge>
+                    )}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Step 3: Comprehension Check - Unlocks after meeting all team members */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 comprehensionComplete ? 'border-green-200 bg-green-50' : ''
-              } ${!docsRead ? 'opacity-60' : ''}`}
-              onClick={() => docsRead && setViewMode('comprehension-check')}
+              } ${Object.values(introProgress).filter(Boolean).length !== teamMembers.length ? 'opacity-60' : ''}`}
+              onClick={() => Object.values(introProgress).filter(Boolean).length === teamMembers.length && setViewMode('comprehension-check')}
               data-testid="card-comprehension-check"
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-blue-600" />
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>3</div>
+                    <div className={`p-2 rounded-lg ${Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                      <MessageSquare className={`h-5 w-5 ${Object.values(introProgress).filter(Boolean).length === teamMembers.length ? 'text-blue-600' : 'text-gray-400'}`} />
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900">Comprehension Check</h4>
@@ -353,9 +366,9 @@ export default function InternOnboardingSession({ session, project, onComplete }
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!docsRead && (
+                    {Object.values(introProgress).filter(Boolean).length !== teamMembers.length && (
                       <Badge variant="outline" className="text-xs">
-                        Read docs first
+                        Meet the team first
                       </Badge>
                     )}
                     {comprehensionComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
