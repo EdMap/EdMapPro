@@ -164,6 +164,7 @@ interface ConversationMemory {
   questionBacklog?: import('./team-interview-questions').TeamInterviewQuestion[]; // Alias for consistency
   askedQuestionIds?: Set<string>; // Track which questions have been asked to prevent repetition
   forcedNextPersonaId?: string; // Force next turn to go to this persona (e.g., when addressed by name)
+  consecutivePersonaTurns?: Record<string, number>; // Track consecutive turns per persona for handoff cooldown
   // Two-phase wrap-up: Wait for candidate response to "any questions?" before finalizing
   pendingWrapUp?: {
     wrapUpReason: string;
@@ -603,7 +604,11 @@ export class InterviewOrchestrator {
     // These thresholds ensure we don't wrap up until collaboration/learning criteria are covered
     const overallSufficiencyThreshold = 0.35; // 35% overall coverage (HR uses 0.5)
     const criticalSufficiencyThreshold = 0.40; // 40% for critical areas - collaboration/learning mindset (HR uses 0.6)
+    const minCategoryThreshold = 0.20; // 20% minimum coverage per category (aligned with prompt guidance)
     const minQuestionsForWrapUp = minQuestions || 4;
+    
+    // Check if all categories have at least minimum coverage
+    const allCategoriesCovered = Object.values(coverageStatus).every(v => v >= minCategoryThreshold);
     
     // 1. Hard limit: Max questions exceeded (failsafe, +1 buffer)
     if (questionsAsked > maxQuestions) {
@@ -636,10 +641,11 @@ export class InterviewOrchestrator {
     }
     
     // 4. High confidence positive: Excellent performance with sufficient coverage
-    // Requires BOTH overall AND critical coverage thresholds to be met
+    // Requires BOTH overall AND critical coverage thresholds to be met, AND all categories touched
     if (avgScore >= 8 && telemetry.highScoreStreak >= 2 && questionsAsked >= minQuestionsForWrapUp) {
       if (overallCoverage >= overallSufficiencyThreshold && 
           criticalCoverage >= criticalSufficiencyThreshold && 
+          allCategoriesCovered &&
           allPersonasParticipated) {
         return {
           shouldWrapUp: true,
@@ -650,10 +656,11 @@ export class InterviewOrchestrator {
       }
     }
     
-    // 5. Sufficient coverage: Met BOTH thresholds + min questions + all personas participated
+    // 5. Sufficient coverage: Met BOTH thresholds + min questions + all personas participated + all categories touched
     if (questionsAsked >= minQuestionsForWrapUp &&
         overallCoverage >= overallSufficiencyThreshold &&
         criticalCoverage >= criticalSufficiencyThreshold &&
+        allCategoriesCovered &&
         allPersonasParticipated) {
       return {
         shouldWrapUp: true,
@@ -664,10 +671,11 @@ export class InterviewOrchestrator {
     }
     
     // 6. Approaching max with good coverage (soft wrap-up)
-    // Requires FULL thresholds AND persona participation - no shortcuts
+    // Requires FULL thresholds AND persona participation AND all categories touched - no shortcuts
     if (questionsAsked >= maxQuestions - 1 && 
         overallCoverage >= overallSufficiencyThreshold &&
         criticalCoverage >= criticalSufficiencyThreshold &&
+        allCategoriesCovered &&
         allPersonasParticipated) {
       return {
         shouldWrapUp: true,
@@ -2878,11 +2886,35 @@ export class InterviewOrchestrator {
       memory.coverage[mappedCriterion].questionsAsked++;
     }
 
-    // Handle persona handoff
+    // Handle persona handoff with cooldown enforcement
+    // Prevent ping-pong by requiring at least 2 consecutive turns before allowing handoff
+    // Initialize tracking if needed
+    memory.consecutivePersonaTurns = memory.consecutivePersonaTurns || {};
+    
+    // Always increment the current persona's turn count FIRST (before evaluating handoff)
+    memory.consecutivePersonaTurns[activePersona.id] = (memory.consecutivePersonaTurns[activePersona.id] || 0) + 1;
+    const currentPersonaTurns = memory.consecutivePersonaTurns[activePersona.id];
+    
     if (turnResult.actionType === 'hand_off' && turnResult.nextPersonaId) {
-      memory.activePersonaId = turnResult.nextPersonaId;
-      const nextPersona = settings.personas.find(p => p.id === turnResult.nextPersonaId);
-      console.log('[Team Interview] Handoff to:', nextPersona?.name);
+      // Enforce handoff cooldown: need at least 2 turns before handoff allowed
+      const MIN_TURNS_BEFORE_HANDOFF = 2;
+      if (currentPersonaTurns < MIN_TURNS_BEFORE_HANDOFF) {
+        console.log('[Team Interview] Handoff blocked - cooldown active:', {
+          persona: activePersona.name,
+          turns: currentPersonaTurns,
+          required: MIN_TURNS_BEFORE_HANDOFF,
+        });
+        // Convert to 'continue' instead - stay with current persona
+        turnResult.actionType = 'continue';
+      } else {
+        // Handoff allowed - switch active persona
+        // Keep current persona's count so they can't immediately hand back if they return
+        memory.activePersonaId = turnResult.nextPersonaId;
+        // Initialize new persona's count to 0 (they need to build up turns before they can hand off)
+        memory.consecutivePersonaTurns[turnResult.nextPersonaId] = 0;
+        const nextPersona = settings.personas.find(p => p.id === turnResult.nextPersonaId);
+        console.log('[Team Interview] Handoff to:', nextPersona?.name);
+      }
     }
 
     // ADDRESSED PERSONA DETECTION
