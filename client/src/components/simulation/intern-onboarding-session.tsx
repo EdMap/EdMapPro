@@ -372,6 +372,8 @@ export default function InternOnboardingSession({
   // Day 2 Standup state
   const [standupStarted, setStandupStarted] = useState(false);
   const [standupVisibleMessages, setStandupVisibleMessages] = useState(0);
+  // Initialize from savedProgress to persist across reloads
+  const [standupUserSpoke, setStandupUserSpoke] = useState(savedProgress?.standupComplete || false);
   
   // Day 2 Test Fix state
   const [testState, setTestState] = useState<'before' | 'running' | 'after'>('before');
@@ -834,15 +836,16 @@ export default function InternOnboardingSession({
   }, [interactions]);
 
   // Day 2 standup script timing - use user's name if available
+  // Delays are set for realistic pacing: longer for full updates, shorter for transitions
   const userName = user?.firstName || user?.username || 'there';
   const standupScript = [
     { sender: 'Sarah', role: 'Tech Lead', content: "Morning team! Let's do a quick standup. Marcus, you're up first.", delay: 0 },
-    { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 2500 },
-    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alex?", delay: 1500 },
-    { sender: 'Alex', role: 'QA Engineer', content: "Yesterday: Wrote integration tests for the new checkout flow. Today: Setting up the test environment for payment retries. Blockers: None.", delay: 2500 },
-    { sender: 'Sarah', role: 'Tech Lead', content: "Great, thanks Alex. Priya?", delay: 1500 },
-    { sender: 'Priya', role: 'Product Manager', content: "Yesterday: Finalized requirements for the merchant analytics dashboard. Today: Writing user stories for the next sprint. Blockers: Waiting on design mockups, but should have them by EOD.", delay: 3000 },
-    { sender: 'Sarah', role: 'Tech Lead', content: `Thanks Priya. And ${userName}, how about you? What are you working on today?`, delay: 2000 }
+    { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 4000 },
+    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alex?", delay: 2500 },
+    { sender: 'Alex', role: 'QA Engineer', content: "Yesterday: Wrote integration tests for the new checkout flow. Today: Setting up the test environment for payment retries. Blockers: None.", delay: 4000 },
+    { sender: 'Sarah', role: 'Tech Lead', content: "Great, thanks Alex. Priya?", delay: 2500 },
+    { sender: 'Priya', role: 'Product Manager', content: "Yesterday: Finalized requirements for the merchant analytics dashboard. Today: Writing user stories for the next sprint. Blockers: Waiting on design mockups, but should have them by EOD.", delay: 5000 },
+    { sender: 'Sarah', role: 'Tech Lead', content: `Thanks Priya. ${userName}, you're up!`, delay: 3000 }
   ];
 
   useEffect(() => {
@@ -1347,8 +1350,17 @@ export default function InternOnboardingSession({
     );
   }
 
+  // Track when user speaks in standup (moved to useEffect to avoid setState in render)
+  const userHasSpokenInStandup = filteredInteractions.some((i: any) => i.sender === 'You' && viewMode === 'day2-standup');
+  useEffect(() => {
+    if (userHasSpokenInStandup && !standupUserSpoke) {
+      setStandupUserSpoke(true);
+    }
+  }, [userHasSpokenInStandup, standupUserSpoke]);
+
   function renderDay2Standup() {
-    const userHasSpoken = filteredInteractions.some((i: any) => i.sender === 'You');
+    // Use stable state so it doesn't flash during query invalidation
+    const userHasSpoken = standupUserSpoke || userHasSpokenInStandup;
     const standupInteractions = filteredInteractions;
     const isUserTurn = standupVisibleMessages >= standupScript.length;
 
@@ -1536,7 +1548,7 @@ export default function InternOnboardingSession({
               <span className="text-sm font-medium">Your turn!</span>
             </div>
             <p className="text-xs text-blue-600 mt-1">
-              Share: yesterday, today, blockers. Feel free to ask questions about the timezone ticket.
+              Share your update when you're ready.
             </p>
           </div>
         )}
@@ -1569,8 +1581,8 @@ export default function InternOnboardingSession({
           </div>
         )}
         
-        {/* Wrap up section - show once user has spoken and no typing */}
-        {userHasSpoken && !typingIndicator && (
+        {/* Wrap up section - show once user has spoken */}
+        {userHasSpoken && (
           <div className="space-y-3">
             {/* Sarah's closing message */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
