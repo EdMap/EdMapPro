@@ -837,8 +837,12 @@ export default function InternOnboardingSession({
   const userName = user?.firstName || user?.username || 'there';
   const standupScript = [
     { sender: 'Sarah', role: 'Tech Lead', content: "Morning team! Let's do a quick standup. Marcus, you're up first.", delay: 0 },
-    { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 2000 },
-    { sender: 'Sarah', role: 'Tech Lead', content: `Thanks Marcus. Alright ${userName}, you're up! What's on your plate today?`, delay: 2500 }
+    { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 2500 },
+    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alex?", delay: 1500 },
+    { sender: 'Alex', role: 'QA Engineer', content: "Yesterday: Wrote integration tests for the new checkout flow. Today: Setting up the test environment for payment retries. Blockers: None.", delay: 2500 },
+    { sender: 'Sarah', role: 'Tech Lead', content: "Great, thanks Alex. Priya?", delay: 1500 },
+    { sender: 'Priya', role: 'Product Manager', content: "Yesterday: Finalized requirements for the merchant analytics dashboard. Today: Writing user stories for the next sprint. Blockers: Waiting on design mockups, but should have them by EOD.", delay: 3000 },
+    { sender: 'Sarah', role: 'Tech Lead', content: `Thanks Priya. And ${userName}, how about you? What are you working on today?`, delay: 2000 }
   ];
 
   useEffect(() => {
@@ -1565,19 +1569,48 @@ export default function InternOnboardingSession({
           </div>
         )}
         
-        {/* Wrap up button - always show once user has spoken */}
-        {userHasSpoken && (
-          <Button 
-            className="w-full"
-            onClick={() => {
-              setStandupComplete(true);
-              setViewMode('overview');
-            }}
-            data-testid="button-complete-standup"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Wrap Up Standup
-          </Button>
+        {/* Wrap up section - show once user has spoken and no typing */}
+        {userHasSpoken && !typingIndicator && (
+          <div className="space-y-3">
+            {/* Sarah's closing message */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                  <AvatarFallback className="bg-blue-500 text-white">S</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Sarah</p>
+                  <p className="text-sm text-green-800 mt-1">
+                    Thanks {userName}! Good luck with the timezone ticket - ping me or Marcus if you get stuck. Alright everyone, let's have a great day!
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Accomplishment */}
+            <div className="bg-gradient-to-r from-teal-50 to-green-50 border border-teal-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-teal-800 mb-2">
+                <CheckCircle2 className="h-5 w-5 text-teal-600" />
+                <span className="font-medium">Standup Complete!</span>
+              </div>
+              <p className="text-sm text-teal-700">
+                You participated in your first daily standup. This is how teams stay aligned and unblock each other.
+              </p>
+            </div>
+            
+            <Button 
+              className="w-full"
+              onClick={() => {
+                setStandupComplete(true);
+                setViewMode('overview');
+              }}
+              data-testid="button-complete-standup"
+            >
+              Continue to Dev Setup
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
         )}
       </div>
     );
