@@ -367,6 +367,18 @@ export default function InternOnboardingSession({
   const [prDescription, setPrDescription] = useState("");
   const [reflectionText, setReflectionText] = useState("");
   
+  // Day 2 Standup state
+  const [standupStarted, setStandupStarted] = useState(false);
+  const [standupVisibleMessages, setStandupVisibleMessages] = useState(0);
+  
+  // Day 2 Test Fix state
+  const [testState, setTestState] = useState<'before' | 'running' | 'after'>('before');
+  
+  // Day 2 PR state  
+  const [prTitle, setPrTitle] = useState('');
+  const [prDescriptionLocal, setPrDescriptionLocal] = useState('');
+  const [prSubmittedLocal, setPrSubmittedLocal] = useState(false);
+  
   // Floating chat state
   const [floatingChatOpen, setFloatingChatOpen] = useState(false);
   const [floatingChatMember, setFloatingChatMember] = useState<TeamMember | null>(null);
@@ -818,6 +830,22 @@ export default function InternOnboardingSession({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [interactions]);
+
+  // Day 2 standup script timing
+  const standupScript = [
+    { sender: 'Sarah', role: 'Tech Lead', content: "Morning team! Let's do a quick standup. Marcus, you're up first.", delay: 0 },
+    { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 2000 },
+    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alright, your turn! What's on your plate today?", delay: 2500 }
+  ];
+
+  useEffect(() => {
+    if (standupStarted && standupVisibleMessages < standupScript.length) {
+      const timer = setTimeout(() => {
+        setStandupVisibleMessages(prev => prev + 1);
+      }, standupScript[standupVisibleMessages]?.delay || 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [standupStarted, standupVisibleMessages]);
 
   function handleSendMessage(targetMember?: TeamMember) {
     if (!message.trim() || sendMessageMutation.isPending) return;
@@ -1313,46 +1341,13 @@ export default function InternOnboardingSession({
   }
 
   function renderDay2Standup() {
-    const [visibleMessages, setVisibleMessages] = useState(0);
-    const [standupStarted, setStandupStarted] = useState(false);
-    
-    const standupScript = [
-      {
-        sender: 'Sarah',
-        role: 'Tech Lead',
-        content: "Morning team! Let's do a quick standup. Marcus, you're up first.",
-        delay: 0
-      },
-      {
-        sender: 'Marcus',
-        role: 'Senior Engineer', 
-        content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.",
-        delay: 2000
-      },
-      {
-        sender: 'Sarah',
-        role: 'Tech Lead',
-        content: "Thanks Marcus. Alright, your turn! What's on your plate today?",
-        delay: 2500
-      }
-    ];
-
-    useEffect(() => {
-      if (standupStarted && visibleMessages < standupScript.length) {
-        const timer = setTimeout(() => {
-          setVisibleMessages(prev => prev + 1);
-        }, standupScript[visibleMessages]?.delay || 1500);
-        return () => clearTimeout(timer);
-      }
-    }, [standupStarted, visibleMessages]);
-
     const userHasSpoken = filteredInteractions.some((i: any) => 
       i.sender === 'You' && i.metadata?.phase === 'standup'
     );
     const standupInteractions = filteredInteractions.filter((i: any) => 
       i.metadata?.phase === 'standup' || i.metadata?.day === 2
     );
-    const isUserTurn = visibleMessages >= standupScript.length;
+    const isUserTurn = standupVisibleMessages >= standupScript.length;
 
     if (!standupStarted) {
       return (
@@ -1383,7 +1378,7 @@ export default function InternOnboardingSession({
                 className="w-full"
                 onClick={() => {
                   setStandupStarted(true);
-                  setVisibleMessages(1);
+                  setStandupVisibleMessages(1);
                 }}
                 data-testid="button-join-standup"
               >
@@ -1420,7 +1415,7 @@ export default function InternOnboardingSession({
         {/* Conversation */}
         <ScrollArea className="flex-1 pr-2 mb-4">
           <div className="space-y-4">
-            {standupScript.slice(0, visibleMessages).map((msg, idx) => (
+            {standupScript.slice(0, standupVisibleMessages).map((msg, idx) => (
               <div key={idx} className="flex gap-3">
                 <Avatar className="h-9 w-9 flex-shrink-0">
                   <AvatarImage src={getTeamAvatarUrl(msg.sender)} alt={msg.sender} />
@@ -1441,12 +1436,12 @@ export default function InternOnboardingSession({
             ))}
 
             {/* Typing indicator while script is playing */}
-            {visibleMessages > 0 && visibleMessages < standupScript.length && (
+            {standupVisibleMessages > 0 && standupVisibleMessages < standupScript.length && (
               <div className="flex gap-3">
                 <Avatar className="h-9 w-9 flex-shrink-0">
-                  <AvatarImage src={getTeamAvatarUrl(standupScript[visibleMessages].sender)} alt="" />
+                  <AvatarImage src={getTeamAvatarUrl(standupScript[standupVisibleMessages].sender)} alt="" />
                   <AvatarFallback className="bg-purple-500 text-white">
-                    {standupScript[visibleMessages].sender[0]}
+                    {standupScript[standupVisibleMessages].sender[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
@@ -2104,8 +2099,6 @@ Resolving deltas: 100% (623/623), done.`
   }
 
   function renderDay2TestFix() {
-    const [testState, setTestState] = useState<'before' | 'running' | 'after'>('before');
-    
     return (
       <div className="space-y-4">
         <Card className="bg-green-50 border-green-200">
@@ -2412,11 +2405,7 @@ remote:   https://github.com/novapay/merchant-dashboard/pull/new/fix/timezone-di
   }
 
   function renderDay2PR() {
-    const [prTitle, setPrTitle] = useState('');
-    const [prDescription, setPrDescription] = useState('');
-    const [prSubmitted, setPrSubmittedLocal] = useState(false);
-
-    const isValidPR = prTitle.trim().length > 10 && prDescription.trim().length > 20;
+    const isValidPR = prTitle.trim().length > 10 && prDescriptionLocal.trim().length > 20;
 
     return (
       <div className="space-y-4">
@@ -2434,7 +2423,7 @@ remote:   https://github.com/novapay/merchant-dashboard/pull/new/fix/timezone-di
           </CardContent>
         </Card>
 
-        {!prSubmitted ? (
+        {!prSubmittedLocal ? (
           <Card>
             <CardHeader className="pb-3 bg-gray-50 border-b">
               <div className="flex items-center gap-2">
@@ -2462,8 +2451,8 @@ remote:   https://github.com/novapay/merchant-dashboard/pull/new/fix/timezone-di
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <Textarea
-                  value={prDescription}
-                  onChange={(e) => setPrDescription(e.target.value)}
+                  value={prDescriptionLocal}
+                  onChange={(e) => setPrDescriptionLocal(e.target.value)}
                   placeholder={`## What changed
 - Updated formatTransactionDate to use merchant's timezone
 
