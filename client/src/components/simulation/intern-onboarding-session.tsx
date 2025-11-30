@@ -1313,278 +1313,266 @@ export default function InternOnboardingSession({
   }
 
   function renderDay2Standup() {
-    const standupParticipants = [
-      { name: 'Sarah', role: 'Tech Lead', status: 'done', update: 'Reviewing PRs and planning sprint work' },
-      { name: 'Marcus', role: 'Senior Engineer', status: 'done', update: 'Continuing payment gateway integration' },
-      { name: 'You', role: 'Intern', status: filteredInteractions.length > 0 ? 'done' : 'current', update: '' },
+    const [visibleMessages, setVisibleMessages] = useState(0);
+    const [standupStarted, setStandupStarted] = useState(false);
+    
+    const standupScript = [
+      {
+        sender: 'Sarah',
+        role: 'Tech Lead',
+        content: "Morning team! Let's do a quick standup. Marcus, you're up first.",
+        delay: 0
+      },
+      {
+        sender: 'Marcus',
+        role: 'Senior Engineer', 
+        content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.",
+        delay: 2000
+      },
+      {
+        sender: 'Sarah',
+        role: 'Tech Lead',
+        content: "Thanks Marcus. Alright, your turn! What's on your plate today?",
+        delay: 2500
+      }
     ];
 
-    const userHasSpoken = filteredInteractions.length > 0;
+    useEffect(() => {
+      if (standupStarted && visibleMessages < standupScript.length) {
+        const timer = setTimeout(() => {
+          setVisibleMessages(prev => prev + 1);
+        }, standupScript[visibleMessages]?.delay || 1500);
+        return () => clearTimeout(timer);
+      }
+    }, [standupStarted, visibleMessages]);
+
+    const userHasSpoken = filteredInteractions.some((i: any) => 
+      i.sender === 'You' && i.metadata?.phase === 'standup'
+    );
+    const standupInteractions = filteredInteractions.filter((i: any) => 
+      i.metadata?.phase === 'standup' || i.metadata?.day === 2
+    );
+    const isUserTurn = visibleMessages >= standupScript.length;
+
+    if (!standupStarted) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center">
+          <Card className="max-w-md">
+            <CardHeader className="text-center">
+              <div className="mx-auto p-3 bg-yellow-100 rounded-full w-fit mb-2">
+                <Users className="h-8 w-8 text-yellow-700" />
+              </div>
+              <CardTitle>Daily Standup</CardTitle>
+              <CardDescription>
+                Payments Team • 9:00 AM
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Standup format:</p>
+                <ol className="text-sm text-gray-600 space-y-1">
+                  <li>1. What I did yesterday</li>
+                  <li>2. What I'm doing today</li>
+                  <li>3. Any blockers?</li>
+                </ol>
+              </div>
+              <p className="text-sm text-gray-600 text-center">
+                Sarah is starting the meeting. You'll share your update after Marcus.
+              </p>
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  setStandupStarted(true);
+                  setVisibleMessages(1);
+                }}
+                data-testid="button-join-standup"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Join Standup
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
     
     return (
       <div className="h-full flex flex-col">
         {/* Meeting Header */}
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-yellow-100 rounded-lg">
                 <Users className="h-5 w-5 text-yellow-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Daily Standup</h3>
-                <p className="text-sm text-gray-600">Payments Team • 9:00 AM</p>
+                <p className="text-sm text-gray-600">Payments Team</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Clock className="h-4 w-4" />
-              <span>~15 min</span>
-            </div>
-          </div>
-          
-          {/* Quick standup format reminder */}
-          <div className="bg-white/60 rounded-lg p-3 text-sm">
-            <p className="text-gray-600 font-medium mb-1">Standup format:</p>
-            <div className="grid grid-cols-3 gap-2 text-xs text-gray-500">
-              <span>1. What I did yesterday</span>
-              <span>2. What I'm doing today</span>
-              <span>3. Any blockers?</span>
-            </div>
+            <Badge variant="outline" className="text-green-600 border-green-300">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse" />
+              Live
+            </Badge>
           </div>
         </div>
 
-        {/* Two-column layout */}
-        <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
-          {/* Left column - Participant queue */}
-          <div className="col-span-1 space-y-3">
-            <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Today's Queue
-            </h4>
-            <div className="space-y-2">
-              {standupParticipants.map((participant, idx) => (
-                <div 
-                  key={participant.name}
-                  className={`p-3 rounded-lg border transition-all ${
-                    participant.status === 'current' 
-                      ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200' 
-                      : participant.status === 'done'
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-gray-50 border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      {participant.name === 'You' ? (
-                        <AvatarFallback className="bg-teal-500 text-white text-xs">Y</AvatarFallback>
-                      ) : (
-                        <>
-                          <AvatarImage src={getTeamAvatarUrl(participant.name)} alt={participant.name} />
-                          <AvatarFallback className="bg-blue-500 text-white text-xs">
-                            {participant.name[0]}
-                          </AvatarFallback>
-                        </>
-                      )}
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium text-gray-900 truncate">
-                          {participant.name}
-                        </span>
-                        {participant.status === 'current' && (
-                          <Badge className="bg-blue-100 text-blue-700 text-xs px-1.5">Your turn</Badge>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-500">{participant.role}</span>
-                    </div>
-                    {participant.status === 'done' && (
-                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    )}
+        {/* Conversation */}
+        <ScrollArea className="flex-1 pr-2 mb-4">
+          <div className="space-y-4">
+            {standupScript.slice(0, visibleMessages).map((msg, idx) => (
+              <div key={idx} className="flex gap-3">
+                <Avatar className="h-9 w-9 flex-shrink-0">
+                  <AvatarImage src={getTeamAvatarUrl(msg.sender)} alt={msg.sender} />
+                  <AvatarFallback className={msg.sender === 'Marcus' ? 'bg-purple-500 text-white' : 'bg-blue-500 text-white'}>
+                    {msg.sender[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-gray-900">{msg.sender}</span>
+                    <Badge variant="outline" className="text-xs py-0 h-5">{msg.role}</Badge>
                   </div>
-                  {participant.status === 'done' && participant.update && (
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">{participant.update}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right column - Conversation */}
-          <div className="col-span-2 flex flex-col min-h-0">
-            <ScrollArea className="flex-1 pr-2 mb-3">
-              <div className="space-y-3">
-                {/* Sarah's opening */}
-                <div className="flex gap-3">
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
-                    <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-gray-900">Sarah</span>
-                      <Badge variant="outline" className="text-xs py-0 h-5">Tech Lead</Badge>
-                      <span className="text-xs text-gray-400">9:00 AM</span>
-                    </div>
-                    <div className="bg-white border rounded-lg p-3 shadow-sm">
-                      <p className="text-sm text-gray-700">
-                        Morning team! Quick standup. Marcus, you're up first.
-                      </p>
-                    </div>
+                  <div className="bg-white border rounded-lg p-3 shadow-sm">
+                    <p className="text-sm text-gray-700">{msg.content}</p>
                   </div>
                 </div>
-
-                {/* Marcus's update */}
-                <div className="flex gap-3">
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={getTeamAvatarUrl('Marcus')} alt="Marcus" />
-                    <AvatarFallback className="bg-purple-500 text-white text-xs">M</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-gray-900">Marcus</span>
-                      <Badge variant="outline" className="text-xs py-0 h-5">Senior Engineer</Badge>
-                      <span className="text-xs text-gray-400">9:01 AM</span>
-                    </div>
-                    <div className="bg-white border rounded-lg p-3 shadow-sm">
-                      <p className="text-sm text-gray-700">
-                        Yesterday I finished the Stripe webhook handlers. Today I'm testing edge cases on the payment retry flow. No blockers.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sarah transitions to intern */}
-                <div className="flex gap-3">
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
-                    <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-gray-900">Sarah</span>
-                      <Badge variant="outline" className="text-xs py-0 h-5">Tech Lead</Badge>
-                      <span className="text-xs text-gray-400">9:02 AM</span>
-                    </div>
-                    <div className="bg-white border rounded-lg p-3 shadow-sm">
-                      <p className="text-sm text-gray-700">
-                        Thanks Marcus. Alright, you're up next! Tell us what you're planning to work on today, and if you have any questions about the timezone bug ticket.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* User messages */}
-                {filteredInteractions.map((interaction: any, idx: number) => (
-                  <div key={idx} className="flex gap-3">
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                      {interaction.sender === 'You' ? (
-                        <AvatarFallback className="bg-teal-500 text-white text-xs">Y</AvatarFallback>
-                      ) : (
-                        <>
-                          <AvatarImage src={getTeamAvatarUrl(interaction.sender)} alt={interaction.sender} />
-                          <AvatarFallback className="bg-blue-500 text-white text-xs">
-                            {interaction.sender[0]}
-                          </AvatarFallback>
-                        </>
-                      )}
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          {interaction.sender === 'You' ? 'You' : interaction.sender}
-                        </span>
-                        <Badge variant="outline" className="text-xs py-0 h-5">
-                          {interaction.sender === 'You' ? 'Intern' : 'Tech Lead'}
-                        </Badge>
-                        <span className="text-xs text-gray-400">9:03 AM</span>
-                      </div>
-                      <div className={`rounded-lg p-3 shadow-sm ${
-                        interaction.sender === 'You' 
-                          ? 'bg-teal-50 border border-teal-200' 
-                          : 'bg-white border'
-                      }`}>
-                        <p className="text-sm text-gray-700">{interaction.content}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {typingIndicator && (
-                  <div className="flex gap-3">
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
-                      <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="bg-gray-100 rounded-lg px-4 py-2 inline-block">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            ))}
 
-            {/* Your turn prompt */}
-            {!userHasSpoken && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                <div className="flex items-center gap-2 text-blue-800">
-                  <Sparkles className="h-4 w-4" />
-                  <span className="text-sm font-medium">It's your turn!</span>
+            {/* Typing indicator while script is playing */}
+            {visibleMessages > 0 && visibleMessages < standupScript.length && (
+              <div className="flex gap-3">
+                <Avatar className="h-9 w-9 flex-shrink-0">
+                  <AvatarImage src={getTeamAvatarUrl(standupScript[visibleMessages].sender)} alt="" />
+                  <AvatarFallback className="bg-purple-500 text-white">
+                    {standupScript[visibleMessages].sender[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="bg-gray-100 rounded-lg px-4 py-3 inline-block">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-blue-600 mt-1">
-                  Share what you're working on today and ask any questions about the timezone ticket.
-                </p>
               </div>
             )}
 
-            {/* Input area */}
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <Textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder={userHasSpoken ? "Add a follow-up or ask a question..." : "I'll be working on the timezone bug today. I wanted to ask..."}
-                  className="min-h-[60px] resize-none text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  data-testid="input-standup-message"
-                />
-                <Button 
-                  onClick={() => handleSendMessage()}
-                  disabled={!message.trim() || sendMessageMutation.isPending}
-                  size="sm"
-                  className="self-end"
-                  data-testid="button-send-standup"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+            {/* User's messages and responses */}
+            {standupInteractions.map((interaction: any, idx: number) => (
+              <div key={`user-${idx}`} className="flex gap-3">
+                <Avatar className="h-9 w-9 flex-shrink-0">
+                  {interaction.sender === 'You' ? (
+                    <AvatarFallback className="bg-teal-500 text-white">Y</AvatarFallback>
+                  ) : (
+                    <>
+                      <AvatarImage src={getTeamAvatarUrl(interaction.sender)} alt={interaction.sender} />
+                      <AvatarFallback className="bg-blue-500 text-white">
+                        {interaction.sender[0]}
+                      </AvatarFallback>
+                    </>
+                  )}
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      {interaction.sender === 'You' ? 'You' : interaction.sender}
+                    </span>
+                    <Badge variant="outline" className="text-xs py-0 h-5">
+                      {interaction.sender === 'You' ? 'Intern' : 'Tech Lead'}
+                    </Badge>
+                  </div>
+                  <div className={`rounded-lg p-3 shadow-sm ${
+                    interaction.sender === 'You' 
+                      ? 'bg-teal-50 border border-teal-200' 
+                      : 'bg-white border'
+                  }`}>
+                    <p className="text-sm text-gray-700">{interaction.content}</p>
+                  </div>
+                </div>
               </div>
-              
-              {filteredInteractions.length >= 2 && (
-                <Button 
-                  className="w-full"
-                  onClick={() => {
-                    setStandupComplete(true);
-                    setViewMode('overview');
-                  }}
-                  data-testid="button-complete-standup"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Wrap Up Standup
-                </Button>
-              )}
-            </div>
+            ))}
+
+            {typingIndicator && (
+              <div className="flex gap-3">
+                <Avatar className="h-9 w-9 flex-shrink-0">
+                  <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                  <AvatarFallback className="bg-blue-500 text-white">S</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="bg-gray-100 rounded-lg px-4 py-3 inline-block">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        </div>
+        </ScrollArea>
+
+        {/* Your turn prompt */}
+        {isUserTurn && !userHasSpoken && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+            <div className="flex items-center gap-2 text-blue-800">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm font-medium">Your turn!</span>
+            </div>
+            <p className="text-xs text-blue-600 mt-1">
+              Share: yesterday, today, blockers. Feel free to ask questions about the timezone ticket.
+            </p>
+          </div>
+        )}
+
+        {/* Input area - only show when it's user's turn */}
+        {isUserTurn && (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Yesterday: got set up. Today: working on the timezone bug. Blockers: I have a question about..."
+                className="min-h-[70px] resize-none text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                data-testid="input-standup-message"
+              />
+              <Button 
+                onClick={() => handleSendMessage()}
+                disabled={!message.trim() || sendMessageMutation.isPending}
+                size="sm"
+                className="self-end"
+                data-testid="button-send-standup"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {standupInteractions.filter((i: any) => i.sender === 'You').length >= 1 && (
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  setStandupComplete(true);
+                  setViewMode('overview');
+                }}
+                data-testid="button-complete-standup"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Wrap Up Standup
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
