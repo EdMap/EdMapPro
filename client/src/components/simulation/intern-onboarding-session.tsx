@@ -1456,39 +1456,52 @@ export default function InternOnboardingSession({
             )}
 
             {/* User's messages and responses */}
-            {standupInteractions.map((interaction: any, idx: number) => (
-              <div key={`user-${idx}`} className="flex gap-3">
-                <Avatar className="h-9 w-9 flex-shrink-0">
-                  {interaction.sender === 'You' ? (
-                    <AvatarFallback className="bg-teal-500 text-white">Y</AvatarFallback>
-                  ) : (
-                    <>
-                      <AvatarImage src={getTeamAvatarUrl(interaction.sender)} alt={interaction.sender} />
-                      <AvatarFallback className="bg-blue-500 text-white">
-                        {interaction.sender[0]}
+            {standupInteractions.map((interaction: any, idx: number) => {
+              const getSenderRole = (sender: string) => {
+                if (sender === 'You') return 'Intern';
+                if (sender === 'Sarah') return 'Tech Lead';
+                if (sender === 'Marcus') return 'Senior Engineer';
+                if (sender === 'Priya') return 'Product Manager';
+                if (sender === 'Alex') return 'QA Engineer';
+                return interaction.senderRole || 'Team Member';
+              };
+              
+              return (
+                <div key={`user-${idx}`} className="flex gap-3">
+                  <Avatar className="h-9 w-9 flex-shrink-0">
+                    {interaction.sender === 'You' ? (
+                      <AvatarFallback className="bg-teal-500 text-white">
+                        {userName?.[0]?.toUpperCase() || 'Y'}
                       </AvatarFallback>
-                    </>
-                  )}
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-900">
-                      {interaction.sender === 'You' ? 'You' : interaction.sender}
-                    </span>
-                    <Badge variant="outline" className="text-xs py-0 h-5">
-                      {interaction.sender === 'You' ? 'Intern' : 'Tech Lead'}
-                    </Badge>
-                  </div>
-                  <div className={`rounded-lg p-3 shadow-sm ${
-                    interaction.sender === 'You' 
-                      ? 'bg-teal-50 border border-teal-200' 
-                      : 'bg-white border'
-                  }`}>
-                    <p className="text-sm text-gray-700">{interaction.content}</p>
+                    ) : (
+                      <>
+                        <AvatarImage src={getTeamAvatarUrl(interaction.sender)} alt={interaction.sender} />
+                        <AvatarFallback className="bg-blue-500 text-white">
+                          {interaction.sender[0]}
+                        </AvatarFallback>
+                      </>
+                    )}
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium text-gray-900">
+                        {interaction.sender === 'You' ? userName : interaction.sender}
+                      </span>
+                      <Badge variant="outline" className="text-xs py-0 h-5">
+                        {getSenderRole(interaction.sender)}
+                      </Badge>
+                    </div>
+                    <div className={`rounded-lg p-3 shadow-sm ${
+                      interaction.sender === 'You' 
+                        ? 'bg-teal-50 border border-teal-200' 
+                        : 'bg-white border'
+                    }`}>
+                      <p className="text-sm text-gray-700">{interaction.content}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {typingIndicator && (
               <div className="flex gap-3">
@@ -1524,48 +1537,47 @@ export default function InternOnboardingSession({
           </div>
         )}
 
-        {/* Input area - only show when it's user's turn */}
+        {/* Input area - show when it's user's turn */}
         {isUserTurn && (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Yesterday: got set up. Today: working on the timezone bug. Blockers: I have a question about..."
-                className="min-h-[70px] resize-none text-sm"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                data-testid="input-standup-message"
-              />
-              <Button 
-                onClick={() => handleSendMessage()}
-                disabled={!message.trim() || sendMessageMutation.isPending}
-                size="sm"
-                className="self-end"
-                data-testid="button-send-standup"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {standupInteractions.filter((i: any) => i.sender === 'You').length >= 1 && (
-              <Button 
-                className="w-full"
-                onClick={() => {
-                  setStandupComplete(true);
-                  setViewMode('overview');
-                }}
-                data-testid="button-complete-standup"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Wrap Up Standup
-              </Button>
-            )}
+          <div className="flex gap-2 mb-3">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Yesterday: got set up. Today: working on the timezone bug. Blockers: I have a question about..."
+              className="min-h-[70px] resize-none text-sm"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              data-testid="input-standup-message"
+            />
+            <Button 
+              onClick={() => handleSendMessage()}
+              disabled={!message.trim() || sendMessageMutation.isPending}
+              size="sm"
+              className="self-end"
+              data-testid="button-send-standup"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
+        )}
+        
+        {/* Wrap up button - always show once user has spoken */}
+        {userHasSpoken && (
+          <Button 
+            className="w-full"
+            onClick={() => {
+              setStandupComplete(true);
+              setViewMode('overview');
+            }}
+            data-testid="button-complete-standup"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Wrap Up Standup
+          </Button>
         )}
       </div>
     );
