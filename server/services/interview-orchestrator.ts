@@ -556,6 +556,135 @@ export class InterviewOrchestrator {
   }
 
   /**
+   * Evaluate team interview completion using coverage-based logic (similar to HR screening)
+   * This mirrors the HR screening approach with team-specific considerations
+   */
+  private evaluateTeamCompletion(
+    memory: ConversationMemory,
+    settings: TeamInterviewSettings,
+    turnResult: { actionType: string; evaluation: { score: number } }
+  ): {
+    shouldWrapUp: boolean;
+    reason: string;
+    message: string;
+    coverageSummary: { overall: number; critical: number };
+  } {
+    const { maxQuestions, minQuestions } = settings;
+    const questionsAsked = memory.totalQuestionsAsked;
+    
+    // Calculate team-specific coverage (using team interview criteria mapping)
+    const coverageStatus = {
+      learning_mindset: memory.coverage.behavioral.score,
+      collaboration: memory.coverage.culture_fit.score,
+      problem_solving: memory.coverage.skills.score,
+      technical_foundations: memory.coverage.background.score,
+    };
+    
+    const coverageValues = Object.values(coverageStatus);
+    const overallCoverage = coverageValues.reduce((a, b) => a + b, 0) / coverageValues.length;
+    const criticalCoverage = (coverageStatus.learning_mindset + coverageStatus.collaboration) / 2;
+    
+    // Calculate average score
+    const avgScore = memory.scores.length > 0 
+      ? memory.scores.reduce((a, b) => a + b, 0) / memory.scores.length 
+      : 5;
+    
+    // Check persona participation (both should have spoken at least once)
+    const personaCounts = memory.personaQuestionCounts || {};
+    const allPersonasParticipated = settings.personas.every(p => (personaCounts[p.id] || 0) > 0);
+    
+    // Telemetry: track score streaks
+    const { telemetry } = memory;
+    
+    // Define thresholds (aligned with HR screening's completion-decision.ts)
+    // Team interviews are shorter, so thresholds are slightly lower than HR's 0.5/0.6
+    // These thresholds ensure we don't wrap up until collaboration/learning criteria are covered
+    const overallSufficiencyThreshold = 0.35; // 35% overall coverage (HR uses 0.5)
+    const criticalSufficiencyThreshold = 0.40; // 40% for critical areas - collaboration/learning mindset (HR uses 0.6)
+    const minQuestionsForWrapUp = minQuestions || 4;
+    
+    // 1. Hard limit: Max questions exceeded (failsafe, +1 buffer)
+    if (questionsAsked > maxQuestions) {
+      return {
+        shouldWrapUp: true,
+        reason: 'max_questions_exceeded',
+        message: "We've covered a lot of ground today",
+        coverageSummary: { overall: overallCoverage, critical: criticalCoverage }
+      };
+    }
+    
+    // 2. Candidate fatigue: Too many consecutive low scores (3+)
+    if (telemetry.lowScoreStreak >= 3 && questionsAsked >= minQuestionsForWrapUp) {
+      return {
+        shouldWrapUp: true,
+        reason: 'candidate_fatigue',
+        message: "I think we have a good sense of your background",
+        coverageSummary: { overall: overallCoverage, critical: criticalCoverage }
+      };
+    }
+    
+    // 3. High confidence negative: Low average and consistent pattern
+    if (avgScore < 4 && questionsAsked >= minQuestionsForWrapUp && telemetry.lowScoreStreak >= 2) {
+      return {
+        shouldWrapUp: true,
+        reason: 'high_confidence_negative',
+        message: "We appreciate you taking the time to speak with us today",
+        coverageSummary: { overall: overallCoverage, critical: criticalCoverage }
+      };
+    }
+    
+    // 4. High confidence positive: Excellent performance with sufficient coverage
+    // Requires BOTH overall AND critical coverage thresholds to be met
+    if (avgScore >= 8 && telemetry.highScoreStreak >= 2 && questionsAsked >= minQuestionsForWrapUp) {
+      if (overallCoverage >= overallSufficiencyThreshold && 
+          criticalCoverage >= criticalSufficiencyThreshold && 
+          allPersonasParticipated) {
+        return {
+          shouldWrapUp: true,
+          reason: 'high_confidence_positive',
+          message: "We're really impressed with what you've shared",
+          coverageSummary: { overall: overallCoverage, critical: criticalCoverage }
+        };
+      }
+    }
+    
+    // 5. Sufficient coverage: Met BOTH thresholds + min questions + all personas participated
+    if (questionsAsked >= minQuestionsForWrapUp &&
+        overallCoverage >= overallSufficiencyThreshold &&
+        criticalCoverage >= criticalSufficiencyThreshold &&
+        allPersonasParticipated) {
+      return {
+        shouldWrapUp: true,
+        reason: 'sufficient_coverage',
+        message: "We have a great picture of your experience",
+        coverageSummary: { overall: overallCoverage, critical: criticalCoverage }
+      };
+    }
+    
+    // 6. Approaching max with good coverage (soft wrap-up)
+    // Requires FULL thresholds AND persona participation - no shortcuts
+    if (questionsAsked >= maxQuestions - 1 && 
+        overallCoverage >= overallSufficiencyThreshold &&
+        criticalCoverage >= criticalSufficiencyThreshold &&
+        allPersonasParticipated) {
+      return {
+        shouldWrapUp: true,
+        reason: 'approaching_max_with_coverage',
+        message: "We've covered the key areas we wanted to discuss",
+        coverageSummary: { overall: overallCoverage, critical: criticalCoverage }
+      };
+    }
+    
+    // 7. Default: Continue
+    return {
+      shouldWrapUp: false,
+      reason: 'continue',
+      message: '',
+      coverageSummary: { overall: overallCoverage, critical: criticalCoverage }
+    };
+  }
+
+  /**
    * Get the next question topic based on coverage gaps
    */
   private getPrioritizedTopic(memory: ConversationMemory): AssessmentCriterion | null {
@@ -2671,16 +2800,18 @@ export class InterviewOrchestrator {
       criterion: turnResult.evaluation.criterionCovered,
     });
 
-    // FORCE WRAP-UP if we've exceeded maxQuestions
-    // The AI sometimes doesn't trigger wrap-up when it should
-    const shouldForceWrapUp = memory.totalQuestionsAsked >= settings.maxQuestions;
-    if (shouldForceWrapUp && turnResult.actionType !== 'wrap_up') {
-      console.log('[Team Interview] FORCING wrap-up - exceeded maxQuestions:', {
+    // Evaluate team completion using coverage-based logic (similar to HR screening)
+    const completionDecision = this.evaluateTeamCompletion(memory, settings, turnResult);
+    
+    if (completionDecision.shouldWrapUp && turnResult.actionType !== 'wrap_up') {
+      console.log('[Team Interview] Completion evaluator triggered wrap-up:', {
+        reason: completionDecision.reason,
         questionsAsked: memory.totalQuestionsAsked,
         maxQuestions: settings.maxQuestions,
+        coverage: completionDecision.coverageSummary,
       });
       turnResult.actionType = 'wrap_up';
-      turnResult.wrapUpReason = `Interview complete after ${memory.totalQuestionsAsked} questions`;
+      turnResult.wrapUpReason = completionDecision.message;
     }
 
     // Update memory with evaluation
