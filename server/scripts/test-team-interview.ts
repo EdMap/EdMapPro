@@ -429,6 +429,9 @@ async function runTeamInterview(iteration: number): Promise<IterationResult> {
     console.log(`[CANDIDATE] (${responseType}): ${candidateResponse}\n`);
     conversation.push({ speaker: 'candidate', message: candidateResponse, responseType });
     
+    // Rate limit protection: wait 3 seconds before next API call
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
     const result: any = await orchestrator.submitAnswer(session.id, currentQuestion.id, candidateResponse);
     
     // Check for closing
