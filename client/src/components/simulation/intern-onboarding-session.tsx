@@ -50,7 +50,8 @@ import {
   GitPullRequest,
   PenLine,
   MessageCircle,
-  Minimize2
+  Minimize2,
+  Star
 } from "lucide-react";
 
 interface DayProgress {
@@ -3811,51 +3812,57 @@ git push origin fix/your-feature-name
           </div>
         </ScrollArea>
 
-        <div className="space-y-3 bg-gray-50 -mx-4 -mb-4 px-4 py-4 border-t">
-          <div className="flex gap-2">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your response to Sarah..."
-              className="min-h-[60px] resize-none bg-white border-gray-300 focus:border-blue-400 focus:ring-blue-400"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(sarah);
-                }
-              }}
-              data-testid="input-comprehension-message"
-            />
-            <Button 
-              onClick={() => handleSendMessage(sarah)}
-              disabled={!message.trim() || sendMessageMutation.isPending}
-              className="px-4"
-              data-testid="button-send-comprehension-message"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Show Complete button after meaningful exchange (at least 3 user messages to Sarah) */}
-          {(() => {
-            const userMessages = filteredInteractions.filter((i: any) => 
-              i.sender === 'You' || i.sender === 'User'
-            );
-            return userMessages.length >= 3 && !comprehensionComplete;
-          })() && (
+        {/* Show completion card when Sarah closes the conversation */}
+        {closedConversations['Sarah'] ? (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 -mx-4 -mb-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-green-800">Comprehension Check Complete!</p>
+                <p className="text-sm text-green-600">You've discussed the project with Sarah</p>
+              </div>
+            </div>
             <Button 
               className="w-full bg-green-600 hover:bg-green-700"
               onClick={() => {
                 setComprehensionComplete(true);
                 setShowDay2Preview(true);
               }}
-              data-testid="button-complete-comprehension"
+              data-testid="button-complete-day1"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Complete Day 1
+              <Star className="h-4 w-4 mr-2" />
+              View Day 1 Summary
             </Button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-3 bg-gray-50 -mx-4 -mb-4 px-4 py-4 border-t">
+            <div className="flex gap-2">
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your response to Sarah..."
+                className="min-h-[60px] resize-none bg-white border-gray-300 focus:border-blue-400 focus:ring-blue-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(sarah);
+                  }
+                }}
+                data-testid="input-comprehension-message"
+              />
+              <Button 
+                onClick={() => handleSendMessage(sarah)}
+                disabled={!message.trim() || sendMessageMutation.isPending}
+                className="px-4"
+                data-testid="button-send-comprehension-message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
