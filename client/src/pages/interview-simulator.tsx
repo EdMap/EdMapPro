@@ -179,7 +179,7 @@ export default function InterviewSimulator() {
     mutationFn: async ({ sessionId, response, currentMessages }: { 
       sessionId: number; 
       response: string;
-      currentMessages: Array<{role: 'interviewer' | 'candidate', content: string}>;
+      currentMessages: Array<{role: 'interviewer' | 'candidate', content: string, personaId?: string}>;
     }) => {
       const res = await apiRequest("POST", `/api/interviews/${sessionId}/prelude`, { response });
       const data = await res.json();
@@ -196,8 +196,12 @@ export default function InterviewSimulator() {
         setIsPreludeMode(false);
         setActiveFirstQuestion(result.firstQuestion);
       } else if (result.preludeMessage) {
-        // Add interviewer's response to prelude messages
-        setPreludeMessages(prev => [...prev, { role: 'interviewer', content: result.preludeMessage }]);
+        // Add interviewer's response to prelude messages - include persona info for team interviews
+        setPreludeMessages(prev => [...prev, { 
+          role: 'interviewer', 
+          content: result.preludeMessage,
+          personaId: result.activePersonaId
+        }]);
       }
     },
     onError: (error: any) => {

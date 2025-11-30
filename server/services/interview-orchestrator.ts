@@ -987,6 +987,8 @@ export class InterviewOrchestrator {
     preludeMessage?: string;
     firstQuestion?: InterviewQuestion;
     preludeComplete: boolean;
+    activePersonaId?: string;
+    isTeamInterview?: boolean;
   }> {
     const session = await storage.getInterviewSession(sessionId);
     if (!session) {
@@ -1019,7 +1021,12 @@ export class InterviewOrchestrator {
         content: introExchangeText,
       });
       
-      return { preludeMessage: introExchangeText, preludeComplete: false };
+      return { 
+        preludeMessage: introExchangeText, 
+        preludeComplete: false,
+        activePersonaId: memory.activePersonaId,
+        isTeamInterview: memory.isTeamInterview,
+      };
     }
 
     if (memory.preludeStep === 2) {
@@ -1039,7 +1046,12 @@ export class InterviewOrchestrator {
           content: ackAndIntro,
         });
         
-        return { preludeMessage: ackAndIntro, preludeComplete: false };
+        return { 
+          preludeMessage: ackAndIntro, 
+          preludeComplete: false,
+          activePersonaId: memory.activePersonaId,
+          isTeamInterview: memory.isTeamInterview,
+        };
       }
       
       // Check if the candidate is asking a conversational question alongside their response
@@ -1057,7 +1069,12 @@ export class InterviewOrchestrator {
           content: warmResponse,
         });
         
-        return { preludeMessage: warmResponse, preludeComplete: false };
+        return { 
+          preludeMessage: warmResponse, 
+          preludeComplete: false,
+          activePersonaId: memory.activePersonaId,
+          isTeamInterview: memory.isTeamInterview,
+        };
       }
       
       // Step 2: Parse candidate's response to intro exchange proposal
@@ -1075,7 +1092,12 @@ export class InterviewOrchestrator {
           content: ackMessage,
         });
         
-        return { preludeMessage: ackMessage, preludeComplete: false };
+        return { 
+          preludeMessage: ackMessage, 
+          preludeComplete: false,
+          activePersonaId: memory.activePersonaId,
+          isTeamInterview: memory.isTeamInterview,
+        };
       }
       
       if (introPreference === 'skip_intros') {
@@ -1101,7 +1123,12 @@ export class InterviewOrchestrator {
           expectedCriteria: this.getExpectedCriteria(config, 0),
         });
 
-        return { firstQuestion: question, preludeComplete: true };
+        return { 
+          firstQuestion: question, 
+          preludeComplete: true,
+          activePersonaId: memory.activePersonaId,
+          isTeamInterview: memory.isTeamInterview,
+        };
       }
       
       // Default: interviewer goes first with role overview
@@ -1113,7 +1140,12 @@ export class InterviewOrchestrator {
         content: selfIntroText,
       });
       
-      return { preludeMessage: selfIntroText, preludeComplete: false };
+      return { 
+        preludeMessage: selfIntroText, 
+        preludeComplete: false,
+        activePersonaId: memory.activePersonaId,
+        isTeamInterview: memory.isTeamInterview,
+      };
     }
 
     if (memory.preludeStep >= 3) {
@@ -1125,7 +1157,12 @@ export class InterviewOrchestrator {
         // Respond warmly to conversational questions like "how're you?"
         const warmResponse = this.generateWarmResponse(candidateResponse);
         memory.preludeStep--; // Stay at current step to ask question after responding
-        return { preludeMessage: warmResponse, preludeComplete: false };
+        return { 
+          preludeMessage: warmResponse, 
+          preludeComplete: false,
+          activePersonaId: memory.activePersonaId,
+          isTeamInterview: memory.isTeamInterview,
+        };
       }
       
       // The self-intro ALWAYS ends with "could you tell me a bit about your background?"
@@ -1210,6 +1247,8 @@ export class InterviewOrchestrator {
         return { 
           firstQuestion: followUpQuestionRecord, 
           preludeComplete: true,
+          activePersonaId: memory.activePersonaId,
+          isTeamInterview: memory.isTeamInterview,
         };
       }
       
@@ -1239,11 +1278,17 @@ export class InterviewOrchestrator {
       return { 
         firstQuestion: nextQuestion, 
         preludeComplete: true,
+        activePersonaId: memory.activePersonaId,
+        isTeamInterview: memory.isTeamInterview,
       };
     }
 
     // Should not reach here
-    return { preludeComplete: false };
+    return { 
+      preludeComplete: false,
+      activePersonaId: memory.activePersonaId,
+      isTeamInterview: memory.isTeamInterview,
+    };
   }
 
   /**
