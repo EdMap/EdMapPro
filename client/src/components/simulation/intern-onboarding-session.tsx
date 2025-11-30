@@ -3741,22 +3741,21 @@ git push origin fix/your-feature-name
 
         <ScrollArea className="flex-1 pr-4 mb-4">
           <div className="space-y-4 px-1">
-            {filteredInteractions.length === 0 && (
-              <div className="flex items-start gap-3">
-                <Avatar className="h-8 w-8 mt-1 ring-1 ring-gray-200 shadow-sm flex-shrink-0">
-                  <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
-                  <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 max-w-[85%]">
-                  <p className="text-xs font-medium text-blue-600 mb-1">Sarah</p>
-                  <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                    <p className="text-gray-800 leading-relaxed">
-                      Hey! I see you've been reading through the docs. Before we get you started on anything, I just want to make sure we're on the same page. What's your understanding of what our Merchant Dashboard does?
-                    </p>
-                  </div>
+            {/* Always show Sarah's initial greeting as the first message */}
+            <div className="flex items-start gap-3">
+              <Avatar className="h-8 w-8 mt-1 ring-1 ring-gray-200 shadow-sm flex-shrink-0">
+                <AvatarImage src={getTeamAvatarUrl('Sarah')} alt="Sarah" />
+                <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 max-w-[85%]">
+                <p className="text-xs font-medium text-blue-600 mb-1">Sarah</p>
+                <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                  <p className="text-gray-800 leading-relaxed">
+                    Hey! I see you've been reading through the docs. Before we get you started on anything, I just want to make sure we're on the same page. What's your understanding of what our Merchant Dashboard does?
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
             {filteredInteractions.map((interaction: any, idx: number) => (
               <div
                 key={idx}
