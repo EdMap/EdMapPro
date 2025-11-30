@@ -146,6 +146,11 @@ interface ConversationMemory {
   consecutiveMinimalResponses: number;
   // Flag to force switching to a completely different topic after repeated refusals
   forceTopicSwitch?: boolean;
+  // Track consecutive follow-ups on the same criterion to prevent repetitive questioning
+  consecutiveCriterionProbes: {
+    criterion: AssessmentCriterion | null;
+    count: number;
+  };
   // Unified chain: conversation history for context
   conversationHistory: Array<{ role: 'interviewer' | 'candidate'; content: string; personaId?: string }>;
   // Team interview specific fields
@@ -246,6 +251,7 @@ export class InterviewOrchestrator {
         telemetry: this.initializeTelemetry(),
         currentQuestionRepeatCount: 0,
         consecutiveMinimalResponses: 0,
+        consecutiveCriterionProbes: { criterion: null, count: 0 },
         conversationHistory: [],
       });
     }
@@ -2052,7 +2058,7 @@ export class InterviewOrchestrator {
     // Build coverage status for the unified chain
     const coverageStatus = coverageBefore;
 
-    // Call the unified chain
+    // Call the unified chain with criterion probe tracking
     const turnResult = await this.unifiedTurn.processTurn({
       interviewerName,
       interviewerRole,
@@ -2067,6 +2073,7 @@ export class InterviewOrchestrator {
       questionsAskedCount: memory.totalQuestionsAsked,
       maxQuestions: config.stageSettings?.maxQuestions || 12,
       lastQuestionId: memory.currentQuestionId,
+      consecutiveCriterionProbes: memory.consecutiveCriterionProbes,
     });
 
     console.log('[Unified Chain] Turn result:', {
@@ -2098,6 +2105,19 @@ export class InterviewOrchestrator {
       );
       memory.coverage[criterion].questionsAsked++;
     }
+    
+    // Track consecutive criterion probes to prevent repetitive questioning
+    if (criterion === memory.consecutiveCriterionProbes.criterion) {
+      memory.consecutiveCriterionProbes.count++;
+    } else {
+      // Different criterion - reset counter
+      memory.consecutiveCriterionProbes = { criterion, count: 1 };
+    }
+    
+    console.log('[Topic Rotation] Criterion probe tracking:', {
+      criterion,
+      consecutiveCount: memory.consecutiveCriterionProbes.count,
+    });
     
     // Capture coverage AFTER this turn for telemetry
     const coverageAfter = {

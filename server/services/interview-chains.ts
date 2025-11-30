@@ -1680,6 +1680,11 @@ export interface UnifiedTurnInput {
   questionsAskedCount: number;
   maxQuestions: number;
   lastQuestionId?: string;
+  // Track consecutive probes on the same criterion to prevent repetitive questioning
+  consecutiveCriterionProbes?: {
+    criterion: string | null;
+    count: number;
+  };
 }
 
 export interface UnifiedTurnOutput {
@@ -1734,6 +1739,13 @@ INTERVIEW FLOW GUIDELINES:
 - Near max questions with gaps: Mention time and prioritize key areas
 - Good coverage achieved: Begin natural wrap-up
 
+TOPIC ROTATION RULE (CRITICAL):
+{criterionProbeStatus}
+- NEVER ask more than 2 consecutive questions on the same topic/criterion
+- If you've already probed a topic twice and got limited responses, SWITCH to a different criterion
+- Rotate between: technical skills, behavioral, motivation, culture_fit, logistics
+- Example: After 2 Git questions with vague answers, switch to "What excites you about this role?"
+
 NATURAL CONVERSATION RULES:
 - Don't robotically evaluate out loud - be conversational
 - Acknowledgments should be brief and varied: "That's helpful", "I see", "Thanks for that"
@@ -1746,7 +1758,11 @@ WRAP-UP CRITERIA (do this when ANY is true):
 - All critical areas (background, skills, motivation) have coverage >= 0.6
 - Candidate seems fatigued or giving consistently short answers
 
-When wrapping up, ask if they have questions for you, thank them, and mention next steps.
+WRAP-UP INSTRUCTIONS:
+- Simply ask "Do you have any questions for me about the role or the team?"
+- Do NOT summarize their performance, strengths, or areas for improvement
+- Do NOT give feedback on how they did - that comes later in a separate feedback report
+- Keep it brief and conversational
 
 OUTPUT FORMAT:
 Return a JSON object with:
@@ -1801,6 +1817,14 @@ export class UnifiedInterviewTurnChain {
       .map(([key, value]) => `- ${key}: ${(value * 100).toFixed(0)}%`)
       .join('\n');
 
+    // Format criterion probe status for topic rotation
+    const probeInfo = input.consecutiveCriterionProbes;
+    const criterionProbeStatus = probeInfo && probeInfo.criterion && probeInfo.count >= 2
+      ? `WARNING: You have asked ${probeInfo.count} consecutive questions about "${probeInfo.criterion}". You MUST switch to a different topic now.`
+      : probeInfo && probeInfo.criterion && probeInfo.count === 1
+      ? `Note: Last question was about "${probeInfo.criterion}". Consider varying topics if response was limited.`
+      : 'No topic rotation concerns.';
+
     const result = await this.chain.invoke({
       interviewerName: input.interviewerName,
       interviewerRole: input.interviewerRole,
@@ -1815,6 +1839,7 @@ export class UnifiedInterviewTurnChain {
       questionsAskedCount: input.questionsAskedCount,
       maxQuestions: input.maxQuestions,
       lastQuestionId: input.lastQuestionId || 'none',
+      criterionProbeStatus,
     });
 
     try {
