@@ -13,7 +13,11 @@ import { TeamInterviewQuestion, getQuestionsForLevel, selectQuestionsForIntervie
 const MODEL_NAME = "qwen/qwen3-32b";
 
 function stripMarkdownCodeBlocks(str: string): string {
-  return str.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  // Remove Qwen's <think>...</think> reasoning tags
+  let cleaned = str.replace(/<think>[\s\S]*?<\/think>/g, '');
+  // Remove markdown code blocks
+  cleaned = cleaned.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+  return cleaned.trim();
 }
 
 export interface TeamTurnInput {
@@ -405,7 +409,7 @@ Output only the greeting text, no JSON.
     });
 
     return {
-      greeting: greeting.trim(),
+      greeting: stripMarkdownCodeBlocks(greeting),
       activePersonaId: primaryPersona.id,
     };
   }
@@ -440,7 +444,7 @@ Output only the greeting text, no JSON.
     });
 
     return {
-      intro: intro.trim(),
+      intro: stripMarkdownCodeBlocks(intro),
       activePersonaId: secondaryPersona.id,
     };
   }
@@ -548,7 +552,7 @@ Output only the closing text, no JSON.
     const primaryPersona = settings.personas[0];
     const secondaryPersona = settings.personas[1];
 
-    const primaryClosing = await this.primaryClosingChain.invoke({
+    const primaryClosingRaw = await this.primaryClosingChain.invoke({
       companyName,
       candidateName,
       jobTitle,
@@ -560,10 +564,11 @@ Output only the closing text, no JSON.
       primaryTone: getToneGuidance(primaryPersona.tone),
       secondaryName: secondaryPersona?.name || 'my colleague',
     });
+    const primaryClosing = stripMarkdownCodeBlocks(primaryClosingRaw);
 
     let secondaryClosing = '';
     if (secondaryPersona) {
-      secondaryClosing = await this.secondaryClosingChain.invoke({
+      const secondaryClosingRaw = await this.secondaryClosingChain.invoke({
         companyName,
         candidateName,
         jobTitle,
@@ -573,15 +578,16 @@ Output only the closing text, no JSON.
         secondaryRole: secondaryPersona.displayRole,
         secondaryTone: getToneGuidance(secondaryPersona.tone),
       });
+      secondaryClosing = stripMarkdownCodeBlocks(secondaryClosingRaw);
     }
 
     const combinedClosing = secondaryClosing 
-      ? `${primaryClosing.trim()}\n\n${secondaryClosing.trim()}`
-      : primaryClosing.trim();
+      ? `${primaryClosing}\n\n${secondaryClosing}`
+      : primaryClosing;
 
     return {
-      primaryClosing: primaryClosing.trim(),
-      secondaryClosing: secondaryClosing.trim(),
+      primaryClosing,
+      secondaryClosing,
       combinedClosing,
     };
   }
