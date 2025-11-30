@@ -229,8 +229,9 @@ export class TeamInterviewTurnChain {
       })
       .join('\n');
 
+    // Backlog is pre-filtered by the orchestrator to exclude asked questions
+    // Just take the first 8 questions and format them
     const formattedBacklog = input.questionBacklog
-      .filter(q => !['asked', 'covered_proactively'].includes(q.id))
       .slice(0, 8)
       .map(q => {
         const isMyFocus = input.activePersona.focusAreas.includes(q.category) ? '★' : '';
@@ -311,33 +312,67 @@ export class TeamInterviewTurnChain {
 }
 
 export class TeamInterviewGreetingChain {
-  private chain: RunnableSequence;
+  private greetingChain: RunnableSequence;
+  private sarahIntroChain: RunnableSequence;
 
   constructor() {
     const greetingPrompt = PromptTemplate.fromTemplate(`
 You are starting a team interview at {companyName}.
 
-INTERVIEWERS:
-{personasIntro}
+PRIMARY INTERVIEWER: {primaryName} - {primaryRole}
+SECONDARY INTERVIEWER: {secondaryName} - {secondaryRole}
 
 CANDIDATE: {candidateName}
 POSITION: {jobTitle} ({experienceLevel} level)
 
-Generate a natural, warm opening where the primary interviewer ({primaryName}) welcomes the candidate and introduces the format. The tone should be {primaryTone}.
+Generate ONLY the primary interviewer ({primaryName})'s welcome message. The tone should be {primaryTone}.
 
-For an {experienceLevel}-level interview:
-{levelContext}
+IMPORTANT: 
+- Introduce yourself and mention your colleague is joining
+- Do NOT ask any questions yet
+- Keep it brief (2-3 sentences max)
+- End by inviting your colleague to introduce themselves
 
-Keep it concise (3-4 sentences). End by asking an easy opening question appropriate for the level.
-
-Example structure:
-"Hi [Candidate]! I'm [Primary], [role]. I'm joined by [Others]. We're excited to chat with you about [role]. [Easy opener]"
+Example:
+"Hi {candidateName}! I'm {primaryName}, {primaryRole} here at {companyName}. I'm joined today by my colleague {secondaryName}, our {secondaryRole}. {secondaryName}, would you like to say hello?"
 
 Output only the greeting text, no JSON.
 `);
 
-    this.chain = RunnableSequence.from([
+    const sarahIntroPrompt = PromptTemplate.fromTemplate(`
+You are {secondaryName}, a {secondaryRole} at {companyName}, joining a team interview.
+
+The primary interviewer ({primaryName}) just introduced themselves and invited you to say hello to the candidate ({candidateName}).
+
+Generate your brief, friendly introduction. The tone should be {secondaryTone}.
+
+For an {experienceLevel}-level interview:
+{levelContext}
+
+IMPORTANT:
+- Keep it brief (2-3 sentences)
+- Be warm and welcoming
+- Mention you're looking forward to chatting
+- End by inviting the candidate to share a bit about themselves
+
+Example:
+"Hi {candidateName}! Great to meet you. I'm {secondaryName}, and I work as {secondaryRole} on the engineering team. I'm excited to learn more about you - could you start by telling us a bit about yourself and what drew you to this opportunity?"
+
+Output only the greeting text, no JSON.
+`);
+
+    this.greetingChain = RunnableSequence.from([
       greetingPrompt,
+      new ChatGroq({
+        model: MODEL_NAME,
+        temperature: 0.7,
+        apiKey: process.env.GROQ_API_KEY,
+      }),
+      new StringOutputParser(),
+    ]);
+
+    this.sarahIntroChain = RunnableSequence.from([
+      sarahIntroPrompt,
       new ChatGroq({
         model: MODEL_NAME,
         temperature: 0.7,
@@ -355,31 +390,58 @@ Output only the greeting text, no JSON.
     candidateName: string
   ): Promise<{ greeting: string; activePersonaId: string }> {
     const primaryPersona = settings.personas[0];
-    
-    const personasIntro = settings.personas
-      .map((p, i) => `${i === 0 ? 'Primary: ' : ''}${p.name} - ${p.displayRole}`)
-      .join('\n');
+    const secondaryPersona = settings.personas[1];
 
-    const levelContext = settings.experienceLevel === 'intern'
-      ? 'This is an intern interview - keep it friendly, low-pressure, and focus on making them comfortable. Ask about their learning journey or what interests them about tech.'
-      : settings.experienceLevel === 'junior'
-      ? 'This is a junior position - be approachable and ask about their recent projects or what they are learning.'
-      : 'Engage at the appropriate seniority level.';
-
-    const greeting = await this.chain.invoke({
+    const greeting = await this.greetingChain.invoke({
       companyName,
-      personasIntro,
       candidateName,
       jobTitle,
       experienceLevel: settings.experienceLevel,
       primaryName: primaryPersona.name,
+      primaryRole: primaryPersona.displayRole,
       primaryTone: getToneGuidance(primaryPersona.tone),
-      levelContext,
+      secondaryName: secondaryPersona?.name || 'colleague',
+      secondaryRole: secondaryPersona?.displayRole || 'team member',
     });
 
     return {
       greeting: greeting.trim(),
       activePersonaId: primaryPersona.id,
+    };
+  }
+
+  async generateSecondaryIntro(
+    settings: TeamInterviewSettings,
+    companyName: string,
+    candidateName: string
+  ): Promise<{ intro: string; activePersonaId: string }> {
+    const primaryPersona = settings.personas[0];
+    const secondaryPersona = settings.personas[1];
+
+    if (!secondaryPersona) {
+      return { intro: '', activePersonaId: primaryPersona.id };
+    }
+
+    const levelContext = settings.experienceLevel === 'intern'
+      ? 'This is an intern interview - keep it friendly, low-pressure, and focus on making them comfortable.'
+      : settings.experienceLevel === 'junior'
+      ? 'This is a junior position - be approachable and welcoming.'
+      : 'Engage at the appropriate seniority level.';
+
+    const intro = await this.sarahIntroChain.invoke({
+      companyName,
+      candidateName,
+      experienceLevel: settings.experienceLevel,
+      primaryName: primaryPersona.name,
+      secondaryName: secondaryPersona.name,
+      secondaryRole: secondaryPersona.displayRole,
+      secondaryTone: getToneGuidance(secondaryPersona.tone),
+      levelContext,
+    });
+
+    return {
+      intro: intro.trim(),
+      activePersonaId: secondaryPersona.id,
     };
   }
 }
@@ -398,4 +460,129 @@ export function getLevelExpectationsText(settings: TeamInterviewSettings): strin
   return settings.evaluationRubric
     .map(r => `${r.criterion}: ${r.levelExpectations[settings.experienceLevel]}`)
     .join('\n');
+}
+
+export class TeamInterviewWrapUpChain {
+  private primaryClosingChain: RunnableSequence;
+  private secondaryClosingChain: RunnableSequence;
+
+  constructor() {
+    const primaryClosingPrompt = PromptTemplate.fromTemplate(`
+You are {primaryName}, a {primaryRole} at {companyName}, wrapping up a team interview.
+
+INTERVIEW SUMMARY:
+- Candidate: {candidateName}
+- Position: {jobTitle} ({experienceLevel} level)
+- Questions Asked: {questionsAsked}
+- Topics Covered: {topicsCovered}
+
+Generate a warm closing remark as the primary interviewer. The tone should be {primaryTone}.
+
+IMPORTANT:
+- Thank the candidate for their time
+- Mention you enjoyed the conversation
+- Hand off to your colleague {secondaryName} for any final thoughts
+- Keep it brief (2-3 sentences)
+
+Example:
+"Thank you so much for chatting with us today, {candidateName}! I really enjoyed learning about your background and experience. {secondaryName}, did you have any final thoughts before we wrap up?"
+
+Output only the closing text, no JSON.
+`);
+
+    const secondaryClosingPrompt = PromptTemplate.fromTemplate(`
+You are {secondaryName}, a {secondaryRole} at {companyName}, giving final remarks in a team interview.
+
+CONTEXT:
+- Candidate: {candidateName}
+- Position: {jobTitle} ({experienceLevel} level)
+- Primary interviewer ({primaryName}) just asked for your final thoughts
+
+Generate brief, warm closing remarks. The tone should be {secondaryTone}.
+
+IMPORTANT:
+- Add a brief positive comment or encouragement
+- Explain next steps (team will review and get back)
+- Thank the candidate
+- Keep it brief (2-3 sentences)
+
+Example:
+"It was great meeting you, {candidateName}! I appreciated hearing about your projects. Our team will review and be in touch with next steps soon. Best of luck!"
+
+Output only the closing text, no JSON.
+`);
+
+    this.primaryClosingChain = RunnableSequence.from([
+      primaryClosingPrompt,
+      new ChatGroq({
+        model: MODEL_NAME,
+        temperature: 0.7,
+        apiKey: process.env.GROQ_API_KEY,
+      }),
+      new StringOutputParser(),
+    ]);
+
+    this.secondaryClosingChain = RunnableSequence.from([
+      secondaryClosingPrompt,
+      new ChatGroq({
+        model: MODEL_NAME,
+        temperature: 0.7,
+        apiKey: process.env.GROQ_API_KEY,
+      }),
+      new StringOutputParser(),
+    ]);
+  }
+
+  async generateClosing(
+    settings: TeamInterviewSettings,
+    companyName: string,
+    jobTitle: string,
+    candidateName: string,
+    questionsAsked: number,
+    topicsCovered: string[]
+  ): Promise<{
+    primaryClosing: string;
+    secondaryClosing: string;
+    combinedClosing: string;
+  }> {
+    const primaryPersona = settings.personas[0];
+    const secondaryPersona = settings.personas[1];
+
+    const primaryClosing = await this.primaryClosingChain.invoke({
+      companyName,
+      candidateName,
+      jobTitle,
+      experienceLevel: settings.experienceLevel,
+      questionsAsked: questionsAsked.toString(),
+      topicsCovered: topicsCovered.join(', ') || 'various topics',
+      primaryName: primaryPersona.name,
+      primaryRole: primaryPersona.displayRole,
+      primaryTone: getToneGuidance(primaryPersona.tone),
+      secondaryName: secondaryPersona?.name || 'my colleague',
+    });
+
+    let secondaryClosing = '';
+    if (secondaryPersona) {
+      secondaryClosing = await this.secondaryClosingChain.invoke({
+        companyName,
+        candidateName,
+        jobTitle,
+        experienceLevel: settings.experienceLevel,
+        primaryName: primaryPersona.name,
+        secondaryName: secondaryPersona.name,
+        secondaryRole: secondaryPersona.displayRole,
+        secondaryTone: getToneGuidance(secondaryPersona.tone),
+      });
+    }
+
+    const combinedClosing = secondaryClosing 
+      ? `${primaryClosing.trim()}\n\n${secondaryClosing.trim()}`
+      : primaryClosing.trim();
+
+    return {
+      primaryClosing: primaryClosing.trim(),
+      secondaryClosing: secondaryClosing.trim(),
+      combinedClosing,
+    };
+  }
 }

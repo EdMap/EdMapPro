@@ -48,6 +48,7 @@ import {
 import { 
   TeamInterviewTurnChain, 
   TeamInterviewGreetingChain,
+  TeamInterviewWrapUpChain,
   getTeamInterviewSettings,
   getLevelExpectationsText,
 } from "./team-interview-chain";
@@ -58,6 +59,7 @@ import {
 import { 
   ExperienceLevel,
   TeamInterviewSettings,
+  TeamInterviewPersona,
   TEAM_INTERVIEW_PRESETS,
 } from "@shared/schema";
 
@@ -159,6 +161,9 @@ interface ConversationMemory {
   activePersonaId?: string;
   personaQuestionCounts?: Record<string, number>;
   teamQuestionBacklog?: import('./team-interview-questions').TeamInterviewQuestion[];
+  questionBacklog?: import('./team-interview-questions').TeamInterviewQuestion[]; // Alias for consistency
+  askedQuestionIds?: Set<string>; // Track which questions have been asked to prevent repetition
+  forcedNextPersonaId?: string; // Force next turn to go to this persona (e.g., when addressed by name)
   // Two-phase wrap-up: Wait for candidate response to "any questions?" before finalizing
   pendingWrapUp?: {
     wrapUpReason: string;
@@ -184,6 +189,7 @@ export class InterviewOrchestrator {
   private unifiedTurn: UnifiedInterviewTurnChain;
   private teamTurn: TeamInterviewTurnChain;
   private teamGreeting: TeamInterviewGreetingChain;
+  private teamWrapUp: TeamInterviewWrapUpChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -203,6 +209,7 @@ export class InterviewOrchestrator {
     this.unifiedTurn = new UnifiedInterviewTurnChain();
     this.teamTurn = new TeamInterviewTurnChain();
     this.teamGreeting = new TeamInterviewGreetingChain();
+    this.teamWrapUp = new TeamInterviewWrapUpChain();
     this.memory = new Map();
   }
 
@@ -1010,6 +1017,13 @@ export class InterviewOrchestrator {
     // Advance prelude step
     memory.preludeStep++;
 
+    // TEAM INTERVIEW: Simplified prelude flow
+    // Step 0 -> 1: After Marcus greeting, Sarah introduces herself
+    // Step 1 -> 2: After Sarah's intro & candidate responds, transition to questions
+    if (memory.isTeamInterview && memory.teamSettings) {
+      return this.handleTeamInterviewPrelude(session, memory, config, candidateResponse);
+    }
+
     if (memory.preludeStep === 1) {
       // Step 1: After greeting, propose introductions
       const introExchangeText = await this.introExchange.generate(config, candidateResponse);
@@ -1289,6 +1303,134 @@ export class InterviewOrchestrator {
       activePersonaId: memory.activePersonaId,
       isTeamInterview: memory.isTeamInterview,
     };
+  }
+
+  /**
+   * Handle team interview specific prelude flow
+   * Step 1: After Marcus greeting, Sarah introduces herself
+   * Step 2: After candidate responds to Sarah, transition to first question
+   */
+  private async handleTeamInterviewPrelude(
+    session: any,
+    memory: InterviewMemory,
+    config: InterviewConfig,
+    candidateResponse: string
+  ): Promise<{
+    preludeMessage?: string;
+    firstQuestion?: InterviewQuestion;
+    preludeComplete: boolean;
+    activePersonaId?: string;
+    isTeamInterview?: boolean;
+  }> {
+    const teamSettings = memory.teamSettings!;
+
+    if (memory.preludeStep === 1) {
+      // Step 1: After Marcus greeting, Sarah introduces herself
+      const { intro, activePersonaId } = await this.teamGreeting.generateSecondaryIntro(
+        teamSettings,
+        memory.jobContext.companyName,
+        memory.candidateName || 'Candidate'
+      );
+
+      memory.activePersonaId = activePersonaId;
+      memory.currentStage = "intro_exchange";
+
+      // Track Sarah's intro in conversation history
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: intro,
+        personaId: activePersonaId,
+      });
+
+      return {
+        preludeMessage: intro,
+        preludeComplete: false,
+        activePersonaId: activePersonaId,
+        isTeamInterview: true,
+      };
+    }
+
+    if (memory.preludeStep >= 2) {
+      // Step 2+: Candidate has responded to Sarah's intro, transition to first question
+      memory.currentStage = "core";
+      memory.preludeStep = 3; // Mark prelude complete
+
+      // Generate first team interview question
+      const result = await this.processAnswerTeam(
+        session.id,
+        null, // No question yet
+        candidateResponse
+      );
+
+      // Return the first question
+      if (result.nextQuestion) {
+        return {
+          firstQuestion: result.nextQuestion,
+          preludeComplete: true,
+          activePersonaId: memory.activePersonaId,
+          isTeamInterview: true,
+        };
+      }
+
+      // Fallback: generate first question manually
+      const firstQuestion = await this.generateTeamFirstQuestion(session, memory, teamSettings);
+      return {
+        firstQuestion,
+        preludeComplete: true,
+        activePersonaId: memory.activePersonaId,
+        isTeamInterview: true,
+      };
+    }
+
+    return {
+      preludeComplete: false,
+      activePersonaId: memory.activePersonaId,
+      isTeamInterview: true,
+    };
+  }
+
+  /**
+   * Generate first question for team interview
+   */
+  private async generateTeamFirstQuestion(
+    session: any,
+    memory: InterviewMemory,
+    teamSettings: TeamInterviewSettings
+  ): Promise<InterviewQuestion> {
+    // Pick first question from backlog
+    const backlog = memory.teamQuestionBacklog || memory.questionBacklog;
+    const firstBacklogItem = backlog?.[0];
+    const questionText = firstBacklogItem?.question || 
+      "Could you tell us a bit about yourself and what drew you to this opportunity?";
+    
+    // Mark question as asked
+    if (firstBacklogItem) {
+      memory.askedQuestionIds = memory.askedQuestionIds || new Set();
+      memory.askedQuestionIds.add(firstBacklogItem.id);
+    }
+
+    // Set Marcus as the active persona for starting questions
+    memory.activePersonaId = teamSettings.personas[0].id;
+
+    const question = await storage.createInterviewQuestion({
+      sessionId: session.id,
+      questionIndex: 0,
+      questionText,
+      questionType: "opening",
+      expectedCriteria: firstBacklogItem?.category || "learning_mindset",
+    });
+
+    memory.questions.push(questionText);
+    memory.totalQuestionsAsked++;
+
+    // Track in conversation history
+    memory.conversationHistory.push({
+      role: 'interviewer',
+      content: questionText,
+      personaId: memory.activePersonaId,
+    });
+
+    return question;
   }
 
   /**
@@ -2413,12 +2555,62 @@ export class InterviewOrchestrator {
     const memory = this.getMemory(sessionId);
     const config = this.getConfig(session, memory.jobContext);
     const settings = memory.teamSettings!;
-    const activePersona = settings.personas.find(p => p.id === memory.activePersonaId) || settings.personas[0];
+    
+    // Initialize tracking if needed
+    memory.askedQuestionIds = memory.askedQuestionIds || new Set();
+    memory.personaQuestionCounts = memory.personaQuestionCounts || {};
+    for (const p of settings.personas) {
+      if (!memory.personaQuestionCounts[p.id]) {
+        memory.personaQuestionCounts[p.id] = 0;
+      }
+    }
+
+    // PERSONA ROTATION GOVERNANCE
+    const primaryPersona = settings.personas[0];
+    const secondaryPersona = settings.personas[1];
+    
+    // FIRST: Check if another persona was forced (e.g., mentioned by name previously)
+    // This takes priority over all other persona selection logic
+    let activePersona: TeamInterviewPersona;
+    if (memory.forcedNextPersonaId) {
+      const forcedPersona = settings.personas.find(p => p.id === memory.forcedNextPersonaId);
+      if (forcedPersona) {
+        activePersona = forcedPersona;
+        memory.activePersonaId = forcedPersona.id;
+        console.log('[Team Interview] Forced persona switch to:', forcedPersona.name);
+      } else {
+        activePersona = settings.personas.find(p => p.id === memory.activePersonaId) || primaryPersona;
+      }
+      // Clear the forced flag after use
+      memory.forcedNextPersonaId = undefined;
+    } else {
+      // Normal persona selection
+      activePersona = settings.personas.find(p => p.id === memory.activePersonaId) || primaryPersona;
+    }
+    
+    // SECOND: Force rotation if one persona is dominating (more than 3 consecutive turns)
+    // Only apply if no forced persona and secondary hasn't spoken
+    if (!memory.forcedNextPersonaId && secondaryPersona) {
+      const primaryCount = memory.personaQuestionCounts[primaryPersona.id] || 0;
+      const secondaryCount = memory.personaQuestionCounts[secondaryPersona.id] || 0;
+      
+      // If secondary persona hasn't spoken and primary has asked 3+ questions, force switch
+      if (secondaryCount === 0 && primaryCount >= 3 && activePersona.id === primaryPersona.id) {
+        activePersona = secondaryPersona;
+        memory.activePersonaId = secondaryPersona.id;
+        console.log('[Team Interview] Forcing secondary persona turn - imbalance detected');
+      }
+    }
 
     // Add candidate's answer to conversation history
     memory.conversationHistory.push({
       role: 'candidate',
       content: answer,
+    });
+
+    // Filter out already-asked questions from backlog
+    const filteredBacklog = (memory.teamQuestionBacklog || []).filter(q => {
+      return !memory.askedQuestionIds?.has(q.id);
     });
 
     // Build coverage status for team interview criteria
@@ -2429,7 +2621,7 @@ export class InterviewOrchestrator {
       technical_foundations: memory.coverage.background.score,
     };
 
-    // Call the team interview chain
+    // Call the team interview chain with filtered backlog
     const turnResult = await this.teamTurn.processTurn({
       activePersona,
       allPersonas: settings.personas,
@@ -2439,13 +2631,24 @@ export class InterviewOrchestrator {
       jobTitle: config.jobTitle || config.targetRole,
       candidateName: memory.candidateName || 'Candidate',
       conversationHistory: memory.conversationHistory,
-      questionBacklog: memory.teamQuestionBacklog || [],
+      questionBacklog: filteredBacklog, // Use filtered backlog to prevent repetition
       coverageStatus,
       questionsAskedCount: memory.totalQuestionsAsked,
       maxQuestions: settings.maxQuestions,
       currentQuestionId: memory.currentQuestionId,
       levelExpectations: getLevelExpectationsText(settings),
     });
+
+    // Track asked question to prevent repetition
+    if (turnResult.questionId) {
+      memory.askedQuestionIds!.add(turnResult.questionId);
+    }
+    // Also mark any questions the chain indicated were covered
+    if (turnResult.coveredQuestionIds) {
+      for (const qId of turnResult.coveredQuestionIds) {
+        memory.askedQuestionIds!.add(qId);
+      }
+    }
 
     console.log('[Team Interview] Turn result:', {
       activePersona: activePersona.name,
@@ -2492,6 +2695,27 @@ export class InterviewOrchestrator {
       console.log('[Team Interview] Handoff to:', nextPersona?.name);
     }
 
+    // ADDRESSED PERSONA DETECTION
+    // Check if the response mentions another persona by name (e.g., "Sarah, do you have any questions?")
+    // If so, force the next turn to go to that persona
+    const response = turnResult.response.toLowerCase();
+    for (const persona of settings.personas) {
+      if (persona.id !== activePersona.id) {
+        const namePattern = new RegExp(`\\b${persona.name.toLowerCase()}\\b`, 'i');
+        // Check for patterns like asking Sarah directly
+        if (namePattern.test(response) && 
+            (response.includes('?') || // Contains a question
+             response.includes('would you') ||
+             response.includes('do you') ||
+             response.includes('any questions') ||
+             response.includes('want to'))) {
+          memory.forcedNextPersonaId = persona.id;
+          console.log('[Team Interview] Detected address to:', persona.name, '- forcing their response next');
+          break;
+        }
+      }
+    }
+
     // Update telemetry
     this.updateTelemetry(memory, evaluation.score);
 
@@ -2525,6 +2749,25 @@ export class InterviewOrchestrator {
         reason: turnResult.wrapUpReason,
       });
 
+      // Generate team closing with both personas
+      const topicsCovered = Object.entries(memory.coverage)
+        .filter(([_, v]) => v.score > 0.3)
+        .map(([k, _]) => k);
+
+      const closingResult = await this.teamWrapUp.generateClosing(
+        settings,
+        config.companyName || 'the company',
+        config.jobTitle || config.targetRole,
+        memory.candidateName || 'Candidate',
+        memory.totalQuestionsAsked,
+        topicsCovered
+      );
+
+      console.log('[Team Interview] Closing generated:', {
+        hasPrimaryClosing: !!closingResult.primaryClosing,
+        hasSecondaryClosing: !!closingResult.secondaryClosing,
+      });
+
       const finalReport = await this.generateFinalReport(sessionId);
 
       await storage.updateInterviewSession(sessionId, {
@@ -2538,7 +2781,7 @@ export class InterviewOrchestrator {
       return {
         evaluation,
         finalReport,
-        closure: turnResult.response,
+        closure: closingResult.combinedClosing,
       };
     }
 
