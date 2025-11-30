@@ -10,7 +10,7 @@ import {
 } from '@shared/schema';
 import { TeamInterviewQuestion, getQuestionsForLevel, selectQuestionsForInterview } from './team-interview-questions';
 
-const MODEL_NAME = "llama-3.3-70b-versatile";
+const MODEL_NAME = "qwen/qwen3-32b";
 
 function stripMarkdownCodeBlocks(str: string): string {
   return str.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
