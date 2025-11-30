@@ -79,6 +79,7 @@ interface InternOnboardingSessionProps {
   savedProgress?: DayProgress;
   savedProgressId?: number;
   initialDay?: number;
+  user?: any;
 }
 
 type ViewMode = 'overview' | 'team-intro' | 'documentation' | 'comprehension-check' | 
@@ -332,7 +333,8 @@ export default function InternOnboardingSession({
   mode = 'journey',
   savedProgress,
   savedProgressId,
-  initialDay
+  initialDay,
+  user
 }: InternOnboardingSessionProps) {
   const [currentDay, setCurrentDay] = useState(initialDay || 1);
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
@@ -831,11 +833,12 @@ export default function InternOnboardingSession({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [interactions]);
 
-  // Day 2 standup script timing
+  // Day 2 standup script timing - use user's name if available
+  const userName = user?.firstName || user?.username || 'there';
   const standupScript = [
     { sender: 'Sarah', role: 'Tech Lead', content: "Morning team! Let's do a quick standup. Marcus, you're up first.", delay: 0 },
     { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 2000 },
-    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alright Jordan, you're up! What's on your plate today?", delay: 2500 }
+    { sender: 'Sarah', role: 'Tech Lead', content: `Thanks Marcus. Alright ${userName}, you're up! What's on your plate today?`, delay: 2500 }
   ];
 
   useEffect(() => {

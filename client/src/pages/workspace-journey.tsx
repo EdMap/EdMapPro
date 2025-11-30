@@ -234,6 +234,7 @@ export default function WorkspaceJourney() {
           savedProgress={config?.savedProgress}
           savedProgressId={config?.savedProgressId}
           initialDay={config?.currentDay}
+          user={user}
         />
       );
     }
