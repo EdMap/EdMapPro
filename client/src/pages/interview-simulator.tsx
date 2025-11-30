@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getPersonaStyle } from "@/lib/persona-styles";
+import { InterviewPanelHeader, PersonaRoster } from "@/components/simulation/team-interview-panel";
 import type { User as UserType, InterviewSession } from "@shared/schema";
 
 const targetRoles = [
@@ -316,64 +317,90 @@ export default function InterviewSimulator() {
     return (
       <div className="h-[calc(100vh-80px)] flex flex-col p-4">
         <Card className="flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">
-                  {interviewTypeLabel} Interview
-                </CardTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  {activeSession.targetRole} • {activeSession.difficulty} level
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                {/* Time-based pacing indicator */}
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">
-                    {preludeElapsedMinutes} min
-                  </span>
+          {/* Enhanced Interview Panel Header for team interviews */}
+          {isTeamInterview ? (
+            <InterviewPanelHeader
+              jobTitle={activeSession.targetRole}
+              difficulty={activeSession.difficulty}
+              currentQuestionIndex={0}
+              totalQuestions={activeSession.totalQuestions || 8}
+              elapsedMinutes={preludeElapsedMinutes}
+              isTeamInterview={isTeamInterview}
+              teamPersonas={teamPersonas}
+              activePersonaId={teamPersonas.length > 0 ? teamPersonas[0].id : null}
+            />
+          ) : (
+            <CardHeader className="flex-shrink-0 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">
+                    {interviewTypeLabel} Interview
+                  </CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {activeSession.targetRole} • {activeSession.difficulty} level
+                  </p>
                 </div>
-                
-                {/* Status chip */}
-                <Badge 
-                  variant="outline" 
-                  className="text-xs px-2 py-0.5 border-blue-200 bg-blue-50 text-blue-700"
-                  data-testid="badge-pacing-status"
-                >
-                  Getting started
-                </Badge>
-                
-                {/* Progress ring */}
-                <div className="relative w-8 h-8">
-                  <svg className="w-8 h-8 transform -rotate-90">
-                    <circle
-                      cx="16"
-                      cy="16"
-                      r="12"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      fill="none"
-                      className="text-gray-200"
-                    />
-                    <circle
-                      cx="16"
-                      cy="16"
-                      r="12"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      fill="none"
-                      strokeDasharray={`${Math.min(preludeElapsedMinutes * 3, 75)} 100`}
-                      className="text-blue-500"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                <div className="flex items-center space-x-4">
+                  {/* Time-based pacing indicator */}
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {preludeElapsedMinutes} min
+                    </span>
+                  </div>
+                  
+                  {/* Status chip */}
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs px-2 py-0.5 border-blue-200 bg-blue-50 text-blue-700"
+                    data-testid="badge-pacing-status"
+                  >
+                    Getting started
+                  </Badge>
+                  
+                  {/* Progress ring */}
+                  <div className="relative w-8 h-8">
+                    <svg className="w-8 h-8 transform -rotate-90">
+                      <circle
+                        cx="16"
+                        cy="16"
+                        r="12"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        className="text-gray-200"
+                      />
+                      <circle
+                        cx="16"
+                        cy="16"
+                        r="12"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeDasharray={`${Math.min(preludeElapsedMinutes * 3, 75)} 100`}
+                        className="text-blue-500"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardHeader>
+            </CardHeader>
+          )}
 
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Main content area with optional PersonaRoster sidebar */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Persona Roster Sidebar - only for team interviews */}
+            {isTeamInterview && teamPersonas.length > 0 && (
+              <PersonaRoster
+                teamPersonas={teamPersonas}
+                activePersonaId={teamPersonas.length > 0 ? teamPersonas[0].id : null}
+                isTyping={isPreludeSubmitting}
+                className="hidden md:block"
+              />
+            )}
+
+            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
             {preludeMessages.map((msg, index) => {
               const personaStyle = msg.role === 'interviewer' ? getPersonaStyle(msg.personaId, isTeamInterview, teamPersonas) : null;
               
@@ -477,6 +504,7 @@ export default function InterviewSimulator() {
             {/* Scroll anchor */}
             <div ref={preludeMessagesEndRef} />
           </CardContent>
+          </div>
 
           <div className="flex-shrink-0 border-t p-4">
             <div className="flex space-x-3">

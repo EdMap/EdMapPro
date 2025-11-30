@@ -762,7 +762,7 @@ export default function LangchainInterviewSession({
               teamPersonas={teamPersonas}
               activePersonaId={activePersonaId}
               isTyping={showTypingIndicator}
-              className="hidden lg:block"
+              className="hidden md:block"
             />
           )}
 
