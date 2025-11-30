@@ -1341,12 +1341,8 @@ export default function InternOnboardingSession({
   }
 
   function renderDay2Standup() {
-    const userHasSpoken = filteredInteractions.some((i: any) => 
-      i.sender === 'You' && i.metadata?.phase === 'standup'
-    );
-    const standupInteractions = filteredInteractions.filter((i: any) => 
-      i.metadata?.phase === 'standup' || i.metadata?.day === 2
-    );
+    const userHasSpoken = filteredInteractions.some((i: any) => i.sender === 'You');
+    const standupInteractions = filteredInteractions;
     const isUserTurn = standupVisibleMessages >= standupScript.length;
 
     if (!standupStarted) {
