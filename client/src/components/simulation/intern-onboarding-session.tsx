@@ -61,6 +61,7 @@ interface DayProgress {
   standupComplete?: boolean;
   devSetupComplete?: boolean;
   ticketReviewed?: boolean;
+  branchCreated?: boolean;
   codebaseExplored?: boolean;
   codeFixComplete?: boolean;
   testFixComplete?: boolean;
@@ -83,7 +84,7 @@ interface InternOnboardingSessionProps {
 }
 
 type ViewMode = 'overview' | 'team-intro' | 'documentation' | 'comprehension-check' | 
-  'day2-standup' | 'day2-dev-setup' | 'day2-ticket' | 'day2-codebase' | 'day2-code-fix' | 
+  'day2-standup' | 'day2-dev-setup' | 'day2-ticket' | 'day2-branch' | 'day2-codebase' | 'day2-code-fix' | 
   'day2-test-fix' | 'day2-git' | 'day2-pr' | 'day2-reflection';
 
 interface TeamMember {
@@ -354,6 +355,7 @@ export default function InternOnboardingSession({
   const [standupComplete, setStandupComplete] = useState(savedProgress?.standupComplete || false);
   const [devSetupComplete, setDevSetupComplete] = useState(savedProgress?.devSetupComplete || false);
   const [ticketReviewed, setTicketReviewed] = useState(savedProgress?.ticketReviewed || false);
+  const [branchCreated, setBranchCreated] = useState(savedProgress?.branchCreated || false);
   const [codebaseExplored, setCodebaseExplored] = useState(savedProgress?.codebaseExplored || false);
   const [codeFixComplete, setCodeFixComplete] = useState(savedProgress?.codeFixComplete || false);
   const [testFixComplete, setTestFixComplete] = useState(savedProgress?.testFixComplete || false);
@@ -382,6 +384,11 @@ export default function InternOnboardingSession({
   const [prTitle, setPrTitle] = useState('');
   const [prDescriptionLocal, setPrDescriptionLocal] = useState('');
   const [prSubmittedLocal, setPrSubmittedLocal] = useState(false);
+  
+  // Day 2 Branch creation state
+  const [branchInput, setBranchInput] = useState('');
+  const [branchError, setBranchError] = useState('');
+  const [branchSuccess, setBranchSuccess] = useState(false);
   
   // Floating chat state
   const [floatingChatOpen, setFloatingChatOpen] = useState(false);
@@ -452,8 +459,9 @@ export default function InternOnboardingSession({
     if (currentDay === 2) {
       let progress = 0;
       if (standupComplete) progress += 10;
-      if (devSetupComplete) progress += 15;
+      if (devSetupComplete) progress += 10;
       if (ticketReviewed) progress += 5;
+      if (branchCreated) progress += 5;
       if (codebaseExplored) progress += 10;
       if (codeFixComplete) progress += 20;
       if (testFixComplete) progress += 10;
@@ -482,6 +490,7 @@ export default function InternOnboardingSession({
         'Morning standup with Sarah',
         'Set up dev environment (clone, install, run)',
         'Review your ticket',
+        'Create a feature branch',
         'Explore the codebase and find the bug',
         'Fix the timezone bug',
         'Test your fix locally',
@@ -719,6 +728,7 @@ export default function InternOnboardingSession({
       standupComplete,
       devSetupComplete,
       ticketReviewed,
+      branchCreated,
       codebaseExplored,
       codeFixComplete,
       testFixComplete,
@@ -785,7 +795,7 @@ export default function InternOnboardingSession({
       return;
     }
     saveProgress();
-  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, devSetupComplete, ticketReviewed, codebaseExplored, codeFixComplete, testFixComplete, gitWorkflowComplete, prCreated, reflectionComplete, codeInputs, currentDay]);
+  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, devSetupComplete, ticketReviewed, branchCreated, codebaseExplored, codeFixComplete, testFixComplete, gitWorkflowComplete, prCreated, reflectionComplete, codeInputs, currentDay]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -1169,12 +1179,42 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
-            {/* 4. Explore Codebase */}
+            {/* 4. Create Branch */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                branchCreated ? 'border-green-200 bg-green-50' : ''
+              } ${!ticketReviewed ? 'opacity-60' : ''}`}
+              onClick={() => ticketReviewed && setViewMode('day2-branch')}
+              data-testid="card-day2-branch"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-cyan-100 rounded-lg">
+                      <GitBranch className="h-5 w-5 text-cyan-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">4. Create a Branch</h4>
+                      <p className="text-sm text-gray-600">
+                        Create a feature branch before making changes
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!ticketReviewed && <Badge variant="outline" className="text-xs">Review ticket first</Badge>}
+                    {branchCreated && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 5. Explore Codebase */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 codebaseExplored ? 'border-green-200 bg-green-50' : ''
-              } ${!ticketReviewed ? 'opacity-60' : ''}`}
-              onClick={() => ticketReviewed && setViewMode('day2-codebase')}
+              } ${!branchCreated ? 'opacity-60' : ''}`}
+              onClick={() => branchCreated && setViewMode('day2-codebase')}
               data-testid="card-day2-codebase"
             >
               <CardContent className="p-4">
@@ -1184,14 +1224,14 @@ export default function InternOnboardingSession({
                       <FolderOpen className="h-5 w-5 text-teal-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">4. Explore the Codebase</h4>
+                      <h4 className="font-medium text-gray-900">5. Explore the Codebase</h4>
                       <p className="text-sm text-gray-600">
                         Find the file where the bug lives
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!ticketReviewed && <Badge variant="outline" className="text-xs">Review ticket first</Badge>}
+                    {!branchCreated && <Badge variant="outline" className="text-xs">Create branch first</Badge>}
                     {codebaseExplored && <CheckCircle2 className="h-5 w-5 text-green-600" />}
                     <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
@@ -1199,7 +1239,7 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
-            {/* 5. Fix the Code */}
+            {/* 6. Fix the Code */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 codeFixComplete ? 'border-green-200 bg-green-50' : ''
@@ -1214,7 +1254,7 @@ export default function InternOnboardingSession({
                       <Code className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">5. Fix the Bug</h4>
+                      <h4 className="font-medium text-gray-900">6. Fix the Bug</h4>
                       <p className="text-sm text-gray-600">
                         Write the timezone fix
                       </p>
@@ -1229,7 +1269,7 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
-            {/* 6. Test Your Fix */}
+            {/* 7. Test Your Fix */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 testFixComplete ? 'border-green-200 bg-green-50' : ''
@@ -1244,7 +1284,7 @@ export default function InternOnboardingSession({
                       <Play className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">6. Test Your Fix</h4>
+                      <h4 className="font-medium text-gray-900">7. Test Your Fix</h4>
                       <p className="text-sm text-gray-600">
                         Verify it works in the browser
                       </p>
@@ -1259,7 +1299,7 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
-            {/* 7. Git Workflow */}
+            {/* 8. Git Workflow */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 gitWorkflowComplete ? 'border-green-200 bg-green-50' : ''
@@ -1274,9 +1314,9 @@ export default function InternOnboardingSession({
                       <GitCommit className="h-5 w-5 text-gray-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">7. Git Workflow</h4>
+                      <h4 className="font-medium text-gray-900">8. Stage & Commit</h4>
                       <p className="text-sm text-gray-600">
-                        Stage, commit, and push your changes
+                        Stage and commit your changes to the branch
                       </p>
                     </div>
                   </div>
@@ -1289,7 +1329,7 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
-            {/* 8. Create PR */}
+            {/* 9. Create PR */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 prCreated ? 'border-green-200 bg-green-50' : ''
@@ -1304,14 +1344,14 @@ export default function InternOnboardingSession({
                       <GitPullRequest className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">8. Create Pull Request</h4>
+                      <h4 className="font-medium text-gray-900">9. Create Pull Request</h4>
                       <p className="text-sm text-gray-600">
                         Submit your work for review
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!gitWorkflowComplete && <Badge variant="outline" className="text-xs">Complete git workflow first</Badge>}
+                    {!gitWorkflowComplete && <Badge variant="outline" className="text-xs">Commit your changes first</Badge>}
                     {prCreated && <CheckCircle2 className="h-5 w-5 text-green-600" />}
                     <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
@@ -1319,7 +1359,7 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
-            {/* 9. Reflection */}
+            {/* 10. Reflection */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 reflectionComplete ? 'border-green-200 bg-green-50' : ''
@@ -1334,7 +1374,7 @@ export default function InternOnboardingSession({
                       <PenLine className="h-5 w-5 text-indigo-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">9. Day 2 Reflection</h4>
+                      <h4 className="font-medium text-gray-900">10. Day 2 Reflection</h4>
                       <p className="text-sm text-gray-600">
                         What did you learn today?
                       </p>
@@ -1950,8 +1990,192 @@ Resolving deltas: 100% (623/623), done.`
           data-testid="button-ticket-reviewed"
         >
           <CheckCircle2 className="h-4 w-4 mr-2" />
-          I understand the ticket - Continue to Explore Code
+          I understand the ticket - Continue to Create Branch
         </Button>
+      </div>
+    );
+  }
+
+  function renderDay2CreateBranch() {
+    const validateBranchName = (name: string) => {
+      const normalized = name.trim().toLowerCase();
+      if (!normalized) return { valid: false, error: 'Enter a branch name' };
+      if (normalized === 'main' || normalized === 'master') {
+        return { valid: false, error: "Don't work on main/master directly!" };
+      }
+      if (!/^[a-z0-9][a-z0-9\-\/]*[a-z0-9]$/.test(normalized) && normalized.length > 1) {
+        return { valid: false, error: 'Use lowercase letters, numbers, hyphens, or slashes' };
+      }
+      if (normalized.includes('fix') || normalized.includes('timezone') || normalized.includes('bug')) {
+        return { valid: true, error: '' };
+      }
+      return { valid: true, error: '' };
+    };
+
+    const handleCreateBranch = () => {
+      const result = validateBranchName(branchInput);
+      if (!result.valid) {
+        setBranchError(result.error);
+        return;
+      }
+      setBranchError('');
+      setBranchSuccess(true);
+    };
+
+    if (branchCreated) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center">
+          <Card className="max-w-md">
+            <CardHeader className="text-center">
+              <div className="mx-auto p-3 bg-green-100 rounded-full w-fit mb-2">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              </div>
+              <CardTitle>Branch Created</CardTitle>
+              <CardDescription>
+                You're now working on your feature branch
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-gradient-to-r from-cyan-50 to-green-50 border border-cyan-200 rounded-lg p-4">
+                <p className="text-sm text-cyan-700">
+                  All your changes will be isolated from the main branch until your PR is merged.
+                </p>
+              </div>
+              <Button 
+                className="w-full"
+                variant="outline"
+                onClick={() => setViewMode('overview')}
+                data-testid="button-back-to-overview"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Overview
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <Card className="bg-cyan-50 border-cyan-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <GitBranch className="h-6 w-6 text-cyan-600" />
+              <div>
+                <p className="font-medium text-cyan-900">Create a Feature Branch</p>
+                <p className="text-sm text-cyan-700">
+                  Before making any changes, create a branch to isolate your work.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Why Create a Branch?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-green-600 mt-0.5" />
+                <span className="text-sm text-gray-700">Your changes are isolated from main</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-green-600 mt-0.5" />
+                <span className="text-sm text-gray-700">You can experiment without affecting others</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-green-600 mt-0.5" />
+                <span className="text-sm text-gray-700">Easy to abandon if your approach doesn't work</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-green-600 mt-0.5" />
+                <span className="text-sm text-gray-700">Your PR shows exactly what changed</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Terminal className="h-5 w-5" />
+              Create Your Branch
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm">
+              <div className="text-gray-400 mb-2">$ git checkout -b <span className="text-cyan-400">[branch-name]</span></div>
+              <p className="text-gray-500 text-xs mt-2">
+                Common patterns: fix/timezone-bug, feature/user-auth, bugfix/payment-error
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Enter your git command:</label>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-mono text-sm">$</span>
+                  <input
+                    type="text"
+                    value={branchInput}
+                    onChange={(e) => {
+                      setBranchInput(e.target.value);
+                      setBranchError('');
+                      setBranchSuccess(false);
+                    }}
+                    placeholder="git checkout -b fix/timezone-bug"
+                    className="w-full pl-7 pr-3 py-2 border rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    data-testid="input-branch-name"
+                  />
+                </div>
+                <Button 
+                  onClick={handleCreateBranch}
+                  disabled={!branchInput.trim()}
+                  data-testid="button-create-branch"
+                >
+                  Run
+                </Button>
+              </div>
+              {branchError && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <X className="h-4 w-4" />
+                  {branchError}
+                </p>
+              )}
+            </div>
+
+            {branchSuccess && (
+              <div className="space-y-3">
+                <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400">
+                  <p>Switched to a new branch '{branchInput.replace('git checkout -b ', '').trim()}'</p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <span className="font-medium">Branch created successfully!</span>
+                  </div>
+                  <p className="text-sm text-green-700 mt-1">
+                    You're now on your feature branch. All changes will be isolated here.
+                  </p>
+                </div>
+                <Button 
+                  className="w-full"
+                  onClick={() => {
+                    setBranchCreated(true);
+                    setViewMode('overview');
+                  }}
+                  data-testid="button-branch-complete"
+                >
+                  Continue to Explore Codebase
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -2689,81 +2913,117 @@ Tested with CST timezone, transactions now display correctly.`}
     if (selectedMember) {
       return (
         <div className="h-full flex flex-col">
-          <div className="flex items-center gap-3 mb-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setSelectedMember(null)}
-              data-testid="button-back-to-team-list"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm">
-                <AvatarImage src={getTeamAvatarUrl(selectedMember.name)} alt={selectedMember.name} />
-                <AvatarFallback className={`text-white text-xs ${getTeamMemberColor(selectedMember.name)}`}>
-                  {getTeamMemberInitials(selectedMember.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-gray-900">{selectedMember.name}</p>
-                <p className="text-xs text-gray-600">{selectedMember.role}</p>
+          {/* Chat Header - styled like standup */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSelectedMember(null)}
+                  className="mr-1"
+                  data-testid="button-back-to-team-list"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Avatar className="h-10 w-10 ring-2 ring-white shadow-md">
+                  <AvatarImage src={getTeamAvatarUrl(selectedMember.name)} alt={selectedMember.name} />
+                  <AvatarFallback className={`text-white ${getTeamMemberColor(selectedMember.name)}`}>
+                    {getTeamMemberInitials(selectedMember.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900">{selectedMember.name}</h3>
+                    <Badge variant="outline" className="text-xs py-0 h-5">{selectedMember.role}</Badge>
+                  </div>
+                  <p className="text-xs text-gray-600">Direct Message</p>
+                </div>
               </div>
+              {introProgress[selectedMember.name] && (
+                <Badge className="bg-green-100 text-green-800 border-green-300">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Introduced
+                </Badge>
+              )}
             </div>
-            {introProgress[selectedMember.name] && (
-              <Badge className="bg-green-100 text-green-800">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Introduced
-              </Badge>
-            )}
           </div>
 
           {selectedMember.bio && (
-            <Card className="mb-4 bg-gray-50">
+            <Card className="mb-4 bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200">
               <CardContent className="p-3 text-sm text-gray-700">
+                <p className="text-xs font-medium text-gray-500 mb-1">About {selectedMember.name}</p>
                 {selectedMember.bio}
               </CardContent>
             </Card>
           )}
 
-          <ScrollArea className="flex-1 pr-4 mb-4">
+          {/* Messages - styled like standup */}
+          <ScrollArea className="flex-1 pr-2 mb-4">
             <div className="space-y-4">
               {filteredInteractions.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Coffee className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Say hello to {selectedMember.name}!</p>
+                  <p className="font-medium">Say hello to {selectedMember.name}!</p>
                   <p className="text-sm">Introduce yourself and ask about their role.</p>
                 </div>
               )}
-              {filteredInteractions.map((interaction: any, idx: number) => (
-                <div
-                  key={idx}
-                  className={`flex ${interaction.sender === 'You' ? 'justify-end' : 'justify-start'}`}
-                  data-testid={`message-${idx}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                      interaction.sender === 'You'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white border shadow-sm'
-                    }`}
-                  >
-                    {interaction.sender !== 'You' && (
-                      <p className="text-xs font-medium text-purple-600 mb-1">
-                        {interaction.sender}
-                      </p>
-                    )}
-                    <p className={interaction.sender === 'You' ? 'text-white' : 'text-gray-800'}>
-                      {interaction.content}
-                    </p>
+              {filteredInteractions.map((interaction: any, idx: number) => {
+                const isUserMsg = interaction.sender === 'You' || interaction.sender === 'User';
+                return (
+                <div key={idx} className="flex gap-3" data-testid={`message-${idx}`}>
+                  <Avatar className="h-9 w-9 flex-shrink-0">
+                    <AvatarImage 
+                      src={isUserMsg 
+                        ? `https://api.dicebear.com/7.x/avataaars/svg?seed=user-intern&backgroundColor=b6e3f4`
+                        : getTeamAvatarUrl(interaction.sender)
+                      } 
+                      alt={interaction.sender} 
+                    />
+                    <AvatarFallback className={`text-white text-xs ${
+                      isUserMsg ? 'bg-blue-500' : getTeamMemberColor(interaction.sender)
+                    }`}>
+                      {isUserMsg ? 'ME' : getTeamMemberInitials(interaction.sender)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium text-gray-900">
+                        {isUserMsg ? 'You' : interaction.sender}
+                      </span>
+                      <Badge variant="outline" className="text-xs py-0 h-5">
+                        {isUserMsg ? 'Intern' : selectedMember.role}
+                      </Badge>
+                    </div>
+                    <div className={`rounded-lg p-3 shadow-sm ${
+                      isUserMsg
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'bg-white border'
+                    }`}>
+                      <p className="text-sm text-gray-700">{interaction.content}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
+              );})}
               {typingIndicator && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg px-4 py-2">
-                    <p className="text-sm text-gray-500">{typingIndicator} is typing...</p>
+                <div className="flex gap-3">
+                  <Avatar className="h-9 w-9 flex-shrink-0">
+                    <AvatarImage src={getTeamAvatarUrl(typingIndicator)} alt={typingIndicator} />
+                    <AvatarFallback className={`text-white text-xs ${getTeamMemberColor(typingIndicator)}`}>
+                      {getTeamMemberInitials(typingIndicator)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium text-gray-900">{typingIndicator}</span>
+                    </div>
+                    <div className="bg-gray-100 rounded-lg p-3 inline-block">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2771,27 +3031,31 @@ Tested with CST timezone, transactions now display correctly.`}
             </div>
           </ScrollArea>
 
-          <div className="flex gap-2">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder={`Message ${selectedMember.name}...`}
-              className="min-h-[60px] resize-none"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              data-testid="input-message"
-            />
-            <Button 
-              onClick={() => handleSendMessage()}
-              disabled={!message.trim() || sendMessageMutation.isPending}
-              data-testid="button-send-message"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+          {/* Input Area - styled consistently */}
+          <div className="border-t pt-4">
+            <div className="flex gap-2">
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={`Message ${selectedMember.name}...`}
+                className="min-h-[60px] resize-none bg-white"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                data-testid="input-message"
+              />
+              <Button 
+                onClick={() => handleSendMessage()}
+                disabled={!message.trim() || sendMessageMutation.isPending}
+                className="self-end"
+                data-testid="button-send-message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       );
@@ -3624,6 +3888,7 @@ git push origin fix/your-feature-name
                   {viewMode === 'day2-standup' && renderDay2Standup()}
                   {viewMode === 'day2-dev-setup' && renderDay2DevSetup()}
                   {viewMode === 'day2-ticket' && renderDay2Ticket()}
+                  {viewMode === 'day2-branch' && renderDay2CreateBranch()}
                   {viewMode === 'day2-codebase' && renderDay2Codebase()}
                   {viewMode === 'day2-code-fix' && renderDay2CodeFix()}
                   {viewMode === 'day2-test-fix' && renderDay2TestFix()}

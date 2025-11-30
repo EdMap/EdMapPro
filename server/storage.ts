@@ -1218,26 +1218,35 @@ export class MemStorage implements IStorage {
     return updatedTask;
   }
 
-  // Workspace interaction operations
+  // Workspace interaction operations - Using PostgreSQL database for persistence
   async getWorkspaceInteractions(sessionId: number, channel?: string): Promise<WorkspaceInteraction[]> {
-    return Array.from(this.workspaceInteractions.values())
-      .filter(interaction => 
-        interaction.sessionId === sessionId && 
-        (!channel || interaction.channel === channel)
-      )
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    if (channel) {
+      return await db.select()
+        .from(workspaceInteractions)
+        .where(and(
+          eq(workspaceInteractions.sessionId, sessionId),
+          eq(workspaceInteractions.channel, channel)
+        ))
+        .orderBy(workspaceInteractions.createdAt);
+    }
+    return await db.select()
+      .from(workspaceInteractions)
+      .where(eq(workspaceInteractions.sessionId, sessionId))
+      .orderBy(workspaceInteractions.createdAt);
   }
 
   async createWorkspaceInteraction(insertInteraction: InsertWorkspaceInteraction): Promise<WorkspaceInteraction> {
-    const id = this.currentInteractionId++;
-    const interaction: WorkspaceInteraction = {
-      ...insertInteraction,
-      id,
-      metadata: insertInteraction.metadata || null,
-      threadId: insertInteraction.threadId || null,
-      createdAt: new Date()
-    };
-    this.workspaceInteractions.set(id, interaction);
+    const [interaction] = await db.insert(workspaceInteractions)
+      .values({
+        sessionId: insertInteraction.sessionId,
+        channel: insertInteraction.channel,
+        sender: insertInteraction.sender,
+        senderRole: insertInteraction.senderRole,
+        content: insertInteraction.content,
+        metadata: insertInteraction.metadata || null,
+        threadId: insertInteraction.threadId || null
+      })
+      .returning();
     return interaction;
   }
 
