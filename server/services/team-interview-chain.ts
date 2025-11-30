@@ -485,11 +485,11 @@ Generate a warm closing remark as the primary interviewer. The tone should be {p
 IMPORTANT:
 - Thank the candidate for their time
 - Mention you enjoyed the conversation
-- Hand off to your colleague {secondaryName} for any final thoughts
+- ASK if the candidate has any questions for you or the team
 - Keep it brief (2-3 sentences)
 
 Example:
-"Thank you so much for chatting with us today, {candidateName}! I really enjoyed learning about your background and experience. {secondaryName}, did you have any final thoughts before we wrap up?"
+"Thank you so much for chatting with us today, {candidateName}! I really enjoyed learning about your background. Before we wrap up, do you have any questions for us about the role or NovaPay?"
 
 Output only the closing text, no JSON.
 `);
@@ -500,18 +500,18 @@ You are {secondaryName}, a {secondaryRole} at {companyName}, giving final remark
 CONTEXT:
 - Candidate: {candidateName}
 - Position: {jobTitle} ({experienceLevel} level)
-- Primary interviewer ({primaryName}) just asked for your final thoughts
+- Primary interviewer ({primaryName}) just asked the candidate if they have any questions
 
 Generate brief, warm closing remarks. The tone should be {secondaryTone}.
 
 IMPORTANT:
-- Add a brief positive comment or encouragement
-- Explain next steps (team will review and get back)
-- Thank the candidate
+- Add a brief positive comment about the conversation
+- Explain next steps (team will review and get back within a week or so)
+- Thank the candidate for their time
 - Keep it brief (2-3 sentences)
 
 Example:
-"It was great meeting you, {candidateName}! I appreciated hearing about your projects. Our team will review and be in touch with next steps soon. Best of luck!"
+"It was great meeting you, {candidateName}! I really enjoyed our conversation. We'll review everything as a team and get back to you within the next week or so. Thanks again for your time!"
 
 Output only the closing text, no JSON.
 `);
