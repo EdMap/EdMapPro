@@ -28,6 +28,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPersonaStyle, type TeamPersona } from "@/lib/persona-styles";
+import { 
+  InterviewPanelHeader, 
+  PersonaRoster, 
+  PersonaTypingIndicator 
+} from "./team-interview-panel";
 
 interface InterviewQuestion {
   id: number;
@@ -624,99 +629,144 @@ export default function LangchainInterviewSession({
       )}
       
       <Card className="flex-1 flex flex-col overflow-hidden">
-        <CardHeader className="flex-shrink-0 border-b">
-          {/* Feedback ready banner */}
-          {showFeedbackBanner && (
-            <div className="mb-3 -mt-2 -mx-2 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2 text-blue-700">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="text-sm font-medium">Your feedback report is ready!</span>
+        {/* Enhanced Interview Panel Header for team interviews */}
+        {isTeamInterview ? (
+          <InterviewPanelHeader
+            jobTitle={session.targetRole}
+            difficulty={session.difficulty}
+            currentQuestionIndex={session.currentQuestionIndex}
+            totalQuestions={session.totalQuestions}
+            elapsedMinutes={pacing.elapsedMinutes}
+            isTeamInterview={isTeamInterview}
+            teamPersonas={teamPersonas}
+            activePersonaId={activePersonaId}
+          />
+        ) : (
+          <CardHeader className="flex-shrink-0 border-b">
+            {/* Feedback ready banner */}
+            {showFeedbackBanner && (
+              <div className="mb-3 -mt-2 -mx-2 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="text-sm font-medium">Your feedback report is ready!</span>
+                </div>
+                <Button 
+                  onClick={handleViewFeedback}
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-200 text-blue-700 hover:bg-blue-100"
+                  data-testid="button-view-feedback-banner"
+                >
+                  View Report
+                </Button>
               </div>
-              <Button 
-                onClick={handleViewFeedback}
-                size="sm"
-                variant="outline"
-                className="border-blue-200 text-blue-700 hover:bg-blue-100"
-                data-testid="button-view-feedback-banner"
-              >
-                View Report
-              </Button>
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">
-                {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                {session.targetRole} • {session.difficulty.charAt(0).toUpperCase() + session.difficulty.slice(1)} level
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Time-based pacing indicator */}
-              <div className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-600">
-                  {pacing.elapsedMinutes} min
-                </span>
+            )}
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">
+                  {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview
+                </CardTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {session.targetRole} • {session.difficulty.charAt(0).toUpperCase() + session.difficulty.slice(1)} level
+                </p>
               </div>
-              
-              {/* Status chip */}
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "text-xs px-2 py-0.5",
-                  pacing.status === 'starting' && "border-blue-200 bg-blue-50 text-blue-700",
-                  pacing.status === 'on_track' && "border-green-200 bg-green-50 text-green-700",
-                  pacing.status === 'mid_interview' && "border-yellow-200 bg-yellow-50 text-yellow-700",
-                  pacing.status === 'wrapping_soon' && "border-orange-200 bg-orange-50 text-orange-700",
-                  pacing.status === 'overtime' && "border-red-200 bg-red-50 text-red-700"
-                )}
-                data-testid="badge-pacing-status"
-              >
-                {pacing.status === 'starting' && 'Getting started'}
-                {pacing.status === 'on_track' && 'On track'}
-                {pacing.status === 'mid_interview' && 'In progress'}
-                {pacing.status === 'wrapping_soon' && 'Wrapping up soon'}
-                {pacing.status === 'overtime' && 'Overtime'}
-              </Badge>
-              
-              {/* Progress ring (visual indicator) */}
-              <div className="relative w-8 h-8">
-                <svg className="w-8 h-8 transform -rotate-90">
-                  <circle
-                    cx="16"
-                    cy="16"
-                    r="12"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    className="text-gray-200"
-                  />
-                  <circle
-                    cx="16"
-                    cy="16"
-                    r="12"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeDasharray={`${pacing.progressPercent * 0.75} 100`}
-                    className={cn(
-                      pacing.status === 'starting' && "text-blue-500",
-                      pacing.status === 'on_track' && "text-green-500",
-                      pacing.status === 'mid_interview' && "text-yellow-500",
-                      pacing.status === 'wrapping_soon' && "text-orange-500",
-                      pacing.status === 'overtime' && "text-red-500"
-                    )}
-                    strokeLinecap="round"
-                  />
-                </svg>
+              <div className="flex items-center space-x-4">
+                {/* Time-based pacing indicator */}
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    {pacing.elapsedMinutes} min
+                  </span>
+                </div>
+                
+                {/* Status chip */}
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "text-xs px-2 py-0.5",
+                    pacing.status === 'starting' && "border-blue-200 bg-blue-50 text-blue-700",
+                    pacing.status === 'on_track' && "border-green-200 bg-green-50 text-green-700",
+                    pacing.status === 'mid_interview' && "border-yellow-200 bg-yellow-50 text-yellow-700",
+                    pacing.status === 'wrapping_soon' && "border-orange-200 bg-orange-50 text-orange-700",
+                    pacing.status === 'overtime' && "border-red-200 bg-red-50 text-red-700"
+                  )}
+                  data-testid="badge-pacing-status"
+                >
+                  {pacing.status === 'starting' && 'Getting started'}
+                  {pacing.status === 'on_track' && 'On track'}
+                  {pacing.status === 'mid_interview' && 'In progress'}
+                  {pacing.status === 'wrapping_soon' && 'Wrapping up soon'}
+                  {pacing.status === 'overtime' && 'Overtime'}
+                </Badge>
+                
+                {/* Progress ring (visual indicator) */}
+                <div className="relative w-8 h-8">
+                  <svg className="w-8 h-8 transform -rotate-90">
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="12"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      className="text-gray-200"
+                    />
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="12"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeDasharray={`${pacing.progressPercent * 0.75} 100`}
+                      className={cn(
+                        pacing.status === 'starting' && "text-blue-500",
+                        pacing.status === 'on_track' && "text-green-500",
+                        pacing.status === 'mid_interview' && "text-yellow-500",
+                        pacing.status === 'wrapping_soon' && "text-orange-500",
+                        pacing.status === 'overtime' && "text-red-500"
+                      )}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
+          </CardHeader>
+        )}
+        
+        {/* Feedback ready banner for team interviews */}
+        {isTeamInterview && showFeedbackBanner && (
+          <div className="mx-4 mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2 text-blue-700">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="text-sm font-medium">Your feedback report is ready!</span>
+            </div>
+            <Button 
+              onClick={handleViewFeedback}
+              size="sm"
+              variant="outline"
+              className="border-blue-200 text-blue-700 hover:bg-blue-100"
+              data-testid="button-view-feedback-banner"
+            >
+              View Report
+            </Button>
           </div>
-        </CardHeader>
+        )}
 
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Main content area with optional PersonaRoster sidebar for team interviews */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Persona Roster Sidebar - only for team interviews */}
+          {isTeamInterview && teamPersonas.length > 0 && (
+            <PersonaRoster
+              teamPersonas={teamPersonas}
+              activePersonaId={activePersonaId}
+              isTyping={showTypingIndicator}
+              className="hidden lg:block"
+            />
+          )}
+
+          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg, index) => {
             const personaStyle = msg.role === 'interviewer' ? getPersonaStyle(msg.personaId, isTeamInterview, teamPersonas) : null;
             
@@ -727,16 +777,20 @@ export default function LangchainInterviewSession({
                 "flex items-start space-x-3",
                 msg.role === 'candidate' && "flex-row-reverse space-x-reverse"
               )}
+              data-testid={`message-${msg.role}-${index}`}
             >
               <Avatar className={cn(
-                "h-10 w-10",
+                "h-10 w-10 shrink-0",
                 msg.role === 'interviewer' 
                   ? (personaStyle?.bgColor || "bg-blue-100") 
                   : "bg-green-100"
               )}>
-                <AvatarFallback>
+                <AvatarFallback className={cn(
+                  "font-semibold",
+                  msg.role === 'interviewer' ? personaStyle?.textColor : "text-green-600"
+                )}>
                   {msg.role === 'interviewer' ? (
-                    <Bot className={cn("h-5 w-5", personaStyle?.iconColor || "text-blue-600")} />
+                    isTeamInterview && personaStyle?.initials ? personaStyle.initials : <Bot className={cn("h-5 w-5", personaStyle?.iconColor || "text-blue-600")} />
                   ) : (
                     <User className="h-5 w-5 text-green-600" />
                   )}
@@ -745,27 +799,36 @@ export default function LangchainInterviewSession({
               <div className={cn(
                 "max-w-[70%] rounded-lg p-4",
                 msg.role === 'interviewer' 
-                  ? (personaStyle?.messageBg || "bg-blue-50") + " text-gray-900" 
-                  : "bg-green-50 text-gray-900"
+                  ? cn(
+                      personaStyle?.messageBg || "bg-blue-50",
+                      "text-gray-900 dark:text-gray-100",
+                      isTeamInterview && personaStyle && "border-l-4",
+                      isTeamInterview && personaStyle?.borderColor
+                    )
+                  : "bg-green-50 dark:bg-green-900/20 text-gray-900 dark:text-gray-100"
               )}>
-                {/* Show persona name and role for team interviews */}
+                {/* Show persona name and role for team interviews with enhanced styling */}
                 {isTeamInterview && msg.role === 'interviewer' && personaStyle && personaStyle.name !== 'Interviewer' && (
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="font-semibold text-sm">{personaStyle.name}</span>
+                  <div className="mb-2 pb-2 border-b border-gray-200/50 flex items-center gap-2">
+                    <span className={cn("font-semibold text-sm", personaStyle.textColor)}>
+                      {personaStyle.name}
+                    </span>
                     {personaStyle.displayRole && (
-                      <span className="text-xs text-gray-500">({personaStyle.displayRole})</span>
+                      <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", personaStyle.borderColor)}>
+                        {personaStyle.displayRole}
+                      </Badge>
                     )}
                   </div>
                 )}
                 <p className="whitespace-pre-wrap">{msg.content}</p>
                 {msg.evaluation && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center space-x-2 mb-2">
                       <Badge variant={msg.evaluation.score >= 7 ? "default" : msg.evaluation.score >= 5 ? "secondary" : "destructive"}>
                         Score: {msg.evaluation.score}/10
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600">{msg.evaluation.feedback}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{msg.evaluation.feedback}</p>
                   </div>
                 )}
               </div>
@@ -775,6 +838,13 @@ export default function LangchainInterviewSession({
           
           {showTypingIndicator && (() => {
             const typingPersonaStyle = getPersonaStyle(activePersonaId, isTeamInterview, teamPersonas);
+            
+            // Use enhanced PersonaTypingIndicator for team interviews
+            if (isTeamInterview && typingPersonaStyle.name !== 'Interviewer') {
+              return <PersonaTypingIndicator persona={typingPersonaStyle} />;
+            }
+            
+            // Default typing indicator for non-team interviews
             return (
             <div className="flex items-start space-x-3">
               <Avatar className={cn("h-10 w-10", typingPersonaStyle.bgColor)}>
@@ -783,18 +853,13 @@ export default function LangchainInterviewSession({
                 </AvatarFallback>
               </Avatar>
               <div className={cn(typingPersonaStyle.messageBg, "rounded-lg p-4")}>
-                {isTeamInterview && typingPersonaStyle.name !== 'Interviewer' && (
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="font-semibold text-sm">{typingPersonaStyle.name}</span>
-                    {typingPersonaStyle.displayRole && (
-                      <span className="text-xs text-gray-500">({typingPersonaStyle.displayRole})</span>
-                    )}
+                <div className="flex items-center gap-2">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
-                )}
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="text-xs text-gray-500">typing...</span>
                 </div>
               </div>
             </div>
@@ -803,6 +868,7 @@ export default function LangchainInterviewSession({
           
           <div ref={messagesEndRef} />
         </CardContent>
+        </div>
 
         <div className="flex-shrink-0 border-t p-4">
           <div className="flex space-x-3">

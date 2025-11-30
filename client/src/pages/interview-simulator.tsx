@@ -384,16 +384,20 @@ export default function InterviewSimulator() {
                   "flex items-start space-x-3",
                   msg.role === 'candidate' && "flex-row-reverse space-x-reverse"
                 )}
+                data-testid={`prelude-message-${msg.role}-${index}`}
               >
                 <Avatar className={cn(
-                  "h-10 w-10",
+                  "h-10 w-10 shrink-0",
                   msg.role === 'interviewer' 
                     ? (personaStyle?.bgColor || "bg-blue-100") 
                     : "bg-green-100"
                 )}>
-                  <AvatarFallback>
+                  <AvatarFallback className={cn(
+                    "font-semibold",
+                    msg.role === 'interviewer' ? personaStyle?.textColor : "text-green-600"
+                  )}>
                     {msg.role === 'interviewer' ? (
-                      <Bot className={cn("h-5 w-5", personaStyle?.iconColor || "text-blue-600")} />
+                      isTeamInterview && personaStyle?.initials ? personaStyle.initials : <Bot className={cn("h-5 w-5", personaStyle?.iconColor || "text-blue-600")} />
                     ) : (
                       <UserIcon className="h-5 w-5 text-green-600" />
                     )}
@@ -402,15 +406,24 @@ export default function InterviewSimulator() {
                 <div className={cn(
                   "max-w-[70%] rounded-lg p-4",
                   msg.role === 'interviewer' 
-                    ? (personaStyle?.messageBg || "bg-blue-50") + " text-gray-900" 
+                    ? cn(
+                        personaStyle?.messageBg || "bg-blue-50",
+                        "text-gray-900",
+                        isTeamInterview && personaStyle && "border-l-4",
+                        isTeamInterview && personaStyle?.borderColor
+                      )
                     : "bg-green-50 text-gray-900"
                 )}>
-                  {/* Show persona name and role for team interviews */}
+                  {/* Show persona name and role for team interviews with enhanced styling */}
                   {isTeamInterview && msg.role === 'interviewer' && personaStyle && personaStyle.name !== 'Interviewer' && (
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="font-semibold text-sm">{personaStyle.name}</span>
+                    <div className="mb-2 pb-2 border-b border-gray-200/50 flex items-center gap-2">
+                      <span className={cn("font-semibold text-sm", personaStyle.textColor)}>
+                        {personaStyle.name}
+                      </span>
                       {personaStyle.displayRole && (
-                        <span className="text-xs text-gray-500">({personaStyle.displayRole})</span>
+                        <span className={cn("text-[10px] px-1.5 py-0 border rounded-full", personaStyle.borderColor)}>
+                          {personaStyle.displayRole}
+                        </span>
                       )}
                     </div>
                   )}
@@ -426,23 +439,35 @@ export default function InterviewSimulator() {
               return (
               <div className="flex items-start space-x-3">
                 <Avatar className={cn("h-10 w-10", typingPersonaStyle.bgColor)}>
-                  <AvatarFallback>
-                    <Bot className={cn("h-5 w-5", typingPersonaStyle.iconColor)} />
+                  <AvatarFallback className={cn("font-semibold", typingPersonaStyle.textColor)}>
+                    {isTeamInterview && typingPersonaStyle.initials ? typingPersonaStyle.initials : <Bot className={cn("h-5 w-5", typingPersonaStyle.iconColor)} />}
                   </AvatarFallback>
                 </Avatar>
-                <div className={cn(typingPersonaStyle.messageBg, "rounded-lg p-4")}>
+                <div className={cn(
+                  typingPersonaStyle.messageBg, 
+                  "rounded-lg p-4",
+                  isTeamInterview && "border-l-4",
+                  isTeamInterview && typingPersonaStyle.borderColor
+                )}>
                   {isTeamInterview && typingPersonaStyle.name !== 'Interviewer' && (
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="font-semibold text-sm">{typingPersonaStyle.name}</span>
+                    <div className="mb-2 pb-2 border-b border-gray-200/50 flex items-center gap-2">
+                      <span className={cn("font-semibold text-sm", typingPersonaStyle.textColor)}>
+                        {typingPersonaStyle.name}
+                      </span>
                       {typingPersonaStyle.displayRole && (
-                        <span className="text-xs text-gray-500">({typingPersonaStyle.displayRole})</span>
+                        <span className={cn("text-[10px] px-1.5 py-0 border rounded-full", typingPersonaStyle.borderColor)}>
+                          {typingPersonaStyle.displayRole}
+                        </span>
                       )}
                     </div>
                   )}
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="flex items-center gap-2">
+                    <div className="flex space-x-1">
+                      <div className={cn("w-2 h-2 rounded-full animate-bounce", isTeamInterview ? typingPersonaStyle.accentColor : "bg-gray-400")} style={{ animationDelay: '0ms' }} />
+                      <div className={cn("w-2 h-2 rounded-full animate-bounce", isTeamInterview ? typingPersonaStyle.accentColor : "bg-gray-400")} style={{ animationDelay: '150ms' }} />
+                      <div className={cn("w-2 h-2 rounded-full animate-bounce", isTeamInterview ? typingPersonaStyle.accentColor : "bg-gray-400")} style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-xs text-gray-500">typing...</span>
                   </div>
                 </div>
               </div>
