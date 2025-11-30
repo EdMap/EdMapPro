@@ -356,7 +356,7 @@ export const applicationStages = pgTable("application_stages", {
   applicationId: integer("application_id").references(() => jobApplications.id).notNull(),
   stageOrder: integer("stage_order").notNull(),
   stageName: text("stage_name").notNull(), // 'Phone Screen', 'Technical Interview', 'System Design'
-  stageType: text("stage_type").notNull(), // 'recruiter_call', 'technical', 'behavioral', 'case_study', 'panel', 'offer'
+  stageType: text("stage_type").notNull(), // 'recruiter_call', 'technical', 'behavioral', 'case_study', 'panel', 'team' (team/panel both use multi-persona interviews), 'offer'
   status: text("status").notNull().default('pending'), // 'pending', 'scheduled', 'in_progress', 'completed', 'skipped'
   interviewSessionId: integer("interview_session_id").references(() => interviewSessions.id),
   scheduledAt: timestamp("scheduled_at"),
@@ -409,6 +409,273 @@ export type InterviewTemplate = typeof interviewTemplates.$inferSelect;
 export type InsertInterviewTemplate = z.infer<typeof insertInterviewTemplateSchema>;
 export type ApplicationStage = typeof applicationStages.$inferSelect;
 export type InsertApplicationStage = z.infer<typeof insertApplicationStageSchema>;
+
+// Team Interview Types and Settings
+export type ExperienceLevel = 'intern' | 'junior' | 'mid' | 'senior' | 'lead';
+
+export interface TeamInterviewPersona {
+  id: string;
+  name: string;
+  role: string; // 'tech_lead', 'peer_engineer', 'product_partner', 'engineering_manager'
+  displayRole: string; // Human-readable: "Tech Lead", "Software Engineer"
+  tone: 'supportive' | 'collegial' | 'challenging' | 'strategic';
+  focusAreas: string[]; // What this persona probes: ['learning', 'collaboration', 'debugging']
+  introStyle: string; // How they introduce themselves
+}
+
+export interface TeamInterviewSettings {
+  experienceLevel: ExperienceLevel;
+  personas: TeamInterviewPersona[];
+  questionWeights: {
+    learning: number; // % of interview focused on learning/growth
+    collaboration: number; // % on teamwork
+    technical: number; // % on technical skills
+    curiosity: number; // % on candidate questions
+  };
+  evaluationRubric: {
+    criterion: string;
+    weight: number;
+    levelExpectations: Record<ExperienceLevel, string>;
+  }[];
+  artifactComplexity: 'simple' | 'moderate' | 'complex';
+  maxQuestions: number;
+}
+
+// Predefined team interview settings by experience level
+export const TEAM_INTERVIEW_PRESETS: Record<ExperienceLevel, TeamInterviewSettings> = {
+  intern: {
+    experienceLevel: 'intern',
+    personas: [
+      {
+        id: 'peer_engineer',
+        name: 'Marcus',
+        role: 'peer_engineer',
+        displayRole: 'Software Engineer',
+        tone: 'supportive',
+        focusAreas: ['learning', 'collaboration', 'asking_for_help'],
+        introStyle: "Hey! I'm Marcus, one of the developers on the team. I've been here about a year, so I remember what it's like being new.",
+      },
+      {
+        id: 'tech_lead',
+        name: 'Sarah',
+        role: 'tech_lead',
+        displayRole: 'Tech Lead',
+        tone: 'supportive',
+        focusAreas: ['potential', 'growth_mindset', 'fundamentals'],
+        introStyle: "Hi! I'm Sarah, the tech lead for this team. I'm excited to learn more about you and what you're looking to get out of this role.",
+      },
+    ],
+    questionWeights: {
+      learning: 40,
+      collaboration: 30,
+      technical: 20,
+      curiosity: 10,
+    },
+    evaluationRubric: [
+      {
+        criterion: 'learning_mindset',
+        weight: 35,
+        levelExpectations: {
+          intern: 'Shows curiosity, asks clarifying questions, admits knowledge gaps honestly',
+          junior: 'Demonstrates self-directed learning, seeks feedback proactively',
+          mid: 'Mentors others while continuing to grow, learns from mistakes quickly',
+          senior: 'Drives learning culture, identifies skill gaps in team',
+          lead: 'Shapes learning strategy, builds knowledge-sharing systems',
+        },
+      },
+      {
+        criterion: 'collaboration',
+        weight: 30,
+        levelExpectations: {
+          intern: 'Communicates clearly, open to feedback, thinks about teammates',
+          junior: 'Works effectively in pairs, gives and receives feedback well',
+          mid: 'Facilitates team discussions, resolves minor conflicts',
+          senior: 'Builds consensus, mentors collaboration skills',
+          lead: 'Designs team structures, optimizes cross-team collaboration',
+        },
+      },
+      {
+        criterion: 'problem_solving',
+        weight: 25,
+        levelExpectations: {
+          intern: 'Has a logical process, knows when to ask for help',
+          junior: 'Breaks down problems, proposes solutions with guidance',
+          mid: 'Solves complex problems independently, considers trade-offs',
+          senior: 'Anticipates problems, designs robust solutions',
+          lead: 'Solves organizational problems, strategic thinking',
+        },
+      },
+      {
+        criterion: 'technical_foundations',
+        weight: 10,
+        levelExpectations: {
+          intern: 'Basic understanding, does not need to be polished',
+          junior: 'Solid fundamentals, can debug with guidance',
+          mid: 'Strong skills, teaches fundamentals to others',
+          senior: 'Expert level, designs systems and patterns',
+          lead: 'Sets technical direction, evaluates new technologies',
+        },
+      },
+    ],
+    artifactComplexity: 'simple',
+    maxQuestions: 8,
+  },
+  junior: {
+    experienceLevel: 'junior',
+    personas: [
+      {
+        id: 'peer_engineer',
+        name: 'Marcus',
+        role: 'peer_engineer',
+        displayRole: 'Senior Engineer',
+        tone: 'collegial',
+        focusAreas: ['practical_skills', 'debugging', 'code_quality'],
+        introStyle: "Hey, I'm Marcus. I'm a senior engineer on the team and I'll be asking you some questions about your experience.",
+      },
+      {
+        id: 'tech_lead',
+        name: 'Sarah',
+        role: 'tech_lead',
+        displayRole: 'Tech Lead',
+        tone: 'collegial',
+        focusAreas: ['problem_solving', 'growth', 'ownership'],
+        introStyle: "Hi, I'm Sarah, the tech lead. Looking forward to hearing about your background and how you approach problems.",
+      },
+    ],
+    questionWeights: {
+      learning: 25,
+      collaboration: 30,
+      technical: 35,
+      curiosity: 10,
+    },
+    evaluationRubric: [],
+    artifactComplexity: 'moderate',
+    maxQuestions: 10,
+  },
+  mid: {
+    experienceLevel: 'mid',
+    personas: [
+      {
+        id: 'senior_engineer',
+        name: 'Marcus',
+        role: 'peer_engineer',
+        displayRole: 'Staff Engineer',
+        tone: 'collegial',
+        focusAreas: ['system_design', 'code_review', 'mentoring'],
+        introStyle: "I'm Marcus, a staff engineer. I'll be diving into some technical scenarios with you.",
+      },
+      {
+        id: 'tech_lead',
+        name: 'Sarah',
+        role: 'tech_lead',
+        displayRole: 'Tech Lead',
+        tone: 'challenging',
+        focusAreas: ['ownership', 'decision_making', 'delivery'],
+        introStyle: "Hi, I'm Sarah, the tech lead. I want to understand how you make technical decisions and drive projects forward.",
+      },
+      {
+        id: 'product_partner',
+        name: 'Priya',
+        role: 'product_partner',
+        displayRole: 'Product Manager',
+        tone: 'collegial',
+        focusAreas: ['cross_functional', 'requirements', 'stakeholder_management'],
+        introStyle: "Hey, I'm Priya from the product team. I'll ask about how you collaborate with non-engineers.",
+      },
+    ],
+    questionWeights: {
+      learning: 15,
+      collaboration: 25,
+      technical: 50,
+      curiosity: 10,
+    },
+    evaluationRubric: [],
+    artifactComplexity: 'moderate',
+    maxQuestions: 12,
+  },
+  senior: {
+    experienceLevel: 'senior',
+    personas: [
+      {
+        id: 'tech_lead',
+        name: 'Sarah',
+        role: 'tech_lead',
+        displayRole: 'Engineering Manager',
+        tone: 'challenging',
+        focusAreas: ['system_design', 'leadership', 'trade_offs'],
+        introStyle: "I'm Sarah, the engineering manager. I'll be exploring your technical depth and leadership experience.",
+      },
+      {
+        id: 'staff_engineer',
+        name: 'Marcus',
+        role: 'peer_engineer',
+        displayRole: 'Principal Engineer',
+        tone: 'challenging',
+        focusAreas: ['architecture', 'scalability', 'technical_vision'],
+        introStyle: "Marcus here, principal engineer. Let's discuss system design and architectural decisions.",
+      },
+      {
+        id: 'product_partner',
+        name: 'Priya',
+        role: 'product_partner',
+        displayRole: 'Senior PM',
+        tone: 'strategic',
+        focusAreas: ['strategy', 'influence', 'cross_org'],
+        introStyle: "I'm Priya, senior PM. I'll ask about your experience driving cross-functional initiatives.",
+      },
+    ],
+    questionWeights: {
+      learning: 10,
+      collaboration: 20,
+      technical: 55,
+      curiosity: 15,
+    },
+    evaluationRubric: [],
+    artifactComplexity: 'complex',
+    maxQuestions: 12,
+  },
+  lead: {
+    experienceLevel: 'lead',
+    personas: [
+      {
+        id: 'director',
+        name: 'David',
+        role: 'engineering_manager',
+        displayRole: 'Engineering Director',
+        tone: 'strategic',
+        focusAreas: ['team_building', 'technical_strategy', 'org_impact'],
+        introStyle: "I'm David, engineering director. I'm interested in your experience building and scaling engineering teams.",
+      },
+      {
+        id: 'staff_engineer',
+        name: 'Sarah',
+        role: 'tech_lead',
+        displayRole: 'Staff Engineer',
+        tone: 'challenging',
+        focusAreas: ['architecture', 'technical_excellence', 'mentorship'],
+        introStyle: "Sarah here, staff engineer. Let's discuss technical vision and how you elevate engineering standards.",
+      },
+      {
+        id: 'product_leader',
+        name: 'Priya',
+        role: 'product_partner',
+        displayRole: 'VP Product',
+        tone: 'strategic',
+        focusAreas: ['roadmap', 'business_alignment', 'vision'],
+        introStyle: "I'm Priya, VP of Product. I want to understand how you align technical work with business goals.",
+      },
+    ],
+    questionWeights: {
+      learning: 5,
+      collaboration: 25,
+      technical: 50,
+      curiosity: 20,
+    },
+    evaluationRubric: [],
+    artifactComplexity: 'complex',
+    maxQuestions: 15,
+  },
+};
 
 // Job Offer Details Structure - mimics real job offers
 export interface OfferDetails {

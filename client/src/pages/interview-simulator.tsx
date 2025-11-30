@@ -100,7 +100,7 @@ export default function InterviewSimulator() {
     if (stageId) {
       setApplicationStageId(parseInt(stageId));
     }
-    if (type && ['behavioral', 'technical', 'system-design', 'case-study'].includes(type)) {
+    if (type && ['behavioral', 'technical', 'system-design', 'case-study', 'team', 'panel'].includes(type)) {
       setInterviewType(type);
     }
     if (role && ['developer', 'pm', 'designer', 'data-scientist'].includes(role)) {

@@ -1084,10 +1084,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let defaultStages;
         
         if (isIntern) {
-          // Intern positions: 2-stage pipeline
+          // Intern positions: 2-stage pipeline with team interview
           defaultStages = [
             { order: 1, name: 'Recruiter Screen', type: 'recruiter_call' },
-            { order: 2, name: 'Team Interview', type: 'behavioral' },
+            { order: 2, name: 'Team Interview', type: 'team' },
           ];
         } else if (job.role === 'developer') {
           defaultStages = [

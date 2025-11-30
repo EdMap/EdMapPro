@@ -394,6 +394,8 @@ function getStageIcon(type: string) {
     case "technical": return <FileText className="h-4 w-4" />;
     case "case_study": return <Target className="h-4 w-4" />;
     case "portfolio": return <Briefcase className="h-4 w-4" />;
+    case "team": return <Users className="h-4 w-4" />;
+    case "panel": return <Users className="h-4 w-4" />;
     default: return <Calendar className="h-4 w-4" />;
   }
 }
@@ -405,6 +407,8 @@ function getStageTypeLabel(type: string): string {
     case "technical": return "Technical";
     case "case_study": return "Case Study";
     case "portfolio": return "Portfolio Review";
+    case "team": return "Team Interview";
+    case "panel": return "Panel Interview";
     default: return type;
   }
 }
@@ -1495,6 +1499,8 @@ export default function Journey() {
       technical: 'technical',
       case_study: 'case_study',
       portfolio: 'behavioral',
+      team: 'team',
+      panel: 'team',
     };
     
     const interviewType = stageTypeToInterviewType[stage.stageType] || 'behavioral';

@@ -45,6 +45,21 @@ import {
   getStageRuntimeConfig,
   StageRuntimeConfig
 } from "./completion-decision";
+import { 
+  TeamInterviewTurnChain, 
+  TeamInterviewGreetingChain,
+  getTeamInterviewSettings,
+  getLevelExpectationsText,
+} from "./team-interview-chain";
+import { 
+  selectQuestionsForInterview,
+  TeamInterviewQuestion,
+} from "./team-interview-questions";
+import { 
+  ExperienceLevel,
+  TeamInterviewSettings,
+  TEAM_INTERVIEW_PRESETS,
+} from "@shared/schema";
 
 export interface JobContext {
   companyName?: string;
@@ -132,7 +147,13 @@ interface ConversationMemory {
   // Flag to force switching to a completely different topic after repeated refusals
   forceTopicSwitch?: boolean;
   // Unified chain: conversation history for context
-  conversationHistory: Array<{ role: 'interviewer' | 'candidate'; content: string }>;
+  conversationHistory: Array<{ role: 'interviewer' | 'candidate'; content: string; personaId?: string }>;
+  // Team interview specific fields
+  isTeamInterview?: boolean;
+  teamSettings?: import('@shared/schema').TeamInterviewSettings;
+  activePersonaId?: string;
+  personaQuestionCounts?: Record<string, number>;
+  teamQuestionBacklog?: import('./team-interview-questions').TeamInterviewQuestion[];
 }
 
 export class InterviewOrchestrator {
@@ -150,6 +171,8 @@ export class InterviewOrchestrator {
   private preparationPlanner: PreparationPlannerChain;
   private triage: TriageChain;
   private unifiedTurn: UnifiedInterviewTurnChain;
+  private teamTurn: TeamInterviewTurnChain;
+  private teamGreeting: TeamInterviewGreetingChain;
   private memory: Map<number, ConversationMemory>;
 
   constructor() {
@@ -167,6 +190,8 @@ export class InterviewOrchestrator {
     this.preparationPlanner = new PreparationPlannerChain();
     this.triage = new TriageChain();
     this.unifiedTurn = new UnifiedInterviewTurnChain();
+    this.teamTurn = new TeamInterviewTurnChain();
+    this.teamGreeting = new TeamInterviewGreetingChain();
     this.memory = new Map();
   }
 
@@ -234,6 +259,21 @@ export class InterviewOrchestrator {
       candidateCv: jobContext?.candidateCv,
       stageSettings: getStageSettings(session.interviewType),
     };
+  }
+
+  private mapDifficultyToLevel(difficulty: string): ExperienceLevel {
+    const mapping: Record<string, ExperienceLevel> = {
+      'easy': 'intern',
+      'intern': 'intern',
+      'junior': 'junior',
+      'medium': 'junior',
+      'mid': 'mid',
+      'senior': 'senior',
+      'hard': 'senior',
+      'lead': 'lead',
+      'expert': 'lead',
+    };
+    return mapping[difficulty.toLowerCase()] || 'junior';
   }
 
   /**
@@ -607,6 +647,74 @@ export class InterviewOrchestrator {
       memory.candidateName = candidateName;
     }
 
+    // Check if this is a team interview (both 'team' and 'panel' use multi-persona interviews)
+    // Note: panel is treated as an alias for team interviews - they share the same persona configuration
+    const isTeamInterview = interviewType === "team" || interviewType === "panel";
+    
+    if (isTeamInterview && jobContext?.companyName && candidateName) {
+      // Get seniority from difficulty (maps to experience level)
+      const experienceLevel = this.mapDifficultyToLevel(difficulty);
+      const teamSettings = getTeamInterviewSettings(experienceLevel);
+      
+      console.log('[Team Interview] Starting with settings:', {
+        experienceLevel,
+        personas: teamSettings.personas.map(p => p.name),
+        maxQuestions: teamSettings.maxQuestions,
+      });
+      
+      // Initialize team interview memory
+      memory.isTeamInterview = true;
+      memory.teamSettings = teamSettings;
+      memory.activePersonaId = teamSettings.personas[0].id;
+      memory.personaQuestionCounts = {};
+      teamSettings.personas.forEach(p => {
+        memory.personaQuestionCounts![p.id] = 0;
+      });
+      
+      // Select level-appropriate questions
+      memory.teamQuestionBacklog = selectQuestionsForInterview(
+        experienceLevel,
+        teamSettings.questionWeights,
+        teamSettings.maxQuestions
+      );
+      
+      console.log('[Team Interview] Question backlog:', {
+        total: memory.teamQuestionBacklog.length,
+        byCategory: {
+          learning: memory.teamQuestionBacklog.filter(q => q.category === 'learning').length,
+          collaboration: memory.teamQuestionBacklog.filter(q => q.category === 'collaboration').length,
+          technical: memory.teamQuestionBacklog.filter(q => q.category === 'technical').length,
+          curiosity: memory.teamQuestionBacklog.filter(q => q.category === 'curiosity').length,
+        },
+      });
+      
+      // Generate team greeting
+      const { greeting: greetingText, activePersonaId } = await this.teamGreeting.generateGreeting(
+        teamSettings,
+        jobContext.companyName,
+        jobContext.companyDescription || '',
+        jobContext.jobTitle || targetRole,
+        candidateName
+      );
+      
+      memory.activePersonaId = activePersonaId;
+      memory.currentStage = "greeting";
+      memory.preludeStep = 0;
+      
+      // Track greeting in conversation history with persona info
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: greetingText,
+        personaId: activePersonaId,
+      });
+      
+      return {
+        session,
+        greeting: greetingText,
+        isPreludeMode: true,
+      };
+    }
+    
     // For HR/behavioral interviews with job context, use conversational prelude
     const usePrelude = jobContext?.companyName && 
       (interviewType === "behavioral" || interviewType === "recruiter_call");
@@ -1251,6 +1359,22 @@ export class InterviewOrchestrator {
       if (!handlerResult.isElaborationOffer) {
         candidateQuestionAnswer = handlerResult.response;
       }
+    }
+
+    // =========================================================================
+    // TEAM INTERVIEW PATH: Multi-persona interview with level calibration
+    // =========================================================================
+    if (memory.isTeamInterview && memory.teamSettings && memory.teamQuestionBacklog) {
+      console.log('[Telemetry] Chain activation:', {
+        chainType: 'team_interview',
+        experienceLevel: memory.teamSettings.experienceLevel,
+        activePersona: memory.activePersonaId,
+        mode: session.mode,
+        sessionId,
+        questionsAsked: memory.totalQuestionsAsked,
+        reason: 'Team interview mode with multi-persona flow',
+      });
+      return this.processAnswerTeam(sessionId, questionId, answer, session, question);
     }
 
     // =========================================================================
@@ -2054,6 +2178,190 @@ export class InterviewOrchestrator {
       decision: {
         action: turnResult.actionType === 'follow_up' ? 'follow_up' : 'next_question',
         reason: 'Unified chain decision',
+      },
+    };
+  }
+
+  /**
+   * Process a conversation turn for team interviews with multi-persona support
+   * and level-calibrated evaluation.
+   */
+  private async processAnswerTeam(
+    sessionId: number,
+    questionId: number,
+    answer: string,
+    session: InterviewSession,
+    question: InterviewQuestion
+  ): Promise<{
+    evaluation?: EvaluationResult;
+    decision?: FollowUpDecision;
+    nextQuestion?: InterviewQuestion;
+    reflection?: string;
+    finalReport?: FinalReport;
+    closure?: string;
+    pacing?: {
+      elapsedMinutes: number;
+      progressPercent: number;
+      status: 'starting' | 'on_track' | 'mid_interview' | 'wrapping_soon' | 'overtime';
+    };
+  }> {
+    const memory = this.getMemory(sessionId);
+    const config = this.getConfig(session, memory.jobContext);
+    const settings = memory.teamSettings!;
+    const activePersona = settings.personas.find(p => p.id === memory.activePersonaId) || settings.personas[0];
+
+    // Add candidate's answer to conversation history
+    memory.conversationHistory.push({
+      role: 'candidate',
+      content: answer,
+    });
+
+    // Build coverage status for team interview criteria
+    const coverageStatus: Record<string, number> = {
+      learning_mindset: memory.coverage.behavioral.score,
+      collaboration: memory.coverage.culture_fit.score,
+      problem_solving: memory.coverage.skills.score,
+      technical_foundations: memory.coverage.background.score,
+    };
+
+    // Call the team interview chain
+    const turnResult = await this.teamTurn.processTurn({
+      activePersona,
+      allPersonas: settings.personas,
+      experienceLevel: settings.experienceLevel,
+      companyName: config.companyName || 'the company',
+      companyDescription: config.companyDescription || '',
+      jobTitle: config.jobTitle || config.targetRole,
+      candidateName: memory.candidateName || 'Candidate',
+      conversationHistory: memory.conversationHistory,
+      questionBacklog: memory.teamQuestionBacklog || [],
+      coverageStatus,
+      questionsAskedCount: memory.totalQuestionsAsked,
+      maxQuestions: settings.maxQuestions,
+      currentQuestionId: memory.currentQuestionId,
+      levelExpectations: getLevelExpectationsText(settings),
+    });
+
+    console.log('[Team Interview] Turn result:', {
+      activePersona: activePersona.name,
+      actionType: turnResult.actionType,
+      nextPersona: turnResult.nextPersonaId,
+      score: turnResult.evaluation.score,
+      criterion: turnResult.evaluation.criterionCovered,
+    });
+
+    // Update memory with evaluation
+    const evaluation: EvaluationResult = {
+      score: turnResult.evaluation.score,
+      feedback: `Score: ${turnResult.evaluation.score}/10 (${settings.experienceLevel} level)`,
+      strengths: turnResult.evaluation.strengths,
+      improvements: turnResult.evaluation.areasToImprove,
+      projectMentioned: null,
+    };
+
+    memory.answers.push(answer);
+    memory.scores.push(evaluation.score);
+    memory.evaluations.push(evaluation);
+    memory.totalQuestionsAsked++;
+    memory.personaQuestionCounts![activePersona.id] = (memory.personaQuestionCounts![activePersona.id] || 0) + 1;
+
+    // Map team interview criteria to coverage tracker
+    const criterionMapping: Record<string, keyof CoverageTracker> = {
+      'learning_mindset': 'behavioral',
+      'collaboration': 'culture_fit',
+      'problem_solving': 'skills',
+      'technical_foundations': 'background',
+    };
+    const mappedCriterion = criterionMapping[turnResult.evaluation.criterionCovered] || 'behavioral';
+    if (memory.coverage[mappedCriterion]) {
+      memory.coverage[mappedCriterion].score = Math.min(1,
+        memory.coverage[mappedCriterion].score + turnResult.evaluation.coverageContribution
+      );
+      memory.coverage[mappedCriterion].questionsAsked++;
+    }
+
+    // Handle persona handoff
+    if (turnResult.actionType === 'hand_off' && turnResult.nextPersonaId) {
+      memory.activePersonaId = turnResult.nextPersonaId;
+      const nextPersona = settings.personas.find(p => p.id === turnResult.nextPersonaId);
+      console.log('[Team Interview] Handoff to:', nextPersona?.name);
+    }
+
+    // Update telemetry
+    this.updateTelemetry(memory, evaluation.score);
+
+    // Add interviewer's response to conversation history with persona info
+    memory.conversationHistory.push({
+      role: 'interviewer',
+      content: turnResult.response,
+      personaId: turnResult.actionType === 'hand_off' ? turnResult.nextPersonaId : activePersona.id,
+    });
+
+    // Save evaluation to database
+    await storage.updateInterviewQuestion(questionId, {
+      candidateAnswer: answer,
+      score: evaluation.score,
+      feedback: evaluation.feedback,
+      strengths: evaluation.strengths,
+      improvements: evaluation.improvements,
+      answeredAt: new Date(),
+    });
+
+    // Handle wrap-up
+    if (turnResult.actionType === 'wrap_up') {
+      console.log('[Team Interview] Wrap-up triggered:', {
+        sessionId,
+        experienceLevel: settings.experienceLevel,
+        questionsAsked: memory.totalQuestionsAsked,
+        personaBreakdown: memory.personaQuestionCounts,
+        avgScore: memory.scores.length > 0
+          ? Math.round((memory.scores.reduce((a, b) => a + b, 0) / memory.scores.length) * 10) / 10
+          : 0,
+        reason: turnResult.wrapUpReason,
+      });
+
+      const finalReport = await this.generateFinalReport(sessionId);
+
+      await storage.updateInterviewSession(sessionId, {
+        status: "completed",
+        overallScore: finalReport.overallScore,
+        completedAt: new Date(),
+      });
+
+      this.memory.delete(sessionId);
+
+      return {
+        evaluation,
+        finalReport,
+        closure: turnResult.response,
+      };
+    }
+
+    // Continue with next question
+    const nextQuestionIndex = session.currentQuestionIndex + 1;
+
+    await storage.updateInterviewSession(sessionId, {
+      currentQuestionIndex: nextQuestionIndex,
+    });
+
+    // Create next question record
+    const nextQuestion = await storage.createInterviewQuestion({
+      sessionId: session.id,
+      questionIndex: nextQuestionIndex,
+      questionText: turnResult.response,
+      questionType: turnResult.actionType === 'follow_up' ? 'follow_up' : 'core',
+      expectedCriteria: this.getExpectedCriteria(config, nextQuestionIndex),
+    });
+
+    memory.questions.push(turnResult.response);
+    memory.currentStage = 'core';
+
+    return {
+      evaluation,
+      nextQuestion,
+      decision: {
+        action: turnResult.actionType === 'follow_up' ? 'follow_up' : 'next_question',
+        reason: `Team interview - ${activePersona.name}`,
       },
     };
   }
