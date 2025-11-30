@@ -200,16 +200,20 @@ export default function LangchainInterviewSession({
       return response.json();
     },
     onSuccess: (result) => {
-      // Update team persona state if provided (for team interviews)
-      if (result.activePersona) {
-        setActivePersonaId(result.activePersona.id);
-      }
+      // Update team personas list if provided
       if (result.teamPersonas && result.teamPersonas.length > 0) {
         setTeamPersonas(result.teamPersonas);
       }
       
       // Get current active persona ID for message attribution
+      // Use activePersona from response (the speaker of the main question)
       const currentPersonaId = result.activePersona?.id || activePersonaId || undefined;
+      
+      // Only update activePersonaId if there's NO addressed response
+      // (if there IS an addressed response, we'll update after showing that message)
+      if (result.activePersona && !result.addressedPersonaResponse) {
+        setActivePersonaId(result.activePersona.id);
+      }
       
       // Handle interim responses (when AI responds to questions, confusion, comments, etc.)
       if (result.interimResponse) {

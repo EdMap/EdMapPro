@@ -2902,8 +2902,9 @@ export class InterviewOrchestrator {
         personaRole: addressedPersona.displayRole,
         content: addressedResponse,
       };
-      // Update active persona since the addressed one spoke last
-      result.activePersona = {
+      // Track who should be active AFTER both messages are shown
+      // activePersona stays as the original speaker for their question
+      result.nextActivePersona = {
         id: addressedPersona.id,
         name: addressedPersona.name,
         role: addressedPersona.role,
