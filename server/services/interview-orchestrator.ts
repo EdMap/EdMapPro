@@ -154,6 +154,12 @@ interface ConversationMemory {
   activePersonaId?: string;
   personaQuestionCounts?: Record<string, number>;
   teamQuestionBacklog?: import('./team-interview-questions').TeamInterviewQuestion[];
+  // Two-phase wrap-up: Wait for candidate response to "any questions?" before finalizing
+  pendingWrapUp?: {
+    wrapUpReason: string;
+    timestamp: number;
+    closurePromptAsked: boolean; // True if we asked "any questions?"
+  };
 }
 
 export class InterviewOrchestrator {
@@ -1964,6 +1970,66 @@ export class InterviewOrchestrator {
     const interviewerName = this.getInterviewerName(session.interviewType);
     const interviewerRole = this.getInterviewerRole(session.interviewType);
 
+    // =========================================================================
+    // TWO-PHASE WRAP-UP: Check if we're waiting for candidate's response to "any questions?"
+    // =========================================================================
+    if (memory.pendingWrapUp) {
+      console.log('[Unified Chain] Completing pending wrap-up after candidate response');
+      
+      // Add candidate's answer to conversation history
+      memory.conversationHistory.push({
+        role: 'candidate',
+        content: answer,
+      });
+      
+      // Save candidate's response to the closing question (no score - not an evaluation question)
+      await storage.updateInterviewQuestion(questionId, {
+        candidateAnswer: answer,
+        feedback: 'Closing question response - not scored',
+        answeredAt: new Date(),
+      });
+      
+      // Generate a brief closure message (thanking them, next steps)
+      const closureMessage = await this.closure.generate(config, memory.candidateName);
+      
+      // Add closure to conversation history for completeness
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: closureMessage,
+      });
+      
+      // Clear the pending wrap-up flag before generating report
+      const wrapUpReason = memory.pendingWrapUp.wrapUpReason;
+      memory.pendingWrapUp = undefined;
+      
+      // Generate final report (uses only actual scored questions from memory.scores)
+      const finalReport = await this.generateFinalReport(sessionId);
+      
+      console.log('[Telemetry] Wrap-up completed:', {
+        sessionId,
+        trigger: 'pending_wrap_up_resolved',
+        reason: wrapUpReason,
+        questionsAsked: memory.totalQuestionsAsked,
+        avgScore: memory.scores.length > 0 
+          ? Math.round((memory.scores.reduce((a, b) => a + b, 0) / memory.scores.length) * 10) / 10
+          : 0,
+        sessionDurationMs: Date.now() - memory.telemetry.startedAt,
+      });
+      
+      await storage.updateInterviewSession(sessionId, {
+        status: "completed",
+        overallScore: finalReport.overallScore,
+        completedAt: new Date(),
+      });
+
+      this.memory.delete(sessionId);
+
+      return {
+        finalReport,
+        closure: closureMessage,
+      };
+    }
+
     // Add candidate's answer to conversation history
     memory.conversationHistory.push({
       role: 'candidate',
@@ -2136,6 +2202,61 @@ export class InterviewOrchestrator {
         sessionDurationMs: Date.now() - memory.telemetry.startedAt,
       });
       
+      // TWO-PHASE WRAP-UP: Always defer if wrapUpReason indicates a conversational close
+      // The chain sets wrapUpReason when it decides to wrap up - trust that signal
+      const shouldDeferWrapUp = !!turnResult.wrapUpReason;
+      
+      if (shouldDeferWrapUp) {
+        console.log('[Unified Chain] Deferring wrap-up - waiting for candidate response', {
+          wrapUpReason: turnResult.wrapUpReason,
+          hasQuestion: turnResult.response.includes('?'),
+        });
+        
+        // Set pending wrap-up state
+        memory.pendingWrapUp = {
+          wrapUpReason: turnResult.wrapUpReason || 'sufficient_coverage',
+          timestamp: Date.now(),
+          closurePromptAsked: true,
+        };
+        
+        // Continue the interview to get the candidate's response to "any questions?"
+        const nextQuestionIndex = session.currentQuestionIndex + 1;
+        
+        await storage.updateInterviewSession(sessionId, {
+          currentQuestionIndex: nextQuestionIndex,
+        });
+        
+        // Create the wrap-up prompt as a closing question (not core)
+        const nextQuestion = await storage.createInterviewQuestion({
+          sessionId: session.id,
+          questionIndex: nextQuestionIndex,
+          questionText: turnResult.response,
+          questionType: 'closing', // Distinct from core questions
+          expectedCriteria: {},
+        });
+        
+        // Don't increment totalQuestionsAsked for closing prompts - they're not evaluation questions
+        memory.questions.push(turnResult.response);
+        memory.currentStage = 'wrapup';
+        
+        // Calculate pacing info for frontend (show wrapping_soon status)
+        const stageConfig = getStageRuntimeConfig(config.interviewType as 'hr' | 'technical' | 'final');
+        const pacing = this.getPacingInfo(memory, stageConfig);
+        // Override status to indicate wrap-up phase
+        pacing.status = 'wrapping_soon';
+        
+        return {
+          evaluation,
+          nextQuestion,
+          decision: {
+            action: 'next_question',
+            reason: 'Wrap-up question - waiting for candidate response',
+          },
+          pacing,
+        };
+      }
+      
+      // Direct closure (no question in response) - finalize immediately
       const finalReport = await this.generateFinalReport(sessionId);
 
       await storage.updateInterviewSession(sessionId, {
@@ -2172,6 +2293,10 @@ export class InterviewOrchestrator {
     memory.questions.push(turnResult.response);
     memory.currentStage = 'core';
 
+    // Calculate pacing info for frontend
+    const stageConfig = getStageRuntimeConfig(config.interviewType as 'hr' | 'technical' | 'final');
+    const pacing = this.getPacingInfo(memory, stageConfig);
+
     return {
       evaluation,
       nextQuestion,
@@ -2179,6 +2304,7 @@ export class InterviewOrchestrator {
         action: turnResult.actionType === 'follow_up' ? 'follow_up' : 'next_question',
         reason: 'Unified chain decision',
       },
+      pacing,
     };
   }
 
@@ -2356,6 +2482,10 @@ export class InterviewOrchestrator {
     memory.questions.push(turnResult.response);
     memory.currentStage = 'core';
 
+    // Calculate pacing info for frontend
+    const stageConfig = getStageRuntimeConfig('hr'); // Team interviews use HR pacing
+    const pacing = this.getPacingInfo(memory, stageConfig);
+
     return {
       evaluation,
       nextQuestion,
@@ -2363,6 +2493,7 @@ export class InterviewOrchestrator {
         action: turnResult.actionType === 'follow_up' ? 'follow_up' : 'next_question',
         reason: `Team interview - ${activePersona.name}`,
       },
+      pacing,
     };
   }
 }
