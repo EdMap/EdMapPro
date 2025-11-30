@@ -2710,6 +2710,16 @@ export class InterviewOrchestrator {
     reflection?: string;
     finalReport?: FinalReport;
     closure?: string;
+    teamClosing?: {
+      primary: {
+        message: string;
+        persona: { id: string; name: string; role: string; displayRole: string };
+      };
+      secondary: {
+        message: string;
+        persona: { id: string; name: string; role: string; displayRole: string };
+      } | null;
+    };
     pacing?: {
       elapsedMinutes: number;
       progressPercent: number;
@@ -3007,10 +3017,35 @@ export class InterviewOrchestrator {
 
       this.memory.delete(sessionId);
 
+      // Return separate closing messages with persona info for proper UI display
+      const primaryPersona = settings.personas[0];
+      const secondaryPersona = settings.personas[1];
+
       return {
         evaluation,
         finalReport,
-        closure: closingResult.combinedClosing,
+        closure: closingResult.combinedClosing, // Keep for backward compatibility
+        // New: separate closings with persona info
+        teamClosing: {
+          primary: {
+            message: closingResult.primaryClosing,
+            persona: {
+              id: primaryPersona.id,
+              name: primaryPersona.name,
+              role: primaryPersona.role,
+              displayRole: primaryPersona.displayRole,
+            },
+          },
+          secondary: secondaryPersona ? {
+            message: closingResult.secondaryClosing,
+            persona: {
+              id: secondaryPersona.id,
+              name: secondaryPersona.name,
+              role: secondaryPersona.role,
+              displayRole: secondaryPersona.displayRole,
+            },
+          } : null,
+        },
       };
     }
 

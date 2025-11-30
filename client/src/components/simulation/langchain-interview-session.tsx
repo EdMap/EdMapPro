@@ -171,6 +171,53 @@ export default function LangchainInterviewSession({
   useEffect(() => {
     scrollToBottom();
   }, [messages, showTypingIndicator]);
+
+  // Helper to show team interview closing sequence with separate persona messages
+  const showTeamClosingSequence = (
+    teamClosing: {
+      primary: { message: string; persona: { id: string; name: string; role: string; displayRole: string } };
+      secondary: { message: string; persona: { id: string; name: string; role: string; displayRole: string } } | null;
+    },
+    showEndModal: (report: any) => void,
+    finalReport: any
+  ) => {
+    // Show primary persona's closing (includes "any questions for us?")
+    setShowTypingIndicator(true);
+    setActivePersonaId(teamClosing.primary.persona.id);
+    setTimeout(() => {
+      setShowTypingIndicator(false);
+      setMessages(prev => [...prev, { 
+        role: 'interviewer', 
+        content: teamClosing.primary.message, 
+        personaId: teamClosing.primary.persona.id 
+      }]);
+      
+      // Then show secondary persona's closing (timeline/next steps)
+      if (teamClosing.secondary) {
+        setTimeout(() => {
+          setShowTypingIndicator(true);
+          setActivePersonaId(teamClosing.secondary!.persona.id);
+          setTimeout(() => {
+            setShowTypingIndicator(false);
+            setMessages(prev => [...prev, { 
+              role: 'interviewer', 
+              content: teamClosing.secondary!.message, 
+              personaId: teamClosing.secondary!.persona.id 
+            }]);
+            // Show modal after brief pause
+            setTimeout(() => {
+              showEndModal(finalReport);
+            }, 2000);
+          }, 1200);
+        }, 1500);
+      } else {
+        // No secondary, show modal after primary
+        setTimeout(() => {
+          showEndModal(finalReport);
+        }, 2000);
+      }
+    }, 1500);
+  };
   
   // Local timer to update elapsed time every 10 seconds for smooth display
   useEffect(() => {
@@ -291,13 +338,15 @@ export default function LangchainInterviewSession({
             setShowTypingIndicator(false);
             setMessages(prev => [...prev, { role: 'interviewer', content: result.candidateQuestionAnswer, personaId: currentPersonaId }]);
             // Then show closure if available
-            if (result.closure) {
+            if (result.teamClosing) {
+              // Team interview: show separate closing messages from each persona
+              showTeamClosingSequence(result.teamClosing, showEndModal, result.finalReport);
+            } else if (result.closure) {
               setTimeout(() => {
                 setShowTypingIndicator(true);
                 setTimeout(() => {
                   setShowTypingIndicator(false);
                   setMessages(prev => [...prev, { role: 'interviewer', content: result.closure, personaId: currentPersonaId }]);
-                  // Show modal after a brief pause to let user read closure
                   setTimeout(() => {
                     showEndModal(result.finalReport);
                   }, 2000);
@@ -309,6 +358,9 @@ export default function LangchainInterviewSession({
               }, 1500);
             }
           }, 1200);
+        } else if (result.teamClosing) {
+          // Team interview: show separate closing messages from each persona
+          showTeamClosingSequence(result.teamClosing, showEndModal, result.finalReport);
         } else if (result.closure) {
           setShowTypingIndicator(true);
           setTimeout(() => {
