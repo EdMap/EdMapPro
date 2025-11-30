@@ -318,6 +318,7 @@ export class TeamInterviewTurnChain {
 export class TeamInterviewGreetingChain {
   private greetingChain: RunnableSequence;
   private sarahIntroChain: RunnableSequence;
+  private transitionChain: RunnableSequence;
 
   constructor() {
     const greetingPrompt = PromptTemplate.fromTemplate(`
@@ -377,6 +378,39 @@ Output only the greeting text, no JSON.
 
     this.sarahIntroChain = RunnableSequence.from([
       sarahIntroPrompt,
+      new ChatGroq({
+        model: MODEL_NAME,
+        temperature: 0.7,
+        apiKey: process.env.GROQ_API_KEY,
+      }),
+      new StringOutputParser(),
+    ]);
+
+    const transitionPrompt = PromptTemplate.fromTemplate(`
+You are {personaName}, a {personaRole} at {companyName}, in a team interview for an {experienceLevel}-level position.
+
+The candidate just introduced themselves:
+"{candidateIntro}"
+
+Generate a brief, warm acknowledgment of what they shared, then naturally transition into your first question.
+
+IMPORTANT:
+- Acknowledge something SPECIFIC they mentioned (career change, background, interests, etc.)
+- Show genuine curiosity about their journey
+- Keep the acknowledgment brief (1-2 sentences)
+- Then smoothly transition into the first question: "{firstQuestion}"
+
+Example (if candidate mentioned career change):
+"That's really interesting that you're making this shift into software engineering! I'm curious about that journey. {firstQuestion}"
+
+Example (if candidate mentioned bootcamp):
+"It's great to hear about your bootcamp experience - that takes real dedication. {firstQuestion}"
+
+Output only the combined acknowledgment + question, no JSON.
+`);
+
+    this.transitionChain = RunnableSequence.from([
+      transitionPrompt,
       new ChatGroq({
         model: MODEL_NAME,
         temperature: 0.7,
@@ -447,6 +481,26 @@ Output only the greeting text, no JSON.
       intro: stripMarkdownCodeBlocks(intro),
       activePersonaId: secondaryPersona.id,
     };
+  }
+
+  async generateTransitionToFirstQuestion(
+    settings: TeamInterviewSettings,
+    companyName: string,
+    candidateIntro: string,
+    firstQuestion: string
+  ): Promise<string> {
+    const primaryPersona = settings.personas[0];
+
+    const transition = await this.transitionChain.invoke({
+      personaName: primaryPersona.name,
+      personaRole: primaryPersona.displayRole,
+      companyName,
+      experienceLevel: settings.experienceLevel,
+      candidateIntro,
+      firstQuestion,
+    });
+
+    return stripMarkdownCodeBlocks(transition);
   }
 }
 

@@ -569,7 +569,9 @@ export class InterviewOrchestrator {
     message: string;
     coverageSummary: { overall: number; critical: number };
   } {
-    const { maxQuestions, minQuestions } = settings;
+    const { maxQuestions } = settings;
+    // minQuestions is derived: at least half of maxQuestions for coverage-based wrap-up
+    const minQuestions = Math.ceil(maxQuestions / 2);
     const questionsAsked = memory.totalQuestionsAsked;
     
     // Calculate team-specific coverage (using team interview criteria mapping)
@@ -1533,6 +1535,7 @@ export class InterviewOrchestrator {
 
   /**
    * Generate first question for team interview
+   * Includes a natural transition that acknowledges the candidate's self-introduction
    */
   private async generateTeamFirstQuestion(
     session: any,
@@ -1542,8 +1545,8 @@ export class InterviewOrchestrator {
     // Pick first question from backlog
     const backlog = memory.teamQuestionBacklog || memory.questionBacklog;
     const firstBacklogItem = backlog?.[0];
-    const questionText = firstBacklogItem?.question || 
-      "Could you tell us a bit about yourself and what drew you to this opportunity?";
+    const rawQuestion = firstBacklogItem?.question || 
+      "How do you approach learning something new?";
     
     // Mark question as asked
     if (firstBacklogItem) {
@@ -1553,6 +1556,27 @@ export class InterviewOrchestrator {
 
     // Set Marcus as the active persona for starting questions
     memory.activePersonaId = teamSettings.personas[0].id;
+
+    // Get the candidate's self-introduction from conversation history
+    const candidateIntro = memory.conversationHistory
+      .filter(msg => msg.role === 'candidate')
+      .slice(-1)[0]?.content || '';
+
+    // Generate a natural transition that acknowledges what the candidate shared
+    let questionText = rawQuestion;
+    if (candidateIntro && memory.jobContext?.companyName) {
+      try {
+        questionText = await this.teamGreeting.generateTransitionToFirstQuestion(
+          teamSettings,
+          memory.jobContext.companyName,
+          candidateIntro,
+          rawQuestion
+        );
+      } catch (error) {
+        console.error('[Team Interview] Failed to generate transition, using raw question:', error);
+        questionText = rawQuestion;
+      }
+    }
 
     const question = await storage.createInterviewQuestion({
       sessionId: session.id,
