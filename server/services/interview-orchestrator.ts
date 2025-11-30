@@ -710,8 +710,8 @@ export class InterviewOrchestrator {
         },
       });
       
-      // Generate team greeting
-      const { greeting: greetingText, activePersonaId } = await this.teamGreeting.generateGreeting(
+      // Generate team greeting (Marcus introduces both himself and Sarah)
+      const { greeting: marcusGreeting, activePersonaId: marcusPersonaId } = await this.teamGreeting.generateGreeting(
         teamSettings,
         jobContext.companyName,
         jobContext.companyDescription || '',
@@ -719,20 +719,44 @@ export class InterviewOrchestrator {
         candidateName
       );
       
-      memory.activePersonaId = activePersonaId;
-      memory.currentStage = "greeting";
-      memory.preludeStep = 0;
-      
-      // Track greeting in conversation history with persona info
+      // Track Marcus's greeting in conversation history
       memory.conversationHistory.push({
         role: 'interviewer',
-        content: greetingText,
-        personaId: activePersonaId,
+        content: marcusGreeting,
+        personaId: marcusPersonaId,
+      });
+      
+      // Since Marcus invites Sarah to introduce herself, generate Sarah's intro immediately
+      // This creates a natural flow: Marcus speaks, then Sarah, then candidate can respond
+      const { intro: sarahIntro, activePersonaId: sarahPersonaId } = await this.teamGreeting.generateSecondaryIntro(
+        teamSettings,
+        jobContext.companyName,
+        candidateName
+      );
+      
+      // Track Sarah's intro in conversation history
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: sarahIntro,
+        personaId: sarahPersonaId,
+      });
+      
+      memory.activePersonaId = sarahPersonaId; // Sarah spoke last
+      memory.currentStage = "intro_exchange";
+      memory.preludeStep = 2; // Skip to step 2 since both intros are done
+      
+      // Combine both greetings for the frontend
+      // Format: Marcus's greeting + marker + Sarah's greeting
+      const combinedGreeting = JSON.stringify({
+        messages: [
+          { personaId: marcusPersonaId, content: marcusGreeting },
+          { personaId: sarahPersonaId, content: sarahIntro },
+        ]
       });
       
       return {
         session,
-        greeting: greetingText,
+        greeting: combinedGreeting,
         isPreludeMode: true,
         // Include team interview info for frontend
         isTeamInterview: true,
@@ -742,7 +766,7 @@ export class InterviewOrchestrator {
           role: p.role,
           displayRole: p.displayRole,
         })),
-        activePersonaId,
+        activePersonaId: sarahPersonaId,
       };
     }
     
@@ -1312,7 +1336,7 @@ export class InterviewOrchestrator {
    */
   private async handleTeamInterviewPrelude(
     session: any,
-    memory: InterviewMemory,
+    memory: ConversationMemory,
     config: InterviewConfig,
     candidateResponse: string
   ): Promise<{
@@ -1328,7 +1352,7 @@ export class InterviewOrchestrator {
       // Step 1: After Marcus greeting, Sarah introduces herself
       const { intro, activePersonaId } = await this.teamGreeting.generateSecondaryIntro(
         teamSettings,
-        memory.jobContext.companyName,
+        memory.jobContext?.companyName || 'the company',
         memory.candidateName || 'Candidate'
       );
 
@@ -1355,24 +1379,13 @@ export class InterviewOrchestrator {
       memory.currentStage = "core";
       memory.preludeStep = 3; // Mark prelude complete
 
+      // Track candidate's prelude response in conversation history
+      memory.conversationHistory.push({
+        role: 'candidate',
+        content: candidateResponse,
+      });
+
       // Generate first team interview question
-      const result = await this.processAnswerTeam(
-        session.id,
-        null, // No question yet
-        candidateResponse
-      );
-
-      // Return the first question
-      if (result.nextQuestion) {
-        return {
-          firstQuestion: result.nextQuestion,
-          preludeComplete: true,
-          activePersonaId: memory.activePersonaId,
-          isTeamInterview: true,
-        };
-      }
-
-      // Fallback: generate first question manually
       const firstQuestion = await this.generateTeamFirstQuestion(session, memory, teamSettings);
       return {
         firstQuestion,
@@ -1394,7 +1407,7 @@ export class InterviewOrchestrator {
    */
   private async generateTeamFirstQuestion(
     session: any,
-    memory: InterviewMemory,
+    memory: ConversationMemory,
     teamSettings: TeamInterviewSettings
   ): Promise<InterviewQuestion> {
     // Pick first question from backlog

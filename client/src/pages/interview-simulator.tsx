@@ -146,13 +146,36 @@ export default function InterviewSimulator() {
       if (result.isPreludeMode && result.greeting) {
         // Enter conversational prelude mode
         setIsPreludeMode(true);
-        // For team interviews, include the active persona in the greeting message
-        const greetingMessage = {
-          role: 'interviewer' as const, 
-          content: result.greeting,
-          personaId: result.activePersonaId
-        };
-        setPreludeMessages([greetingMessage]);
+        
+        // Check if greeting is a combined team format (JSON with messages array)
+        try {
+          const parsed = JSON.parse(result.greeting);
+          if (parsed.messages && Array.isArray(parsed.messages)) {
+            // Team interview: multiple persona messages
+            const messages = parsed.messages.map((msg: { personaId: string; content: string }) => ({
+              role: 'interviewer' as const,
+              content: msg.content,
+              personaId: msg.personaId
+            }));
+            setPreludeMessages(messages);
+          } else {
+            // Fallback to single message
+            const greetingMessage = {
+              role: 'interviewer' as const, 
+              content: result.greeting,
+              personaId: result.activePersonaId
+            };
+            setPreludeMessages([greetingMessage]);
+          }
+        } catch {
+          // Not JSON, treat as single message (legacy format)
+          const greetingMessage = {
+            role: 'interviewer' as const, 
+            content: result.greeting,
+            personaId: result.activePersonaId
+          };
+          setPreludeMessages([greetingMessage]);
+        }
       } else {
         // Legacy flow without prelude
         setIsPreludeMode(false);
