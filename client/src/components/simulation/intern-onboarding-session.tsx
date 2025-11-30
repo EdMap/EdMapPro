@@ -401,6 +401,8 @@ export default function InternOnboardingSession({
   const [closedConversations, setClosedConversations] = useState<Record<string, boolean>>(savedProgress?.closedConversations || {});
   // Track if showing all-intros-complete screen
   const [showAllIntrosComplete, setShowAllIntrosComplete] = useState(false);
+  // Track if all-intros-complete dialog has been dismissed (to prevent showing again)
+  const [introsDialogDismissed, setIntrosDialogDismissed] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docsScrollRef = useRef<HTMLDivElement>(null);
@@ -623,10 +625,11 @@ export default function InternOnboardingSession({
           const newClosed = { ...prev, [member.name]: true };
           
           // Check if all intros are now complete using the new state
+          // Only show dialog if NOT already in comprehension-check mode and dialog hasn't been dismissed
           const teamMembersToMeet = teamMembers.filter((m: TeamMember) => m.name !== 'Sarah');
           const allClosed = teamMembersToMeet.every((m: TeamMember) => newClosed[m.name]);
           
-          if (allClosed) {
+          if (allClosed && viewMode !== 'comprehension-check' && !introsDialogDismissed) {
             // Also ensure all are marked as met
             setIntroProgress(prevIntro => {
               const newIntro = { ...prevIntro, [member.name]: true };
@@ -3833,7 +3836,13 @@ git push origin fix/your-feature-name
             </Button>
           </div>
           
-          {filteredInteractions.length >= 4 && !comprehensionComplete && (
+          {/* Show Complete button after meaningful exchange (at least 3 user messages to Sarah) */}
+          {(() => {
+            const userMessages = filteredInteractions.filter((i: any) => 
+              i.sender === 'You' || i.sender === 'User'
+            );
+            return userMessages.length >= 3 && !comprehensionComplete;
+          })() && (
             <Button 
               className="w-full bg-green-600 hover:bg-green-700"
               onClick={() => {
@@ -4069,7 +4078,10 @@ git push origin fix/your-feature-name
       </Dialog>
 
       {/* All Team Intros Complete Dialog */}
-      <Dialog open={showAllIntrosComplete} onOpenChange={setShowAllIntrosComplete}>
+      <Dialog open={showAllIntrosComplete} onOpenChange={(open) => {
+        setShowAllIntrosComplete(open);
+        if (!open) setIntrosDialogDismissed(true);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex flex-col items-center text-center">
@@ -4111,6 +4123,7 @@ git push origin fix/your-feature-name
               variant="outline" 
               onClick={() => {
                 setShowAllIntrosComplete(false);
+                setIntrosDialogDismissed(true);
                 setSelectedMember(null);
                 setViewMode('overview');
               }}
@@ -4122,6 +4135,7 @@ git push origin fix/your-feature-name
               className="bg-green-600 hover:bg-green-700"
               onClick={() => {
                 setShowAllIntrosComplete(false);
+                setIntrosDialogDismissed(true);
                 setSelectedMember(null);
                 setViewMode('comprehension-check');
               }}
