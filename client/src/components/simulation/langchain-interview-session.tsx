@@ -27,6 +27,7 @@ import {
   X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPersonaStyle, type TeamPersona } from "@/lib/persona-styles";
 
 interface InterviewQuestion {
   id: number;
@@ -65,6 +66,7 @@ interface FinalReport {
 interface PreludeMessage {
   role: 'interviewer' | 'candidate';
   content: string;
+  personaId?: string;
 }
 
 interface PacingInfo {
@@ -80,6 +82,8 @@ interface LangchainInterviewSessionProps {
   preludeMessages?: PreludeMessage[];
   onComplete: () => void;
   mode?: "practice" | "journey";
+  isTeamInterview?: boolean;
+  teamPersonas?: TeamPersona[];
 }
 
 export default function LangchainInterviewSession({ 
@@ -88,20 +92,29 @@ export default function LangchainInterviewSession({
   introduction,
   preludeMessages: initialPreludeMessages,
   onComplete,
-  mode = "practice"
+  mode = "practice",
+  isTeamInterview = false,
+  teamPersonas: initialTeamPersonas = []
 }: LangchainInterviewSessionProps) {
   const { toast } = useToast();
   const [session, setSession] = useState(initialSession);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion>(firstQuestion);
   const [answer, setAnswer] = useState("");
   
-  // Message type with evaluation and interim flag
+  // Message type with evaluation, interim flag, and team persona info
   type ChatMessage = {
     role: 'interviewer' | 'candidate';
     content: string;
     evaluation?: any;
     isInterim?: boolean; // Marks messages that triggered interim responses (not real answers)
+    personaId?: string; // For team interviews: which persona is speaking
   };
+
+  // Track team personas (from props or updated from API responses)
+  const [teamPersonas, setTeamPersonas] = useState<TeamPersona[]>(initialTeamPersonas);
+  const [activePersonaId, setActivePersonaId] = useState<string | null>(
+    initialTeamPersonas.length > 0 ? initialTeamPersonas[0].id : null
+  );
 
   // Initialize messages: prelude messages (if any) OR introduction (legacy), then first question
   const buildInitialMessages = (): Array<ChatMessage> => {
@@ -110,15 +123,27 @@ export default function LangchainInterviewSession({
     // Prefer prelude messages (properly attributed) over introduction string
     if (initialPreludeMessages && initialPreludeMessages.length > 0) {
       initialPreludeMessages.forEach(pm => {
-        msgs.push({ role: pm.role, content: pm.content });
+        msgs.push({ 
+          role: pm.role, 
+          content: pm.content,
+          personaId: pm.personaId // Include persona for team interviews
+        });
       });
     } else if (introduction) {
       // Legacy: single introduction from interviewer
-      msgs.push({ role: 'interviewer', content: introduction });
+      msgs.push({ 
+        role: 'interviewer', 
+        content: introduction,
+        personaId: isTeamInterview && initialTeamPersonas.length > 0 ? initialTeamPersonas[0].id : undefined
+      });
     }
     
-    // Add first question
-    msgs.push({ role: 'interviewer', content: firstQuestion.questionText });
+    // Add first question (use current active persona for team interviews)
+    msgs.push({ 
+      role: 'interviewer', 
+      content: firstQuestion.questionText,
+      personaId: isTeamInterview && initialTeamPersonas.length > 0 ? initialTeamPersonas[0].id : undefined
+    });
     return msgs;
   };
   
@@ -170,6 +195,17 @@ export default function LangchainInterviewSession({
       return response.json();
     },
     onSuccess: (result) => {
+      // Update team persona state if provided (for team interviews)
+      if (result.activePersona) {
+        setActivePersonaId(result.activePersona.id);
+      }
+      if (result.teamPersonas && result.teamPersonas.length > 0) {
+        setTeamPersonas(result.teamPersonas);
+      }
+      
+      // Get current active persona ID for message attribution
+      const currentPersonaId = result.activePersona?.id || activePersonaId || undefined;
+      
       // Handle interim responses (when AI responds to questions, confusion, comments, etc.)
       if (result.interimResponse) {
         // The AI is responding to a non-answer (question, confusion, etc.)
@@ -198,11 +234,11 @@ export default function LangchainInterviewSession({
           setShowTypingIndicator(false);
           setMessages(prev => {
             const updated = [...prev];
-            // Add interviewer's interim response
-            updated.push({ role: 'interviewer', content: result.interimResponse });
+            // Add interviewer's interim response (with persona for team interviews)
+            updated.push({ role: 'interviewer', content: result.interimResponse, personaId: currentPersonaId });
             // If question should be repeated, also re-display it
             if (result.questionRepeated && result.currentQuestionText) {
-              updated.push({ role: 'interviewer', content: result.currentQuestionText });
+              updated.push({ role: 'interviewer', content: result.currentQuestionText, personaId: currentPersonaId });
             }
             return updated;
           });
@@ -244,14 +280,14 @@ export default function LangchainInterviewSession({
           setShowTypingIndicator(true);
           setTimeout(() => {
             setShowTypingIndicator(false);
-            setMessages(prev => [...prev, { role: 'interviewer', content: result.candidateQuestionAnswer }]);
+            setMessages(prev => [...prev, { role: 'interviewer', content: result.candidateQuestionAnswer, personaId: currentPersonaId }]);
             // Then show closure if available
             if (result.closure) {
               setTimeout(() => {
                 setShowTypingIndicator(true);
                 setTimeout(() => {
                   setShowTypingIndicator(false);
-                  setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
+                  setMessages(prev => [...prev, { role: 'interviewer', content: result.closure, personaId: currentPersonaId }]);
                   // Show modal after a brief pause to let user read closure
                   setTimeout(() => {
                     showEndModal(result.finalReport);
@@ -268,7 +304,7 @@ export default function LangchainInterviewSession({
           setShowTypingIndicator(true);
           setTimeout(() => {
             setShowTypingIndicator(false);
-            setMessages(prev => [...prev, { role: 'interviewer', content: result.closure }]);
+            setMessages(prev => [...prev, { role: 'interviewer', content: result.closure, personaId: currentPersonaId }]);
             // Show modal after a brief pause to let user read closure
             setTimeout(() => {
               showEndModal(result.finalReport);
@@ -300,12 +336,12 @@ export default function LangchainInterviewSession({
             const newMessages = [...prev];
             // Add candidate question answer first (if any)
             if (hasCandidateQuestionAnswer) {
-              newMessages.push({ role: 'interviewer', content: result.candidateQuestionAnswer });
+              newMessages.push({ role: 'interviewer', content: result.candidateQuestionAnswer, personaId: currentPersonaId });
             }
             if (hasReflection) {
-              newMessages.push({ role: 'interviewer', content: result.reflection });
+              newMessages.push({ role: 'interviewer', content: result.reflection, personaId: currentPersonaId });
             }
-            newMessages.push({ role: 'interviewer', content: result.nextQuestion.questionText });
+            newMessages.push({ role: 'interviewer', content: result.nextQuestion.questionText, personaId: currentPersonaId });
             return newMessages;
           });
         }, hasCandidateQuestionAnswer ? 1800 : hasReflection ? 1500 : 1200);
@@ -613,7 +649,7 @@ export default function LangchainInterviewSession({
                 {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview
               </CardTitle>
               <p className="text-sm text-gray-500 mt-1">
-                {session.targetRole} • {session.difficulty} level
+                {session.targetRole} • {session.difficulty.charAt(0).toUpperCase() + session.difficulty.slice(1)} level
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -681,7 +717,10 @@ export default function LangchainInterviewSession({
         </CardHeader>
 
         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg, index) => (
+          {messages.map((msg, index) => {
+            const personaStyle = msg.role === 'interviewer' ? getPersonaStyle(msg.personaId, isTeamInterview, teamPersonas) : null;
+            
+            return (
             <div
               key={index}
               className={cn(
@@ -691,11 +730,13 @@ export default function LangchainInterviewSession({
             >
               <Avatar className={cn(
                 "h-10 w-10",
-                msg.role === 'interviewer' ? "bg-blue-100" : "bg-green-100"
+                msg.role === 'interviewer' 
+                  ? (personaStyle?.bgColor || "bg-blue-100") 
+                  : "bg-green-100"
               )}>
                 <AvatarFallback>
                   {msg.role === 'interviewer' ? (
-                    <Bot className="h-5 w-5 text-blue-600" />
+                    <Bot className={cn("h-5 w-5", personaStyle?.iconColor || "text-blue-600")} />
                   ) : (
                     <User className="h-5 w-5 text-green-600" />
                   )}
@@ -704,9 +745,18 @@ export default function LangchainInterviewSession({
               <div className={cn(
                 "max-w-[70%] rounded-lg p-4",
                 msg.role === 'interviewer' 
-                  ? "bg-blue-50 text-gray-900" 
+                  ? (personaStyle?.messageBg || "bg-blue-50") + " text-gray-900" 
                   : "bg-green-50 text-gray-900"
               )}>
+                {/* Show persona name and role for team interviews */}
+                {isTeamInterview && msg.role === 'interviewer' && personaStyle && personaStyle.name !== 'Interviewer' && (
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="font-semibold text-sm">{personaStyle.name}</span>
+                    {personaStyle.displayRole && (
+                      <span className="text-xs text-gray-500">({personaStyle.displayRole})</span>
+                    )}
+                  </div>
+                )}
                 <p className="whitespace-pre-wrap">{msg.content}</p>
                 {msg.evaluation && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
@@ -720,24 +770,36 @@ export default function LangchainInterviewSession({
                 )}
               </div>
             </div>
-          ))}
+          );
+          })}
           
-          {showTypingIndicator && (
+          {showTypingIndicator && (() => {
+            const typingPersonaStyle = getPersonaStyle(activePersonaId, isTeamInterview, teamPersonas);
+            return (
             <div className="flex items-start space-x-3">
-              <Avatar className="h-10 w-10 bg-blue-100">
+              <Avatar className={cn("h-10 w-10", typingPersonaStyle.bgColor)}>
                 <AvatarFallback>
-                  <Bot className="h-5 w-5 text-blue-600" />
+                  <Bot className={cn("h-5 w-5", typingPersonaStyle.iconColor)} />
                 </AvatarFallback>
               </Avatar>
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div className={cn(typingPersonaStyle.messageBg, "rounded-lg p-4")}>
+                {isTeamInterview && typingPersonaStyle.name !== 'Interviewer' && (
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="font-semibold text-sm">{typingPersonaStyle.name}</span>
+                    {typingPersonaStyle.displayRole && (
+                      <span className="text-xs text-gray-500">({typingPersonaStyle.displayRole})</span>
+                    )}
+                  </div>
+                )}
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             </div>
-          )}
+          );
+          })()}
           
           <div ref={messagesEndRef} />
         </CardContent>

@@ -633,6 +633,9 @@ export class InterviewOrchestrator {
     greeting?: string;
     introduction?: string;
     isPreludeMode?: boolean;
+    isTeamInterview?: boolean;
+    teamPersonas?: Array<{ id: string; name: string; role: string; displayRole: string }>;
+    activePersonaId?: string;
   }> {
     const session = await storage.createInterviewSession({
       userId,
@@ -724,6 +727,15 @@ export class InterviewOrchestrator {
         session,
         greeting: greetingText,
         isPreludeMode: true,
+        // Include team interview info for frontend
+        isTeamInterview: true,
+        teamPersonas: teamSettings.personas.map(p => ({
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          displayRole: p.displayRole,
+        })),
+        activePersonaId,
       };
     }
     
@@ -2350,6 +2362,8 @@ export class InterviewOrchestrator {
       progressPercent: number;
       status: 'starting' | 'on_track' | 'mid_interview' | 'wrapping_soon' | 'overtime';
     };
+    activePersona?: { id: string; name: string; role: string; displayRole: string };
+    teamPersonas?: Array<{ id: string; name: string; role: string; displayRole: string }>;
   }> {
     const memory = this.getMemory(sessionId);
     const config = this.getConfig(session, memory.jobContext);
@@ -2514,6 +2528,19 @@ export class InterviewOrchestrator {
         reason: `Team interview - ${activePersona.name}`,
       },
       pacing,
+      // Include persona info for team interview UI
+      activePersona: {
+        id: activePersona.id,
+        name: activePersona.name,
+        role: activePersona.role,
+        displayRole: activePersona.displayRole,
+      },
+      teamPersonas: settings.personas.map(p => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        displayRole: p.displayRole,
+      })),
     };
   }
 }

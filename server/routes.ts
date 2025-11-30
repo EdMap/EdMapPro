@@ -637,6 +637,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract candidate name for personalized greeting
       let candidateName: string | undefined;
+      
+      // For journey mode, use the job's seniority as difficulty (e.g., "intern", "junior")
+      let resolvedDifficulty = difficulty;
 
       if (applicationStageId) {
         const stage = await storage.getApplicationStage(applicationStageId);
@@ -651,6 +654,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             const jobWithCompany = await storage.getJobPostingWithCompany(application.jobPostingId);
             if (jobWithCompany) {
+              // Use job seniority as difficulty for journey mode (intern, junior, mid, senior, lead)
+              resolvedDifficulty = jobWithCompany.seniority || difficulty;
+              
               // Build requirements string from job posting
               const requirements = [];
               if (jobWithCompany.requirements) {
@@ -686,7 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         interviewType,
         targetRole,
-        difficulty || "medium",
+        resolvedDifficulty || "medium",
         totalQuestions || defaultQuestionCount,
         jobContext,
         candidateName,

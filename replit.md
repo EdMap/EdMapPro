@@ -33,3 +33,21 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 
 ### Authentication
 - Session-based authentication is implemented.
+
+## Recent Updates
+
+### Team Interview UI Improvements (November 2025)
+- Added persona-specific styling for team interview messages with distinct colors per role:
+  - Tech Lead: Purple theme
+  - Peer Engineer: Teal theme  
+  - Product Partner: Orange theme
+  - Engineering Manager: Indigo theme
+- Messages now display persona name and role (e.g., "Sarah (Tech Lead)")
+- Typing indicator shows current speaking persona
+- Shared styling utility at `client/src/lib/persona-styles.ts`
+- Backend returns `teamPersonas`, `isTeamInterview`, and `activePersonaId` for team interviews
+
+### Interview Flow Improvements
+- Topic rotation limits prevent repetitive questioning (max 2 consecutive questions per criterion)
+- Simplified wrap-up flow only asks "any questions?" (feedback provided separately)
+- Journey mode displays job posting's seniority level correctly (e.g., "Intern level")

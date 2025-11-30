@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { getPersonaStyle } from "@/lib/persona-styles";
 import type { User as UserType, InterviewSession } from "@shared/schema";
 
 const targetRoles = [
@@ -68,10 +69,14 @@ export default function InterviewSimulator() {
   
   // Prelude conversation state
   const [isPreludeMode, setIsPreludeMode] = useState(false);
-  const [preludeMessages, setPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string}>>([]);
-  const [completedPreludeMessages, setCompletedPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string}>>([]);
+  const [preludeMessages, setPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string; personaId?: string}>>([]);
+  const [completedPreludeMessages, setCompletedPreludeMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string; personaId?: string}>>([]);
   const [preludeResponse, setPreludeResponse] = useState("");
   const [isPreludeSubmitting, setIsPreludeSubmitting] = useState(false);
+  
+  // Team interview state
+  const [isTeamInterview, setIsTeamInterview] = useState(false);
+  const [teamPersonas, setTeamPersonas] = useState<Array<{id: string; name: string; role: string; displayRole: string}>>([]);
   
   // Pacing state for prelude
   const [preludeStartTime, setPreludeStartTime] = useState<number | null>(null);
@@ -128,10 +133,25 @@ export default function InterviewSimulator() {
       // Reset prelude state for new session
       setCompletedPreludeMessages([]);
       
+      // Handle team interview data
+      if (result.isTeamInterview && result.teamPersonas) {
+        setIsTeamInterview(true);
+        setTeamPersonas(result.teamPersonas);
+      } else {
+        setIsTeamInterview(false);
+        setTeamPersonas([]);
+      }
+      
       if (result.isPreludeMode && result.greeting) {
         // Enter conversational prelude mode
         setIsPreludeMode(true);
-        setPreludeMessages([{ role: 'interviewer', content: result.greeting }]);
+        // For team interviews, include the active persona in the greeting message
+        const greetingMessage = {
+          role: 'interviewer' as const, 
+          content: result.greeting,
+          personaId: result.activePersonaId
+        };
+        setPreludeMessages([greetingMessage]);
       } else {
         // Legacy flow without prelude
         setIsPreludeMode(false);
@@ -350,7 +370,10 @@ export default function InterviewSimulator() {
           </CardHeader>
 
           <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-            {preludeMessages.map((msg, index) => (
+            {preludeMessages.map((msg, index) => {
+              const personaStyle = msg.role === 'interviewer' ? getPersonaStyle(msg.personaId, isTeamInterview, teamPersonas) : null;
+              
+              return (
               <div
                 key={index}
                 className={cn(
@@ -360,11 +383,13 @@ export default function InterviewSimulator() {
               >
                 <Avatar className={cn(
                   "h-10 w-10",
-                  msg.role === 'interviewer' ? "bg-blue-100" : "bg-green-100"
+                  msg.role === 'interviewer' 
+                    ? (personaStyle?.bgColor || "bg-blue-100") 
+                    : "bg-green-100"
                 )}>
                   <AvatarFallback>
                     {msg.role === 'interviewer' ? (
-                      <Bot className="h-5 w-5 text-blue-600" />
+                      <Bot className={cn("h-5 w-5", personaStyle?.iconColor || "text-blue-600")} />
                     ) : (
                       <UserIcon className="h-5 w-5 text-green-600" />
                     )}
@@ -373,30 +398,52 @@ export default function InterviewSimulator() {
                 <div className={cn(
                   "max-w-[70%] rounded-lg p-4",
                   msg.role === 'interviewer' 
-                    ? "bg-blue-50 text-gray-900" 
+                    ? (personaStyle?.messageBg || "bg-blue-50") + " text-gray-900" 
                     : "bg-green-50 text-gray-900"
                 )}>
+                  {/* Show persona name and role for team interviews */}
+                  {isTeamInterview && msg.role === 'interviewer' && personaStyle && personaStyle.name !== 'Interviewer' && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="font-semibold text-sm">{personaStyle.name}</span>
+                      {personaStyle.displayRole && (
+                        <span className="text-xs text-gray-500">({personaStyle.displayRole})</span>
+                      )}
+                    </div>
+                  )}
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                 </div>
               </div>
-            ))}
+            );
+            })}
             
-            {isPreludeSubmitting && (
+            {isPreludeSubmitting && (() => {
+              // For typing indicator, use the first persona (who is currently speaking)
+              const typingPersonaStyle = getPersonaStyle(teamPersonas.length > 0 ? teamPersonas[0].id : undefined, isTeamInterview, teamPersonas);
+              return (
               <div className="flex items-start space-x-3">
-                <Avatar className="h-10 w-10 bg-blue-100">
+                <Avatar className={cn("h-10 w-10", typingPersonaStyle.bgColor)}>
                   <AvatarFallback>
-                    <Bot className="h-5 w-5 text-blue-600" />
+                    <Bot className={cn("h-5 w-5", typingPersonaStyle.iconColor)} />
                   </AvatarFallback>
                 </Avatar>
-                <div className="bg-blue-50 rounded-lg p-4">
+                <div className={cn(typingPersonaStyle.messageBg, "rounded-lg p-4")}>
+                  {isTeamInterview && typingPersonaStyle.name !== 'Interviewer' && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="font-semibold text-sm">{typingPersonaStyle.name}</span>
+                      {typingPersonaStyle.displayRole && (
+                        <span className="text-xs text-gray-500">({typingPersonaStyle.displayRole})</span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
-            )}
+            );
+            })()}
             
             {/* Scroll anchor */}
             <div ref={preludeMessagesEndRef} />
@@ -445,6 +492,8 @@ export default function InterviewSimulator() {
         introduction={activeIntroduction}
         preludeMessages={completedPreludeMessages.length > 0 ? completedPreludeMessages : undefined}
         mode={isJourneyMode ? "journey" : "practice"}
+        isTeamInterview={isTeamInterview}
+        teamPersonas={teamPersonas}
         onComplete={() => {
           setActiveSession(null);
           setActiveFirstQuestion(null);
