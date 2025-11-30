@@ -333,6 +333,9 @@ export default function LangchainInterviewSession({
         // Show candidate question answer first (if any), then reflection, then question
         const hasReflection = result.reflection && result.reflection.trim().length > 0;
         
+        // Check if there's an addressed persona response (when one persona mentions another)
+        const hasAddressedResponse = result.addressedPersonaResponse?.content;
+        
         setTimeout(() => {
           setShowTypingIndicator(false);
           
@@ -349,6 +352,26 @@ export default function LangchainInterviewSession({
             newMessages.push({ role: 'interviewer', content: result.nextQuestion.questionText, personaId: currentPersonaId });
             return newMessages;
           });
+          
+          // If another persona was addressed and responded, show their response after a delay
+          if (hasAddressedResponse) {
+            const addressedPersonaId = result.addressedPersonaResponse.personaId;
+            setTimeout(() => {
+              setShowTypingIndicator(true);
+              setActivePersonaId(addressedPersonaId);
+              setTimeout(() => {
+                setShowTypingIndicator(false);
+                setMessages(prev => [
+                  ...prev, 
+                  { 
+                    role: 'interviewer', 
+                    content: result.addressedPersonaResponse.content, 
+                    personaId: addressedPersonaId 
+                  }
+                ]);
+              }, 1200);
+            }, 500);
+          }
         }, hasCandidateQuestionAnswer ? 1800 : hasReflection ? 1500 : 1200);
       }
       

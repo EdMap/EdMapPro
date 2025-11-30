@@ -2710,22 +2710,62 @@ export class InterviewOrchestrator {
 
     // ADDRESSED PERSONA DETECTION
     // Check if the response mentions another persona by name (e.g., "Sarah, do you have any questions?")
-    // If so, force the next turn to go to that persona
-    const response = turnResult.response.toLowerCase();
+    // If so, immediately generate their response (no waiting for user input)
+    const responseLower = turnResult.response.toLowerCase();
+    let addressedPersona: typeof settings.personas[0] | null = null;
+    let addressedResponse: string | null = null;
+    
     for (const persona of settings.personas) {
       if (persona.id !== activePersona.id) {
         const namePattern = new RegExp(`\\b${persona.name.toLowerCase()}\\b`, 'i');
         // Check for patterns like asking Sarah directly
-        if (namePattern.test(response) && 
-            (response.includes('?') || // Contains a question
-             response.includes('would you') ||
-             response.includes('do you') ||
-             response.includes('any questions') ||
-             response.includes('want to'))) {
-          memory.forcedNextPersonaId = persona.id;
-          console.log('[Team Interview] Detected address to:', persona.name, '- forcing their response next');
+        if (namePattern.test(responseLower) && 
+            (responseLower.includes('?') || // Contains a question
+             responseLower.includes('would you') ||
+             responseLower.includes('do you') ||
+             responseLower.includes('any questions') ||
+             responseLower.includes('want to'))) {
+          addressedPersona = persona;
+          console.log('[Team Interview] Detected address to:', persona.name, '- generating immediate response');
           break;
         }
+      }
+    }
+    
+    // If another persona was addressed, generate their immediate response
+    if (addressedPersona) {
+      // Generate the addressed persona's response
+      const addressedTurnResult = await this.teamTurn.processTurn({
+        activePersona: addressedPersona,
+        allPersonas: settings.personas,
+        experienceLevel: settings.experienceLevel,
+        companyName: config.companyName || 'the company',
+        companyDescription: config.companyDescription || '',
+        jobTitle: config.jobTitle || config.targetRole,
+        candidateName: memory.candidateName || 'Candidate',
+        conversationHistory: [
+          ...memory.conversationHistory,
+          { role: 'interviewer', content: turnResult.response, personaId: activePersona.id }
+        ],
+        questionBacklog: (memory.teamQuestionBacklog || []).filter(q => !memory.askedQuestionIds?.has(q.id)),
+        coverageStatus: {
+          learning_mindset: memory.coverage.behavioral.score,
+          collaboration: memory.coverage.culture_fit.score,
+          problem_solving: memory.coverage.skills.score,
+          technical_foundations: memory.coverage.background.score,
+        },
+        questionsAskedCount: memory.totalQuestionsAsked,
+        maxQuestions: settings.maxQuestions,
+        currentQuestionId: memory.currentQuestionId,
+        levelExpectations: getLevelExpectationsText(settings),
+      });
+      
+      addressedResponse = addressedTurnResult.response;
+      memory.activePersonaId = addressedPersona.id;
+      
+      // Track the addressed persona's question
+      if (addressedTurnResult.questionId) {
+        memory.askedQuestionIds!.add(addressedTurnResult.questionId);
       }
     }
 
@@ -2736,8 +2776,17 @@ export class InterviewOrchestrator {
     memory.conversationHistory.push({
       role: 'interviewer',
       content: turnResult.response,
-      personaId: turnResult.actionType === 'hand_off' ? turnResult.nextPersonaId : activePersona.id,
+      personaId: activePersona.id,
     });
+    
+    // If there was an addressed response, add it too
+    if (addressedPersona && addressedResponse) {
+      memory.conversationHistory.push({
+        role: 'interviewer',
+        content: addressedResponse,
+        personaId: addressedPersona.id,
+      });
+    }
 
     // Save evaluation to database
     await storage.updateInterviewQuestion(questionId, {
@@ -2821,7 +2870,8 @@ export class InterviewOrchestrator {
     const stageConfig = getStageRuntimeConfig('hr'); // Team interviews use HR pacing
     const pacing = this.getPacingInfo(memory, stageConfig);
 
-    return {
+    // Build the result with optional follow-up from addressed persona
+    const result: any = {
       evaluation,
       nextQuestion,
       decision: {
@@ -2843,6 +2893,25 @@ export class InterviewOrchestrator {
         displayRole: p.displayRole,
       })),
     };
+    
+    // If another persona was addressed and responded, include their response
+    if (addressedPersona && addressedResponse) {
+      result.addressedPersonaResponse = {
+        personaId: addressedPersona.id,
+        personaName: addressedPersona.name,
+        personaRole: addressedPersona.displayRole,
+        content: addressedResponse,
+      };
+      // Update active persona since the addressed one spoke last
+      result.activePersona = {
+        id: addressedPersona.id,
+        name: addressedPersona.name,
+        role: addressedPersona.role,
+        displayRole: addressedPersona.displayRole,
+      };
+    }
+    
+    return result;
   }
 }
 
