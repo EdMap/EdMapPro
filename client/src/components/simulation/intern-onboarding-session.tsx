@@ -717,9 +717,13 @@ export default function InternOnboardingSession({
       comprehensionComplete,
       docSectionsRead,
       standupComplete,
+      devSetupComplete,
+      ticketReviewed,
       codebaseExplored,
       codeFixComplete,
+      testFixComplete,
       gitWorkflowComplete,
+      prCreated,
       reflectionComplete,
       codeInputs
     },
@@ -781,7 +785,7 @@ export default function InternOnboardingSession({
       return;
     }
     saveProgress();
-  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, codebaseExplored, codeFixComplete, gitWorkflowComplete, reflectionComplete, codeInputs, currentDay]);
+  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, devSetupComplete, ticketReviewed, codebaseExplored, codeFixComplete, testFixComplete, gitWorkflowComplete, prCreated, reflectionComplete, codeInputs, currentDay]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -1363,6 +1367,41 @@ export default function InternOnboardingSession({
     const userHasSpoken = standupUserSpoke || userHasSpokenInStandup;
     const standupInteractions = filteredInteractions;
     const isUserTurn = standupVisibleMessages >= standupScript.length;
+
+    // If standup is already complete, show a summary instead of regenerating the chat
+    if (standupComplete) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center">
+          <Card className="max-w-md">
+            <CardHeader className="text-center">
+              <div className="mx-auto p-3 bg-green-100 rounded-full w-fit mb-2">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              </div>
+              <CardTitle>Standup Complete</CardTitle>
+              <CardDescription>
+                You participated in the morning standup
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-gradient-to-r from-teal-50 to-green-50 border border-teal-200 rounded-lg p-4">
+                <p className="text-sm text-teal-700">
+                  You shared your update with the team and learned what everyone is working on today.
+                </p>
+              </div>
+              <Button 
+                className="w-full"
+                variant="outline"
+                onClick={() => setViewMode('overview')}
+                data-testid="button-back-to-overview"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Overview
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
     if (!standupStarted) {
       return (
