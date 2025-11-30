@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -58,11 +59,16 @@ interface DayProgress {
   comprehensionComplete?: boolean;
   docSectionsRead?: Record<string, boolean>;
   standupComplete?: boolean;
+  devSetupComplete?: boolean;
+  ticketReviewed?: boolean;
   codebaseExplored?: boolean;
   codeFixComplete?: boolean;
+  testFixComplete?: boolean;
   gitWorkflowComplete?: boolean;
+  prCreated?: boolean;
   reflectionComplete?: boolean;
   codeInputs?: Record<string, string>;
+  gitInputs?: Record<string, string>;
 }
 
 interface InternOnboardingSessionProps {
@@ -76,7 +82,8 @@ interface InternOnboardingSessionProps {
 }
 
 type ViewMode = 'overview' | 'team-intro' | 'documentation' | 'comprehension-check' | 
-  'day2-standup' | 'day2-codebase' | 'day2-code-fix' | 'day2-git' | 'day2-reflection';
+  'day2-standup' | 'day2-dev-setup' | 'day2-ticket' | 'day2-codebase' | 'day2-code-fix' | 
+  'day2-test-fix' | 'day2-git' | 'day2-pr' | 'day2-reflection';
 
 interface TeamMember {
   name: string;
@@ -343,15 +350,21 @@ export default function InternOnboardingSession({
   
   // Day 2 state
   const [standupComplete, setStandupComplete] = useState(savedProgress?.standupComplete || false);
+  const [devSetupComplete, setDevSetupComplete] = useState(savedProgress?.devSetupComplete || false);
+  const [ticketReviewed, setTicketReviewed] = useState(savedProgress?.ticketReviewed || false);
   const [codebaseExplored, setCodebaseExplored] = useState(savedProgress?.codebaseExplored || false);
   const [codeFixComplete, setCodeFixComplete] = useState(savedProgress?.codeFixComplete || false);
+  const [testFixComplete, setTestFixComplete] = useState(savedProgress?.testFixComplete || false);
   const [gitWorkflowComplete, setGitWorkflowComplete] = useState(savedProgress?.gitWorkflowComplete || false);
+  const [prCreated, setPrCreated] = useState(savedProgress?.prCreated || false);
   const [reflectionComplete, setReflectionComplete] = useState(savedProgress?.reflectionComplete || false);
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [codeInputs, setCodeInputs] = useState<Record<string, string>>(savedProgress?.codeInputs || {});
+  const [gitInputs, setGitInputs] = useState<Record<string, string>>(savedProgress?.gitInputs || {});
   const [gitStep, setGitStep] = useState(0);
   const [gitCommands, setGitCommands] = useState<string[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
+  const [prDescription, setPrDescription] = useState("");
   const [reflectionText, setReflectionText] = useState("");
   
   // Floating chat state
@@ -422,11 +435,15 @@ export default function InternOnboardingSession({
     
     if (currentDay === 2) {
       let progress = 0;
-      if (standupComplete) progress += 20;
-      if (codebaseExplored) progress += 15;
-      if (codeFixComplete) progress += 30;
-      if (gitWorkflowComplete) progress += 25;
-      if (reflectionComplete) progress += 10;
+      if (standupComplete) progress += 10;
+      if (devSetupComplete) progress += 15;
+      if (ticketReviewed) progress += 5;
+      if (codebaseExplored) progress += 10;
+      if (codeFixComplete) progress += 20;
+      if (testFixComplete) progress += 10;
+      if (gitWorkflowComplete) progress += 15;
+      if (prCreated) progress += 10;
+      if (reflectionComplete) progress += 5;
       return progress;
     }
     
@@ -447,9 +464,13 @@ export default function InternOnboardingSession({
     if (currentDay === 2) {
       return [
         'Morning standup with Sarah',
-        'Explore the codebase and find dateFormatters.ts',
-        'Fix the timezone bug in the merchant dashboard',
-        'Complete Git workflow (branch, commit, push)',
+        'Set up dev environment (clone, install, run)',
+        'Review your ticket',
+        'Explore the codebase and find the bug',
+        'Fix the timezone bug',
+        'Test your fix locally',
+        'Git workflow (branch, commit, push)',
+        'Create pull request',
         'End-of-day reflection'
       ];
     }
@@ -487,9 +508,13 @@ export default function InternOnboardingSession({
     
     if (currentDay === 2) {
       if (standupComplete) completed.push('Morning standup completed');
+      if (devSetupComplete) completed.push('Dev environment set up');
+      if (ticketReviewed) completed.push('Reviewed ticket');
       if (codebaseExplored) completed.push('Explored codebase and found dateFormatters.ts');
       if (codeFixComplete) completed.push('Fixed the timezone bug');
+      if (testFixComplete) completed.push('Tested the fix');
       if (gitWorkflowComplete) completed.push('Completed Git workflow');
+      if (prCreated) completed.push('Created pull request');
       if (reflectionComplete) completed.push('Completed end-of-day reflection');
     }
     
@@ -1001,7 +1026,7 @@ export default function InternOnboardingSession({
           </CardHeader>
           <CardContent>
             <p className="text-orange-800">
-              Today you'll experience the full developer workflow: standup, code exploration, making a fix, and submitting your first PR.
+              Today you'll experience the full developer workflow: set up your environment, understand your ticket, write code, test it, and submit your first PR.
             </p>
           </CardContent>
         </Card>
@@ -1013,6 +1038,7 @@ export default function InternOnboardingSession({
           </h3>
           
           <div className="grid gap-3">
+            {/* 1. Morning Standup */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 standupComplete ? 'border-green-200 bg-green-50' : ''
@@ -1027,7 +1053,7 @@ export default function InternOnboardingSession({
                       <Sun className="h-5 w-5 text-yellow-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Morning Standup</h4>
+                      <h4 className="font-medium text-gray-900">1. Morning Standup</h4>
                       <p className="text-sm text-gray-600">
                         Sync with Sarah on your ticket
                       </p>
@@ -1041,28 +1067,89 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
+            {/* 2. Dev Environment Setup */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
-                codebaseExplored ? 'border-green-200 bg-green-50' : ''
+                devSetupComplete ? 'border-green-200 bg-green-50' : ''
               } ${!standupComplete ? 'opacity-60' : ''}`}
-              onClick={() => standupComplete && setViewMode('day2-codebase')}
-              data-testid="card-day2-codebase"
+              onClick={() => standupComplete && setViewMode('day2-dev-setup')}
+              data-testid="card-day2-dev-setup"
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-100 rounded-lg">
-                      <FolderOpen className="h-5 w-5 text-blue-600" />
+                      <Terminal className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Explore the Codebase</h4>
+                      <h4 className="font-medium text-gray-900">2. Set Up Dev Environment</h4>
                       <p className="text-sm text-gray-600">
-                        Find the timezone utility file
+                        Clone the repo, install dependencies, run locally
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {!standupComplete && <Badge variant="outline" className="text-xs">Complete standup first</Badge>}
+                    {devSetupComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3. Review Your Ticket */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                ticketReviewed ? 'border-green-200 bg-green-50' : ''
+              } ${!devSetupComplete ? 'opacity-60' : ''}`}
+              onClick={() => devSetupComplete && setViewMode('day2-ticket')}
+              data-testid="card-day2-ticket"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Clipboard className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">3. Review Your Ticket</h4>
+                      <p className="text-sm text-gray-600">
+                        Understand the requirements and acceptance criteria
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!devSetupComplete && <Badge variant="outline" className="text-xs">Set up environment first</Badge>}
+                    {ticketReviewed && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 4. Explore Codebase */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                codebaseExplored ? 'border-green-200 bg-green-50' : ''
+              } ${!ticketReviewed ? 'opacity-60' : ''}`}
+              onClick={() => ticketReviewed && setViewMode('day2-codebase')}
+              data-testid="card-day2-codebase"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-teal-100 rounded-lg">
+                      <FolderOpen className="h-5 w-5 text-teal-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">4. Explore the Codebase</h4>
+                      <p className="text-sm text-gray-600">
+                        Find the file where the bug lives
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!ticketReviewed && <Badge variant="outline" className="text-xs">Review ticket first</Badge>}
                     {codebaseExplored && <CheckCircle2 className="h-5 w-5 text-green-600" />}
                     <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
@@ -1070,6 +1157,7 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
+            {/* 5. Fix the Code */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 codeFixComplete ? 'border-green-200 bg-green-50' : ''
@@ -1080,13 +1168,13 @@ export default function InternOnboardingSession({
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Code className="h-5 w-5 text-purple-600" />
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <Code className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Fix the Code</h4>
+                      <h4 className="font-medium text-gray-900">5. Fix the Bug</h4>
                       <p className="text-sm text-gray-600">
-                        Make the timezone fix
+                        Write the timezone fix
                       </p>
                     </div>
                   </div>
@@ -1099,28 +1187,59 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
+            {/* 6. Test Your Fix */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
-                gitWorkflowComplete ? 'border-green-200 bg-green-50' : ''
+                testFixComplete ? 'border-green-200 bg-green-50' : ''
               } ${!codeFixComplete ? 'opacity-60' : ''}`}
-              onClick={() => codeFixComplete && setViewMode('day2-git')}
-              data-testid="card-day2-git"
+              onClick={() => codeFixComplete && setViewMode('day2-test-fix')}
+              data-testid="card-day2-test-fix"
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-green-100 rounded-lg">
-                      <GitBranch className="h-5 w-5 text-green-600" />
+                      <Play className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Git Workflow</h4>
+                      <h4 className="font-medium text-gray-900">6. Test Your Fix</h4>
                       <p className="text-sm text-gray-600">
-                        Branch, commit, and create PR
+                        Verify it works in the browser
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!codeFixComplete && <Badge variant="outline" className="text-xs">Fix code first</Badge>}
+                    {!codeFixComplete && <Badge variant="outline" className="text-xs">Fix the bug first</Badge>}
+                    {testFixComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 7. Git Workflow */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                gitWorkflowComplete ? 'border-green-200 bg-green-50' : ''
+              } ${!testFixComplete ? 'opacity-60' : ''}`}
+              onClick={() => testFixComplete && setViewMode('day2-git')}
+              data-testid="card-day2-git"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <GitCommit className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">7. Git Workflow</h4>
+                      <p className="text-sm text-gray-600">
+                        Stage, commit, and push your changes
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!testFixComplete && <Badge variant="outline" className="text-xs">Test your fix first</Badge>}
                     {gitWorkflowComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
                     <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
@@ -1128,11 +1247,42 @@ export default function InternOnboardingSession({
               </CardContent>
             </Card>
 
+            {/* 8. Create PR */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                prCreated ? 'border-green-200 bg-green-50' : ''
+              } ${!gitWorkflowComplete ? 'opacity-60' : ''}`}
+              onClick={() => gitWorkflowComplete && setViewMode('day2-pr')}
+              data-testid="card-day2-pr"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <GitPullRequest className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">8. Create Pull Request</h4>
+                      <p className="text-sm text-gray-600">
+                        Submit your work for review
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!gitWorkflowComplete && <Badge variant="outline" className="text-xs">Complete git workflow first</Badge>}
+                    {prCreated && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 9. Reflection */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-md ${
                 reflectionComplete ? 'border-green-200 bg-green-50' : ''
-              } ${!gitWorkflowComplete ? 'opacity-60' : ''}`}
-              onClick={() => gitWorkflowComplete && setViewMode('day2-reflection')}
+              } ${!prCreated ? 'opacity-60' : ''}`}
+              onClick={() => prCreated && setViewMode('day2-reflection')}
               data-testid="card-day2-reflection"
             >
               <CardContent className="p-4">
@@ -1142,14 +1292,14 @@ export default function InternOnboardingSession({
                       <PenLine className="h-5 w-5 text-indigo-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Day 2 Reflection</h4>
+                      <h4 className="font-medium text-gray-900">9. Day 2 Reflection</h4>
                       <p className="text-sm text-gray-600">
-                        What will you confirm with QA tomorrow?
+                        What did you learn today?
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!gitWorkflowComplete && <Badge variant="outline" className="text-xs">Complete git workflow first</Badge>}
+                    {!prCreated && <Badge variant="outline" className="text-xs">Create PR first</Badge>}
                     {reflectionComplete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
                     <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
@@ -1264,6 +1414,295 @@ export default function InternOnboardingSession({
             </Button>
           )}
         </div>
+      </div>
+    );
+  }
+
+  function renderDay2DevSetup() {
+    const setupSteps = [
+      { 
+        id: 'clone',
+        instruction: 'Clone the repository novapay/merchant-dashboard',
+        hint: 'Use git clone with the GitHub URL',
+        validate: (input: string) => {
+          const normalized = input.trim().toLowerCase();
+          return normalized.includes('git clone') && 
+                 (normalized.includes('novapay/merchant-dashboard') || 
+                  normalized.includes('github.com/novapay/merchant-dashboard'));
+        },
+        successOutput: `Cloning into 'merchant-dashboard'...
+remote: Enumerating objects: 1247, done.
+remote: Counting objects: 100% (1247/1247), done.
+remote: Compressing objects: 100% (892/892), done.
+Receiving objects: 100% (1247/1247), 2.34 MiB | 12.5 MiB/s, done.
+Resolving deltas: 100% (623/623), done.`
+      },
+      {
+        id: 'cd',
+        instruction: 'Navigate into the project directory',
+        hint: 'Use cd to change directory',
+        validate: (input: string) => {
+          const normalized = input.trim().toLowerCase();
+          return normalized === 'cd merchant-dashboard' || normalized === 'cd ./merchant-dashboard';
+        },
+        successOutput: ''
+      },
+      {
+        id: 'install',
+        instruction: 'Install the project dependencies',
+        hint: 'This project uses npm',
+        validate: (input: string) => {
+          const normalized = input.trim().toLowerCase();
+          return normalized === 'npm install' || normalized === 'npm i';
+        },
+        successOutput: `added 1423 packages in 8.2s
+
+247 packages are looking for funding
+  run \`npm fund\` for details`
+      },
+      {
+        id: 'run',
+        instruction: 'Start the development server',
+        hint: 'Check the package.json scripts',
+        validate: (input: string) => {
+          const normalized = input.trim().toLowerCase();
+          return normalized === 'npm run dev' || normalized === 'npm start';
+        },
+        successOutput: `> merchant-dashboard@1.0.0 dev
+> vite
+
+  VITE v5.0.0  ready in 342ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose`
+      }
+    ];
+
+    const currentStep = setupSteps.findIndex(step => !gitInputs[step.id]);
+    const allComplete = currentStep === -1;
+
+    const handleCommand = (stepId: string, input: string) => {
+      const step = setupSteps.find(s => s.id === stepId);
+      if (step && step.validate(input)) {
+        setGitInputs(prev => ({ ...prev, [stepId]: input }));
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Terminal className="h-6 w-6 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-900">Set Up Your Dev Environment</p>
+                <p className="text-sm text-blue-700">
+                  Before you can work on the code, you need to get it on your machine and running locally.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Terminal className="h-4 w-4" />
+              Terminal
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm space-y-4">
+              {setupSteps.map((step, idx) => {
+                const isComplete = gitInputs[step.id];
+                const isCurrent = idx === currentStep;
+                const isFuture = idx > currentStep && currentStep !== -1;
+
+                return (
+                  <div key={step.id} className={isFuture ? 'opacity-40' : ''}>
+                    <p className="text-gray-400 text-xs mb-1"># {step.instruction}</p>
+                    {isComplete ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400">$</span>
+                          <span className="text-white">{gitInputs[step.id]}</span>
+                          <Check className="h-4 w-4 text-green-400 ml-2" />
+                        </div>
+                        {step.successOutput && (
+                          <pre className="text-gray-400 text-xs mt-1 whitespace-pre-wrap">{step.successOutput}</pre>
+                        )}
+                      </>
+                    ) : isCurrent ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-400">$</span>
+                        <input
+                          type="text"
+                          className="bg-transparent text-white flex-1 outline-none"
+                          placeholder="Type your command..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleCommand(step.id, e.currentTarget.value);
+                            }
+                          }}
+                          data-testid={`input-setup-${step.id}`}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600">$</span>
+                        <span className="text-gray-600">...</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {currentStep !== -1 && currentStep < setupSteps.length && (
+              <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-800">
+                  <strong>Hint:</strong> {setupSteps[currentStep].hint}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {allComplete && (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-green-800">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">Dev environment ready!</span>
+              </div>
+              <p className="text-sm text-green-700 mt-1">
+                The app is running locally. You can see it at http://localhost:5173
+              </p>
+              <Button 
+                className="mt-3"
+                onClick={() => {
+                  setDevSetupComplete(true);
+                  setViewMode('overview');
+                }}
+                data-testid="button-dev-setup-complete"
+              >
+                Continue to Review Ticket
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  function renderDay2Ticket() {
+    return (
+      <div className="space-y-4">
+        <Card className="bg-purple-50 border-purple-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Clipboard className="h-6 w-6 text-purple-600" />
+              <div>
+                <p className="font-medium text-purple-900">Review Your Ticket</p>
+                <p className="text-sm text-purple-700">
+                  Before writing any code, understand exactly what you're building.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-purple-200">
+          <CardHeader className="bg-purple-50 border-b border-purple-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-orange-100 text-orange-700 border-orange-300">Bug</Badge>
+                <Badge variant="outline" className="text-purple-600 border-purple-300">In Progress</Badge>
+              </div>
+              <span className="text-sm text-gray-500 font-mono">PAY-1234</span>
+            </div>
+            <CardTitle className="text-lg mt-2">
+              Transactions show incorrect time for non-UTC merchants
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Description</p>
+              <p className="text-gray-600 text-sm">
+                Merchants in timezones other than UTC see transaction timestamps in UTC instead of their local time. 
+                For example, a transaction at 8pm CST shows as 2am the next day, causing confusion during daily reconciliation.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Acceptance Criteria</p>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li className="flex items-start gap-2">
+                  <div className="h-4 w-4 rounded border border-gray-300 mt-0.5" />
+                  <span>Transactions display in the merchant's configured timezone</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="h-4 w-4 rounded border border-gray-300 mt-0.5" />
+                  <span>Date filters work correctly with local dates</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="h-4 w-4 rounded border border-gray-300 mt-0.5" />
+                  <span>Existing tests pass</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div>
+                <p className="text-xs text-gray-500">Assignee</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="text-xs bg-teal-100 text-teal-700">Y</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">You</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Reporter</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="text-xs bg-pink-100 text-pink-700">P</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">Priya</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Priority</p>
+                <Badge variant="outline" className="mt-1 text-orange-600 border-orange-300">Medium</Badge>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Sprint</p>
+                <span className="text-sm">Sprint 14</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm font-medium text-blue-900 mb-1">Files to investigate</p>
+              <div className="font-mono text-xs text-blue-700 space-y-1">
+                <p>client/src/utils/dateFormatters.ts</p>
+                <p>client/src/components/TransactionList.tsx</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button 
+          className="w-full"
+          onClick={() => {
+            setTicketReviewed(true);
+            setViewMode('overview');
+          }}
+          data-testid="button-ticket-reviewed"
+        >
+          <CheckCircle2 className="h-4 w-4 mr-2" />
+          I understand the ticket - Continue to Explore Code
+        </Button>
       </div>
     );
   }
@@ -1493,7 +1932,7 @@ export default function InternOnboardingSession({
                     }}
                     data-testid="button-code-fix-complete"
                   >
-                    Continue to Git Workflow
+                    Continue to Test Your Fix
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </>
@@ -1505,39 +1944,216 @@ export default function InternOnboardingSession({
     );
   }
 
-  function renderDay2Git() {
-    const gitSteps = [
-      { command: 'git checkout -b fix/timezone-display', description: 'Create a new branch for your fix' },
-      { command: 'git add .', description: 'Stage your changes' },
-      { command: 'git commit -m "..."', description: 'Commit with a descriptive message' },
-      { command: 'git push origin fix/timezone-display', description: 'Push to remote' }
-    ];
-
-    const handleGitCommand = () => {
-      if (gitStep < gitSteps.length) {
-        const expectedCommand = gitSteps[gitStep].command;
-        const userCommand = gitCommands[gitStep] || '';
-        
-        if (gitStep === 2) {
-          if (userCommand.startsWith('git commit -m') && commitMessage.trim()) {
-            setGitStep(prev => prev + 1);
-          }
-        } else if (userCommand.trim() === expectedCommand) {
-          setGitStep(prev => prev + 1);
-        }
-      }
-    };
-
+  function renderDay2TestFix() {
+    const [testState, setTestState] = useState<'before' | 'running' | 'after'>('before');
+    
     return (
       <div className="space-y-4">
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <GitBranch className="h-6 w-6 text-green-600" />
+              <Play className="h-6 w-6 text-green-600" />
               <div>
-                <p className="font-medium text-green-900">Git Workflow</p>
+                <p className="font-medium text-green-900">Test Your Fix</p>
                 <p className="text-sm text-green-700">
-                  Now let's commit your fix and create a pull request. Follow the commands below.
+                  Before committing, always verify your changes work in the browser.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Monitor className="h-4 w-4" />
+              Merchant Dashboard - Transactions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-gray-100 p-2 flex items-center gap-2 border-b">
+                <div className="flex gap-1">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                </div>
+                <div className="flex-1 bg-white rounded px-2 py-1 text-xs text-gray-500">
+                  localhost:5173/transactions
+                </div>
+              </div>
+              
+              <div className="p-4 bg-white">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
+                  <Badge variant="outline">Maria's Coffee Shop (CST)</Badge>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+                    <div>
+                      <p className="font-medium">$24.50 - Card Payment</p>
+                      <p className={`text-sm ${testState === 'after' ? 'text-green-600' : 'text-red-600'}`}>
+                        {testState === 'after' ? 'Feb 14, 8:30 PM CST' : 'Feb 15, 2:30 AM UTC'}
+                      </p>
+                    </div>
+                    {testState === 'after' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                    {testState === 'before' && <X className="h-5 w-5 text-red-400" />}
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+                    <div>
+                      <p className="font-medium">$8.75 - Card Payment</p>
+                      <p className={`text-sm ${testState === 'after' ? 'text-green-600' : 'text-red-600'}`}>
+                        {testState === 'after' ? 'Feb 14, 7:15 PM CST' : 'Feb 15, 1:15 AM UTC'}
+                      </p>
+                    </div>
+                    {testState === 'after' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                    {testState === 'before' && <X className="h-5 w-5 text-red-400" />}
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+                    <div>
+                      <p className="font-medium">$15.00 - Card Payment</p>
+                      <p className={`text-sm ${testState === 'after' ? 'text-green-600' : 'text-red-600'}`}>
+                        {testState === 'after' ? 'Feb 14, 6:45 PM CST' : 'Feb 15, 12:45 AM UTC'}
+                      </p>
+                    </div>
+                    {testState === 'after' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                    {testState === 'before' && <X className="h-5 w-5 text-red-400" />}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {testState === 'before' && (
+              <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                <p className="text-sm text-red-800">
+                  <strong>Bug visible:</strong> Transactions show UTC time (next day at 2am) instead of Maria's local CST time (8pm same day).
+                </p>
+              </div>
+            )}
+
+            {testState === 'running' && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                <p className="text-sm text-blue-800">Refreshing with your fix...</p>
+              </div>
+            )}
+
+            {testState === 'after' && (
+              <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-sm text-green-800">
+                  <strong>Fix working!</strong> Transactions now show in Maria's local timezone (CST). The dates make sense for her daily reconciliation.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {testState === 'before' && (
+          <Button 
+            className="w-full"
+            onClick={() => {
+              setTestState('running');
+              setTimeout(() => setTestState('after'), 1500);
+            }}
+            data-testid="button-run-test"
+          >
+            <Play className="h-4 w-4 mr-2" />
+            Refresh Page to Test Fix
+          </Button>
+        )}
+
+        {testState === 'after' && (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-green-800">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">Your fix works!</span>
+              </div>
+              <p className="text-sm text-green-700 mt-1">
+                Time to save your work with git and create a pull request.
+              </p>
+              <Button 
+                className="mt-3"
+                onClick={() => {
+                  setTestFixComplete(true);
+                  setViewMode('overview');
+                }}
+                data-testid="button-test-complete"
+              >
+                Continue to Git Workflow
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  function renderDay2Git() {
+    const gitSteps = [
+      { 
+        id: 'add',
+        instruction: 'Stage your changes for commit',
+        hint: 'Use git add to include the files you modified',
+        validate: (input: string) => {
+          const normalized = input.trim().toLowerCase();
+          return normalized === 'git add .' || 
+                 normalized === 'git add -a' || 
+                 normalized.includes('git add') && normalized.includes('dateformatter');
+        },
+        successOutput: ''
+      },
+      {
+        id: 'commit',
+        instruction: 'Commit your changes with a message describing what you fixed',
+        hint: 'Use git commit -m "your descriptive message"',
+        validate: (input: string) => {
+          const normalized = input.trim().toLowerCase();
+          return normalized.startsWith('git commit -m') && 
+                 (input.includes('"') || input.includes("'")) &&
+                 (normalized.includes('timezone') || normalized.includes('fix') || normalized.includes('date'));
+        },
+        successOutput: `[fix/timezone-display abc1234] Fix timezone display for merchant transactions
+ 1 file changed, 2 insertions(+), 2 deletions(-)`
+      },
+      {
+        id: 'push',
+        instruction: 'Push your branch to the remote repository',
+        hint: 'Use git push origin followed by your branch name',
+        validate: (input: string) => {
+          const normalized = input.trim().toLowerCase();
+          return normalized.startsWith('git push');
+        },
+        successOutput: `Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Writing objects: 100% (3/3), 312 bytes | 312.00 KiB/s, done.
+remote: Create a pull request:
+remote:   https://github.com/novapay/merchant-dashboard/pull/new/fix/timezone-display`
+      }
+    ];
+
+    const currentStepIdx = gitSteps.findIndex(step => !gitInputs[step.id]);
+    const allComplete = currentStepIdx === -1;
+
+    const handleGitCommand = (stepId: string, input: string) => {
+      const step = gitSteps.find(s => s.id === stepId);
+      if (step && step.validate(input)) {
+        setGitInputs(prev => ({ ...prev, [stepId]: input }));
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <Card className="bg-gray-50 border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <GitCommit className="h-6 w-6 text-gray-600" />
+              <div>
+                <p className="font-medium text-gray-900">Git Workflow</p>
+                <p className="text-sm text-gray-700">
+                  Save your work by staging, committing, and pushing your changes.
                 </p>
               </div>
             </div>
@@ -1552,89 +2168,71 @@ export default function InternOnboardingSession({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm space-y-3">
-              {gitSteps.map((step, idx) => (
-                <div key={idx} className={idx > gitStep ? 'opacity-40' : ''}>
-                  <p className="text-gray-400 text-xs mb-1"># {step.description}</p>
-                  {idx < gitStep ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-400">$</span>
-                      <span className="text-white">{gitCommands[idx] || step.command}</span>
-                      <Check className="h-4 w-4 text-green-400 ml-2" />
-                    </div>
-                  ) : idx === gitStep ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-400">$</span>
-                      <input
-                        type="text"
-                        value={gitCommands[idx] || ''}
-                        onChange={(e) => {
-                          const newCommands = [...gitCommands];
-                          newCommands[idx] = e.target.value;
-                          setGitCommands(newCommands);
-                        }}
-                        placeholder={step.command}
-                        className="bg-transparent text-white flex-1 outline-none"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleGitCommand();
-                        }}
-                        data-testid={`input-git-step-${idx}`}
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-600">$</span>
-                      <span className="text-gray-600">{step.command}</span>
-                    </div>
-                  )}
-                  
-                  {idx === 2 && gitStep === 2 && (
-                    <div className="mt-2 ml-4">
-                      <p className="text-gray-400 text-xs mb-1">Enter your commit message:</p>
-                      <Textarea
-                        value={commitMessage}
-                        onChange={(e) => setCommitMessage(e.target.value)}
-                        placeholder="Fix timezone display in transaction list"
-                        className="bg-gray-800 border-gray-700 text-white min-h-[60px]"
-                        data-testid="input-commit-message"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {gitStep >= gitSteps.length && (
-                <div className="border-t border-gray-700 pt-3 mt-3">
-                  <div className="flex items-center gap-2 text-green-400">
-                    <GitPullRequest className="h-4 w-4" />
-                    <span>Ready to create Pull Request!</span>
+            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm space-y-4">
+              {gitSteps.map((step, idx) => {
+                const isComplete = gitInputs[step.id];
+                const isCurrent = idx === currentStepIdx;
+                const isFuture = idx > currentStepIdx && currentStepIdx !== -1;
+
+                return (
+                  <div key={step.id} className={isFuture ? 'opacity-40' : ''}>
+                    <p className="text-gray-400 text-xs mb-1"># {step.instruction}</p>
+                    {isComplete ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400">$</span>
+                          <span className="text-white">{gitInputs[step.id]}</span>
+                          <Check className="h-4 w-4 text-green-400 ml-2" />
+                        </div>
+                        {step.successOutput && (
+                          <pre className="text-gray-400 text-xs mt-1 whitespace-pre-wrap">{step.successOutput}</pre>
+                        )}
+                      </>
+                    ) : isCurrent ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-400">$</span>
+                        <input
+                          type="text"
+                          className="bg-transparent text-white flex-1 outline-none"
+                          placeholder="Type your command..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleGitCommand(step.id, e.currentTarget.value);
+                            }
+                          }}
+                          data-testid={`input-git-${step.id}`}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600">$</span>
+                        <span className="text-gray-600">...</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })}
             </div>
 
-            {gitStep < gitSteps.length && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Current step:</strong> {gitSteps[gitStep].description}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Type the command and press Enter
+            {currentStepIdx !== -1 && currentStepIdx < gitSteps.length && (
+              <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-800">
+                  <strong>Hint:</strong> {gitSteps[currentStepIdx].hint}
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {gitStep >= gitSteps.length && (
+        {allComplete && (
           <Card className="border-green-200 bg-green-50">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-green-800">
                 <CheckCircle2 className="h-5 w-5" />
-                <span className="font-medium">Git workflow complete!</span>
+                <span className="font-medium">Changes pushed!</span>
               </div>
               <p className="text-sm text-green-700 mt-1">
-                Your PR is ready for review. Sarah will look at it tomorrow during code review!
+                Your code is now on GitHub. Time to create a pull request for review.
               </p>
               <Button 
                 className="mt-3"
@@ -1643,6 +2241,134 @@ export default function InternOnboardingSession({
                   setViewMode('overview');
                 }}
                 data-testid="button-git-complete"
+              >
+                Continue to Create PR
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  function renderDay2PR() {
+    const [prTitle, setPrTitle] = useState('');
+    const [prDescription, setPrDescription] = useState('');
+    const [prSubmitted, setPrSubmittedLocal] = useState(false);
+
+    const isValidPR = prTitle.trim().length > 10 && prDescription.trim().length > 20;
+
+    return (
+      <div className="space-y-4">
+        <Card className="bg-purple-50 border-purple-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <GitPullRequest className="h-6 w-6 text-purple-600" />
+              <div>
+                <p className="font-medium text-purple-900">Create Pull Request</p>
+                <p className="text-sm text-purple-700">
+                  A good PR helps reviewers understand your changes quickly.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {!prSubmitted ? (
+          <Card>
+            <CardHeader className="pb-3 bg-gray-50 border-b">
+              <div className="flex items-center gap-2">
+                <GitPullRequest className="h-5 w-5 text-green-600" />
+                <span className="font-medium">Open a pull request</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                <Badge variant="outline" className="text-xs">fix/timezone-display</Badge>
+                <ArrowRight className="h-3 w-3" />
+                <Badge variant="outline" className="text-xs">main</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <Input
+                  value={prTitle}
+                  onChange={(e) => setPrTitle(e.target.value)}
+                  placeholder="Fix timezone display for merchant transactions"
+                  data-testid="input-pr-title"
+                />
+                <p className="text-xs text-gray-500 mt-1">Summarize what this PR does</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <Textarea
+                  value={prDescription}
+                  onChange={(e) => setPrDescription(e.target.value)}
+                  placeholder={`## What changed
+- Updated formatTransactionDate to use merchant's timezone
+
+## Why
+Merchants were seeing transactions in UTC instead of their local time, causing confusion during reconciliation.
+
+## Testing
+Tested with CST timezone, transactions now display correctly.`}
+                  className="min-h-[150px] font-mono text-sm"
+                  data-testid="input-pr-description"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <div className="text-sm text-gray-500">
+                  Reviewers: Sarah (auto-assigned)
+                </div>
+                <Button 
+                  disabled={!isValidPR}
+                  onClick={() => setPrSubmittedLocal(true)}
+                  data-testid="button-create-pr"
+                >
+                  Create Pull Request
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-green-800 mb-3">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">Pull Request Created!</span>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 border mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <GitPullRequest className="h-4 w-4 text-green-600" />
+                  <span className="font-medium text-gray-900">{prTitle || 'Fix timezone display'}</span>
+                  <Badge className="bg-green-100 text-green-700 text-xs">Open</Badge>
+                </div>
+                <p className="text-sm text-gray-600">#47 opened just now by you</p>
+                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3" />
+                    0 comments
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <File className="h-3 w-3" />
+                    1 file changed
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-sm text-green-700">
+                Sarah will review this tomorrow morning. Great work on your first PR!
+              </p>
+              <Button 
+                className="mt-3"
+                onClick={() => {
+                  setPrCreated(true);
+                  setViewMode('overview');
+                }}
+                data-testid="button-pr-complete"
               >
                 Continue to Reflection
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -2653,9 +3379,13 @@ git push origin fix/your-feature-name
                   {viewMode === 'documentation' && renderDocumentation()}
                   {viewMode === 'comprehension-check' && renderComprehensionCheck()}
                   {viewMode === 'day2-standup' && renderDay2Standup()}
+                  {viewMode === 'day2-dev-setup' && renderDay2DevSetup()}
+                  {viewMode === 'day2-ticket' && renderDay2Ticket()}
                   {viewMode === 'day2-codebase' && renderDay2Codebase()}
                   {viewMode === 'day2-code-fix' && renderDay2CodeFix()}
+                  {viewMode === 'day2-test-fix' && renderDay2TestFix()}
                   {viewMode === 'day2-git' && renderDay2Git()}
+                  {viewMode === 'day2-pr' && renderDay2PR()}
                   {viewMode === 'day2-reflection' && renderDay2Reflection()}
                 </CardContent>
               </Card>
