@@ -58,6 +58,7 @@ interface DayProgress {
   introProgress?: Record<string, boolean>;
   comprehensionComplete?: boolean;
   docSectionsRead?: Record<string, boolean>;
+  closedConversations?: Record<string, boolean>;
   standupComplete?: boolean;
   devSetupComplete?: boolean;
   ticketReviewed?: boolean;
@@ -396,6 +397,11 @@ export default function InternOnboardingSession({
   const [floatingChatMessage, setFloatingChatMessage] = useState("");
   const [floatingTypingIndicator, setFloatingTypingIndicator] = useState<string | null>(null);
   
+  // Track closed conversations (when user says goodbye)
+  const [closedConversations, setClosedConversations] = useState<Record<string, boolean>>(savedProgress?.closedConversations || {});
+  // Track if showing all-intros-complete screen
+  const [showAllIntrosComplete, setShowAllIntrosComplete] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docsScrollRef = useRef<HTMLDivElement>(null);
   const progressIdRef = useRef<number | null>(savedProgressId || null);
@@ -602,13 +608,38 @@ export default function InternOnboardingSession({
       
       return { previousInteractions, member };
     },
-    onSuccess: (_data, _variables, context) => {
+    onSuccess: (data, _variables, context) => {
       setTypingIndicator(null);
       queryClient.invalidateQueries({ queryKey: ['/api/workspace', session.id, 'interactions'] });
       
       const member = context?.member;
       if (member && !introProgress[member.name]) {
         setIntroProgress(prev => ({ ...prev, [member.name]: true }));
+      }
+      
+      // Check if conversation was closed by the team member
+      if (data?.conversationClosed && member) {
+        setClosedConversations(prev => {
+          const newClosed = { ...prev, [member.name]: true };
+          
+          // Check if all intros are now complete using the new state
+          const teamMembersToMeet = teamMembers.filter((m: TeamMember) => m.name !== 'Sarah');
+          const allClosed = teamMembersToMeet.every((m: TeamMember) => newClosed[m.name]);
+          
+          if (allClosed) {
+            // Also ensure all are marked as met
+            setIntroProgress(prevIntro => {
+              const newIntro = { ...prevIntro, [member.name]: true };
+              const allMet = teamMembersToMeet.every((m: TeamMember) => newIntro[m.name]);
+              if (allMet) {
+                setTimeout(() => setShowAllIntrosComplete(true), 1000);
+              }
+              return newIntro;
+            });
+          }
+          
+          return newClosed;
+        });
       }
     },
     onError: (_err, _variables, context) => {
@@ -725,6 +756,7 @@ export default function InternOnboardingSession({
       introProgress,
       comprehensionComplete,
       docSectionsRead,
+      closedConversations,
       standupComplete,
       devSetupComplete,
       ticketReviewed,
@@ -795,7 +827,7 @@ export default function InternOnboardingSession({
       return;
     }
     saveProgress();
-  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, standupComplete, devSetupComplete, ticketReviewed, branchCreated, codebaseExplored, codeFixComplete, testFixComplete, gitWorkflowComplete, prCreated, reflectionComplete, codeInputs, currentDay]);
+  }, [docsRead, introProgress, comprehensionComplete, docSectionsRead, closedConversations, standupComplete, devSetupComplete, ticketReviewed, branchCreated, codebaseExplored, codeFixComplete, testFixComplete, gitWorkflowComplete, prCreated, reflectionComplete, codeInputs, currentDay]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -3031,32 +3063,96 @@ Tested with CST timezone, transactions now display correctly.`}
             </div>
           </ScrollArea>
 
-          {/* Input Area - styled consistently */}
-          <div className="border-t pt-4">
-            <div className="flex gap-2">
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={`Message ${selectedMember.name}...`}
-                className="min-h-[60px] resize-none bg-white"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                data-testid="input-message"
-              />
-              <Button 
-                onClick={() => handleSendMessage()}
-                disabled={!message.trim() || sendMessageMutation.isPending}
-                className="self-end"
-                data-testid="button-send-message"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+          {/* Input Area or Completion Card */}
+          {closedConversations[selectedMember.name] ? (
+            <div className="border-t pt-4">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-green-800">Intro Complete!</h4>
+                    <p className="text-sm text-green-600">You've met {selectedMember.name}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={async () => {
+                      // Notify backend to reopen the channel
+                      try {
+                        const response = await apiRequest("POST", `/api/workspace/${session.id}/reopen-channel`, {
+                          channel: `dm-${selectedMember.name}`
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                          setClosedConversations(prev => ({ ...prev, [selectedMember.name]: false }));
+                        } else {
+                          console.error('Failed to reopen channel:', result.message);
+                        }
+                      } catch (error) {
+                        console.error('Failed to reopen channel:', error);
+                        // Still allow local reopen even if backend fails
+                        setClosedConversations(prev => ({ ...prev, [selectedMember.name]: false }));
+                      }
+                    }}
+                    data-testid="button-reopen-chat"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Reopen Chat
+                  </Button>
+                  <Button 
+                    size="sm"
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    onClick={() => {
+                      setSelectedMember(null);
+                      // Find next team member to meet
+                      const teamMembersToMeet = teamMembers.filter((m: TeamMember) => m.name !== 'Sarah');
+                      const nextMember = teamMembersToMeet.find((m: TeamMember) => !closedConversations[m.name]);
+                      if (nextMember) {
+                        setTimeout(() => startTeamIntro(nextMember), 300);
+                      }
+                    }}
+                    data-testid="button-next-teammate"
+                  >
+                    {teamMembers.filter((m: TeamMember) => m.name !== 'Sarah').every((m: TeamMember) => closedConversations[m.name] || m.name === selectedMember.name) 
+                      ? 'All Done!' 
+                      : 'Meet Next Teammate'}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="border-t pt-4">
+              <div className="flex gap-2">
+                <Textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder={`Message ${selectedMember.name}...`}
+                  className="min-h-[60px] resize-none bg-white"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  data-testid="input-message"
+                />
+                <Button 
+                  onClick={() => handleSendMessage()}
+                  disabled={!message.trim() || sendMessageMutation.isPending}
+                  className="self-end"
+                  data-testid="button-send-message"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -3968,6 +4064,72 @@ git push origin fix/your-feature-name
             }} data-testid="button-start-day2">
               <Rocket className="h-4 w-4 mr-2" />
               Start Day 2
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* All Team Intros Complete Dialog */}
+      <Dialog open={showAllIntrosComplete} onOpenChange={setShowAllIntrosComplete}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                <Users className="h-8 w-8 text-white" />
+              </div>
+              <DialogTitle className="text-xl">You've Met the Team!</DialogTitle>
+              <DialogDescription className="mt-2">
+                Great job! You've introduced yourself to all your teammates. They're excited to work with you!
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-3 my-4">
+            <div className="flex flex-wrap justify-center gap-2">
+              {teamMembers.filter((m: TeamMember) => m.name !== 'Sarah').map((member: TeamMember, idx: number) => (
+                <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-full pl-1 pr-3 py-1">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={getTeamAvatarUrl(member.name)} alt={member.name} />
+                    <AvatarFallback className={`text-white text-xs ${getTeamMemberColor(member.name)}`}>
+                      {getTeamMemberInitials(member.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{member.name}</span>
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Next up:</strong> Sarah wants to do a quick comprehension check to make sure you're ready for tomorrow.
+            </p>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowAllIntrosComplete(false);
+                setSelectedMember(null);
+                setViewMode('overview');
+              }}
+              data-testid="button-back-to-overview"
+            >
+              Back to Overview
+            </Button>
+            <Button 
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                setShowAllIntrosComplete(false);
+                setSelectedMember(null);
+                setViewMode('comprehension-check');
+              }}
+              data-testid="button-go-to-comprehension"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Chat with Sarah
             </Button>
           </DialogFooter>
         </DialogContent>

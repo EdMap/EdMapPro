@@ -29,6 +29,10 @@ export interface ChannelMessage {
   senderRole: string;
   content: string;
   timestamp: Date;
+  metadata?: {
+    closed?: boolean;
+    [key: string]: any;
+  };
 }
 
 export interface WorkspaceAction {
@@ -113,6 +117,13 @@ export class WorkspaceOrchestrator {
     }
 
     return { isClosing: false, isFinal: false };
+  }
+
+  /**
+   * Reopen a closed channel to allow continued conversation
+   */
+  reopenChannel(channel: string): void {
+    this.closedChannels.set(channel, false);
   }
 
   /**
@@ -414,7 +425,8 @@ Format as JSON:
         sender: member.name,
         senderRole: member.role,
         content: response.content,
-        timestamp: new Date()
+        timestamp: new Date(),
+        metadata: response.metadata
       };
 
       this.addToMemory(sessionId, channel, message);

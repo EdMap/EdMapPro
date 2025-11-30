@@ -459,19 +459,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             channel,
             sender: response.sender,
             senderRole: response.senderRole,
-            content: response.content
+            content: response.content,
+            metadata: response.metadata || null
           });
         }
       }
 
+      // Check if any response indicates conversation closed
+      const conversationClosed = responses.some(r => r.metadata?.closed === true);
+
       res.json({
         evaluation,
         responses,
+        conversationClosed,
         success: true
       });
     } catch (error) {
       console.error('Workspace action error:', error);
       res.status(500).json({ message: "Failed to process action: " + (error as Error).message });
+    }
+  });
+
+  // Reopen a closed channel (for continuing conversation after goodbye)
+  app.post("/api/workspace/:sessionId/reopen-channel", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { channel } = req.body;
+      
+      // Validate required fields
+      if (!channel || typeof channel !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Missing or invalid 'channel' field in request body" 
+        });
+      }
+      
+      // Verify session exists
+      const session = await storage.getSimulationSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Session not found" 
+        });
+      }
+      
+      workspaceOrchestrator.reopenChannel(channel);
+      res.json({ success: true, message: `Channel ${channel} reopened` });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to reopen channel: " + (error as Error).message 
+      });
     }
   });
 
