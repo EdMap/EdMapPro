@@ -440,7 +440,7 @@ export default function InternOnboardingSession({
     if (currentDay === 1) {
       return [
         'Meet the team (1-on-1 introductions with Sarah, Marcus, Priya, Alex, Jordan)',
-        'Read project documentation (Product & Users, Your Mission)',
+        'Read project documentation (Product & Users, How We Work)',
         'Comprehension check with Sarah'
       ];
     }
@@ -1896,8 +1896,8 @@ export default function InternOnboardingSession({
   const allSectionsRead = Boolean(
     docSectionsRead['product'] && 
     docSectionsRead['users'] && 
-    docSectionsRead['bug'] && 
-    docSectionsRead['setup']
+    docSectionsRead['norms'] && 
+    docSectionsRead['workflow']
   );
 
   function handleFinishDocs() {
@@ -1950,10 +1950,10 @@ export default function InternOnboardingSession({
                 <CheckCircle2 className="h-3 w-3 text-green-600 ml-1" />
               )}
             </TabsTrigger>
-            <TabsTrigger value="mission" className="flex items-center gap-2" data-testid="tab-mission">
-              <Target className="h-4 w-4" />
-              Your Mission
-              {docSectionsRead['bug'] && docSectionsRead['setup'] && (
+            <TabsTrigger value="howwework" className="flex items-center gap-2" data-testid="tab-howwework">
+              <Users className="h-4 w-4" />
+              How We Work
+              {docSectionsRead['norms'] && docSectionsRead['workflow'] && (
                 <CheckCircle2 className="h-3 w-3 text-green-600 ml-1" />
               )}
             </TabsTrigger>
@@ -2106,20 +2106,20 @@ export default function InternOnboardingSession({
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                       <div>
                         <p className="font-medium text-orange-900">Section Complete!</p>
-                        <p className="text-sm text-orange-700">2 of 4 sections done. Ready to learn about your mission?</p>
+                        <p className="text-sm text-orange-700">2 of 4 sections done. Learn how the team works next.</p>
                       </div>
                     </div>
                     <Button 
                       onClick={() => {
-                        setActiveDocTab('mission');
+                        setActiveDocTab('howwework');
                         setTimeout(() => {
                           docsScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }, 50);
                       }}
                       className="bg-orange-600 hover:bg-orange-700"
-                      data-testid="button-continue-mission"
+                      data-testid="button-continue-howwework"
                     >
-                      Continue to Your Mission
+                      Continue to How We Work
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </div>
@@ -2128,93 +2128,79 @@ export default function InternOnboardingSession({
             )}
           </TabsContent>
 
-          <TabsContent value="mission" className="space-y-4 mt-4">
-            <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
+          <TabsContent value="howwework" className="space-y-4 mt-4">
+            <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <Target className="h-5 w-5 text-orange-600 mt-0.5" />
+                  <Users className="h-5 w-5 text-purple-600 mt-0.5" />
                   <div>
-                    <p className="font-medium text-orange-900">Your Mission</p>
-                    <p className="text-sm text-orange-800">
-                      Fix the timezone bug so Maria sees transactions in her local time, not server time. You'll work on this starting Day 2.
+                    <p className="font-medium text-purple-900">How the Team Works</p>
+                    <p className="text-sm text-purple-800">
+                      Before diving into code, learn how we collaborate, communicate, and ship features together.
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Collapsible open={expandedSections['bug']} onOpenChange={(open) => toggleSection('bug', open)}>
+            <Collapsible open={expandedSections['norms']} onOpenChange={(open) => toggleSection('norms', open)}>
               <Card>
-                <CollapsibleTrigger className="w-full" data-testid="section-bug">
+                <CollapsibleTrigger className="w-full" data-testid="section-norms">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <Bug className="h-4 w-4 text-red-600" />
-                        The Timezone Bug
-                        {docSectionsRead['bug'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        <MessageCircle className="h-4 w-4 text-purple-600" />
+                        Team Norms & Culture
+                        {docSectionsRead['norms'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                       </CardTitle>
-                      {expandedSections['bug'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      {expandedSections['norms'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="pt-0 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                        <p className="text-xs font-medium text-red-600 mb-1">CURRENT (Bug)</p>
-                        <div className="flex items-center gap-2">
-                          <Monitor className="h-8 w-8 text-red-400" />
-                          <div>
-                            <p className="font-mono text-sm">Feb 15, 02:30 AM</p>
-                            <p className="text-xs text-red-600">Shows UTC time</p>
-                          </div>
+                    <p className="text-gray-700">
+                      Every team has its own rhythm. Here's how we work together at NovaPay.
+                    </p>
+
+                    <div className="grid gap-3">
+                      <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-blue-900">Daily Standup at 10am</p>
+                          <p className="text-sm text-blue-800">Quick 15-min sync. Share what you did, what you're doing, and any blockers.</p>
                         </div>
                       </div>
-                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                        <p className="text-xs font-medium text-green-600 mb-1">EXPECTED (Fixed)</p>
-                        <div className="flex items-center gap-2">
-                          <Monitor className="h-8 w-8 text-green-400" />
-                          <div>
-                            <p className="font-mono text-sm">Feb 14, 08:30 PM</p>
-                            <p className="text-xs text-green-600">Shows merchant's local time</p>
-                          </div>
+                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <MessageCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-green-900">Ask Early, Ask Often</p>
+                          <p className="text-sm text-green-800">Stuck for more than 15 minutes? Reach out. No question is too small.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <GitPullRequest className="h-5 w-5 text-amber-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-amber-900">Reviews = Learning</p>
+                          <p className="text-sm text-amber-800">Code review feedback is about the code, not about you. It's how we all improve.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                        <PenLine className="h-5 w-5 text-purple-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-purple-900">Document As You Go</p>
+                          <p className="text-sm text-purple-800">Comments and READMEs save future headaches. Write for future-you.</p>
                         </div>
                       </div>
                     </div>
 
-                    <div>
-                      <p className="font-medium text-gray-900 mb-2">What's Happening:</p>
-                      <ul className="space-y-2 text-sm text-gray-700">
-                        <li className="flex items-start gap-2">
-                          <span className="text-red-500 mt-1">1.</span>
-                          <span>Transaction timestamps are stored in UTC (correct)</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-red-500 mt-1">2.</span>
-                          <span>Frontend displays them as-is without conversion (bug)</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-red-500 mt-1">3.</span>
-                          <span>Merchant's timezone preference is ignored</span>
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <p className="font-medium text-blue-900 mb-2">Files You'll Touch:</p>
-                      <div className="font-mono text-xs space-y-1 text-blue-800">
-                        <p>client/src/components/TransactionList.tsx</p>
-                        <p>client/src/utils/dateFormatters.ts</p>
-                        <p>shared/types/merchant.ts</p>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="font-medium text-green-900 mb-1">Success Criteria:</p>
-                      <ul className="text-sm text-green-800 space-y-1">
-                        <li>• Transactions display in merchant's configured timezone</li>
-                        <li>• Date filters work correctly with local dates</li>
-                        <li>• Existing tests pass + new timezone tests added</li>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="font-medium text-gray-900 mb-2">Communication Channels:</p>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        <li>• <strong>Slack #team-payments</strong> - Day-to-day team chat</li>
+                        <li>• <strong>Slack DMs</strong> - Quick questions to individuals</li>
+                        <li>• <strong>GitHub PRs</strong> - Code discussions and reviews</li>
+                        <li>• <strong>Notion</strong> - Documentation and specs</li>
                       </ul>
                     </div>
                   </CardContent>
@@ -2222,61 +2208,89 @@ export default function InternOnboardingSession({
               </Card>
             </Collapsible>
 
-            <Collapsible open={expandedSections['setup']} onOpenChange={(open) => toggleSection('setup', open)}>
+            <Collapsible open={expandedSections['workflow']} onOpenChange={(open) => toggleSection('workflow', open)}>
               <Card>
-                <CollapsibleTrigger className="w-full" data-testid="section-setup">
+                <CollapsibleTrigger className="w-full" data-testid="section-workflow">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <GitBranch className="h-4 w-4 text-purple-600" />
-                        How We Work
-                        {docSectionsRead['setup'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        <GitBranch className="h-4 w-4 text-teal-600" />
+                        Development Flow
+                        {docSectionsRead['workflow'] && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                       </CardTitle>
-                      {expandedSections['setup'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      {expandedSections['workflow'] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="pt-0 space-y-4">
                     <div>
-                      <p className="font-medium text-gray-900 mb-3">Development Workflow:</p>
+                      <p className="font-medium text-gray-900 mb-3">How We Ship Features:</p>
                       <div className="flex items-center gap-2 flex-wrap text-sm">
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <span>1</span> Pick ticket
+                        <Badge variant="outline" className="flex items-center gap-1 bg-gray-50">
+                          <span className="text-gray-500">1</span> Pick ticket
                         </Badge>
                         <ArrowRight className="h-3 w-3 text-gray-400" />
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <span>2</span> Branch
+                        <Badge variant="outline" className="flex items-center gap-1 bg-blue-50">
+                          <span className="text-blue-600">2</span> Branch
                         </Badge>
                         <ArrowRight className="h-3 w-3 text-gray-400" />
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <span>3</span> Code
+                        <Badge variant="outline" className="flex items-center gap-1 bg-purple-50">
+                          <span className="text-purple-600">3</span> Code
                         </Badge>
                         <ArrowRight className="h-3 w-3 text-gray-400" />
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <span>4</span> PR
+                        <Badge variant="outline" className="flex items-center gap-1 bg-amber-50">
+                          <span className="text-amber-600">4</span> PR
                         </Badge>
                         <ArrowRight className="h-3 w-3 text-gray-400" />
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <span>5</span> Review
+                        <Badge variant="outline" className="flex items-center gap-1 bg-orange-50">
+                          <span className="text-orange-600">5</span> Review
                         </Badge>
                         <ArrowRight className="h-3 w-3 text-gray-400" />
-                        <Badge variant="outline" className="flex items-center gap-1 bg-green-50">
-                          <span>6</span> Merge
+                        <Badge variant="outline" className="flex items-center gap-1 bg-green-100">
+                          <span className="text-green-700">6</span> Merge
                         </Badge>
                       </div>
                     </div>
 
-                    <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400">
-                      <pre className="whitespace-pre-wrap">{`# Your first commands tomorrow:
-git checkout -b fix/timezone-display
-npm install
-npm run dev
+                    <div className="p-4 bg-gray-50 rounded-lg border">
+                      <p className="font-medium text-gray-900 mb-3">Our Codebase:</p>
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Folder className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-gray-900">Repository: novapay/merchant-dashboard</p>
+                            <p className="text-sm text-gray-600">Monorepo with client, server, and shared code</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                          <div className="p-2 bg-white rounded border">
+                            <FolderOpen className="h-3 w-3 inline mr-1 text-blue-500" />
+                            client/
+                            <p className="text-gray-500 mt-1">React frontend</p>
+                          </div>
+                          <div className="p-2 bg-white rounded border">
+                            <FolderOpen className="h-3 w-3 inline mr-1 text-green-500" />
+                            server/
+                            <p className="text-gray-500 mt-1">Node.js API</p>
+                          </div>
+                          <div className="p-2 bg-white rounded border">
+                            <FolderOpen className="h-3 w-3 inline mr-1 text-purple-500" />
+                            shared/
+                            <p className="text-gray-500 mt-1">Types & utils</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-# When ready to submit:
-git add .
-git commit -m "Fix timezone display in transactions"
-git push origin fix/timezone-display`}</pre>
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="font-medium text-blue-900 mb-2">Conventions:</p>
+                      <ul className="text-sm text-blue-800 space-y-1">
+                        <li>• <strong>Branch names:</strong> fix/description or feature/description</li>
+                        <li>• <strong>Commits:</strong> Clear, descriptive messages ("Fix timezone display in transactions")</li>
+                        <li>• <strong>PRs:</strong> Include what, why, and how to test</li>
+                        <li>• <strong>Comments:</strong> Explain the "why", not the "what"</li>
+                      </ul>
                     </div>
 
                     <div>
@@ -2286,38 +2300,56 @@ git push origin fix/timezone-display`}</pre>
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs bg-blue-100 text-blue-700">S</AvatarFallback>
                           </Avatar>
-                          <span><strong>Sarah</strong> - Code questions, PR reviews</span>
+                          <span><strong>Sarah</strong> - Code questions, PR reviews, architecture</span>
                         </div>
                         <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs bg-pink-100 text-pink-700">P</AvatarFallback>
                           </Avatar>
-                          <span><strong>Priya</strong> - Requirements, user context</span>
+                          <span><strong>Priya</strong> - Requirements, user context, priorities</span>
                         </div>
                         <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs bg-green-100 text-green-700">M</AvatarFallback>
                           </Avatar>
-                          <span><strong>Marcus</strong> - Architecture, tricky bugs</span>
+                          <span><strong>Marcus</strong> - Tricky bugs, system design</span>
                         </div>
                         <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs bg-orange-100 text-orange-700">A</AvatarFallback>
                           </Avatar>
-                          <span><strong>Alex</strong> - Testing, QA process</span>
+                          <span><strong>Alex</strong> - Testing, QA process, edge cases</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <p className="font-medium text-purple-900 mb-2">Team Norms:</p>
-                      <ul className="text-sm text-purple-800 space-y-1">
-                        <li>• <strong>Standup at 10am</strong> - Quick sync on progress</li>
-                        <li>• <strong>Ask early</strong> - Stuck for 15 min? Ask for help</li>
-                        <li>• <strong>Reviews = learning</strong> - Feedback is about code, not you</li>
-                        <li>• <strong>Document as you go</strong> - Comments save future headaches</li>
-                      </ul>
-                    </div>
+                    <Collapsible>
+                      <CollapsibleTrigger className="w-full">
+                        <div className="flex items-center justify-between p-3 bg-gray-900 rounded-lg text-white hover:bg-gray-800 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <Terminal className="h-4 w-4 text-green-400" />
+                            <span className="text-sm font-medium">Quick Reference: Git Commands</span>
+                          </div>
+                          <ChevronDown className="h-4 w-4" />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="bg-gray-900 rounded-b-lg p-4 font-mono text-sm text-green-400 -mt-2 border-t border-gray-700">
+                          <pre className="whitespace-pre-wrap">{`# Start a new feature:
+git checkout main
+git pull origin main
+git checkout -b fix/your-feature-name
+
+# Save your work:
+git add .
+git commit -m "Your descriptive message"
+
+# Push and create PR:
+git push origin fix/your-feature-name
+# Then open a PR on GitHub`}</pre>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </CollapsibleContent>
               </Card>
