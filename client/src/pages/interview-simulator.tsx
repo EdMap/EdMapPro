@@ -105,20 +105,19 @@ export default function InterviewSimulator() {
     
     const nextMessage = pendingMessages[0];
     
-    // First, show typing indicator for this persona
-    if (!typingPersonaId && nextMessage.personaId) {
-      setTypingPersonaId(nextMessage.personaId);
-      
-      // After a delay, reveal the message
-      const typingDelay = setTimeout(() => {
-        setPreludeMessages(prev => [...prev, nextMessage]);
-        setTypingPersonaId(null);
-        setPendingMessages(prev => prev.slice(1));
-      }, 1500); // 1.5 seconds of "typing"
-      
-      return () => clearTimeout(typingDelay);
-    }
-  }, [pendingMessages, typingPersonaId]);
+    // Start the reveal process: show typing, wait, then reveal message
+    // Set typing indicator immediately
+    setTypingPersonaId(nextMessage.personaId || null);
+    
+    // After a delay, reveal the message and clear typing
+    const typingDelay = setTimeout(() => {
+      setPreludeMessages(prev => [...prev, nextMessage]);
+      setTypingPersonaId(null);
+      setPendingMessages(prev => prev.slice(1));
+    }, 1500); // 1.5 seconds of "typing"
+    
+    return () => clearTimeout(typingDelay);
+  }, [pendingMessages.length]); // Only depend on length to avoid re-running when we modify the array
 
   // Determine mode based on URL params
   const isJourneyMode = applicationStageId !== null;
