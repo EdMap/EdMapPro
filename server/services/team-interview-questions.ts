@@ -2,7 +2,7 @@ import { ExperienceLevel, TeamInterviewPersona } from '@shared/schema';
 
 export interface TeamInterviewQuestion {
   id: string;
-  category: 'learning' | 'collaboration' | 'technical' | 'curiosity';
+  category: 'warmup' | 'learning' | 'collaboration' | 'technical' | 'curiosity';
   personaRole: string; // Which persona typically asks this
   question: string;
   followUps: string[]; // Possible follow-up questions
@@ -12,6 +12,71 @@ export interface TeamInterviewQuestion {
 }
 
 export const INTERN_QUESTIONS: TeamInterviewQuestion[] = [
+  // WARM-UP / MOTIVATION (First question - sets the tone)
+  {
+    id: 'intern_warmup_1',
+    category: 'warmup',
+    personaRole: 'peer_engineer',
+    question: "What got you interested in software engineering in the first place?",
+    followUps: [
+      "Was there a specific moment or project that sparked that interest?",
+      "What do you enjoy most about coding so far?",
+    ],
+    lookingFor: [
+      'Genuine enthusiasm for building things',
+      'Can articulate what draws them to the field',
+      'Shows curiosity about technology',
+      'Personal connection to the work',
+    ],
+    redFlags: [
+      'Only mentions salary or job security',
+      'Cannot explain any interest in the work itself',
+      'Seems disengaged when talking about coding',
+    ],
+  },
+  {
+    id: 'intern_warmup_2',
+    category: 'warmup',
+    personaRole: 'peer_engineer',
+    question: "What excites you most about this opportunity?",
+    followUps: [
+      "What are you hoping to learn or work on?",
+      "What kind of projects interest you?",
+    ],
+    lookingFor: [
+      'Has researched the company/role',
+      'Shows enthusiasm for learning',
+      'Connects their interests to the opportunity',
+      'Has realistic expectations',
+    ],
+    redFlags: [
+      'Generic answer that could apply anywhere',
+      'No awareness of what the role involves',
+      'Only focused on what they can get, not contribute',
+    ],
+  },
+  {
+    id: 'intern_warmup_3',
+    category: 'warmup',
+    personaRole: 'tech_lead',
+    question: "Tell me a bit about your journey into tech so far - how did you get here?",
+    followUps: [
+      "What made you choose this path?",
+      "What's been the most rewarding part so far?",
+    ],
+    lookingFor: [
+      'Clear narrative of their path',
+      'Shows self-awareness about their journey',
+      'Demonstrates initiative in learning',
+      'Authentic and thoughtful response',
+    ],
+    redFlags: [
+      'Cannot explain their own choices',
+      'Seems to have fallen into it accidentally with no interest',
+      'Dismissive of their own learning journey',
+    ],
+  },
+
   // LEARNING & GROWTH (40% of interview)
   {
     id: 'intern_learn_1',
@@ -386,12 +451,24 @@ export function selectQuestionsForInterview(
   const allQuestions = getQuestionsForLevel(level);
   const selected: TeamInterviewQuestion[] = [];
   
+  // ALWAYS start with a warmup question (motivation/interest)
+  const warmupQuestions = allQuestions.filter(q => q.category === 'warmup');
+  if (warmupQuestions.length > 0) {
+    const shuffledWarmup = warmupQuestions.sort(() => Math.random() - 0.5);
+    selected.push(shuffledWarmup[0]);
+  }
+  
+  // Then add questions from other categories in progression order:
+  // learning → collaboration → technical → curiosity
   const categories: Array<'learning' | 'collaboration' | 'technical' | 'curiosity'> = 
     ['learning', 'collaboration', 'technical', 'curiosity'];
   
+  // Reduce maxQuestions by 1 to account for warmup
+  const remainingSlots = maxQuestions - selected.length;
+  
   for (const category of categories) {
     const categoryQuestions = allQuestions.filter(q => q.category === category);
-    const targetCount = Math.round((weights[category] / 100) * maxQuestions);
+    const targetCount = Math.round((weights[category] / 100) * remainingSlots);
     
     const shuffled = categoryQuestions.sort(() => Math.random() - 0.5);
     selected.push(...shuffled.slice(0, targetCount));
