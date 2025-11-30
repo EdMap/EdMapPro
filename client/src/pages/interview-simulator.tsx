@@ -75,6 +75,11 @@ export default function InterviewSimulator() {
   const [preludeResponse, setPreludeResponse] = useState("");
   const [isPreludeSubmitting, setIsPreludeSubmitting] = useState(false);
   
+  // Sequential message reveal state (for team interview greetings)
+  const [visibleMessageCount, setVisibleMessageCount] = useState(0);
+  const [typingPersonaId, setTypingPersonaId] = useState<string | null>(null);
+  const [pendingMessages, setPendingMessages] = useState<Array<{role: 'interviewer' | 'candidate', content: string; personaId?: string}>>([]);
+  
   // Team interview state
   const [isTeamInterview, setIsTeamInterview] = useState(false);
   const [teamPersonas, setTeamPersonas] = useState<Array<{id: string; name: string; role: string; displayRole: string}>>([]);
@@ -91,7 +96,29 @@ export default function InterviewSimulator() {
     if (preludeMessagesEndRef.current) {
       preludeMessagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [preludeMessages, isPreludeSubmitting]);
+  }, [preludeMessages, isPreludeSubmitting, typingPersonaId]);
+
+  // Sequential message reveal effect for team interview greetings
+  // This creates a natural "typing then speaking" flow for each persona
+  useEffect(() => {
+    if (pendingMessages.length === 0) return;
+    
+    const nextMessage = pendingMessages[0];
+    
+    // First, show typing indicator for this persona
+    if (!typingPersonaId && nextMessage.personaId) {
+      setTypingPersonaId(nextMessage.personaId);
+      
+      // After a delay, reveal the message
+      const typingDelay = setTimeout(() => {
+        setPreludeMessages(prev => [...prev, nextMessage]);
+        setTypingPersonaId(null);
+        setPendingMessages(prev => prev.slice(1));
+      }, 1500); // 1.5 seconds of "typing"
+      
+      return () => clearTimeout(typingDelay);
+    }
+  }, [pendingMessages, typingPersonaId]);
 
   // Determine mode based on URL params
   const isJourneyMode = applicationStageId !== null;
@@ -147,17 +174,28 @@ export default function InterviewSimulator() {
         // Enter conversational prelude mode
         setIsPreludeMode(true);
         
+        // Reset sequential reveal state
+        setTypingPersonaId(null);
+        setPendingMessages([]);
+        
         // Check if greeting is a combined team format (JSON with messages array)
         try {
           const parsed = JSON.parse(result.greeting);
           if (parsed.messages && Array.isArray(parsed.messages)) {
-            // Team interview: multiple persona messages
+            // Team interview: multiple persona messages - reveal sequentially
             const messages = parsed.messages.map((msg: { personaId: string; content: string }) => ({
               role: 'interviewer' as const,
               content: msg.content,
               personaId: msg.personaId
             }));
-            setPreludeMessages(messages);
+            
+            // Show first message immediately, queue the rest
+            if (messages.length > 0) {
+              setPreludeMessages([messages[0]]);
+              if (messages.length > 1) {
+                setPendingMessages(messages.slice(1));
+              }
+            }
           } else {
             // Fallback to single message
             const greetingMessage = {
@@ -483,9 +521,11 @@ export default function InterviewSimulator() {
             );
             })}
             
-            {isPreludeSubmitting && (() => {
-              // For typing indicator, use the first persona (who is currently speaking)
-              const typingPersonaStyle = getPersonaStyle(teamPersonas.length > 0 ? teamPersonas[0].id : undefined, isTeamInterview, teamPersonas);
+            {/* Typing indicator - shown for sequential reveals OR when waiting for API response */}
+            {(typingPersonaId || isPreludeSubmitting) && (() => {
+              // Use the specific persona for sequential reveals, or first persona for API responses
+              const activeTypingId = typingPersonaId || (teamPersonas.length > 0 ? teamPersonas[0].id : undefined);
+              const typingPersonaStyle = getPersonaStyle(activeTypingId, isTeamInterview, teamPersonas);
               return (
               <div className="flex items-start space-x-3">
                 <Avatar className={cn("h-10 w-10", typingPersonaStyle.bgColor)}>
@@ -540,14 +580,14 @@ export default function InterviewSimulator() {
                     handlePreludeSubmit();
                   }
                 }}
-                placeholder="Type your response here... (Press Enter to send, Shift+Enter for new line)"
+                placeholder={pendingMessages.length > 0 ? "Please wait for all interviewers to introduce themselves..." : "Type your response here... (Press Enter to send, Shift+Enter for new line)"}
                 className="flex-1 min-h-[80px] resize-none"
-                disabled={isPreludeSubmitting}
+                disabled={isPreludeSubmitting || pendingMessages.length > 0 || typingPersonaId !== null}
                 data-testid="input-prelude-response"
               />
               <Button 
                 onClick={handlePreludeSubmit}
-                disabled={!preludeResponse.trim() || isPreludeSubmitting}
+                disabled={!preludeResponse.trim() || isPreludeSubmitting || pendingMessages.length > 0 || typingPersonaId !== null}
                 className="self-end"
                 data-testid="button-send-prelude"
               >
