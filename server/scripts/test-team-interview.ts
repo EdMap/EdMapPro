@@ -320,29 +320,50 @@ async function runTeamInterview(iteration: number): Promise<IterationResult> {
     1, "team", "Software Engineer", "intern", 8, jobContext, "Arsen"
   );
   
-  // Track initial persona
-  const initialPersona = teamPersonas?.find((p: any) => p.id === activePersonaId);
-  if (initialPersona) {
-    personaBreakdown[initialPersona.name] = (personaBreakdown[initialPersona.name] || 0) + 1;
+  // Parse the combined greeting JSON (contains both personas' messages)
+  let greetingMessages: Array<{personaId: string; content: string}> = [];
+  try {
+    const parsed = JSON.parse(greeting || '{}');
+    greetingMessages = parsed.messages || [];
+  } catch {
+    // Fallback if not JSON
+    greetingMessages = [{ personaId: activePersonaId || '', content: greeting || '' }];
   }
   
-  console.log(`[${initialPersona?.name || 'INTERVIEWER'} - Greeting]: ${greeting}`);
-  conversation.push({ 
-    speaker: 'interviewer', 
-    message: greeting || '',
-    personaId: activePersonaId,
-    personaName: initialPersona?.name
-  });
+  // Display each persona's greeting with proper attribution
+  for (const msg of greetingMessages) {
+    const persona = teamPersonas?.find((p: any) => p.id === msg.personaId);
+    const personaName = persona?.name || 'INTERVIEWER';
+    
+    // Track persona
+    if (personaName) {
+      personaBreakdown[personaName] = (personaBreakdown[personaName] || 0) + 1;
+    }
+    
+    console.log(`[${personaName} - Greeting]: ${msg.content}`);
+    conversation.push({ 
+      speaker: 'interviewer', 
+      message: msg.content,
+      personaId: msg.personaId,
+      personaName
+    });
+  }
+  
+  // Use the last greeting message for candidate's response context
+  const lastGreetingContent = greetingMessages.length > 0 
+    ? greetingMessages[greetingMessages.length - 1].content 
+    : greeting || '';
+  const lastPersona = teamPersonas?.find((p: any) => p.id === activePersonaId);
   
   // Handle prelude (greetings) with complete responses
-  let candidateResponse = await candidate.respond(greeting || '', conversation, 'complete', initialPersona?.name);
+  let candidateResponse = await candidate.respond(lastGreetingContent, conversation, 'complete', lastPersona?.name);
   console.log(`[CANDIDATE]: ${candidateResponse}\n`);
   conversation.push({ speaker: 'candidate', message: candidateResponse, responseType: 'complete' });
   
   if (isPreludeMode) {
     // Handle prelude exchanges
     let preludeResult: any = await orchestrator.handlePreludeResponse(session.id, candidateResponse);
-    let currentPersonaName = initialPersona?.name;
+    let currentPersonaName = lastPersona?.name;
     
     while (preludeResult.preludeMessage && !preludeResult.firstQuestion) {
       // Track persona changes in prelude

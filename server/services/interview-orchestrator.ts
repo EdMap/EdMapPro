@@ -2671,6 +2671,18 @@ export class InterviewOrchestrator {
       criterion: turnResult.evaluation.criterionCovered,
     });
 
+    // FORCE WRAP-UP if we've exceeded maxQuestions
+    // The AI sometimes doesn't trigger wrap-up when it should
+    const shouldForceWrapUp = memory.totalQuestionsAsked >= settings.maxQuestions;
+    if (shouldForceWrapUp && turnResult.actionType !== 'wrap_up') {
+      console.log('[Team Interview] FORCING wrap-up - exceeded maxQuestions:', {
+        questionsAsked: memory.totalQuestionsAsked,
+        maxQuestions: settings.maxQuestions,
+      });
+      turnResult.actionType = 'wrap_up';
+      turnResult.wrapUpReason = `Interview complete after ${memory.totalQuestionsAsked} questions`;
+    }
+
     // Update memory with evaluation
     const evaluation: EvaluationResult = {
       score: turnResult.evaluation.score,
