@@ -835,7 +835,7 @@ export default function InternOnboardingSession({
   const standupScript = [
     { sender: 'Sarah', role: 'Tech Lead', content: "Morning team! Let's do a quick standup. Marcus, you're up first.", delay: 0 },
     { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 2000 },
-    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alright, your turn! What's on your plate today?", delay: 2500 }
+    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alright Jordan, you're up! What's on your plate today?", delay: 2500 }
   ];
 
   useEffect(() => {
