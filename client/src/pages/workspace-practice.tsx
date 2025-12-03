@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,14 @@ import {
   Lock,
   CheckCircle2,
   Building2,
-  MoreVertical
+  MoreVertical,
+  Briefcase,
+  TestTube,
+  Server,
+  Database,
+  Loader2
 } from "lucide-react";
+import { useAvailableRoles, type AvailableRole } from "@/hooks/use-adapters";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -311,11 +317,35 @@ export default function WorkspacePractice() {
   const inProgressSessions = practiceSessions.filter((p: any) => p.status === 'in_progress');
   const completedSessions = practiceSessions.filter((p: any) => p.status === 'completed');
 
-  const availableRoles = [
-    { name: 'Developer', available: true, description: 'Write code, fix bugs, and collaborate with your team' },
-    { name: 'Product Manager', available: false, description: 'Coming soon' },
-    { name: 'Designer', available: false, description: 'Coming soon' }
-  ];
+  // Phase 2: Fetch available roles from adapters API
+  const { data: adapterRoles = [], isLoading: rolesLoading } = useAvailableRoles();
+
+  // Role icon mapping
+  const roleIconMap: Record<string, any> = {
+    developer: Code,
+    pm: Briefcase,
+    qa: TestTube,
+    devops: Server,
+    data_science: Database,
+  };
+
+  // Map adapter roles to display format - only Developer is available for now
+  const availableRoles = useMemo(() => {
+    if (adapterRoles.length === 0) {
+      return [
+        { name: 'Developer', role: 'developer', available: true, description: 'Write code, fix bugs, and collaborate with your team', icon: Code },
+        { name: 'Product Manager', role: 'pm', available: false, description: 'Coming soon', icon: Briefcase },
+        { name: 'Designer', role: 'designer', available: false, description: 'Coming soon', icon: Briefcase }
+      ];
+    }
+    return adapterRoles.map((role: AvailableRole) => ({
+      name: role.displayName,
+      role: role.role,
+      available: role.role === 'developer', // Only developer has content for now
+      description: role.role === 'developer' ? role.description : 'Coming soon in Phase 5',
+      icon: roleIconMap[role.role] || Code
+    }));
+  }, [adapterRoles]);
 
   const renderWizardSteps = () => (
     <div className="flex items-center justify-center mb-8">
@@ -424,33 +454,43 @@ export default function WorkspacePractice() {
       <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Your Role</h2>
       <p className="text-gray-600 mb-4">For: {selectedProject?.name}</p>
       
-      <div className="grid md:grid-cols-3 gap-4">
-        {availableRoles.map((role) => (
-          <Card 
-            key={role.name}
-            className={`transition-all ${
-              role.available 
-                ? `cursor-pointer hover:shadow-lg ${selectedRole === role.name ? 'ring-2 ring-teal-500 shadow-lg bg-teal-50/30' : ''}`
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-            onClick={() => role.available && handleSelectRole(role.name)}
-            data-testid={`card-practice-role-${role.name.toLowerCase().replace(' ', '-')}`}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-teal-100 rounded-lg">
-                  <Code className="h-5 w-5 text-teal-600" />
-                </div>
-                {!role.available && (
-                  <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
-                )}
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">{role.name}</h3>
-              <p className="text-sm text-gray-600">{role.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {rolesLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
+          <span className="ml-2 text-gray-500">Loading roles...</span>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {availableRoles.map((role: any) => {
+            const Icon = role.icon || Code;
+            return (
+              <Card 
+                key={role.name}
+                className={`transition-all ${
+                  role.available 
+                    ? `cursor-pointer hover:shadow-lg ${selectedRole === role.name ? 'ring-2 ring-teal-500 shadow-lg bg-teal-50/30' : ''}`
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                onClick={() => role.available && handleSelectRole(role.name)}
+                data-testid={`card-practice-role-${role.role || role.name.toLowerCase().replace(' ', '-')}`}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`p-2 rounded-lg ${role.available ? 'bg-teal-100' : 'bg-gray-100'}`}>
+                      <Icon className={`h-5 w-5 ${role.available ? 'text-teal-600' : 'text-gray-400'}`} />
+                    </div>
+                    {!role.available && (
+                      <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-1">{role.name}</h3>
+                  <p className="text-sm text-gray-600">{role.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 

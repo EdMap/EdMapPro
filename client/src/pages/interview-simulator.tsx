@@ -184,10 +184,24 @@ export default function InterviewSimulator() {
   // Fetch available levels for selected role
   const { data: availableLevels = [], isLoading: levelsLoading } = useAvailableLevels(targetRole);
   
+  // Map difficulty to level for adapter API
+  const difficultyToLevel = useMemo(() => {
+    const map: Record<string, string> = {
+      'easy': 'intern',
+      'medium': 'junior', 
+      'hard': 'senior',
+      'junior': 'junior',
+      'mid': 'mid',
+      'senior': 'senior',
+      'intern': 'intern',
+    };
+    return map[difficulty] || 'junior';
+  }, [difficulty]);
+  
   // Fetch interview configuration for selected role/level
   const { data: interviewConfig, isLoading: configLoading } = useInterviewConfig(
     targetRole, 
-    difficulty // Map difficulty to level for now
+    difficultyToLevel
   );
 
   // Map available roles to display format with icons

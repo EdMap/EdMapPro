@@ -66,6 +66,9 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 | File | Purpose |
 |------|---------|
 | `docs/PRODUCT_ROADMAP.md` | Complete product strategy and implementation plan |
+| `shared/adapters/index.ts` | Unified adapter types and helper functions (Phase 2) |
+| `server/services/adapter-service.ts` | Server-side adapter service with caching (Phase 2) |
+| `client/src/hooks/use-adapters.ts` | React Query hooks for adapter configurations (Phase 2) |
 | `shared/catalogue/index.json` | Catalogue structure and content type definitions |
 | `shared/catalogue/README.md` | Catalogue documentation and usage guide |
 | `shared/catalogue/service.ts` | Query-based catalogue service (Phase 1-ready interface) |
@@ -74,8 +77,8 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 | `shared/catalogue/interview/` | Interview simulator extracted content (questions, rubrics, personas) |
 | `client/src/components/simulation/intern-onboarding-session.tsx` | Current workspace simulation (4k lines, to be modularized) |
 | `client/src/pages/workspace-journey.tsx` | Journey mode entry point |
-| `client/src/pages/workspace-practice.tsx` | Practice mode entry point |
-| `client/src/pages/interview-simulator.tsx` | Interview simulator |
+| `client/src/pages/workspace-practice.tsx` | Practice mode entry point (now uses adapters) |
+| `client/src/pages/interview-simulator.tsx` | Interview simulator (now uses adapters) |
 | `server/services/workspace-orchestrator.ts` | AI team member responses |
 | `shared/schema.ts` | Database schema |
 
@@ -107,6 +110,27 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 See `docs/PRODUCT_ROADMAP.md` for detailed phase descriptions.
 
 ## Recent Updates
+
+### Phase 2 In Progress: Adapter Service Layer (December 2025)
+**Unified Adapter Architecture:**
+- Created `shared/adapters/index.ts` - Unified types and helper functions for interview/workspace configuration
+- Created `server/services/adapter-service.ts` - Server-side service fetching from Phase 1 database tables
+- Created `client/src/hooks/use-adapters.ts` - React Query hooks for adapter configurations
+
+**New API Endpoints:**
+- `GET /api/adapters/interview-config` - Interview configuration for role/level
+- `GET /api/adapters/workspace-config` - Workspace configuration for role/level/language
+- `GET /api/adapters/interview-questions` - Interview question configuration with level adjustments
+- `GET /api/adapters/workspace-problems` - Workspace problem configuration with language examples
+- `GET /api/adapters/available-roles` - All available roles with display names
+- `GET /api/adapters/available-levels/:role` - Available levels for a role
+- `GET /api/adapters/available-languages/:role` - Available languages for a role
+
+**Simulator Integration:**
+- Interview Simulator now fetches roles dynamically from database (all 5 roles visible)
+- Workspace Practice now fetches roles dynamically (Developer available, others marked "Coming Soon")
+- Focus areas shown based on selected role configuration
+- Difficulty-to-level mapping for proper API queries
 
 ### Phase 1 Complete: Database, API & Progression Engine (December 2025)
 **Database Schema:**
