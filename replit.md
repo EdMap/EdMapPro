@@ -106,13 +106,23 @@ See `docs/PRODUCT_ROADMAP.md` for detailed phase descriptions.
 
 ## Recent Updates
 
-### Phase 0 Complete: Content Extraction (December 2025)
-- Extracted all hardcoded content to JSON catalogue files
-- **Workspace Catalogue**: team-members.json, documentation-day1.json, activities-day1.json, activities-day2.json, ticket-timezone-bug.json
+### Phase 0 In Progress: Content Extraction & Migration (December 2025)
+**Extraction Complete:**
+- Extracted all hardcoded content to JSON catalogue files (15 files total)
+- **Workspace Catalogue**: team-members.json, documentation-day1.json, activities-day1.json, activities-day2.json, ticket-timezone-bug.json, standup-script.json, dev-setup-steps.json, git-workflow-steps.json, codebase-structure.json, code-exercise-timezone.json, branch-creation.json
 - **Interview Catalogue**: question-banks.json, interview-config.json, evaluation-rubrics.json, team-personas.json
 - Created catalogue index and documentation at `shared/catalogue/`
-- Content structured for role/level/language adapters (currently: Developer + JavaScript)
-- Ready for Phase 1: Shared schema, catalogue API, component migration
+- Created typed loader utility with Zod validation at `shared/catalogue/loaders.ts`
+
+**Component Migration (In Progress):**
+- `intern-onboarding-session.tsx`: Migrated standup script, dev setup steps, git workflow, codebase structure, code exercise, branch validation to use JSON imports
+- `interview-simulator.tsx`: Migrated target roles, interview types, and difficulties to use JSON imports
+- Remaining: interview-session.tsx, langchain-interview-session.tsx, backend orchestrators
+
+**Technical Details:**
+- Added `resolveJsonModule: true` to tsconfig.json for JSON imports
+- Using `@shared/catalogue/...` import path alias
+- Validation helpers in loaders.ts: validateSetupCommand, validateGitCommand, validateBranchName, validateCodeBlank
 
 ### Strategic Planning (December 2025)
 - Defined competency-based progression framework (Explorer → Contributor → Junior Ready)

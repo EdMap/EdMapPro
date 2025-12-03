@@ -12,6 +12,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+import standupScriptData from "@shared/catalogue/workspace/standup-script.json";
+import devSetupStepsData from "@shared/catalogue/workspace/dev-setup-steps.json";
+import gitWorkflowStepsData from "@shared/catalogue/workspace/git-workflow-steps.json";
+import codebaseStructureData from "@shared/catalogue/workspace/codebase-structure.json";
+import codeExerciseData from "@shared/catalogue/workspace/code-exercise-timezone.json";
+import branchCreationData from "@shared/catalogue/workspace/branch-creation.json";
+import {
+  validateSetupCommand,
+  validateGitCommand,
+  validateBranchName as validateBranchNameFromCatalogue,
+  validateCodeBlank,
+  interpolateUserName,
+  type SetupStep,
+  type GitStep,
+  type CodeBlank
+} from "@shared/catalogue/loaders";
 import { 
   Send, 
   CheckCircle2, 
@@ -885,18 +902,14 @@ export default function InternOnboardingSession({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [interactions]);
 
-  // Day 2 standup script timing - use user's name if available
-  // Delays are set for realistic pacing: longer for full updates, shorter for transitions
+  // Day 2 standup script - loaded from JSON catalogue
   const userName = user?.firstName || user?.username || 'there';
-  const standupScript = [
-    { sender: 'Sarah', role: 'Tech Lead', content: "Morning team! Let's do a quick standup. Marcus, you're up first.", delay: 0 },
-    { sender: 'Marcus', role: 'Senior Engineer', content: "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.", delay: 4000 },
-    { sender: 'Sarah', role: 'Tech Lead', content: "Thanks Marcus. Alex?", delay: 2500 },
-    { sender: 'Alex', role: 'QA Engineer', content: "Yesterday: Wrote integration tests for the new checkout flow. Today: Setting up the test environment for payment retries. Blockers: None.", delay: 4000 },
-    { sender: 'Sarah', role: 'Tech Lead', content: "Great, thanks Alex. Priya?", delay: 2500 },
-    { sender: 'Priya', role: 'Product Manager', content: "Yesterday: Finalized requirements for the merchant analytics dashboard. Today: Writing user stories for the next sprint. Blockers: Waiting on design mockups, but should have them by EOD.", delay: 5000 },
-    { sender: 'Sarah', role: 'Tech Lead', content: `Thanks Priya. ${userName}, you're up!`, delay: 3000 }
-  ];
+  const standupScript = standupScriptData.content.script.map(msg => ({
+    sender: msg.sender,
+    role: msg.role,
+    content: msg.isUserCue ? msg.content.replace('{{userName}}', userName) : msg.content,
+    delay: msg.delay
+  }));
 
   useEffect(() => {
     if (standupStarted && standupVisibleMessages < standupScript.length) {
@@ -1744,71 +1757,15 @@ export default function InternOnboardingSession({
   }
 
   function renderDay2DevSetup() {
-    const setupSteps = [
-      { 
-        id: 'clone',
-        instruction: 'Clone the repository novapay/merchant-dashboard',
-        hint: 'Use git clone with the GitHub URL',
-        validate: (input: string) => {
-          const normalized = input.trim().toLowerCase();
-          return normalized.includes('git clone') && 
-                 (normalized.includes('novapay/merchant-dashboard') || 
-                  normalized.includes('github.com/novapay/merchant-dashboard'));
-        },
-        successOutput: `Cloning into 'merchant-dashboard'...
-remote: Enumerating objects: 1247, done.
-remote: Counting objects: 100% (1247/1247), done.
-remote: Compressing objects: 100% (892/892), done.
-Receiving objects: 100% (1247/1247), 2.34 MiB | 12.5 MiB/s, done.
-Resolving deltas: 100% (623/623), done.`
-      },
-      {
-        id: 'cd',
-        instruction: 'Navigate into the project directory',
-        hint: 'Use cd to change directory',
-        validate: (input: string) => {
-          const normalized = input.trim().toLowerCase();
-          return normalized === 'cd merchant-dashboard' || normalized === 'cd ./merchant-dashboard';
-        },
-        successOutput: ''
-      },
-      {
-        id: 'install',
-        instruction: 'Install the project dependencies',
-        hint: 'This project uses npm',
-        validate: (input: string) => {
-          const normalized = input.trim().toLowerCase();
-          return normalized === 'npm install' || normalized === 'npm i';
-        },
-        successOutput: `added 1423 packages in 8.2s
-
-247 packages are looking for funding
-  run \`npm fund\` for details`
-      },
-      {
-        id: 'run',
-        instruction: 'Start the development server',
-        hint: 'Check the package.json scripts',
-        validate: (input: string) => {
-          const normalized = input.trim().toLowerCase();
-          return normalized === 'npm run dev' || normalized === 'npm start';
-        },
-        successOutput: `> merchant-dashboard@1.0.0 dev
-> vite
-
-  VITE v5.0.0  ready in 342ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose`
-      }
-    ];
+    // Load setup steps from JSON catalogue
+    const setupSteps = devSetupStepsData.content.steps;
 
     const currentStep = setupSteps.findIndex(step => !gitInputs[step.id]);
     const allComplete = currentStep === -1;
 
     const handleCommand = (stepId: string, input: string) => {
       const step = setupSteps.find(s => s.id === stepId);
-      if (step && step.validate(input)) {
+      if (step && validateSetupCommand(input, step as SetupStep)) {
         setGitInputs(prev => ({ ...prev, [stepId]: input }));
       }
     };
@@ -2033,25 +1990,22 @@ Resolving deltas: 100% (623/623), done.`
   }
 
   function renderDay2CreateBranch() {
+    // Load branch creation config from JSON catalogue
+    const branchConfig = branchCreationData.content;
+    
     const validateBranchName = (name: string) => {
       const normalized = name.trim().toLowerCase();
       if (!normalized) return { valid: false, error: 'Enter a branch name' };
       if (normalized === 'main' || normalized === 'master') {
         return { valid: false, error: "Don't work on main/master directly!" };
       }
-      if (!/^[a-z0-9][a-z0-9\-\/]*[a-z0-9]$/.test(normalized) && normalized.length > 1) {
-        return { valid: false, error: 'Use lowercase letters, numbers, hyphens, or slashes' };
-      }
-      if (normalized.includes('fix') || normalized.includes('timezone') || normalized.includes('bug')) {
-        return { valid: true, error: '' };
-      }
-      return { valid: true, error: '' };
+      return validateBranchNameFromCatalogue(name, branchConfig.validation);
     };
 
     const handleCreateBranch = () => {
       const result = validateBranchName(branchInput);
       if (!result.valid) {
-        setBranchError(result.error);
+        setBranchError(result.error || '');
         return;
       }
       setBranchError('');
@@ -2217,27 +2171,9 @@ Resolving deltas: 100% (623/623), done.`
   }
 
   function renderDay2Codebase() {
-    const fileStructure = [
-      { name: 'client', type: 'folder', children: [
-        { name: 'src', type: 'folder', children: [
-          { name: 'components', type: 'folder', children: [
-            { name: 'TransactionList.tsx', type: 'file', highlight: true }
-          ]},
-          { name: 'utils', type: 'folder', children: [
-            { name: 'dateFormatters.ts', type: 'file', highlight: true, target: true }
-          ]}
-        ]}
-      ]},
-      { name: 'server', type: 'folder', children: [
-        { name: 'routes', type: 'folder' },
-        { name: 'services', type: 'folder' }
-      ]},
-      { name: 'shared', type: 'folder', children: [
-        { name: 'types', type: 'folder', children: [
-          { name: 'merchant.ts', type: 'file' }
-        ]}
-      ]}
-    ];
+    // Load codebase structure from JSON catalogue
+    const fileStructure = codebaseStructureData.content.fileStructure;
+    const targetFile = codebaseStructureData.content.targetFile;
 
     const renderFileTree = (items: any[], depth = 0) => {
       return items.map((item, idx) => (
@@ -2327,26 +2263,11 @@ Resolving deltas: 100% (623/623), done.`
   }
 
   function renderDay2CodeFix() {
-    const codeTemplate = `export function formatTransactionDate(
-  timestamp: string,
-  merchantTimezone: string = 'UTC'
-): string {
-  const date = new Date(timestamp);
-  
-  // TODO: Convert to merchant's timezone
-  const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: ___BLANK_1___  // Fill in the timezone
-  };
-  
-  return date.toLocaleString('en-US', options);
-}`;
-
-    const isCorrect = codeInputs['blank1']?.toLowerCase().trim() === 'merchanttimezone';
+    // Load code exercise from JSON catalogue
+    const codeExercise = codeExerciseData.content;
+    const blank = codeExercise.blanks[0];
+    
+    const isCorrect = validateCodeBlank(codeInputs['blank1'] || '', blank as CodeBlank);
     
     return (
       <div className="space-y-4">
@@ -2599,54 +2520,15 @@ Resolving deltas: 100% (623/623), done.`
   }
 
   function renderDay2Git() {
-    const gitSteps = [
-      { 
-        id: 'add',
-        instruction: 'Stage your changes for commit',
-        hint: 'Use git add to include the files you modified',
-        validate: (input: string) => {
-          const normalized = input.trim().toLowerCase();
-          return normalized === 'git add .' || 
-                 normalized === 'git add -a' || 
-                 normalized.includes('git add') && normalized.includes('dateformatter');
-        },
-        successOutput: ''
-      },
-      {
-        id: 'commit',
-        instruction: 'Commit your changes with a message describing what you fixed',
-        hint: 'Use git commit -m "your descriptive message"',
-        validate: (input: string) => {
-          const normalized = input.trim().toLowerCase();
-          return normalized.startsWith('git commit -m') && 
-                 (input.includes('"') || input.includes("'")) &&
-                 (normalized.includes('timezone') || normalized.includes('fix') || normalized.includes('date'));
-        },
-        successOutput: `[fix/timezone-display abc1234] Fix timezone display for merchant transactions
- 1 file changed, 2 insertions(+), 2 deletions(-)`
-      },
-      {
-        id: 'push',
-        instruction: 'Push your branch to the remote repository',
-        hint: 'Use git push origin followed by your branch name',
-        validate: (input: string) => {
-          const normalized = input.trim().toLowerCase();
-          return normalized.startsWith('git push');
-        },
-        successOutput: `Enumerating objects: 5, done.
-Counting objects: 100% (5/5), done.
-Writing objects: 100% (3/3), 312 bytes | 312.00 KiB/s, done.
-remote: Create a pull request:
-remote:   https://github.com/novapay/merchant-dashboard/pull/new/fix/timezone-display`
-      }
-    ];
+    // Load git workflow steps from JSON catalogue
+    const gitSteps = gitWorkflowStepsData.content.steps;
 
     const currentStepIdx = gitSteps.findIndex(step => !gitInputs[step.id]);
     const allComplete = currentStepIdx === -1;
 
     const handleGitCommand = (stepId: string, input: string) => {
       const step = gitSteps.find(s => s.id === stepId);
-      if (step && step.validate(input)) {
+      if (step && validateGitCommand(input, step as GitStep)) {
         setGitInputs(prev => ({ ...prev, [stepId]: input }));
       }
     };

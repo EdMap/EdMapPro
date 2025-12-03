@@ -34,25 +34,32 @@ import { getPersonaStyle } from "@/lib/persona-styles";
 import { InterviewPanelHeader, PersonaRoster } from "@/components/simulation/team-interview-panel";
 import type { User as UserType, InterviewSession } from "@shared/schema";
 
-const targetRoles = [
-  { value: "developer", label: "Software Developer", icon: Code },
-  { value: "pm", label: "Product Manager", icon: Briefcase },
-  { value: "designer", label: "UX Designer", icon: Lightbulb },
-  { value: "data-scientist", label: "Data Scientist", icon: Brain },
-];
+import interviewConfigData from "@shared/catalogue/interview/interview-config.json";
 
-const interviewTypes = [
-  { value: "behavioral", label: "Behavioral Interview", description: "Assess soft skills and past experiences" },
-  { value: "technical", label: "Technical Interview", description: "Evaluate technical knowledge and problem-solving" },
-  { value: "system-design", label: "System Design", description: "Test architectural thinking and design skills" },
-  { value: "case-study", label: "Case Study", description: "Analyze business problems and solutions" },
-];
+const iconMap: Record<string, any> = {
+  Code,
+  Briefcase,
+  Lightbulb,
+  Brain
+};
 
-const difficulties = [
-  { value: "easy", label: "Entry Level", description: "Junior positions, basic questions" },
-  { value: "medium", label: "Mid Level", description: "Standard industry expectations" },
-  { value: "hard", label: "Senior Level", description: "Advanced, challenging questions" },
-];
+const targetRoles = interviewConfigData.content.targetRoles.map(role => ({
+  value: role.value,
+  label: role.label,
+  icon: iconMap[role.icon as keyof typeof iconMap] || Code
+}));
+
+const interviewTypes = interviewConfigData.content.interviewTypes.map(type => ({
+  value: type.value,
+  label: type.label,
+  description: type.description
+}));
+
+const difficulties = interviewConfigData.content.difficulties.map(diff => ({
+  value: diff.value,
+  label: diff.label,
+  description: diff.description
+}));
 
 export default function InterviewSimulator() {
   const { toast } = useToast();
