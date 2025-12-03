@@ -2085,6 +2085,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =====================================================
+  // Phase 4: Sprint Generator Routes
+  // =====================================================
+
+  // GET /api/sprint-generator/templates - Get all template IDs
+  app.get("/api/sprint-generator/templates", async (req, res) => {
+    try {
+      const { sprintGenerator } = await import("./services/sprint-generator");
+      const templates = sprintGenerator.getAllTemplateIds();
+      res.json(templates);
+    } catch (error) {
+      console.error("Failed to get templates:", error);
+      res.status(500).json({ message: "Failed to get templates" });
+    }
+  });
+
+  // GET /api/sprint-generator/templates/stats - Get template statistics
+  app.get("/api/sprint-generator/templates/stats", async (req, res) => {
+    try {
+      const { sprintGenerator } = await import("./services/sprint-generator");
+      const stats = sprintGenerator.getTemplateStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Failed to get template stats:", error);
+      res.status(500).json({ message: "Failed to get template stats" });
+    }
+  });
+
+  // GET /api/sprint-generator/templates/:category/:id - Get specific template details
+  app.get("/api/sprint-generator/templates/:category/:id", async (req, res) => {
+    try {
+      const { sprintGenerator } = await import("./services/sprint-generator");
+      const category = req.params.category as 'bugs' | 'features' | 'soft_skills';
+      const id = req.params.id;
+      
+      const template = sprintGenerator.getTemplateDetails(category, id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Failed to get template:", error);
+      res.status(500).json({ message: "Failed to get template" });
+    }
+  });
+
+  // GET /api/sprint-generator/themes - Get all available themes
+  app.get("/api/sprint-generator/themes", async (req, res) => {
+    try {
+      const { sprintGenerator } = await import("./services/sprint-generator");
+      const themes = sprintGenerator.getAvailableThemes();
+      res.json(themes);
+    } catch (error) {
+      console.error("Failed to get themes:", error);
+      res.status(500).json({ message: "Failed to get themes" });
+    }
+  });
+
+  // GET /api/sprint-generator/themes/:id - Get specific theme
+  app.get("/api/sprint-generator/themes/:id", async (req, res) => {
+    try {
+      const { sprintGenerator } = await import("./services/sprint-generator");
+      const theme = sprintGenerator.getTheme(req.params.id);
+      
+      if (!theme) {
+        return res.status(404).json({ message: "Theme not found" });
+      }
+      
+      res.json(theme);
+    } catch (error) {
+      console.error("Failed to get theme:", error);
+      res.status(500).json({ message: "Failed to get theme" });
+    }
+  });
+
+  // POST /api/sprint-generator/generate - Generate a new sprint backlog
+  app.post("/api/sprint-generator/generate", async (req, res) => {
+    try {
+      const { sprintGenerator } = await import("./services/sprint-generator");
+      
+      const previousSprintSchema = z.object({
+        id: z.number().optional(),
+        theme: z.string().optional(),
+        generationMetadata: z.any().optional(),
+      }).passthrough();
+      
+      const requestSchema = z.object({
+        journeyId: z.number(),
+        sprintNumber: z.number(),
+        difficultyBand: z.enum(['guided', 'supported', 'independent', 'expert']),
+        previousSprints: z.array(previousSprintSchema).default([]),
+        userCompetencyGaps: z.array(z.string()).default([]),
+        avoidThemes: z.array(z.string()).default([]),
+        avoidTemplates: z.array(z.string()).default([]),
+      });
+      
+      const validatedRequest = requestSchema.parse(req.body);
+      
+      const backlog = await sprintGenerator.generateSprint(validatedRequest as any);
+      
+      res.json(backlog);
+    } catch (error) {
+      console.error("Failed to generate sprint:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate sprint" });
+    }
+  });
+
+  // GET /api/sprint-generator/templates-by-difficulty/:band - Get templates for a mastery band
+  app.get("/api/sprint-generator/templates-by-difficulty/:band", async (req, res) => {
+    try {
+      const { sprintGenerator } = await import("./services/sprint-generator");
+      const band = req.params.band as 'explorer' | 'contributor' | 'junior_ready';
+      
+      if (!['explorer', 'contributor', 'junior_ready'].includes(band)) {
+        return res.status(400).json({ message: "Invalid mastery band" });
+      }
+      
+      const templates = sprintGenerator.getTemplatesByDifficulty(band);
+      res.json(templates);
+    } catch (error) {
+      console.error("Failed to get templates by difficulty:", error);
+      res.status(500).json({ message: "Failed to get templates by difficulty" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
