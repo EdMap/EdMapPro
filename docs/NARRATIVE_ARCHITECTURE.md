@@ -43,10 +43,8 @@ This document defines how the edmap Workspace Simulator assembles narrative expe
 │  │                                                                      │ │
 │  │   SPRINT ARC N... (as needed for progression)                       │ │
 │  │                                                                      │ │
-│  │   OFFBOARDING ARC (Final Week)                                      │ │
-│  │   ├── Final evaluation                                              │ │
-│  │   ├── Portfolio compilation                                         │ │
-│  │   └── Readiness assessment                                          │ │
+│  │   OFFBOARDING (End of Final Sprint)                                 │ │
+│  │   └── Final 1:1 with Manager (evaluates entire journey)             │ │
 │  │                                                                      │ │
 │  └────────────────────────────────────────────────────────────────────┘ │
 │      ↓                                                                   │
@@ -66,7 +64,7 @@ The top-level narrative container. Each journey consists of multiple arcs.
 ```typescript
 interface Arc {
   id: string;
-  type: 'onboarding' | 'sprint' | 'offboarding';
+  type: 'onboarding' | 'sprint';    // Only two arc types
   order: number;                    // Sequence in journey (1, 2, 3...)
   name: string;                     // "Onboarding", "Sprint 1", etc.
   duration: {
@@ -78,8 +76,11 @@ interface Arc {
   softSkillHooks: SoftSkillHook[];  // Injected challenges
   competencyFocus: string[];        // Primary competencies developed
   days: Day[];
+  isFinalArc: boolean;              // If true, ends with Final 1:1 (offboarding)
 }
 ```
+
+> **Note**: There is no separate "offboarding arc". Instead, the final sprint ends with a **Final 1:1** that evaluates the entire journey and exits the user from the experience.
 
 ### SprintArc (extends Arc)
 
@@ -462,6 +463,7 @@ interface RetrospectiveCeremony {
 interface OneOnOneCeremony {
   duration: '10-15 minutes';
   frequency: 'after_each_sprint';
+  isFinal: boolean;                 // True for the last sprint's 1:1
   
   topics: {
     sprintPerformance: {
@@ -484,7 +486,7 @@ interface OneOnOneCeremony {
     };
     
     goalSetting: {
-      // Set goals for next sprint
+      // Set goals for next sprint (not included in final 1:1)
       previousGoals: Goal[];
       newGoals: Goal[];
     };
@@ -492,6 +494,91 @@ interface OneOnOneCeremony {
   
   competencies: ['receiving_feedback', 'goal_setting', 'self_advocacy'];
 }
+```
+
+### 7. Final 1:1 (Offboarding)
+
+The final 1:1 replaces the regular sprint 1:1 at the end of the last sprint. It evaluates the **entire journey**, not just the last sprint.
+
+```typescript
+interface FinalOneOnOneCeremony extends OneOnOneCeremony {
+  isFinal: true;
+  duration: '20-30 minutes';        // Longer than regular 1:1s
+  
+  journeyReview: {
+    // Comprehensive review of entire experience
+    overallPerformance: {
+      strengths: string[];          // Key strengths demonstrated
+      growthAreas: string[];        // Areas of improvement shown
+      keyMoments: JourneyMoment[];  // Memorable achievements/challenges
+    };
+    
+    competencyAssessment: {
+      // Final competency scores
+      competencies: CompetencyScore[];
+      overallBand: 'explorer' | 'contributor' | 'junior_ready';
+      readinessScore: number;       // 0-100
+    };
+    
+    portfolioHighlights: {
+      // Artifacts collected during journey
+      bestPRs: PortfolioArtifact[];
+      codeReviewsGiven: PortfolioArtifact[];
+      documentationWritten: PortfolioArtifact[];
+      challengesOvercome: string[];
+    };
+    
+    managerFinalWords: {
+      // Personalized closing message
+      congratulations: string;
+      adviceForFuture: string[];
+      recommendationLetter?: string; // If junior_ready achieved
+    };
+  };
+  
+  exitExperience: {
+    // User exits the workspace after this
+    showBadge: boolean;             // Junior Ready badge if earned
+    showPortfolio: boolean;         // Link to compiled portfolio
+    returnToJobBoard: boolean;      // Option to start new journey
+  };
+  
+  competencies: ['receiving_feedback', 'self_reflection', 'professional_growth'];
+}
+```
+
+**Final 1:1 Flow:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     FINAL 1:1 WITH MANAGER                   │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. JOURNEY REVIEW                                           │
+│     "Let's look back at your time here..."                   │
+│     - Highlights from each sprint                            │
+│     - Key accomplishments                                    │
+│     - Challenges overcome                                    │
+│                                                              │
+│  2. COMPETENCY ASSESSMENT                                    │
+│     "Here's where you stand on each skill..."                │
+│     - Visual breakdown of competencies                       │
+│     - Comparison to Junior Ready threshold                   │
+│     - Specific examples of growth                            │
+│                                                              │
+│  3. PORTFOLIO COMPILATION                                    │
+│     "You've built an impressive body of work..."             │
+│     - Best PRs and code samples                              │
+│     - Documentation contributions                            │
+│     - Code reviews given                                     │
+│                                                              │
+│  4. CLOSING & BADGE                                          │
+│     "Congratulations! You've earned..."                      │
+│     - Junior Ready badge (if earned)                         │
+│     - Manager's advice for the future                        │
+│     - Exit to portfolio view                                 │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -676,18 +763,18 @@ interface AIOrchestrationConfig {
 - Day 11: Retrospective - discuss what went well
 - 1:1 with Sarah: Feedback on first sprint
 
-**Week 4-5: Sprint 2 - "Fraud Prevention"**
+**Week 4-5: Sprint 2 (Final Sprint) - "Fraud Prevention"**
 - Higher complexity tickets
 - Day 15: Production incident - payment failures spike
 - Collaborate with DevOps to investigate
 - More challenging code reviews
-- 1:1 discusses areas for improvement
-
-**Week 6: Offboarding Arc**
-- Final evaluation with Sarah
-- Portfolio compilation: PRs, code samples, reflections
-- Readiness assessment: competency scores
-- Badge earned: "Junior Ready - Developer"
+- Sprint Review & Retrospective
+- **Final 1:1 with Sarah** (replaces regular 1:1):
+  - Reviews entire journey from Day 1 to now
+  - Competency assessment across all sprints
+  - Portfolio compilation: PRs, code samples, reflections
+  - Badge earned: "Junior Ready - Developer"
+  - Exit experience → Portfolio view
 
 ---
 
