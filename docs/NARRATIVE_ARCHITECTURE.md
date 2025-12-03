@@ -583,6 +583,251 @@ interface FinalOneOnOneCeremony extends OneOnOneCeremony {
 
 ---
 
+## Exit Triggers & Progression Paths
+
+### When Does the Journey End?
+
+The Final 1:1 is triggered by **either**:
+
+| Trigger | Description |
+|---------|-------------|
+| **User Choice** | User decides they're ready to exit (clicks "Complete Journey") |
+| **System Determination** | System detects user has reached target readiness level |
+
+```typescript
+interface ExitTrigger {
+  type: 'user_initiated' | 'system_determined';
+  
+  userInitiated?: {
+    // User clicks "I'm ready to graduate"
+    minimumSprints: number;         // Must complete at least N sprints
+    confirmationRequired: boolean;  // "Are you sure?" dialog
+  };
+  
+  systemDetermined?: {
+    // System detects readiness threshold reached
+    readinessThreshold: number;     // e.g., 85 for Junior Ready
+    competencyMinimums: {           // Must meet minimums in key areas
+      [competencySlug: string]: number;
+    };
+    sustainedPerformance: number;   // Must maintain level for N sprints
+  };
+}
+```
+
+### Progression Paths (Extensible)
+
+The Intern → Junior path is just the first use case. The same architecture supports:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      PROGRESSION PATHS                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  PATH 1: Intern → Junior Ready (Current Focus)                          │
+│  ├── Entry: New graduate, bootcamp student, career changer              │
+│  ├── Focus: Foundational habits, core delivery skills                   │
+│  ├── Duration: 2-4 sprints                                              │
+│  └── Exit Badge: "Junior Ready"                                         │
+│                                                                          │
+│  PATH 2: Junior → Mid-Level (Future)                                    │
+│  ├── Entry: 1-2 years experience, Junior Ready badge holders            │
+│  ├── Focus: Technical leadership, mentoring, system design              │
+│  ├── Duration: 4-6 sprints                                              │
+│  └── Exit Badge: "Mid-Level Professional"                               │
+│                                                                          │
+│  PATH 3: Mid → Senior (Future)                                          │
+│  ├── Entry: 3-5 years experience, Mid-Level badge holders               │
+│  ├── Focus: Architecture, cross-team influence, strategic thinking      │
+│  ├── Duration: 6-8 sprints                                              │
+│  └── Exit Badge: "Senior Professional"                                  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Progression Path Configuration
+
+```typescript
+interface ProgressionPath {
+  id: string;
+  name: string;                     // "Intern to Junior Ready"
+  
+  entryLevel: Level;                // 'intern' | 'junior' | 'mid' | 'senior'
+  exitLevel: Level;                 // Target level to achieve
+  
+  requirements: {
+    entry: {
+      previousBadge?: string;       // Required badge to start (null for intern)
+      minimumExperience?: string;   // "1-2 years" (for display only)
+    };
+    exit: {
+      readinessScore: number;       // Threshold to complete path
+      requiredCompetencies: string[]; // Must demonstrate these
+      minimumSprints: number;       // Can't exit before this
+      maximumSprints: number;       // Forced graduation after this
+    };
+  };
+  
+  competencyFocus: {
+    // Different paths emphasize different competencies
+    primary: string[];              // Main focus areas
+    secondary: string[];            // Also tracked but less weight
+  };
+  
+  difficultyProgression: {
+    // How difficulty scales through the path
+    startingBand: 'guided' | 'supported' | 'independent';
+    endingBand: 'guided' | 'supported' | 'independent';
+    escalationRate: 'gradual' | 'steep';
+  };
+  
+  exitBadge: {
+    name: string;                   // "Junior Ready"
+    description: string;
+    icon: string;
+  };
+}
+```
+
+### Example: Two Progression Paths
+
+**Path 1: Intern → Junior Ready**
+```json
+{
+  "id": "intern-to-junior",
+  "name": "Intern to Junior Ready",
+  "entryLevel": "intern",
+  "exitLevel": "junior",
+  "requirements": {
+    "entry": {
+      "previousBadge": null
+    },
+    "exit": {
+      "readinessScore": 85,
+      "requiredCompetencies": ["debugging", "git_workflow", "code_review", "communication"],
+      "minimumSprints": 2,
+      "maximumSprints": 6
+    }
+  },
+  "competencyFocus": {
+    "primary": ["debugging", "git_workflow", "testing", "code_review"],
+    "secondary": ["documentation", "estimation", "collaboration"]
+  },
+  "difficultyProgression": {
+    "startingBand": "guided",
+    "endingBand": "supported",
+    "escalationRate": "gradual"
+  },
+  "exitBadge": {
+    "name": "Junior Ready",
+    "description": "Demonstrated readiness for a junior developer role",
+    "icon": "badge-junior-ready"
+  }
+}
+```
+
+**Path 2: Junior → Mid-Level (Future)**
+```json
+{
+  "id": "junior-to-mid",
+  "name": "Junior to Mid-Level Professional",
+  "entryLevel": "junior",
+  "exitLevel": "mid",
+  "requirements": {
+    "entry": {
+      "previousBadge": "Junior Ready"
+    },
+    "exit": {
+      "readinessScore": 90,
+      "requiredCompetencies": ["system_design", "mentoring", "technical_leadership", "cross_team_collab"],
+      "minimumSprints": 4,
+      "maximumSprints": 10
+    }
+  },
+  "competencyFocus": {
+    "primary": ["system_design", "technical_leadership", "mentoring", "architecture"],
+    "secondary": ["stakeholder_management", "estimation", "risk_assessment"]
+  },
+  "difficultyProgression": {
+    "startingBand": "supported",
+    "endingBand": "independent",
+    "escalationRate": "steep"
+  },
+  "exitBadge": {
+    "name": "Mid-Level Professional",
+    "description": "Demonstrated readiness for mid-level technical roles",
+    "icon": "badge-mid-level"
+  }
+}
+```
+
+### Exit Flow Decision Tree
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              END OF SPRINT CHECK                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  After Sprint Retrospective...                               │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Has user completed minimum sprints?                   │   │
+│  └──────────────────────────────────────────────────────┘   │
+│              │                                               │
+│      NO ─────┴───── YES                                      │
+│       │              │                                       │
+│       ▼              ▼                                       │
+│  Continue to    ┌──────────────────────────────────────┐    │
+│  next sprint    │ Check exit conditions:               │    │
+│                 │                                       │    │
+│                 │ A) User clicked "Complete Journey"?   │    │
+│                 │    → Trigger Final 1:1                │    │
+│                 │                                       │    │
+│                 │ B) Readiness score >= threshold?      │    │
+│                 │    → System suggests Final 1:1        │    │
+│                 │    → User can accept or continue      │    │
+│                 │                                       │    │
+│                 │ C) Reached maximum sprints?           │    │
+│                 │    → Force Final 1:1 (graduation)     │    │
+│                 │                                       │    │
+│                 │ D) None of above?                     │    │
+│                 │    → Continue to next sprint          │    │
+│                 └──────────────────────────────────────┘    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### System-Suggested Graduation
+
+When the system determines the user is ready:
+
+```typescript
+interface GraduationSuggestion {
+  trigger: 'readiness_threshold_met';
+  
+  notification: {
+    title: "You're Ready!";
+    message: "Based on your performance, you've reached Junior Ready status.";
+    readinessScore: number;
+    competencyHighlights: string[];
+  };
+  
+  options: {
+    accept: {
+      label: "Graduate Now";
+      action: 'trigger_final_1_1';
+    };
+    defer: {
+      label: "Continue Practicing";
+      action: 'continue_to_next_sprint';
+      note: "You can graduate after any future sprint";
+    };
+  };
+}
+```
+
+---
+
 ## Soft Skill Integration
 
 Soft skill challenges are woven throughout the narrative, not isolated.
