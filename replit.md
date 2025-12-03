@@ -66,6 +66,7 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 | File | Purpose |
 |------|---------|
 | `docs/PRODUCT_ROADMAP.md` | Complete product strategy and implementation plan |
+| `docs/NARRATIVE_ARCHITECTURE.md` | Sprint-based narrative structure specification |
 | `shared/adapters/index.ts` | Unified adapter types and helper functions (Phase 2) |
 | `server/services/adapter-service.ts` | Server-side adapter service with caching (Phase 2) |
 | `client/src/hooks/use-adapters.ts` | React Query hooks for adapter configurations (Phase 2) |
