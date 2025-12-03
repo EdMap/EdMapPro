@@ -677,6 +677,164 @@ export const TEAM_INTERVIEW_PRESETS: Record<ExperienceLevel, TeamInterviewSettin
   },
 };
 
+// ============================================================================
+// PHASE 1: UNIFIED DATA LAYER TABLES
+// ============================================================================
+
+// Mastery bands for competency progression
+export const masteryBandEnum = ['explorer', 'contributor', 'junior_ready'] as const;
+export type MasteryBand = typeof masteryBandEnum[number];
+
+// Competencies - Skills with rubrics per mastery band
+export const competencies = pgTable("competencies", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(), // e.g., "debugging", "git-workflow", "code-review"
+  name: text("name").notNull(), // Human-readable name
+  summary: text("summary").notNull(), // Brief description
+  category: text("category").notNull(), // "foundational_habits", "core_delivery", "professional_impact"
+  role: text("role"), // null = universal, or specific role like "developer"
+  rubric: jsonb("rubric").notNull(), // { explorer: {...}, contributor: {...}, junior_ready: {...} }
+  skills: jsonb("skills").notNull(), // Observable behaviors for this competency
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Simulation Catalogue - Questions/scenarios with adapter tags
+export const simulationCatalogue = pgTable("simulation_catalogue", {
+  id: serial("id").primaryKey(),
+  externalId: text("external_id").notNull().unique(), // Maps to JSON meta.id (e.g., "workspace-standup-day2")
+  type: text("type").notNull(), // Content type (e.g., "standup_script", "code_exercise")
+  simulator: text("simulator").notNull(), // "workspace" or "interview"
+  role: text("role"), // "developer", "pm", "qa", etc. (null = shared)
+  level: text("level"), // "intern", "junior", "mid", "senior" (null = all levels)
+  language: text("language"), // "javascript", "python", "c_cpp" (null = language-agnostic)
+  day: integer("day"), // Day number for daily content (null = not day-specific)
+  version: text("version").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  content: jsonb("content").notNull(), // The actual content payload
+  competencySlugs: text("competency_slugs").array(), // Links to competencies this item tests
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Role Adapters - Config per role
+export const roleAdapters = pgTable("role_adapters", {
+  id: serial("id").primaryKey(),
+  role: text("role").notNull().unique(), // "developer", "pm", "qa", "devops", "data_science"
+  displayName: text("display_name").notNull(),
+  description: text("description").notNull(),
+  levels: jsonb("levels").notNull(), // Per-level scaffolding and expectations
+  languageOverrides: jsonb("language_overrides"), // Language-specific adaptations (for developer)
+  simulatorSettings: jsonb("simulator_settings").notNull(), // Settings per simulator
+  metadata: jsonb("metadata"), // Additional role-specific config
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Competency Ledger - User mastery scores
+export const competencyLedger = pgTable("competency_ledger", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  competencyId: integer("competency_id").references(() => competencies.id).notNull(),
+  currentBand: text("current_band").notNull().default('explorer'), // 'explorer', 'contributor', 'junior_ready'
+  evidenceCount: integer("evidence_count").notNull().default(0),
+  confidence: integer("confidence").notNull().default(0), // 0-100
+  lastEvidenceAt: timestamp("last_evidence_at"),
+  history: jsonb("history").notNull().default('[]'), // Array of delta events
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Portfolio Artifacts - Collected work samples
+export const portfolioArtifacts = pgTable("portfolio_artifacts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  source: text("source").notNull(), // "workspace", "interview", "upload"
+  catalogueItemId: integer("catalogue_item_id").references(() => simulationCatalogue.id),
+  title: text("title").notNull(),
+  artifactType: text("artifact_type").notNull(), // "code_fix", "standup_response", "interview_answer", etc.
+  summary: text("summary"),
+  artifactData: jsonb("artifact_data").notNull(), // The actual work sample data
+  evidenceCompetencies: text("evidence_competencies").array(), // Competency slugs this demonstrates
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Insert schemas for Phase 1 tables
+export const insertCompetencySchema = createInsertSchema(competencies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSimulationCatalogueSchema = createInsertSchema(simulationCatalogue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRoleAdapterSchema = createInsertSchema(roleAdapters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCompetencyLedgerSchema = createInsertSchema(competencyLedger).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPortfolioArtifactSchema = createInsertSchema(portfolioArtifacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for Phase 1 tables
+export type InsertCompetency = z.infer<typeof insertCompetencySchema>;
+export type Competency = typeof competencies.$inferSelect;
+
+export type InsertSimulationCatalogue = z.infer<typeof insertSimulationCatalogueSchema>;
+export type SimulationCatalogue = typeof simulationCatalogue.$inferSelect;
+
+export type InsertRoleAdapter = z.infer<typeof insertRoleAdapterSchema>;
+export type RoleAdapter = typeof roleAdapters.$inferSelect;
+
+export type InsertCompetencyLedger = z.infer<typeof insertCompetencyLedgerSchema>;
+export type CompetencyLedger = typeof competencyLedger.$inferSelect;
+
+export type InsertPortfolioArtifact = z.infer<typeof insertPortfolioArtifactSchema>;
+export type PortfolioArtifact = typeof portfolioArtifacts.$inferSelect;
+
+// Competency delta payload for POST /api/user/:id/competency-delta
+export const competencyDeltaSchema = z.object({
+  competencySlug: z.string(),
+  source: z.enum(['workspace', 'interview']),
+  catalogueItemId: z.number().optional(),
+  evidenceType: z.string(), // "exercise_complete", "answer_rated", etc.
+  evidenceData: z.record(z.unknown()).optional(),
+  score: z.number().min(0).max(100).optional(), // Optional score from the activity
+});
+
+export type CompetencyDelta = z.infer<typeof competencyDeltaSchema>;
+
+// Readiness response structure
+export interface ReadinessScore {
+  overallScore: number; // 0-100
+  currentBand: MasteryBand;
+  competencyBreakdown: {
+    slug: string;
+    name: string;
+    band: MasteryBand;
+    confidence: number;
+    evidenceCount: number;
+  }[];
+  gaps: string[]; // Competency slugs needing improvement
+  strengths: string[]; // Competency slugs showing strength
+}
+
 // Job Offer Details Structure - mimics real job offers
 export interface OfferDetails {
   // Core Compensation
