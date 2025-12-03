@@ -263,14 +263,123 @@ export class SprintGenerator {
     const softSkillEvents = this.generateSoftSkillEvents(selectedSoftSkills);
     const ceremonies = this.generateCeremonies(theme, tickets);
 
-    console.log(`Generated sprint for journey ${request.journeyId}: ${tickets.length} tickets, ${softSkillEvents.length} soft skill events`);
-
-    return {
+    const validatedBacklog = this.validateAndRepairBacklog({
       theme,
       tickets,
       softSkillEvents,
       ceremonies,
-    };
+    }, request.difficultyBand);
+
+    console.log(`Generated sprint for journey ${request.journeyId}: ${validatedBacklog.tickets.length} tickets, ${validatedBacklog.softSkillEvents.length} soft skill events`);
+
+    return validatedBacklog;
+  }
+
+  private validateAndRepairBacklog(
+    backlog: GeneratedSprintBacklog,
+    difficultyBand: TemplateDifficulty
+  ): GeneratedSprintBacklog {
+    const validated = { ...backlog };
+    const warnings: string[] = [];
+
+    if (validated.tickets.length === 0) {
+      warnings.push("No tickets generated - adding fallback ticket");
+      validated.tickets = [{
+        templateId: "fallback-bug",
+        type: "bug",
+        day: 1,
+        appliedContext: {},
+        generatedTicket: {
+          title: "Review and fix console warnings",
+          description: "Check the browser console and server logs for any warnings or non-critical errors. Document and address the most common issues.",
+          acceptanceCriteria: [
+            "Identify at least 3 console warnings",
+            "Fix or document each warning with a resolution plan",
+            "Verify no new warnings are introduced"
+          ],
+          difficulty: this.mapMasteryBandToTemplateDifficulty(
+            this.difficultyBandToMasteryBand(difficultyBand)
+          ),
+        },
+      }];
+    }
+
+    for (const ticket of validated.tickets) {
+      if (!ticket.generatedTicket) {
+        warnings.push(`Ticket ${ticket.templateId} missing generatedTicket, creating default`);
+        ticket.generatedTicket = {
+          title: `Task: ${ticket.templateId}`,
+          description: "Complete the assigned task as specified.",
+          acceptanceCriteria: ["Task completed as described", "Code follows conventions"],
+          difficulty: this.mapMasteryBandToTemplateDifficulty(
+            this.difficultyBandToMasteryBand(difficultyBand)
+          ),
+        };
+      }
+      
+      if (!ticket.generatedTicket.title) {
+        warnings.push(`Ticket ${ticket.templateId} has missing title`);
+        ticket.generatedTicket.title = `Task: ${ticket.templateId}`;
+      } else if (ticket.generatedTicket.title.includes('[')) {
+        warnings.push(`Ticket ${ticket.templateId} has incomplete title`);
+        ticket.generatedTicket.title = ticket.generatedTicket.title.replace(/\[([^\]]+)\]/g, 'the $1');
+      }
+      
+      if (!ticket.generatedTicket.description || ticket.generatedTicket.description.length < 10) {
+        warnings.push(`Ticket ${ticket.templateId} has missing/short description`);
+        ticket.generatedTicket.description = ticket.generatedTicket.description || 
+          `Complete the task as described in the title: ${ticket.generatedTicket.title}`;
+      }
+      
+      if (!ticket.generatedTicket.acceptanceCriteria?.length) {
+        warnings.push(`Ticket ${ticket.templateId} missing acceptance criteria`);
+        ticket.generatedTicket.acceptanceCriteria = [
+          "Task is completed as described",
+          "Code is clean and follows project conventions",
+          "Changes are tested"
+        ];
+      }
+    }
+
+    for (const event of validated.softSkillEvents) {
+      if (!event.generatedScenario) {
+        warnings.push(`Soft skill event ${event.templateId} missing generatedScenario, creating default`);
+        event.generatedScenario = {
+          setup: "A team member needs your input.",
+          message: "Hey, got a moment to help with something?",
+          sender: "Team Member",
+          senderRole: "Developer",
+        };
+      }
+      
+      if (!event.generatedScenario.message) {
+        warnings.push(`Soft skill event ${event.templateId} has missing message`);
+        event.generatedScenario.message = "Hey, got a moment to help with something?";
+      } else if (event.generatedScenario.message.includes('[')) {
+        warnings.push(`Soft skill event ${event.templateId} has incomplete message`);
+        event.generatedScenario.message = event.generatedScenario.message.replace(/\[([^\]]+)\]/g, 'the $1');
+      }
+    }
+
+    if (!validated.ceremonies?.planning?.script?.length) {
+      warnings.push("Missing planning ceremony, using fallback");
+      validated.ceremonies = validated.ceremonies || {} as any;
+      validated.ceremonies.planning = {
+        day: 1,
+        script: [
+          "Welcome to Sprint Planning!",
+          "Let's review what we'll be working on this sprint.",
+          `We have ${validated.tickets.length} tickets to discuss.`,
+          "Let's estimate and commit to our goals."
+        ]
+      };
+    }
+
+    if (warnings.length > 0) {
+      console.warn(`Sprint generation warnings:\n${warnings.join('\n')}`);
+    }
+
+    return validated;
   }
 
   private extractUsedTemplates(previousSprints: SprintGenerationRequest['previousSprints']): string[] {
