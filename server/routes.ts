@@ -2237,6 +2237,512 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // Phase 5: Journey & Sprint Management APIs
+  // ============================================
+
+  // GET /api/journeys/:journeyId/dashboard - Get full journey dashboard
+  app.get("/api/journeys/:journeyId/dashboard", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const dashboard = await storage.getJourneyDashboard(journeyId);
+      
+      if (!dashboard) {
+        return res.status(404).json({ message: "Journey not found" });
+      }
+      
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Failed to get journey dashboard:", error);
+      res.status(500).json({ message: "Failed to get journey dashboard" });
+    }
+  });
+
+  // GET /api/journeys/:journeyId/sprints - Get all sprints for a journey
+  app.get("/api/journeys/:journeyId/sprints", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const sprints = await storage.getSprintsByJourney(journeyId);
+      res.json(sprints);
+    } catch (error) {
+      console.error("Failed to get sprints:", error);
+      res.status(500).json({ message: "Failed to get sprints" });
+    }
+  });
+
+  // GET /api/sprints/:sprintId - Get sprint with overview
+  app.get("/api/sprints/:sprintId", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const overview = await storage.getSprintOverview(sprintId);
+      
+      if (!overview) {
+        return res.status(404).json({ message: "Sprint not found" });
+      }
+      
+      res.json(overview);
+    } catch (error) {
+      console.error("Failed to get sprint:", error);
+      res.status(500).json({ message: "Failed to get sprint" });
+    }
+  });
+
+  // PATCH /api/sprints/:sprintId - Update sprint state
+  app.patch("/api/sprints/:sprintId", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const updates = req.body;
+      
+      const sprint = await storage.updateSprint(sprintId, updates);
+      
+      if (!sprint) {
+        return res.status(404).json({ message: "Sprint not found" });
+      }
+      
+      res.json(sprint);
+    } catch (error) {
+      console.error("Failed to update sprint:", error);
+      res.status(500).json({ message: "Failed to update sprint" });
+    }
+  });
+
+  // ============================================
+  // Sprint Ticket APIs
+  // ============================================
+
+  // GET /api/sprints/:sprintId/tickets - Get all tickets for a sprint
+  app.get("/api/sprints/:sprintId/tickets", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const tickets = await storage.getSprintTickets(sprintId);
+      res.json(tickets);
+    } catch (error) {
+      console.error("Failed to get tickets:", error);
+      res.status(500).json({ message: "Failed to get tickets" });
+    }
+  });
+
+  // GET /api/tickets/:ticketId - Get single ticket
+  app.get("/api/tickets/:ticketId", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const ticket = await storage.getSprintTicket(ticketId);
+      
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error("Failed to get ticket:", error);
+      res.status(500).json({ message: "Failed to get ticket" });
+    }
+  });
+
+  // POST /api/sprints/:sprintId/tickets - Create ticket
+  app.post("/api/sprints/:sprintId/tickets", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const ticketData = { ...req.body, sprintId };
+      
+      const ticket = await storage.createSprintTicket(ticketData);
+      res.status(201).json(ticket);
+    } catch (error) {
+      console.error("Failed to create ticket:", error);
+      res.status(500).json({ message: "Failed to create ticket" });
+    }
+  });
+
+  // PATCH /api/tickets/:ticketId - Update ticket status/details
+  app.patch("/api/tickets/:ticketId", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const updates = req.body;
+      
+      const ticket = await storage.updateSprintTicket(ticketId, updates);
+      
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error("Failed to update ticket:", error);
+      res.status(500).json({ message: "Failed to update ticket" });
+    }
+  });
+
+  // PATCH /api/tickets/:ticketId/move - Move ticket between kanban columns
+  app.patch("/api/tickets/:ticketId/move", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const { newStatus } = req.body;
+      
+      const validStatuses = ['todo', 'in_progress', 'in_review', 'done'];
+      if (!validStatuses.includes(newStatus)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const ticket = await storage.getSprintTicket(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      // Validate git gates based on status transition
+      const gitState = ticket.gitState as { branchCreated?: boolean; hasPR?: boolean; merged?: boolean } || {};
+      
+      if (newStatus === 'in_progress' && ticket.status === 'todo') {
+        // Must have created branch to move to in_progress
+        if (!gitState.branchCreated) {
+          return res.status(400).json({ 
+            message: "Create a branch first before starting work",
+            gate: "branch_required"
+          });
+        }
+      }
+      
+      if (newStatus === 'in_review' && ticket.status === 'in_progress') {
+        // Must have PR to move to in_review
+        if (!gitState.hasPR) {
+          return res.status(400).json({ 
+            message: "Submit a pull request before moving to review",
+            gate: "pr_required"
+          });
+        }
+      }
+      
+      if (newStatus === 'done' && ticket.status === 'in_review') {
+        // Must be merged to move to done
+        if (!gitState.merged) {
+          return res.status(400).json({ 
+            message: "PR must be merged before marking as done",
+            gate: "merge_required"
+          });
+        }
+      }
+      
+      const updatedTicket = await storage.updateSprintTicket(ticketId, { status: newStatus });
+      res.json(updatedTicket);
+    } catch (error) {
+      console.error("Failed to move ticket:", error);
+      res.status(500).json({ message: "Failed to move ticket" });
+    }
+  });
+
+  // ============================================
+  // Ceremony Instance APIs
+  // ============================================
+
+  // GET /api/sprints/:sprintId/ceremonies - Get all ceremonies for a sprint
+  app.get("/api/sprints/:sprintId/ceremonies", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const ceremonies = await storage.getCeremonyInstances(sprintId);
+      res.json(ceremonies);
+    } catch (error) {
+      console.error("Failed to get ceremonies:", error);
+      res.status(500).json({ message: "Failed to get ceremonies" });
+    }
+  });
+
+  // GET /api/ceremonies/:ceremonyId - Get ceremony with messages
+  app.get("/api/ceremonies/:ceremonyId", async (req, res) => {
+    try {
+      const ceremonyId = parseInt(req.params.ceremonyId);
+      const ceremony = await storage.getCeremonyInstance(ceremonyId);
+      
+      if (!ceremony) {
+        return res.status(404).json({ message: "Ceremony not found" });
+      }
+      
+      res.json(ceremony);
+    } catch (error) {
+      console.error("Failed to get ceremony:", error);
+      res.status(500).json({ message: "Failed to get ceremony" });
+    }
+  });
+
+  // POST /api/sprints/:sprintId/ceremonies - Create ceremony instance
+  app.post("/api/sprints/:sprintId/ceremonies", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const ceremonyData = { ...req.body, sprintId };
+      
+      const ceremony = await storage.createCeremonyInstance(ceremonyData);
+      res.status(201).json(ceremony);
+    } catch (error) {
+      console.error("Failed to create ceremony:", error);
+      res.status(500).json({ message: "Failed to create ceremony" });
+    }
+  });
+
+  // PATCH /api/ceremonies/:ceremonyId - Update ceremony state
+  app.patch("/api/ceremonies/:ceremonyId", async (req, res) => {
+    try {
+      const ceremonyId = parseInt(req.params.ceremonyId);
+      const updates = req.body;
+      
+      const ceremony = await storage.updateCeremonyInstance(ceremonyId, updates);
+      
+      if (!ceremony) {
+        return res.status(404).json({ message: "Ceremony not found" });
+      }
+      
+      res.json(ceremony);
+    } catch (error) {
+      console.error("Failed to update ceremony:", error);
+      res.status(500).json({ message: "Failed to update ceremony" });
+    }
+  });
+
+  // POST /api/ceremonies/:ceremonyId/messages - Add message to ceremony
+  app.post("/api/ceremonies/:ceremonyId/messages", async (req, res) => {
+    try {
+      const ceremonyId = parseInt(req.params.ceremonyId);
+      const { message, type = 'team' } = req.body;
+      
+      const ceremony = await storage.getCeremonyInstance(ceremonyId);
+      if (!ceremony) {
+        return res.status(404).json({ message: "Ceremony not found" });
+      }
+      
+      const messages = type === 'team' 
+        ? [...(ceremony.teamMessages as any[] || []), message]
+        : [...(ceremony.userResponses as any[] || []), message];
+      
+      const updated = await storage.updateCeremonyInstance(ceremonyId, {
+        [type === 'team' ? 'teamMessages' : 'userResponses']: messages
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Failed to add message:", error);
+      res.status(500).json({ message: "Failed to add message" });
+    }
+  });
+
+  // ============================================
+  // Git Session APIs
+  // ============================================
+
+  // GET /api/tickets/:ticketId/git - Get git session for ticket
+  app.get("/api/tickets/:ticketId/git", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const session = await storage.getGitSession(ticketId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Git session not found" });
+      }
+      
+      const events = await storage.getGitEvents(session.id);
+      res.json({ session, events });
+    } catch (error) {
+      console.error("Failed to get git session:", error);
+      res.status(500).json({ message: "Failed to get git session" });
+    }
+  });
+
+  // POST /api/tickets/:ticketId/git - Create git session
+  app.post("/api/tickets/:ticketId/git", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      
+      // Check if session already exists
+      const existing = await storage.getGitSession(ticketId);
+      if (existing) {
+        return res.status(400).json({ message: "Git session already exists for this ticket" });
+      }
+      
+      const session = await storage.createGitSession({
+        ticketId,
+        ...req.body
+      });
+      
+      res.status(201).json(session);
+    } catch (error) {
+      console.error("Failed to create git session:", error);
+      res.status(500).json({ message: "Failed to create git session" });
+    }
+  });
+
+  // POST /api/git/:sessionId/command - Execute git command
+  app.post("/api/git/:sessionId/command", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { command, args } = req.body;
+      
+      const session = await storage.getGitSessionById(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Git session not found" });
+      }
+      
+      // Record the git event
+      const event = await storage.createGitEvent({
+        sessionId,
+        commandType: command,
+        rawCommand: `git ${command} ${(args || []).join(' ')}`,
+        stateChange: { args },
+        isValid: true
+      });
+      
+      // Update session state based on command
+      let updates: any = {};
+      let ticketUpdates: any = {};
+      
+      switch (command) {
+        case 'clone':
+          updates.isCloned = true;
+          break;
+        case 'checkout':
+        case 'branch':
+          if (args && args.length > 0) {
+            updates.currentBranch = args[args.length - 1];
+            // Update ticket gitState
+            const ticket = await storage.getSprintTicket(session.ticketId);
+            if (ticket) {
+              ticketUpdates.gitState = { 
+                ...(ticket.gitState as any || {}), 
+                branchCreated: true,
+                branchName: args[args.length - 1]
+              };
+            }
+          }
+          break;
+        case 'add':
+          const currentStaged = session.stagedFiles as string[] || [];
+          updates.stagedFiles = Array.from(new Set([...currentStaged, ...(args || [])]));
+          break;
+        case 'commit':
+          const commits = session.commits as any[] || [];
+          updates.commits = [...commits, { 
+            message: args?.find((a: string) => a.startsWith('-m'))?.replace('-m ', '') || args?.[0],
+            timestamp: new Date().toISOString()
+          }];
+          updates.stagedFiles = [];
+          updates.remoteSyncStatus = 'ahead';
+          break;
+        case 'push':
+          updates.remoteSyncStatus = 'synced';
+          break;
+        case 'pull':
+          updates.remoteSyncStatus = 'synced';
+          break;
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await storage.updateGitSession(sessionId, updates);
+      }
+      
+      if (Object.keys(ticketUpdates).length > 0) {
+        await storage.updateSprintTicket(session.ticketId, ticketUpdates);
+      }
+      
+      res.json({ 
+        event, 
+        session: await storage.getGitSessionById(sessionId)
+      });
+    } catch (error) {
+      console.error("Failed to execute git command:", error);
+      res.status(500).json({ message: "Failed to execute git command" });
+    }
+  });
+
+  // POST /api/tickets/:ticketId/pr - Create pull request
+  app.post("/api/tickets/:ticketId/pr", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const { title, description } = req.body;
+      
+      const ticket = await storage.getSprintTicket(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      const gitState = ticket.gitState as any || {};
+      if (!gitState.branchCreated) {
+        return res.status(400).json({ message: "Must create branch before PR" });
+      }
+      
+      // Update ticket with PR info
+      const updated = await storage.updateSprintTicket(ticketId, {
+        gitState: {
+          ...gitState,
+          hasPR: true,
+          prTitle: title,
+          prDescription: description,
+          prCreatedAt: new Date().toISOString()
+        }
+      });
+      
+      // Record git event
+      const session = await storage.getGitSession(ticketId);
+      if (session) {
+        await storage.createGitEvent({
+          sessionId: session.id,
+          commandType: 'pr_create',
+          rawCommand: `Create PR: ${title}`,
+          stateChange: { title, description },
+          isValid: true
+        });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Failed to create PR:", error);
+      res.status(500).json({ message: "Failed to create PR" });
+    }
+  });
+
+  // POST /api/tickets/:ticketId/merge - Merge pull request
+  app.post("/api/tickets/:ticketId/merge", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      
+      const ticket = await storage.getSprintTicket(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+      
+      const gitState = ticket.gitState as any || {};
+      if (!gitState.hasPR) {
+        return res.status(400).json({ message: "No PR exists to merge" });
+      }
+      
+      // Update ticket with merge info
+      const updated = await storage.updateSprintTicket(ticketId, {
+        gitState: {
+          ...gitState,
+          merged: true,
+          mergedAt: new Date().toISOString()
+        }
+      });
+      
+      // Record git event
+      const session = await storage.getGitSession(ticketId);
+      if (session) {
+        await storage.createGitEvent({
+          sessionId: session.id,
+          commandType: 'merge',
+          rawCommand: `Merge PR: ${gitState.prTitle}`,
+          stateChange: { branchName: gitState.branchName },
+          isValid: true
+        });
+        
+        // Update session branch to main after merge
+        await storage.updateGitSession(session.id, {
+          currentBranch: 'main',
+          remoteSyncStatus: 'synced'
+        });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Failed to merge PR:", error);
+      res.status(500).json({ message: "Failed to merge PR" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

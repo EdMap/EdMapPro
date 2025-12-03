@@ -3098,8 +3098,13 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
 
   async createGitEvent(event: InsertGitEvent): Promise<GitEvent> {
     const results = await db.insert(gitEvents).values({
-      ...event,
+      sessionId: event.sessionId,
+      commandType: event.commandType,
+      rawCommand: event.rawCommand,
       isValid: event.isValid ?? true,
+      output: event.output || null,
+      errorMessage: event.errorMessage || null,
+      stateChange: event.stateChange || {},
       createdAt: new Date()
     }).returning();
     return results[0];
