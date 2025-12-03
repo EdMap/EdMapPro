@@ -108,6 +108,37 @@ See `docs/PRODUCT_ROADMAP.md` for detailed phase descriptions.
 
 ## Recent Updates
 
+### Phase 1 Complete: Database, API & Progression Engine (December 2025)
+**Database Schema:**
+- Created 5 new tables: `competencies`, `simulation_catalogue`, `role_adapters`, `competency_ledger`, `portfolio_artifacts`
+- All tables use proper foreign key relationships and JSON storage for flexible content
+- Seeded 10 competencies (3 categories), 5 role adapters, 15 catalogue items
+
+**API Endpoints:**
+- `GET /api/catalogue` - Query catalogue items with filters (simulator, type, role, level, language, day)
+- `GET /api/catalogue/:externalId` - Get single catalogue item
+- `GET /api/competencies` - Query competencies with filters (role, category)
+- `GET /api/competencies/:slug` - Get single competency
+- `GET /api/role-adapters` - Get all role adapters
+- `GET /api/role-adapters/:role` - Get single role adapter
+- `GET /api/user/:id/readiness` - Get user's readiness score with competency breakdown
+- `POST /api/user/:id/competency-delta` - Record competency evidence (with Zod validation)
+- `GET /api/user/:id/portfolio` - Get user's portfolio artifacts
+- `POST /api/user/:id/portfolio` - Add portfolio artifact
+- `GET /api/user/:id/competency-ledger` - Get user's competency ledger entries
+
+**Progression Logic:**
+- `ReadinessScore` structure: overallScore, currentBand, competencyBreakdown, gaps, strengths
+- Band progression: Explorer → Contributor (10+ evidence, 70+ confidence) → Junior Ready (25+ evidence, 85+ confidence)
+- Competency delta tracking with full history for audit trail
+
+**Key Files Added/Updated:**
+- `shared/catalogue/competencies.json` - 10 competencies with rubrics for each mastery band
+- `shared/catalogue/role-adapters.json` - 5 role adapters with level configurations
+- `server/seed-phase1.ts` - Seeding script for Phase 1 tables
+- `server/storage.ts` - Added storage methods for all Phase 1 operations
+- `server/routes.ts` - Added Phase 1 API endpoints
+
 ### Phase 0 Complete: Content Extraction & Service Layer (December 2025)
 **Extraction Complete:**
 - Extracted all hardcoded content to JSON catalogue files (15 files total)
