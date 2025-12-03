@@ -129,6 +129,31 @@ export default function WorkspacePractice() {
 
   const { data: adapterRoles = [], isLoading: rolesLoading } = useAvailableRoles();
 
+  const roleIconMap: Record<string, any> = {
+    developer: Code,
+    pm: Briefcase,
+    qa: TestTube,
+    devops: Server,
+    data_science: Database,
+  };
+
+  const availableRoles = useMemo(() => {
+    if (adapterRoles.length === 0) {
+      return [
+        { name: 'Developer', role: 'developer', available: true, description: 'Write code, fix bugs, and collaborate with your team', icon: Code },
+        { name: 'Product Manager', role: 'pm', available: false, description: 'Coming soon', icon: Briefcase },
+        { name: 'Designer', role: 'designer', available: false, description: 'Coming soon', icon: Briefcase }
+      ];
+    }
+    return adapterRoles.map((role: AvailableRole) => ({
+      name: role.displayName,
+      role: role.role,
+      available: role.role === 'developer',
+      description: role.role === 'developer' ? role.description : 'Coming soon in Phase 5',
+      icon: roleIconMap[role.role] || Code
+    }));
+  }, [adapterRoles]);
+
   const createSessionMutation = useMutation({
     mutationFn: async (config: any) => {
       const response = await apiRequest("POST", "/api/sessions", config);
@@ -318,33 +343,6 @@ export default function WorkspacePractice() {
 
   const inProgressSessions = practiceSessions.filter((p: any) => p.status === 'in_progress');
   const completedSessions = practiceSessions.filter((p: any) => p.status === 'completed');
-
-  // Role icon mapping
-  const roleIconMap: Record<string, any> = {
-    developer: Code,
-    pm: Briefcase,
-    qa: TestTube,
-    devops: Server,
-    data_science: Database,
-  };
-
-  // Map adapter roles to display format - only Developer is available for now
-  const availableRoles = useMemo(() => {
-    if (adapterRoles.length === 0) {
-      return [
-        { name: 'Developer', role: 'developer', available: true, description: 'Write code, fix bugs, and collaborate with your team', icon: Code },
-        { name: 'Product Manager', role: 'pm', available: false, description: 'Coming soon', icon: Briefcase },
-        { name: 'Designer', role: 'designer', available: false, description: 'Coming soon', icon: Briefcase }
-      ];
-    }
-    return adapterRoles.map((role: AvailableRole) => ({
-      name: role.displayName,
-      role: role.role,
-      available: role.role === 'developer', // Only developer has content for now
-      description: role.role === 'developer' ? role.description : 'Coming soon in Phase 5',
-      icon: roleIconMap[role.role] || Code
-    }));
-  }, [adapterRoles]);
 
   const renderWizardSteps = () => (
     <div className="flex items-center justify-center mb-8">
