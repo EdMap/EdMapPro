@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "type": "standup_script",
+  "description": "Day 2 daily standup meeting script for workspace simulation",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "day": 2,
+    "activity": "standup"
+  },
+  "content": {
+    "meeting": {
+      "name": "Daily Standup",
+      "team": "Payments Team",
+      "time": "9:00 AM",
+      "format": [
+        "What I did yesterday",
+        "What I'm doing today",
+        "Any blockers?"
+      ]
+    },
+    "script": [
+      {
+        "id": "standup-1",
+        "sender": "Sarah",
+        "role": "Tech Lead",
+        "content": "Morning team! Let's do a quick standup. Marcus, you're up first.",
+        "delay": 0,
+        "order": 1
+      },
+      {
+        "id": "standup-2",
+        "sender": "Marcus",
+        "role": "Senior Engineer",
+        "content": "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.",
+        "delay": 4000,
+        "order": 2
+      },
+      {
+        "id": "standup-3",
+        "sender": "Sarah",
+        "role": "Tech Lead",
+        "content": "Thanks Marcus. Alex?",
+        "delay": 2500,
+        "order": 3
+      },
+      {
+        "id": "standup-4",
+        "sender": "Alex",
+        "role": "QA Engineer",
+        "content": "Yesterday: Wrote integration tests for the new checkout flow. Today: Setting up the test environment for payment retries. Blockers: None.",
+        "delay": 4000,
+        "order": 4
+      },
+      {
+        "id": "standup-5",
+        "sender": "Sarah",
+        "role": "Tech Lead",
+        "content": "Great, thanks Alex. Priya?",
+        "delay": 2500,
+        "order": 5
+      },
+      {
+        "id": "standup-6",
+        "sender": "Priya",
+        "role": "Product Manager",
+        "content": "Yesterday: Finalized requirements for the merchant analytics dashboard. Today: Writing user stories for the next sprint. Blockers: Waiting on design mockups, but should have them by EOD.",
+        "delay": 5000,
+        "order": 6
+      },
+      {
+        "id": "standup-7",
+        "sender": "Sarah",
+        "role": "Tech Lead",
+        "content": "Thanks Priya. {{userName}}, you're up!",
+        "delay": 3000,
+        "order": 7,
+        "isUserCue": true,
+        "placeholder": "{{userName}}"
+      }
+    ],
+    "userGuidance": {
+      "waitingMessage": "Sarah is starting the meeting. You'll share your update after Marcus.",
+      "expectedFormat": "Share what you learned yesterday, what you'll do today, and any blockers.",
+      "suggestedResponses": [
+        "Yesterday I read through the documentation and met the team. Today I'm starting on my first ticket - the timezone bug fix. No blockers.",
+        "Yesterday was my first day - got oriented with docs and team intros. Today I'm tackling the timezone display bug. No blockers so far.",
+        "I spent yesterday learning about the codebase and meeting everyone. Today I'll fix the timezone issue in the transaction display. No blockers."
+      ]
+    },
+    "completionMessage": {
+      "title": "Standup Complete!",
+      "description": "You participated in your first daily standup. This is how teams stay aligned and unblock each other."
+    }
+  }
+}

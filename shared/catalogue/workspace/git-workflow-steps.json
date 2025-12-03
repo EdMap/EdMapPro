@@ -1,0 +1,81 @@
+{
+  "version": "1.0.0",
+  "type": "git_workflow_steps",
+  "description": "Git workflow steps for Day 2 workspace simulation - stage, commit, push",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "day": 2,
+    "activity": "git-workflow"
+  },
+  "content": {
+    "introduction": {
+      "title": "Git Workflow",
+      "description": "Save your work by staging, committing, and pushing your changes."
+    },
+    "steps": [
+      {
+        "id": "add",
+        "order": 1,
+        "instruction": "Stage your changes for commit",
+        "hint": "Use git add to include the files you modified",
+        "validPatterns": [
+          "^git add \\.$",
+          "^git add -a$",
+          "git add.*dateformatter"
+        ],
+        "validationRules": {
+          "matchAny": ["git add .", "git add -a"],
+          "orContains": ["git add", "dateformatter"]
+        },
+        "successOutput": "",
+        "acceptedCommands": [
+          "git add .",
+          "git add -A",
+          "git add client/src/utils/dateFormatters.ts"
+        ]
+      },
+      {
+        "id": "commit",
+        "order": 2,
+        "instruction": "Commit your changes with a message describing what you fixed",
+        "hint": "Use git commit -m \"your descriptive message\"",
+        "validPatterns": [
+          "^git commit -m.*['\"].*['\"]$"
+        ],
+        "validationRules": {
+          "mustStartWith": ["git commit -m"],
+          "mustContainAnyQuote": ["\"", "'"],
+          "mustContainAnyKeyword": ["timezone", "fix", "date"]
+        },
+        "successOutput": "[fix/timezone-display abc1234] Fix timezone display for merchant transactions\n 1 file changed, 2 insertions(+), 2 deletions(-)",
+        "acceptedCommands": [
+          "git commit -m \"Fix timezone display for merchant transactions\"",
+          "git commit -m 'Fix timezone bug in date formatter'"
+        ]
+      },
+      {
+        "id": "push",
+        "order": 3,
+        "instruction": "Push your branch to the remote repository",
+        "hint": "Use git push origin followed by your branch name",
+        "validPatterns": [
+          "^git push"
+        ],
+        "validationRules": {
+          "mustStartWith": ["git push"]
+        },
+        "successOutput": "Enumerating objects: 5, done.\nCounting objects: 100% (5/5), done.\nWriting objects: 100% (3/3), 312 bytes | 312.00 KiB/s, done.\nremote: Create a pull request:\nremote:   https://github.com/novapay/merchant-dashboard/pull/new/fix/timezone-display",
+        "acceptedCommands": [
+          "git push origin fix/timezone-display",
+          "git push -u origin fix/timezone-display",
+          "git push"
+        ]
+      }
+    ],
+    "completionMessage": {
+      "title": "Code Pushed!",
+      "description": "Your changes are now on the remote repository. Time to create a pull request."
+    }
+  }
+}

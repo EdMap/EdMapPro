@@ -1,0 +1,91 @@
+{
+  "version": "1.0.0",
+  "type": "code_exercise",
+  "description": "Timezone bug fix code exercise for Day 2 workspace simulation",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "day": 2,
+    "activity": "code-fix",
+    "difficulty": "beginner",
+    "competencies": ["debugging", "code_reading", "javascript"]
+  },
+  "content": {
+    "introduction": {
+      "title": "Fix the Timezone Bug",
+      "description": "Complete the code by filling in the missing value. The function should use the merchant's timezone, not UTC."
+    },
+    "file": {
+      "path": "client/src/utils/dateFormatters.ts",
+      "name": "dateFormatters.ts"
+    },
+    "codeTemplate": {
+      "language": "typescript",
+      "code": "export function formatTransactionDate(\n  timestamp: string,\n  merchantTimezone: string = 'UTC'\n): string {\n  const date = new Date(timestamp);\n  \n  // TODO: Convert to merchant's timezone\n  const options: Intl.DateTimeFormatOptions = {\n    year: 'numeric',\n    month: 'short',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    timeZone: ___BLANK_1___  // Fill in the timezone\n  };\n  \n  return date.toLocaleString('en-US', options);\n}"
+    },
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "answer": "merchantTimezone",
+        "caseSensitive": false,
+        "hint": "Look at the function parameter - what variable holds the merchant's timezone preference?",
+        "successMessage": "Correct! By using `merchantTimezone`, transactions will now display in the merchant's local time!"
+      }
+    ],
+    "testScenario": {
+      "title": "Verify Your Fix",
+      "description": "Let's see how Maria's transactions look with your fix applied.",
+      "merchantContext": {
+        "name": "Maria's Corner Bakery",
+        "location": "Chicago, IL",
+        "timezone": "America/Chicago",
+        "timezoneAbbr": "CST"
+      },
+      "testCases": [
+        {
+          "id": "test1",
+          "description": "$24.50 - Card Payment",
+          "before": {
+            "display": "Feb 15, 2:30 AM UTC",
+            "status": "incorrect"
+          },
+          "after": {
+            "display": "Feb 14, 8:30 PM CST",
+            "status": "correct"
+          }
+        },
+        {
+          "id": "test2",
+          "description": "$8.75 - Card Payment",
+          "before": {
+            "display": "Feb 15, 1:15 AM UTC",
+            "status": "incorrect"
+          },
+          "after": {
+            "display": "Feb 14, 7:15 PM CST",
+            "status": "correct"
+          }
+        },
+        {
+          "id": "test3",
+          "description": "$15.00 - Card Payment",
+          "before": {
+            "display": "Feb 15, 12:45 AM UTC",
+            "status": "incorrect"
+          },
+          "after": {
+            "display": "Feb 14, 6:45 PM CST",
+            "status": "correct"
+          }
+        }
+      ],
+      "bugExplanation": "Transactions show UTC time (next day at 2am) instead of Maria's local CST time (8pm same day).",
+      "fixExplanation": "Time to save your work with git and create a pull request."
+    },
+    "completionMessage": {
+      "title": "Your fix works!",
+      "description": "Time to save your work with git and create a pull request."
+    }
+  }
+}

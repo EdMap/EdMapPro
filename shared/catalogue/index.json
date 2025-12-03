@@ -70,6 +70,36 @@
           "name": "ticket-timezone-bug.json",
           "type": "ticket",
           "description": "Timezone bug ticket for Day 2 coding exercise"
+        },
+        {
+          "name": "standup-script.json",
+          "type": "standup_script",
+          "description": "Day 2 daily standup meeting script"
+        },
+        {
+          "name": "dev-setup-steps.json",
+          "type": "dev_setup_steps",
+          "description": "Development environment setup commands (clone, npm install, etc.)"
+        },
+        {
+          "name": "git-workflow-steps.json",
+          "type": "git_workflow_steps",
+          "description": "Git workflow commands (add, commit, push)"
+        },
+        {
+          "name": "codebase-structure.json",
+          "type": "codebase_structure",
+          "description": "Simulated codebase file tree for exploration"
+        },
+        {
+          "name": "code-exercise-timezone.json",
+          "type": "code_exercise",
+          "description": "Timezone bug fix code exercise with validation"
+        },
+        {
+          "name": "branch-creation.json",
+          "type": "branch_creation",
+          "description": "Git branch creation exercise and naming conventions"
         }
       ]
     }
@@ -178,6 +208,74 @@
           "ticket": "TicketDetails",
           "codeExercise": "CodeExercise",
           "gitWorkflow": "GitWorkflow"
+        }
+      }
+    },
+    "standup_script": {
+      "description": "Daily standup meeting script with timed messages",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "meeting": "{ name, team, time, format }",
+          "script": "StandupMessage[]",
+          "userGuidance": "UserGuidanceConfig"
+        }
+      }
+    },
+    "dev_setup_steps": {
+      "description": "Development environment setup steps with validation",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "introduction": "{ title, description }",
+          "project": "{ name, org, repoUrl }",
+          "steps": "SetupStep[]"
+        }
+      }
+    },
+    "git_workflow_steps": {
+      "description": "Git workflow steps (add, commit, push) with validation",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "introduction": "{ title, description }",
+          "steps": "GitStep[]"
+        }
+      }
+    },
+    "codebase_structure": {
+      "description": "Simulated codebase file tree for exploration",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "introduction": "{ title, description }",
+          "targetFile": "{ name, path, description }",
+          "fileStructure": "FileNode[]"
+        }
+      }
+    },
+    "code_exercise": {
+      "description": "Code fix exercise with blanks and validation",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "introduction": "{ title, description }",
+          "file": "{ path, name }",
+          "codeTemplate": "{ language, code }",
+          "blanks": "BlankConfig[]",
+          "testScenario": "TestScenarioConfig"
+        }
+      }
+    },
+    "branch_creation": {
+      "description": "Git branch creation exercise with naming conventions",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "introduction": "{ title, description }",
+          "whyBranch": "Reason[]",
+          "namingConvention": "NamingConfig",
+          "validation": "ValidationRules"
         }
       }
     }

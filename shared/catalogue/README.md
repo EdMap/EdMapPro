@@ -6,19 +6,25 @@ This directory contains the extracted content for both Interview and Workspace s
 
 ```
 shared/catalogue/
-├── index.json              # Catalogue index and structure definition
-├── README.md               # This file
-├── interview/              # Interview Simulator content
-│   ├── question-banks.json     # Questions by role/type/level
-│   ├── interview-config.json   # Types, roles, difficulties, settings
-│   ├── evaluation-rubrics.json # Scoring and evaluation criteria
-│   └── team-personas.json      # Panel interview personas
-└── workspace/              # Workspace Simulator content
-    ├── team-members.json       # Team member definitions
-    ├── documentation-day1.json # Day 1 onboarding docs
-    ├── activities-day1.json    # Day 1 activities
-    ├── activities-day2.json    # Day 2 activities
-    └── ticket-timezone-bug.json # Day 2 coding exercise
+├── index.json                   # Catalogue index and structure definition
+├── README.md                    # This file
+├── interview/                   # Interview Simulator content
+│   ├── question-banks.json          # Questions by role/type/level
+│   ├── interview-config.json        # Types, roles, difficulties, settings
+│   ├── evaluation-rubrics.json      # Scoring and evaluation criteria
+│   └── team-personas.json           # Panel interview personas
+└── workspace/                   # Workspace Simulator content
+    ├── team-members.json            # Team member definitions
+    ├── documentation-day1.json      # Day 1 onboarding docs
+    ├── activities-day1.json         # Day 1 activities
+    ├── activities-day2.json         # Day 2 activities
+    ├── ticket-timezone-bug.json     # Day 2 ticket definition
+    ├── standup-script.json          # Day 2 standup meeting script
+    ├── dev-setup-steps.json         # Dev environment setup commands
+    ├── git-workflow-steps.json      # Git commands (add, commit, push)
+    ├── codebase-structure.json      # Simulated file tree for exploration
+    ├── code-exercise-timezone.json  # Timezone bug fix exercise
+    └── branch-creation.json         # Branch creation exercise
 ```
 
 ## Content Types
@@ -40,7 +46,13 @@ shared/catalogue/
 | `documentation-day1.json` | Product documentation, team norms, development workflow |
 | `activities-day1.json` | Day 1 activities: read docs, meet team, comprehension check |
 | `activities-day2.json` | Day 2 activities: standup, dev setup, coding, git, PR |
-| `ticket-timezone-bug.json` | Complete ticket with code exercise, file structure, git workflow |
+| `ticket-timezone-bug.json` | Ticket definition with title, description, acceptance criteria |
+| `standup-script.json` | Daily standup meeting script with timed team messages |
+| `dev-setup-steps.json` | Dev environment setup: clone, cd, npm install, npm run dev |
+| `git-workflow-steps.json` | Git workflow: stage, commit, push with validation |
+| `codebase-structure.json` | Simulated project file tree for codebase exploration |
+| `code-exercise-timezone.json` | Code fix exercise with blanks, validation, test scenarios |
+| `branch-creation.json` | Branch creation with naming conventions and validation |
 
 ## Adapter Pattern
 

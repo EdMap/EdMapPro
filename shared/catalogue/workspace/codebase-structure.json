@@ -1,0 +1,97 @@
+{
+  "version": "1.0.0",
+  "type": "codebase_structure",
+  "description": "Simulated codebase file structure for Day 2 codebase exploration",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "day": 2,
+    "activity": "codebase-exploration",
+    "project": "merchant-dashboard"
+  },
+  "content": {
+    "introduction": {
+      "title": "Explore the Codebase",
+      "description": "Navigate to find the file where the timezone fix needs to happen."
+    },
+    "targetFile": {
+      "name": "dateFormatters.ts",
+      "path": "client/src/utils/dateFormatters.ts",
+      "description": "This is where dates are formatted for display. You'll fix the timezone handling here."
+    },
+    "fileStructure": [
+      {
+        "name": "client",
+        "type": "folder",
+        "children": [
+          {
+            "name": "src",
+            "type": "folder",
+            "children": [
+              {
+                "name": "components",
+                "type": "folder",
+                "children": [
+                  {
+                    "name": "TransactionList.tsx",
+                    "type": "file",
+                    "highlight": true,
+                    "description": "Displays list of merchant transactions"
+                  }
+                ]
+              },
+              {
+                "name": "utils",
+                "type": "folder",
+                "children": [
+                  {
+                    "name": "dateFormatters.ts",
+                    "type": "file",
+                    "highlight": true,
+                    "target": true,
+                    "description": "Date formatting utilities - contains the timezone bug"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "server",
+        "type": "folder",
+        "children": [
+          {
+            "name": "routes",
+            "type": "folder"
+          },
+          {
+            "name": "services",
+            "type": "folder"
+          }
+        ]
+      },
+      {
+        "name": "shared",
+        "type": "folder",
+        "children": [
+          {
+            "name": "types",
+            "type": "folder",
+            "children": [
+              {
+                "name": "merchant.ts",
+                "type": "file",
+                "description": "Merchant type definitions"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "completionMessage": {
+      "title": "Found it!",
+      "description": "This is where dates are formatted for display. You'll fix the timezone handling here."
+    }
+  }
+}

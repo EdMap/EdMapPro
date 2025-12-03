@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "type": "branch_creation",
+  "description": "Git branch creation exercise for Day 2 workspace simulation",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "day": 2,
+    "activity": "create-branch"
+  },
+  "content": {
+    "introduction": {
+      "title": "Create a Feature Branch",
+      "description": "Before making any changes, create a branch to isolate your work."
+    },
+    "whyBranch": [
+      {
+        "icon": "shield",
+        "title": "Protects main branch",
+        "description": "Your changes won't affect others until reviewed"
+      },
+      {
+        "icon": "users",
+        "title": "Enables collaboration",
+        "description": "Others can review your code before merging"
+      },
+      {
+        "icon": "git-branch",
+        "title": "Creates clear history",
+        "description": "Each feature has its own isolated history"
+      }
+    ],
+    "namingConvention": {
+      "format": "type/description",
+      "examples": [
+        {
+          "name": "fix/timezone-display",
+          "description": "Bug fixes"
+        },
+        {
+          "name": "feature/new-dashboard",
+          "description": "New features"
+        },
+        {
+          "name": "chore/update-deps",
+          "description": "Maintenance tasks"
+        }
+      ]
+    },
+    "validation": {
+      "mustStartWith": "git checkout -b",
+      "branchNameRules": {
+        "minLength": 3,
+        "recommendedPatterns": [
+          "fix/.*",
+          "feature/.*",
+          "chore/.*"
+        ],
+        "suggestedKeywords": ["fix", "timezone", "bug"]
+      }
+    },
+    "suggestedBranchName": "fix/timezone-display",
+    "fullCommand": "git checkout -b fix/timezone-display",
+    "successOutput": "Switched to a new branch '{{branchName}}'",
+    "completionMessage": {
+      "title": "Branch Created",
+      "description": "You're now working on your feature branch. All your changes will be isolated from the main branch until your PR is merged."
+    }
+  }
+}
