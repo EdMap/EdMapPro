@@ -78,31 +78,102 @@ Content is designed to be adapted based on:
 
 ## Usage
 
-### Reading Catalogue Content
+### Catalogue Service (Recommended)
+
+The catalogue service provides a query-based interface that mirrors the Phase 1 API signature. Components should use this service instead of direct JSON imports to enable seamless transition to the database-backed API.
+
+```typescript
+import { catalogue, getCatalogueItems } from '@shared/catalogue/service';
+
+// Query-based access (matches future API signature)
+const items = await getCatalogueItems({
+  simulator: 'workspace',
+  type: 'standup_script',
+  role: 'developer',
+  day: 2
+});
+
+// Typed convenience methods
+const standupContent = await catalogue.getStandupScript({ day: 2 });
+const devSetupContent = await catalogue.getDevSetupSteps({ role: 'developer' });
+const gitWorkflowContent = await catalogue.getGitWorkflowSteps();
+const codebaseContent = await catalogue.getCodebaseStructure();
+const codeExerciseContent = await catalogue.getCodeExercise();
+const branchContent = await catalogue.getBranchCreation();
+const interviewConfig = await catalogue.getInterviewConfig();
+
+// Access specific item by ID
+const item = await catalogue.getItem('workspace-standup-day2');
+```
+
+### CatalogueItem Structure
+
+Each item returned by the service has a normalized structure:
+
+```typescript
+interface CatalogueItem<T> {
+  meta: {
+    id: string;           // Unique identifier
+    type: string;         // Content type (e.g., 'standup_script')
+    simulator: string;    // 'workspace' or 'interview'
+    version: string;      // Content version
+    role?: string;        // 'developer', 'pm', 'qa', etc.
+    level?: string;       // 'intern', 'junior', 'mid', 'senior'
+    language?: string;    // 'javascript', 'python', 'c_cpp'
+    day?: number;         // Day number for daily content
+  };
+  content: T;             // Type-specific content
+}
+```
+
+### Direct JSON Import (Legacy)
+
+For simple cases, direct imports are still supported:
 
 ```typescript
 import teamMembers from '@shared/catalogue/workspace/team-members.json';
 import questionBanks from '@shared/catalogue/interview/question-banks.json';
 
-// Get team members
 const members = teamMembers.content.members;
-
-// Get junior developer behavioral questions
 const questions = questionBanks.content.roles.software_engineer.types.behavioral.junior;
 ```
 
-### Query Patterns
+### Validation Helpers
+
+The loaders module provides validation functions for user input:
 
 ```typescript
-// Get activities for Day 2
-const day2Activities = activities.content.activities;
+import { 
+  validateSetupCommand, 
+  validateGitCommand, 
+  validateBranchName,
+  validateCodeBlank 
+} from '@shared/catalogue/loaders';
 
-// Filter by completion status
-const incomplete = day2Activities.filter(a => a.completionCheck === 'standupComplete');
+// Validate dev setup command
+const isValid = validateSetupCommand(userInput, setupStep);
 
-// Get questions matching criteria
-const techQuestions = questionBanks.content.roles.software_engineer.types.technical.mid;
+// Validate git command
+const gitValid = validateGitCommand(userInput, gitStep);
+
+// Validate branch name
+const branchValid = validateBranchName(userInput, branchConfig);
+
+// Validate code exercise blank
+const codeValid = validateCodeBlank(userInput, blankConfig);
 ```
+
+## Phase 1 Transition
+
+The service layer is designed for seamless Phase 1 transition:
+
+| Phase 0 (Current) | Phase 1 (Future) |
+|-------------------|------------------|
+| Service loads JSON files | Service calls `/api/catalogue` API |
+| In-memory filtering | Database queries with adapter tags |
+| Static content | Dynamic, database-backed content |
+
+**No component changes required** - components that use the service layer will work unchanged in Phase 1.
 
 ## Version History
 
