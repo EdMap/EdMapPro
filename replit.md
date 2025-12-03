@@ -27,6 +27,14 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
   - Readiness scoring with exit triggers (min sprints + user choice OR ≥85% readiness OR max sprints)
   - Progress dashboard UI showing readiness, sprint progress, and graduation eligibility
   - React Query hooks for all progression data (use-progression.ts)
+- **Template-Driven Sprint Generation (Phase 4)**: A catalogue-based system for generating varied sprint content. Features include:
+  - Template schema for bugs, features, and soft skills with context variables
+  - 15 initial templates (7 bug, 4 feature, 4 soft skill) organized in shared/catalogue/templates/
+  - SprintGeneratorService with competency-aware selection and theme rotation
+  - Context substitution engine for filling template variables based on company/industry
+  - Integration with progression engine via startNewSprint method
+  - Quality guardrails: validateAndRepairBacklog for crash-proof template handling
+  - Fallback mechanisms for exhausted templates and missing content
 
 ## External Dependencies
 
