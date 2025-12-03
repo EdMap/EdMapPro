@@ -21,6 +21,12 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
 - **Job Journey System**: Manages the job application lifecycle, including a searchable Job Board, AI-feedback-enabled Application Flow, and a Journey Timeline, integrating with the Interview Simulator.
 - **Interview Simulator**: An AI-powered tool offering dual-mode interview experiences with multi-persona AI teams, level calibration, and a two-phase AI agent architecture (Preparation and Conversation). It includes a question backlog, real-time evaluation, smart follow-ups, and comprehensive final reports.
 - **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work in dual-mode. It features multi-character AI teams, role-based practice, various project scenarios, persistent progress saving, dynamic collaboration via multi-channel communication, interactive project artifacts, and specialized session components (e.g., `InternOnboardingSession`).
+- **Narrative Progression System (Phase 3)**: A dynamic journey system with configurable progression paths (Intern→Junior, Junior→Mid, Mid→Senior), story arcs (Onboarding, Sprints, Graduation), and competency tracking. Features include:
+  - Level-agnostic sprint generation engine (same code, different content packs per level)
+  - Delta calculator for competency changes with mastery bands (Explorer → Contributor → Junior Ready)
+  - Readiness scoring with exit triggers (min sprints + user choice OR ≥85% readiness OR max sprints)
+  - Progress dashboard UI showing readiness, sprint progress, and graduation eligibility
+  - React Query hooks for all progression data (use-progression.ts)
 
 ## External Dependencies
 
