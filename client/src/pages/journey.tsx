@@ -1480,6 +1480,14 @@ export default function Journey() {
     enabled: !!user?.id,
   });
 
+  // Check for active journey
+  const { data: journeys } = useQuery<Array<{ id: number; status: string; journeyMetadata: any }>>({
+    queryKey: ['/api/journeys'],
+    enabled: !!user?.id,
+  });
+
+  const activeJourney = journeys?.find(j => j.status === 'in_progress' || j.status === 'active');
+
   // Auto-select first application or most promising
   const selectedApplication = applications?.find(a => a.id === selectedId) 
     || applications?.[0] 
@@ -1517,6 +1525,33 @@ export default function Journey() {
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
+      {/* Active Journey Banner */}
+      {activeJourney && (
+        <div className="p-4 pb-0 bg-white dark:bg-gray-900">
+          <Link href={`/journey/${activeJourney.id}`}>
+            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/20 rounded-lg p-2">
+                    <Rocket className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">Active Onboarding Journey</h3>
+                    <p className="text-blue-100 text-sm">
+                      {activeJourney.journeyMetadata?.companyName || 'Your Company'} - Sprint in progress
+                    </p>
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" className="bg-white/20 text-white border-0 hover:bg-white/30">
+                  Open Dashboard
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
+      
       {/* Journey Mode Banner */}
       <div className="p-4 pb-0 bg-white dark:bg-gray-900">
         <ModeBanner mode="journey" variant="banner" />

@@ -2241,6 +2241,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Phase 5: Journey & Sprint Management APIs
   // ============================================
 
+  // GET /api/journeys - Get all journeys for current user
+  app.get("/api/journeys", async (req, res) => {
+    try {
+      // For MVP, use user ID 1
+      const userId = 1;
+      const journeys = await storage.getUserJourneys(userId);
+      res.json(journeys);
+    } catch (error) {
+      console.error("Failed to get journeys:", error);
+      res.status(500).json({ message: "Failed to get journeys" });
+    }
+  });
+
   // GET /api/journeys/:journeyId/dashboard - Get full journey dashboard
   app.get("/api/journeys/:journeyId/dashboard", async (req, res) => {
     try {

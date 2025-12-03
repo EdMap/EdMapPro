@@ -350,6 +350,7 @@ export class MemStorage implements IStorage {
     
     // Seed job journey data
     this.seedJobJourneyData();
+    this.seedSprintWorkflowData();
   }
 
   private async seedWorkspaceData() {
@@ -2452,6 +2453,215 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         totalTime: 285 * 60, // Total interview duration in seconds
       });
     }
+  }
+
+  private async seedSprintWorkflowData() {
+    // Check if sprint workflow data already exists - skip if so
+    const existingJourneys = await db.select().from(userJourneys).limit(1);
+    if (existingJourneys.length > 0) {
+      console.log('Sprint workflow data already exists, skipping seed...');
+      return;
+    }
+
+    console.log('Seeding sprint workflow data...');
+
+    // First, create a progression path
+    const [progressionPath] = await db.insert(progressionPaths).values({
+      slug: 'intern-to-junior',
+      entryLevel: 'intern',
+      exitLevel: 'junior',
+      role: 'developer',
+      displayName: 'Intern to Junior Developer',
+      description: 'Progress from Intern to Junior Ready through realistic work simulations',
+      requirements: { minSprints: 3, maxSprints: 8, readinessThreshold: 85 },
+      difficultyProgression: { startDifficulty: 1, endDifficulty: 3, curve: 'linear' },
+      exitBadge: 'Junior Ready Developer',
+      competencyFocus: ['code-quality', 'git-workflow', 'communication', 'problem-solving'],
+      estimatedDuration: '4-8 weeks',
+    }).returning();
+
+    // Create a project template
+    const [projectTemplate] = await db.insert(projectTemplates).values({
+      slug: 'novapay-payment-platform',
+      name: 'NovaPay Payment Platform',
+      description: 'A fintech payment processing platform for small businesses',
+      industry: 'fintech',
+      domain: 'payments',
+      teamTopology: { structure: 'squad', size: 6 },
+      team: [
+        { id: 'tm-1', name: 'Sarah Chen', role: 'Engineering Manager', avatar: null },
+        { id: 'tm-2', name: 'Marcus Johnson', role: 'Senior Developer', avatar: null },
+        { id: 'tm-3', name: 'Priya Patel', role: 'Product Manager', avatar: null },
+        { id: 'tm-4', name: 'Alex Rivera', role: 'QA Engineer', avatar: null },
+      ],
+      codebase: { language: 'typescript', framework: 'react', complexity: 'medium' },
+      backlogThemes: ['payments', 'user-management', 'dashboard', 'notifications'],
+      bugTemplates: ['null-pointer', 'ui-responsive', 'api-error-handling'],
+      featureTemplates: ['add-field', 'loading-state', 'validation'],
+      softSkillPacks: ['standup', 'code-review', 'pair-programming'],
+      sprintCadence: 10,
+      techStack: ['TypeScript', 'React', 'Node.js', 'PostgreSQL'],
+      language: 'typescript',
+      progressionPathId: progressionPath.id,
+    }).returning();
+
+    // Create a journey for user 1 with accepted application
+    const journey = await this.createJourney({
+      userId: 1,
+      progressionPathId: progressionPath.id,
+      projectTemplateId: projectTemplate.id,
+      jobApplicationId: 5, // Link to existing accepted application
+      status: 'in_progress',
+      currentArcId: null,
+      currentSprintNumber: 1,
+      completedSprints: 0,
+      readinessScore: 25,
+      exitTrigger: null,
+      journeyMetadata: {
+        companyName: 'NovaPay',
+        role: 'Junior Developer',
+        level: 'intern',
+      },
+    });
+
+    // Create a journey arc first
+    const [arc] = await db.insert(journeyArcs).values({
+      journeyId: journey.id,
+      arcType: 'sprint',
+      arcOrder: 1,
+      status: 'active',
+      arcMetadata: { theme: 'Onboarding' },
+    }).returning();
+
+    // Update journey with current arc
+    await db.update(userJourneys)
+      .set({ currentArcId: arc.id })
+      .where(eq(userJourneys.id, journey.id));
+
+    // Create the first sprint with proper schema structure
+    const [sprint] = await db.insert(sprints).values({
+      arcId: arc.id,
+      sprintNumber: 1,
+      goal: 'Complete onboarding and deliver first bug fix',
+      theme: 'Onboarding',
+      backlog: [
+        { id: 1, title: 'Fix login button', type: 'bug', points: 3 },
+        { id: 2, title: 'Add loading spinner', type: 'feature', points: 2 },
+        { id: 3, title: 'Review documentation', type: 'task', points: 1 },
+        { id: 4, title: 'Fix null pointer', type: 'bug', points: 5 },
+        { id: 5, title: 'Update profile API', type: 'feature', points: 2 },
+      ],
+      userTickets: [1, 2, 3], // Ticket IDs assigned to user
+      teamTickets: [4, 5], // Ticket IDs for AI team
+      storyPointsTarget: 13,
+      storyPointsCompleted: 0,
+      ceremonies: {
+        planning: { status: 'pending', scheduledDay: 1 },
+        standup: { status: 'pending', scheduledDay: 2 },
+        review: { status: 'pending', scheduledDay: 10 },
+        retrospective: { status: 'pending', scheduledDay: 10 },
+      },
+      sprintState: { currentDay: 1, phase: 'planning' },
+    }).returning();
+
+    // Create sprint tickets
+    const ticketData = [
+      {
+        sprintId: sprint.id,
+        title: 'Fix login button not responding on mobile',
+        description: 'Users report that the login button on mobile devices does not respond to taps. Investigate and fix the issue.',
+        type: 'bug' as const,
+        priority: 'high' as const,
+        status: 'todo' as const,
+        storyPoints: 3,
+        acceptanceCriteria: ['Login button responds to taps on iOS and Android', 'No regression on desktop'],
+        labels: ['mobile', 'urgent'],
+        gitBranch: null,
+        prUrl: null,
+      },
+      {
+        sprintId: sprint.id,
+        title: 'Add loading spinner to dashboard',
+        description: 'The dashboard currently shows a blank screen while loading data. Add a loading spinner for better UX.',
+        type: 'feature' as const,
+        priority: 'medium' as const,
+        status: 'todo' as const,
+        storyPoints: 2,
+        acceptanceCriteria: ['Spinner displays while data is loading', 'Spinner disappears when data loads'],
+        labels: ['ux', 'dashboard'],
+        gitBranch: null,
+        prUrl: null,
+      },
+      {
+        sprintId: sprint.id,
+        title: 'Review onboarding documentation',
+        description: 'Read through the developer onboarding docs and note any questions or unclear sections.',
+        type: 'feature' as const,
+        priority: 'low' as const,
+        status: 'todo' as const,
+        storyPoints: 1,
+        acceptanceCriteria: ['Docs reviewed', 'Questions documented'],
+        labels: ['onboarding'],
+        gitBranch: null,
+        prUrl: null,
+      },
+      {
+        sprintId: sprint.id,
+        title: 'Fix null pointer in payment processing',
+        description: 'The payment processing module throws a null pointer exception when the user has no saved cards.',
+        type: 'bug' as const,
+        priority: 'high' as const,
+        status: 'todo' as const,
+        storyPoints: 5,
+        acceptanceCriteria: ['No crash when user has no saved cards', 'Proper error message shown'],
+        labels: ['payments', 'critical'],
+        gitBranch: null,
+        prUrl: null,
+      },
+      {
+        sprintId: sprint.id,
+        title: 'Update user profile API endpoint',
+        description: 'Add email verification field to the user profile API response.',
+        type: 'feature' as const,
+        priority: 'medium' as const,
+        status: 'todo' as const,
+        storyPoints: 2,
+        acceptanceCriteria: ['API returns emailVerified field', 'Field is boolean'],
+        labels: ['api', 'user-profile'],
+        gitBranch: null,
+        prUrl: null,
+      },
+    ];
+
+    for (const ticket of ticketData) {
+      await this.createSprintTicket(ticket);
+    }
+
+    // Create ceremonies for the sprint
+    const ceremonyData = [
+      {
+        sprintId: sprint.id,
+        ceremonyType: 'planning' as const,
+        status: 'pending' as const,
+        scheduledFor: new Date(),
+        duration: 60,
+        outcome: null,
+      },
+      {
+        sprintId: sprint.id,
+        ceremonyType: 'standup' as const,
+        status: 'pending' as const,
+        scheduledFor: new Date(),
+        duration: 15,
+        outcome: null,
+      },
+    ];
+
+    for (const ceremony of ceremonyData) {
+      await this.createCeremony(ceremony);
+    }
+
+    console.log('Sprint workflow data seeded successfully!');
   }
 
   // Phase 1: Competency operations
