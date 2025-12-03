@@ -1,7 +1,28 @@
 # edmap: AI-Powered B2B Onboarding Platform
 
 ## Overview
-edmap is an AI-powered B2B onboarding platform designed to accelerate enterprise onboarding through workspace simulators. It offers three core simulation products: Interview Simulator, Negotiation Simulator, and Workspace Simulator, covering the professional journey from pre-hire to post-hire integration. The platform aims to enhance real-world collaboration skills within a virtual tech team environment, allowing users to practice various roles in dynamic project scenarios with AI-powered teammates. The project's ambition includes tailoring curriculum-aligned journeys for educational institutions like 42 London, starting with intern-level positions and progressing to advanced scenarios across various tech specializations.
+edmap is an AI-powered B2B onboarding platform designed to help students progress from **Intern → Junior Ready** through realistic professional simulations. The platform exposes learners to real-world challenges—both technical (code bugs, git issues, CI/CD) and soft (time pressure, peer conflicts, manager evaluations, feedback)—so they stand out when graduating from any training program.
+
+## Product Vision
+See `docs/PRODUCT_ROADMAP.md` for the complete product strategy and implementation plan.
+
+### Core Value Proposition
+- **Without edmap**: Graduate with theoretical knowledge, struggle with first job challenges
+- **With edmap**: Graduate with simulated work experience, demonstrated readiness, professional portfolio
+
+### Two Paths
+1. **Journey Path**: Guided, story-driven experience where problems arise organically in narrative context
+2. **Practice Path**: Targeted, drill-focused experience where users pick specific skills to practice
+
+### Competency Framework
+- **Three Layers**: Foundational Habits → Core Delivery Skills → Professional Impact
+- **Mastery Bands**: Explorer → Contributor → Junior Ready
+- **Unified Tracking**: Both Interview and Workspace simulators feed the same progression engine
+
+### Multi-Role Support (Planned)
+- Developer, PM, QA, DevOps, Data Science
+- Role Adapters: Technical problems change per role, soft problems stay universal
+- Language Adapters (Developer): C/C++, JavaScript, Python
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -14,6 +35,24 @@ The platform features a fixed sidebar navigation with a responsive header and de
 ### Technical Implementations
 edmap is built as a monorepo with a React 18 frontend (TypeScript, Vite, shadcn/ui, Tailwind CSS, TanStack Query, Wouter, React Hook Form with Zod) and a Node.js Express.js backend (TypeScript, Drizzle ORM, PostgreSQL). AI integration is powered by Groq via LangChain.js, and session management uses Express sessions with a PostgreSQL store.
 
+### Unified Adapter + Catalogue Architecture (Target State)
+```
+SIMULATION ENGINE (Shared)
+├── Interview Simulator
+│   ├── Role Adapters (Developer, PM, QA, DevOps, Data Science)
+│   ├── Level Adapters (Intern, Junior, Mid, Senior)
+│   └── Catalogue (Behavioral Qs, Technical Qs, Case Studies)
+├── Workspace Simulator
+│   ├── Role Adapters (Developer, PM, QA, DevOps, Data Science)
+│   ├── Language Adapters (C/C++, JavaScript, Python)
+│   └── Catalogue (Technical Drills, Soft Skills Drills, Sprint Arcs)
+└── Shared Components
+    ├── Competency Framework
+    ├── Readiness Engine
+    ├── Portfolio System
+    └── AI Orchestrator
+```
+
 ### Feature Specifications
 - **Job Journey System**: Manages the entire job application lifecycle, including a searchable Job Board, an Application Flow with AI-generated feedback, and a Journey Timeline to track progress. It supports various company profiles and interview pipelines, integrating seamlessly with the Interview Simulator.
 - **Interview Simulator**: An AI-powered tool offering dual-mode (Practice and Journey) interview experiences. It features multi-persona team interviews with distinct AI roles, level calibration for questions, and a two-phase AI agent architecture (Preparation and Conversation) for dynamic, adaptive interviews. Key elements include a question backlog system, real-time evaluation, smart follow-ups, proactive answer detection, and a comprehensive final report.
@@ -21,6 +60,18 @@ edmap is built as a monorepo with a React 18 frontend (TypeScript, Vite, shadcn/
 
 ### System Design Choices
 The system uses a monorepo structure to organize `client/`, `server/`, `shared/`, and `migrations/` directories. Dual-mode architectures are consistently applied across simulators to provide both structured, context-aware experiences (Journey Mode) and flexible, skill-building opportunities (Practice Mode). AI agent architectures are modular, utilizing LangChain for orchestrating specialized chains to manage complex interactions and evaluations.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `docs/PRODUCT_ROADMAP.md` | Complete product strategy and implementation plan |
+| `client/src/components/simulation/intern-onboarding-session.tsx` | Current workspace simulation (4k lines, to be modularized) |
+| `client/src/pages/workspace-journey.tsx` | Journey mode entry point |
+| `client/src/pages/workspace-practice.tsx` | Practice mode entry point |
+| `client/src/pages/interview-simulator.tsx` | Interview simulator |
+| `server/services/workspace-orchestrator.ts` | AI team member responses |
+| `shared/schema.ts` | Database schema |
 
 ## External Dependencies
 
@@ -34,7 +85,28 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 ### Authentication
 - Session-based authentication is implemented.
 
+## Implementation Roadmap
+
+| Phase | Duration | Focus |
+|-------|----------|-------|
+| Phase 0 | 1-2 weeks | Extract content to JSON (both simulators) |
+| Phase 1 | 2-3 weeks | Shared schema, catalogue API, seed content |
+| Phase 2 | 2-3 weeks | Role + Level adapters (both simulators) |
+| Phase 3 | 2 weeks | Progression engine, readiness tracking |
+| Phase 4 | 3-4 weeks | New UX (Journey dashboard, Practice browser) |
+| Phase 5 | 2-3 weeks | Multi-role expansion (PM, QA, DevOps, DS) |
+| Phase 6 | 2 weeks | Portfolio + credentialing |
+| Phase 7 | 1-2 weeks | Language adapters (C/C++, Python) |
+
+See `docs/PRODUCT_ROADMAP.md` for detailed phase descriptions.
+
 ## Recent Updates
+
+### Strategic Planning (December 2025)
+- Defined competency-based progression framework (Explorer → Contributor → Junior Ready)
+- Designed unified adapter + catalogue architecture for both simulators
+- Created comprehensive product roadmap with phased implementation plan
+- Established multi-role support strategy (Developer, PM, QA, DevOps, Data Science)
 
 ### Team Interview UI Improvements (November 2025)
 - Added persona-specific styling for team interview messages with distinct colors per role:
