@@ -1,0 +1,140 @@
+{
+  "id": "unclear-requirements",
+  "version": "1.0.0",
+  "category": "soft_skill",
+  "name": "Unclear Requirements",
+  "summary": "Ticket has vague or conflicting requirements",
+  "skillType": "ambiguity",
+  "competencies": ["communication", "critical-thinking", "requirements-clarification", "proactiveness"],
+  "trigger": "start_of_day",
+  "contextVariables": [
+    {
+      "key": "ticketTitle",
+      "description": "The vague ticket",
+      "examples": {
+        "fintech": "Improve payment flow",
+        "healthcare": "Make patient search better",
+        "ecommerce": "Fix checkout issues",
+        "saas": "Enhance dashboard"
+      }
+    },
+    {
+      "key": "pm",
+      "description": "Who wrote the ticket",
+      "examples": {
+        "fintech": "Priya",
+        "healthcare": "Amanda",
+        "ecommerce": "Derek",
+        "saas": "Michelle"
+      }
+    },
+    {
+      "key": "ambiguity",
+      "description": "What's unclear",
+      "examples": {
+        "fintech": "no acceptance criteria, unclear scope",
+        "healthcare": "conflicting stakeholder input in comments",
+        "ecommerce": "multiple possible interpretations",
+        "saas": "missing technical requirements"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "setup": "You pick up your next ticket: '{ticketTitle}'. Reading through it, you notice {ambiguity}. The ticket was written by {pm}.",
+    "message": "Ticket: {ticketTitle}\n\nDescription: We need to improve this area based on user feedback. Please make it better and more user-friendly.\n\nAcceptance Criteria: TBD",
+    "sender": "Jira Notification",
+    "senderRole": "System"
+  },
+  "responseOptions": [
+    {
+      "id": "just-start",
+      "label": "Just start building",
+      "description": "I'll interpret it how I think makes sense and start coding.",
+      "isRecommended": false,
+      "evaluationNotes": "Risk of building the wrong thing and wasted effort"
+    },
+    {
+      "id": "wait-silently",
+      "label": "Wait for clarification",
+      "description": "I'll wait until someone clarifies what this means.",
+      "isRecommended": false,
+      "evaluationNotes": "Passive approach delays progress"
+    },
+    {
+      "id": "ask-specific-questions",
+      "label": "Ask specific questions",
+      "description": "Message PM with specific questions about scope, success criteria, and priority",
+      "isRecommended": true,
+      "evaluationNotes": "Proactive clarification before starting work"
+    },
+    {
+      "id": "propose-interpretation",
+      "label": "Propose your interpretation",
+      "description": "Share your understanding: 'I'm interpreting this as X, Y, Z - does that match your intent?'",
+      "isRecommended": true,
+      "evaluationNotes": "Shows initiative and moves conversation forward"
+    },
+    {
+      "id": "request-meeting",
+      "label": "Request quick sync",
+      "description": "This needs discussion - can we do a 15-min refinement call?",
+      "isRecommended": true,
+      "evaluationNotes": "Efficient for complex ambiguity"
+    }
+  ],
+  "evaluationCriteria": [
+    {
+      "dimension": "proactiveness",
+      "question": "Did they take initiative to clarify?",
+      "weight": 30
+    },
+    {
+      "dimension": "communication",
+      "question": "Did they ask clear, specific questions?",
+      "weight": 30
+    },
+    {
+      "dimension": "critical-thinking",
+      "question": "Did they identify what was unclear?",
+      "weight": 25
+    },
+    {
+      "dimension": "professionalism",
+      "question": "Did they handle the ambiguity constructively?",
+      "weight": 15
+    }
+  ],
+  "followUpTemplates": [
+    {
+      "condition": "user_asked_questions",
+      "message": "Great questions! Let me clarify: the main goal is [specific goal]. For scope, let's focus on [specific scope]. Does that help?"
+    },
+    {
+      "condition": "user_proposed_interpretation",
+      "message": "That's close! Your points 1 and 2 are spot on. For point 3, we actually want [correction]. Want me to update the ticket with these details?"
+    },
+    {
+      "condition": "user_requested_meeting",
+      "message": "Good idea - this needs more discussion. I'm free at 2pm today. I'll also pull in [stakeholder] since they had input on this."
+    },
+    {
+      "condition": "user_just_started",
+      "message": "[After they submit PR] Hey, this looks good but it's not quite what we needed. The goal was actually [different goal]. Can we chat about adjustments?"
+    }
+  ],
+  "industryExamples": {
+    "fintech": {
+      "context": "Vague improvement request",
+      "specificMessage": "Ticket: Improve payment flow\n\nMake the payment experience better based on recent user feedback about confusion. Should be more intuitive."
+    },
+    "healthcare": {
+      "context": "Conflicting stakeholder input",
+      "specificMessage": "Ticket: Enhance patient search\n\nComment from Dr. Smith: 'Need faster search'\nComment from Nurse Team: 'Need more filter options'\nNo clear priority given."
+    },
+    "ecommerce": {
+      "context": "Missing scope definition",
+      "specificMessage": "Ticket: Fix checkout issues\n\n'Users are having trouble checking out. Please investigate and fix.' No specific issues listed."
+    }
+  },
+  "cooldownSprints": 2
+}

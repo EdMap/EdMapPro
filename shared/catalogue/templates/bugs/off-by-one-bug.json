@@ -1,0 +1,99 @@
+{
+  "id": "off-by-one-error",
+  "version": "1.0.0",
+  "category": "bug",
+  "name": "Off-By-One Error",
+  "summary": "Loop or array index is one position off, causing incorrect results",
+  "description": "A classic bug where array indexing or loop boundaries are off by one, causing missing items, extra iterations, or index out of bounds errors.",
+  "difficulty": ["guided", "supported"],
+  "roles": ["developer"],
+  "languages": ["javascript", "python", "c_cpp"],
+  "competencies": ["debugging", "attention-to-detail", "array-manipulation"],
+  "contextVariables": [
+    {
+      "key": "dataType",
+      "description": "What data is being processed",
+      "examples": {
+        "fintech": "transaction list",
+        "healthcare": "patient records",
+        "ecommerce": "product inventory",
+        "saas": "user list"
+      }
+    },
+    {
+      "key": "symptom",
+      "description": "What users observe",
+      "examples": {
+        "fintech": "last transaction missing from report",
+        "healthcare": "first patient skipped in batch",
+        "ecommerce": "wrong item count in cart",
+        "saas": "pagination shows wrong page count"
+      }
+    },
+    {
+      "key": "context",
+      "description": "Where the bug manifests",
+      "examples": {
+        "fintech": "monthly statement generation",
+        "healthcare": "patient list export",
+        "ecommerce": "inventory sync",
+        "saas": "user directory pagination"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "{symptom} in {context}",
+    "ticketDescription": "Users report that {symptom}. This appears to be an off-by-one error in our {context} logic. The issue affects data display and could lead to incorrect reporting.",
+    "acceptanceCriteria": [
+      "All items are correctly included in the output",
+      "No items are duplicated or skipped",
+      "Edge cases (empty list, single item) work correctly"
+    ],
+    "filesToInvestigate": [
+      "src/utils/{feature}Processor.ts",
+      "src/services/{feature}Service.ts"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "The loop uses incorrect boundary conditions, causing the last item to be skipped.",
+    "codeTemplate": "function processItems(items) {\n  const results = [];\n  \n  // Bug: Using < items.length - 1 skips the last item\n  for (let i = 0; i < items.length - 1; i++) {\n    results.push(transform(items[i]));\n  }\n  \n  return results;\n}\n\n// Fix the loop boundary\nfunction processItemsFixed(items) {\n  const results = [];\n  \n  for (let i = 0; i ___BLANK_1___; i++) {\n    results.push(transform(items[i]));\n  }\n  \n  return results;\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["< items.length", "<= items.length - 1", "< items.length"],
+        "hint": "Think about what the last valid index is for an array"
+      }
+    ],
+    "fixedCode": "function processItemsFixed(items) {\n  const results = [];\n  \n  for (let i = 0; i < items.length; i++) {\n    results.push(transform(items[i]));\n  }\n  \n  return results;\n}",
+    "successMessage": "Correct! Using i < items.length ensures all items are processed."
+  },
+  "hints": [
+    "What is the last valid index for an array of length n?",
+    "Walk through the loop manually with a small example",
+    "Try with an array of 3 items - which indices should be accessed?"
+  ],
+  "commonMistakes": [
+    "Confusing < with <= in loop conditions",
+    "Starting at index 1 instead of 0",
+    "Using length instead of length - 1 for the last index access"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "statement generation",
+      "specificContext": "Monthly statements missing the last day's transactions",
+      "testScenario": "Generate statement for a month with 31 days"
+    },
+    "healthcare": {
+      "feature": "batch processing",
+      "specificContext": "Patient notification batch skips last patient",
+      "testScenario": "Send reminders to a list of 10 patients"
+    },
+    "ecommerce": {
+      "feature": "cart totaling",
+      "specificContext": "Cart total excludes the last added item",
+      "testScenario": "Add 5 items to cart and check total"
+    }
+  },
+  "cooldownSprints": 2
+}

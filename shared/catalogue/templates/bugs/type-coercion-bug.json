@@ -1,0 +1,99 @@
+{
+  "id": "type-coercion-arithmetic",
+  "version": "1.0.0",
+  "category": "bug",
+  "name": "Type Coercion in Arithmetic",
+  "summary": "String concatenation instead of number addition due to type coercion",
+  "description": "A JavaScript-specific bug where arithmetic operations produce unexpected results because one operand is a string, causing concatenation instead of addition.",
+  "difficulty": ["guided", "supported"],
+  "roles": ["developer"],
+  "languages": ["javascript"],
+  "competencies": ["debugging", "javascript-fundamentals", "type-awareness"],
+  "contextVariables": [
+    {
+      "key": "calculation",
+      "description": "What is being calculated",
+      "examples": {
+        "fintech": "transaction total",
+        "healthcare": "dosage calculation",
+        "ecommerce": "cart subtotal",
+        "saas": "usage metrics"
+      }
+    },
+    {
+      "key": "symptom",
+      "description": "The incorrect result users see",
+      "examples": {
+        "fintech": "total shows 1050 instead of 15",
+        "healthcare": "dosage shows 52 instead of 7",
+        "ecommerce": "subtotal is absurdly high",
+        "saas": "usage stats look wrong"
+      }
+    },
+    {
+      "key": "source",
+      "description": "Where the string value comes from",
+      "examples": {
+        "fintech": "API response",
+        "healthcare": "form input",
+        "ecommerce": "price from database",
+        "saas": "URL query parameter"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "{calculation} shows incorrect value - {symptom}",
+    "ticketDescription": "The {calculation} is displaying wildly incorrect numbers. For example, adding 10 + 5 shows as 105. This appears to be a type coercion issue where values from {source} are being treated as strings.",
+    "acceptanceCriteria": [
+      "All arithmetic operations produce correct numeric results",
+      "Input values are properly converted to numbers",
+      "Edge cases (empty, null, non-numeric) are handled gracefully"
+    ],
+    "filesToInvestigate": [
+      "src/utils/calculations.ts",
+      "src/components/{Feature}Calculator.tsx"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "Values from an API are strings, but they're being used in arithmetic without conversion.",
+    "codeTemplate": "function calculateTotal(items) {\n  let total = 0;\n  \n  for (const item of items) {\n    // Bug: item.price is a string from API\n    // \"10\" + \"5\" = \"105\" instead of 15\n    total = total + item.price;\n  }\n  \n  return total;\n}\n\n// Fix: Convert to number before adding\nfunction calculateTotalFixed(items) {\n  let total = 0;\n  \n  for (const item of items) {\n    total = total + ___BLANK_1___;\n  }\n  \n  return total;\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["Number(item.price)", "parseFloat(item.price)", "+item.price", "parseInt(item.price, 10)"],
+        "hint": "Convert the string to a number before the arithmetic operation"
+      }
+    ],
+    "fixedCode": "function calculateTotalFixed(items) {\n  let total = 0;\n  \n  for (const item of items) {\n    total = total + Number(item.price);\n  }\n  \n  return total;\n}",
+    "successMessage": "Converting to Number ensures proper arithmetic instead of string concatenation!"
+  },
+  "hints": [
+    "Check the types of values being added - are they numbers or strings?",
+    "JavaScript's + operator concatenates if either operand is a string",
+    "Use Number(), parseFloat(), or the unary + to convert strings"
+  ],
+  "commonMistakes": [
+    "Using parseInt for decimal values (loses precision)",
+    "Not handling NaN when conversion fails",
+    "Assuming API values are always numbers"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "transaction sum",
+      "specificContext": "Account balance shows 10020030 instead of 150",
+      "testScenario": "Sum three transactions: $100, $200, $300"
+    },
+    "healthcare": {
+      "feature": "medication dosage",
+      "specificContext": "Total weekly dose calculation is wrong",
+      "testScenario": "Calculate 7 days × 2 pills where values come from form"
+    },
+    "ecommerce": {
+      "feature": "cart total",
+      "specificContext": "Cart shows $9991999 for two $19.99 items",
+      "testScenario": "Add two items with prices from product API"
+    }
+  },
+  "cooldownSprints": 2
+}

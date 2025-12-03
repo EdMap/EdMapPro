@@ -1,0 +1,89 @@
+{
+  "id": "stale-closure",
+  "version": "1.0.0",
+  "category": "bug",
+  "name": "Stale Closure",
+  "summary": "Event handler or callback uses outdated state value",
+  "description": "A React-specific bug where a callback function captures an old value from a closure and doesn't see updated state, causing the UI to behave unexpectedly.",
+  "difficulty": ["supported", "independent"],
+  "roles": ["developer"],
+  "languages": ["javascript"],
+  "competencies": ["debugging", "react-hooks", "closures"],
+  "contextVariables": [
+    {
+      "key": "feature",
+      "description": "The feature with stale data",
+      "examples": {
+        "fintech": "real-time balance display",
+        "healthcare": "live patient monitoring",
+        "ecommerce": "shopping cart count",
+        "saas": "notification counter"
+      }
+    },
+    {
+      "key": "symptom",
+      "description": "What users experience",
+      "examples": {
+        "fintech": "balance doesn't update on transactions",
+        "healthcare": "vitals show old readings",
+        "ecommerce": "cart badge shows wrong count",
+        "saas": "notification count stuck"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "{feature} shows stale data after updates",
+    "ticketDescription": "The {feature} intermittently shows outdated information. Users report that {symptom} even after the data should have changed. Refreshing the page fixes it temporarily.",
+    "acceptanceCriteria": [
+      "UI always reflects the current state",
+      "Callbacks use the latest values",
+      "No stale data after rapid updates"
+    ],
+    "filesToInvestigate": [
+      "src/components/{Feature}Display.tsx",
+      "src/hooks/use{Feature}.ts"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "The useEffect callback captures the initial value of count and never sees updates.",
+    "codeTemplate": "function Counter() {\n  const [count, setCount] = useState(0);\n  \n  useEffect(() => {\n    const interval = setInterval(() => {\n      // Bug: 'count' is captured from initial render (always 0)\n      console.log('Current count:', count);\n      setCount(count + 1); // Always sets to 1\n    }, 1000);\n    \n    return () => clearInterval(interval);\n  }, []); // Empty deps = stale closure\n  \n  return <div>{count}</div>;\n}\n\n// Fix: Use functional update\nfunction CounterFixed() {\n  const [count, setCount] = useState(0);\n  \n  useEffect(() => {\n    const interval = setInterval(() => {\n      setCount(___BLANK_1___); // Use functional update\n    }, 1000);\n    \n    return () => clearInterval(interval);\n  }, []);\n  \n  return <div>{count}</div>;\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["prev => prev + 1", "c => c + 1", "(prevCount) => prevCount + 1", "prevState => prevState + 1"],
+        "hint": "Pass a function to setState that receives the previous value"
+      }
+    ],
+    "fixedCode": "function CounterFixed() {\n  const [count, setCount] = useState(0);\n  \n  useEffect(() => {\n    const interval = setInterval(() => {\n      setCount(prev => prev + 1);\n    }, 1000);\n    \n    return () => clearInterval(interval);\n  }, []);\n  \n  return <div>{count}</div>;\n}",
+    "successMessage": "Functional updates always receive the latest state value, avoiding stale closures!"
+  },
+  "hints": [
+    "What value does 'count' have when the callback is created?",
+    "Consider using the functional form of setState",
+    "useRef can also help access current values in callbacks"
+  ],
+  "commonMistakes": [
+    "Adding state to useEffect deps (causes infinite loop)",
+    "Using ref when functional update would work",
+    "Not understanding when closures capture values"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "live balance",
+      "specificContext": "WebSocket updates don't reflect in the UI",
+      "testScenario": "Receive 5 rapid balance updates via WebSocket"
+    },
+    "healthcare": {
+      "feature": "patient vitals",
+      "specificContext": "Heart rate monitor shows stale readings",
+      "testScenario": "Monitor receiving updates every second"
+    },
+    "ecommerce": {
+      "feature": "cart counter",
+      "specificContext": "Adding items rapidly shows wrong count",
+      "testScenario": "Add 5 items to cart in quick succession"
+    }
+  },
+  "cooldownSprints": 3
+}

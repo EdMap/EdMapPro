@@ -1,0 +1,140 @@
+{
+  "id": "teammate-asks-help",
+  "version": "1.0.0",
+  "category": "soft_skill",
+  "name": "Teammate Asks for Help",
+  "summary": "A colleague needs your help while you're busy with your own work",
+  "skillType": "help",
+  "competencies": ["collaboration", "communication", "time-management", "mentorship"],
+  "trigger": "mid_sprint",
+  "contextVariables": [
+    {
+      "key": "teammate",
+      "description": "Who needs help",
+      "examples": {
+        "fintech": "Emma (Junior Developer)",
+        "healthcare": "Ryan (New Team Member)",
+        "ecommerce": "Sophie (Frontend Dev)",
+        "saas": "Carlos (Intern)"
+      }
+    },
+    {
+      "key": "theirProblem",
+      "description": "What they're stuck on",
+      "examples": {
+        "fintech": "debugging a payment webhook",
+        "healthcare": "understanding the FHIR API",
+        "ecommerce": "setting up the test environment",
+        "saas": "fixing a React state issue"
+      }
+    },
+    {
+      "key": "yourTask",
+      "description": "What you're currently working on",
+      "examples": {
+        "fintech": "the timezone bug (due tomorrow)",
+        "healthcare": "the patient dashboard (in code review)",
+        "ecommerce": "the checkout optimization (almost done)",
+        "saas": "the authentication refactor (blocking others)"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "setup": "You're focused on {yourTask} when you get a message from a teammate.",
+    "message": "Hey! Sorry to interrupt - I've been stuck on {theirProblem} for a couple hours now. I've tried a few things but can't figure it out. Would you have time to help me take a look?",
+    "sender": "{teammate}",
+    "senderRole": "Developer"
+  },
+  "responseOptions": [
+    {
+      "id": "drop-everything",
+      "label": "Drop everything to help",
+      "description": "Sure, let me stop what I'm doing. Share your screen!",
+      "isRecommended": false,
+      "evaluationNotes": "Helpful but may sacrifice your own deadlines"
+    },
+    {
+      "id": "flat-refuse",
+      "label": "Decline to help",
+      "description": "Sorry, I'm too busy right now. Maybe ask someone else?",
+      "isRecommended": false,
+      "evaluationNotes": "May harm team relationships and leaves colleague stuck"
+    },
+    {
+      "id": "schedule-time",
+      "label": "Schedule time to help",
+      "description": "I'd be happy to help! I'm in the middle of something right now - can I ping you in about an hour when I hit a stopping point?",
+      "isRecommended": true,
+      "evaluationNotes": "Balances helping with own responsibilities"
+    },
+    {
+      "id": "quick-pointer",
+      "label": "Give a quick pointer",
+      "description": "I can't dive deep right now, but quick thought: have you checked [specific thing]? That's usually the culprit. If that doesn't help, let's sync in an hour.",
+      "isRecommended": true,
+      "evaluationNotes": "Provides immediate value while managing time"
+    },
+    {
+      "id": "redirect-resource",
+      "label": "Point to resources",
+      "description": "I remember hitting something similar! Check out [docs/slack thread/wiki page] - that helped me. If you're still stuck after, ping me and we'll debug together.",
+      "isRecommended": true,
+      "evaluationNotes": "Empowers learning while offering backup support"
+    }
+  ],
+  "evaluationCriteria": [
+    {
+      "dimension": "helpfulness",
+      "question": "Did they try to help their teammate?",
+      "weight": 30
+    },
+    {
+      "dimension": "time-management",
+      "question": "Did they balance helping with their own work?",
+      "weight": 25
+    },
+    {
+      "dimension": "communication",
+      "question": "Did they respond kindly and clearly?",
+      "weight": 25
+    },
+    {
+      "dimension": "teaching",
+      "question": "Did they empower the teammate to learn?",
+      "weight": 20
+    }
+  ],
+  "followUpTemplates": [
+    {
+      "condition": "user_scheduled_time",
+      "message": "That would be great, thanks! I'll keep poking at it in the meantime. Just ping me whenever you're free."
+    },
+    {
+      "condition": "user_gave_pointer",
+      "message": "Oh I didn't think of that! Let me check... Actually that might be it! I'll try it and let you know. Thanks!"
+    },
+    {
+      "condition": "user_shared_resource",
+      "message": "Perfect, I'll check that out. Thanks for the pointer! I'll reach out if I'm still stuck."
+    },
+    {
+      "condition": "user_dropped_everything",
+      "message": "Oh you don't have to stop everything! But if you have a minute, that would be amazing."
+    }
+  ],
+  "industryExamples": {
+    "fintech": {
+      "context": "Complex integration issue",
+      "specificMessage": "Hey, I'm stuck on this Stripe webhook - it's not triggering correctly. I've checked the signature but something's off. Any ideas?"
+    },
+    "healthcare": {
+      "context": "New API learning curve",
+      "specificMessage": "I'm trying to integrate with the FHIR API but the auth flow is confusing. Could you walk me through how you set it up?"
+    },
+    "ecommerce": {
+      "context": "Environment setup",
+      "specificMessage": "I can't get the local environment to connect to the staging database. I followed the docs but getting connection refused. Help?"
+    }
+  },
+  "cooldownSprints": 2
+}

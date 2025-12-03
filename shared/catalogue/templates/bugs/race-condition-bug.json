@@ -1,0 +1,106 @@
+{
+  "id": "race-condition-async",
+  "version": "1.0.0",
+  "category": "bug",
+  "name": "Async Race Condition",
+  "summary": "Concurrent operations cause data inconsistency or duplicate actions",
+  "description": "A bug where two or more async operations execute in an unexpected order, causing data corruption, duplicate entries, or stale data being displayed.",
+  "difficulty": ["supported", "independent", "expert"],
+  "roles": ["developer"],
+  "languages": ["javascript", "python"],
+  "competencies": ["debugging", "async-programming", "state-management"],
+  "contextVariables": [
+    {
+      "key": "action",
+      "description": "The action that gets duplicated or corrupted",
+      "examples": {
+        "fintech": "payment processing",
+        "healthcare": "prescription submission",
+        "ecommerce": "order placement",
+        "saas": "form submission"
+      }
+    },
+    {
+      "key": "trigger",
+      "description": "What causes the race condition",
+      "examples": {
+        "fintech": "double-clicking the pay button",
+        "healthcare": "slow network causing retry",
+        "ecommerce": "impatient user clicking multiple times",
+        "saas": "browser back button during save"
+      }
+    },
+    {
+      "key": "consequence",
+      "description": "What goes wrong",
+      "examples": {
+        "fintech": "customer charged twice",
+        "healthcare": "duplicate prescriptions sent",
+        "ecommerce": "multiple orders created",
+        "saas": "data overwritten by stale response"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "{action} happens multiple times when {trigger}",
+    "ticketDescription": "We're seeing cases where {consequence}. This happens when users {trigger}. The button should be disabled after the first click, and we need to ensure idempotency.",
+    "acceptanceCriteria": [
+      "Button is disabled immediately after first click",
+      "Multiple rapid clicks only result in one {action}",
+      "Loading state is shown during processing",
+      "Error state allows retry"
+    ],
+    "filesToInvestigate": [
+      "src/components/{Action}Button.tsx",
+      "src/api/{action}Service.ts"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "The submit handler doesn't prevent multiple submissions while the first request is still in flight.",
+    "codeTemplate": "function SubmitButton({ onSubmit }) {\n  const [isLoading, setIsLoading] = useState(false);\n  \n  const handleClick = async () => {\n    // Bug: No check for existing request in flight\n    setIsLoading(true);\n    try {\n      await onSubmit();\n    } finally {\n      setIsLoading(false);\n    }\n  };\n  \n  return (\n    <button onClick={handleClick}>\n      Submit\n    </button>\n  );\n}\n\n// Fix: Prevent multiple submissions\nfunction SubmitButtonFixed({ onSubmit }) {\n  const [isLoading, setIsLoading] = useState(false);\n  \n  const handleClick = async () => {\n    if (___BLANK_1___) return; // Guard clause\n    \n    setIsLoading(true);\n    try {\n      await onSubmit();\n    } finally {\n      setIsLoading(false);\n    }\n  };\n  \n  return (\n    <button \n      onClick={handleClick}\n      disabled={___BLANK_2___}\n    >\n      {isLoading ? 'Processing...' : 'Submit'}\n    </button>\n  );\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["isLoading", "isLoading === true"],
+        "hint": "We should exit early if a request is already in progress"
+      },
+      {
+        "id": "blank2",
+        "placeholder": "___BLANK_2___",
+        "correctAnswers": ["isLoading", "{isLoading}"],
+        "hint": "The button should be disabled while loading"
+      }
+    ],
+    "fixedCode": "function SubmitButtonFixed({ onSubmit }) {\n  const [isLoading, setIsLoading] = useState(false);\n  \n  const handleClick = async () => {\n    if (isLoading) return;\n    \n    setIsLoading(true);\n    try {\n      await onSubmit();\n    } finally {\n      setIsLoading(false);\n    }\n  };\n  \n  return (\n    <button \n      onClick={handleClick}\n      disabled={isLoading}\n    >\n      {isLoading ? 'Processing...' : 'Submit'}\n    </button>\n  );\n}",
+    "successMessage": "The guard clause and disabled state prevent multiple submissions!"
+  },
+  "hints": [
+    "What happens if the user clicks while a request is already in flight?",
+    "Consider adding a guard clause at the start of the handler",
+    "The button should visually indicate it's processing"
+  ],
+  "commonMistakes": [
+    "Only disabling the button but not adding the guard clause",
+    "Not handling the error case (user should be able to retry)",
+    "Using a ref instead of state (won't trigger re-render)"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "payment button",
+      "specificContext": "Double-click on Pay Now charges the card twice",
+      "testScenario": "User on slow connection clicks pay multiple times"
+    },
+    "healthcare": {
+      "feature": "prescription submit",
+      "specificContext": "Clicking submit twice sends two prescriptions to pharmacy",
+      "testScenario": "Doctor clicks submit, sees no response, clicks again"
+    },
+    "ecommerce": {
+      "feature": "place order",
+      "specificContext": "Multiple orders created for single checkout",
+      "testScenario": "User impatient during checkout clicks order button 3 times"
+    }
+  },
+  "cooldownSprints": 3
+}

@@ -1,0 +1,87 @@
+{
+  "id": "loading-states",
+  "version": "1.0.0",
+  "category": "feature",
+  "name": "Loading States & Skeleton UI",
+  "summary": "Add loading indicators and skeleton screens for better perceived performance",
+  "description": "Implement loading states that provide visual feedback during async operations, improving perceived performance and user experience.",
+  "difficulty": ["guided", "supported"],
+  "roles": ["developer"],
+  "languages": ["javascript"],
+  "competencies": ["implementation", "user-experience", "frontend"],
+  "contextVariables": [
+    {
+      "key": "component",
+      "description": "The component needing loading states",
+      "examples": {
+        "fintech": "account dashboard",
+        "healthcare": "patient list",
+        "ecommerce": "product grid",
+        "saas": "data table"
+      }
+    },
+    {
+      "key": "loadingType",
+      "description": "Type of loading indicator needed",
+      "examples": {
+        "fintech": "skeleton cards",
+        "healthcare": "list placeholder",
+        "ecommerce": "image skeleton with shimmer",
+        "saas": "table rows skeleton"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "Add loading states to {component}",
+    "ticketDescription": "The {component} currently shows nothing while data loads, making the app feel slow. Add {loadingType} to provide visual feedback during loading.",
+    "acceptanceCriteria": [
+      "Skeleton UI appears immediately on page load",
+      "Skeleton matches the layout of actual content",
+      "Smooth transition from skeleton to content",
+      "Loading state for partial updates"
+    ],
+    "technicalRequirements": [
+      "Create reusable Skeleton components",
+      "Match skeleton dimensions to actual content",
+      "Add subtle animation (shimmer effect)",
+      "Handle loading state in data hooks"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "Create a skeleton component and use it while data loads.",
+    "codeTemplate": "// Skeleton component\nfunction Skeleton({ className }) {\n  return (\n    <div \n      className={`animate-pulse bg-gray-200 rounded ${className}`}\n    />\n  );\n}\n\n// Card with loading state\nfunction UserCard({ user, isLoading }) {\n  if (___BLANK_1___) {\n    return (\n      <div className=\"p-4 border rounded\">\n        <Skeleton className=\"h-12 w-12 rounded-full\" />\n        <Skeleton className=\"h-4 w-32 mt-2\" />\n        <Skeleton className=\"h-3 w-24 mt-1\" />\n      </div>\n    );\n  }\n  \n  return (\n    <div className=\"p-4 border rounded\">\n      <img src={user.avatar} className=\"h-12 w-12 rounded-full\" />\n      <h3 className=\"mt-2\">{user.name}</h3>\n      <p className=\"text-gray-500\">{user.email}</p>\n    </div>\n  );\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["isLoading", "isLoading === true", "loading"],
+        "hint": "Check the loading state prop to decide what to render"
+      }
+    ],
+    "solutionCode": "function Skeleton({ className }) {\n  return (\n    <div \n      className={`animate-pulse bg-gray-200 rounded ${className}`}\n    />\n  );\n}\n\nfunction UserCard({ user, isLoading }) {\n  if (isLoading) {\n    return (\n      <div className=\"p-4 border rounded\">\n        <Skeleton className=\"h-12 w-12 rounded-full\" />\n        <Skeleton className=\"h-4 w-32 mt-2\" />\n        <Skeleton className=\"h-3 w-24 mt-1\" />\n      </div>\n    );\n  }\n  \n  return (\n    <div className=\"p-4 border rounded\">\n      <img src={user.avatar} className=\"h-12 w-12 rounded-full\" />\n      <h3 className=\"mt-2\">{user.name}</h3>\n      <p className=\"text-gray-500\">{user.email}</p>\n    </div>\n  );\n}",
+    "successMessage": "The skeleton provides visual feedback while content loads!"
+  },
+  "hints": [
+    "Skeletons should match the size of the actual content",
+    "Use CSS animations for the shimmer effect",
+    "Consider using a library like react-loading-skeleton"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "transaction list",
+      "specificContext": "Skeleton rows while fetching transaction history",
+      "businessValue": "Feels faster, reduces perceived wait time"
+    },
+    "healthcare": {
+      "feature": "patient records",
+      "specificContext": "Card skeletons while loading patient data",
+      "businessValue": "Professional UX, reduces anxiety"
+    },
+    "ecommerce": {
+      "feature": "product grid",
+      "specificContext": "Image and text skeletons for product cards",
+      "businessValue": "Keeps users engaged during load"
+    }
+  },
+  "cooldownSprints": 2
+}

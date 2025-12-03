@@ -1167,3 +1167,182 @@ export interface OfferDetails {
   offerLetterSignatory: string;
   offerLetterSignatoryTitle: string;
 }
+
+// =====================================================
+// Phase 4: Dynamic Sprint Generation Templates
+// =====================================================
+
+export type TemplateCategory = 'bug' | 'feature' | 'soft_skill';
+export type TemplateDifficulty = 'guided' | 'supported' | 'independent' | 'expert';
+
+export interface ContextVariable {
+  key: string;
+  description: string;
+  examples: Record<string, string>;
+}
+
+export interface BugTemplate {
+  id: string;
+  version: string;
+  category: 'bug';
+  name: string;
+  summary: string;
+  description: string;
+  difficulty: TemplateDifficulty[];
+  roles: string[];
+  languages: string[];
+  competencies: string[];
+  contextVariables: ContextVariable[];
+  scenarioTemplate: {
+    ticketTitle: string;
+    ticketDescription: string;
+    acceptanceCriteria: string[];
+    filesToInvestigate: string[];
+  };
+  codeExercise: {
+    problemDescription: string;
+    codeTemplate: string;
+    blanks: {
+      id: string;
+      placeholder: string;
+      correctAnswers: string[];
+      hint: string;
+    }[];
+    fixedCode: string;
+    successMessage: string;
+  };
+  hints: string[];
+  commonMistakes: string[];
+  industryExamples: Record<string, {
+    feature: string;
+    specificContext: string;
+    testScenario: string;
+  }>;
+  cooldownSprints: number;
+}
+
+export interface FeatureTemplate {
+  id: string;
+  version: string;
+  category: 'feature';
+  name: string;
+  summary: string;
+  description: string;
+  difficulty: TemplateDifficulty[];
+  roles: string[];
+  languages: string[];
+  competencies: string[];
+  contextVariables: ContextVariable[];
+  scenarioTemplate: {
+    ticketTitle: string;
+    ticketDescription: string;
+    acceptanceCriteria: string[];
+    technicalRequirements: string[];
+  };
+  codeExercise: {
+    problemDescription: string;
+    codeTemplate: string;
+    blanks: {
+      id: string;
+      placeholder: string;
+      correctAnswers: string[];
+      hint: string;
+    }[];
+    solutionCode: string;
+    successMessage: string;
+  };
+  hints: string[];
+  industryExamples: Record<string, {
+    feature: string;
+    specificContext: string;
+    businessValue: string;
+  }>;
+  cooldownSprints: number;
+}
+
+export interface SoftSkillTemplate {
+  id: string;
+  version: string;
+  category: 'soft_skill';
+  name: string;
+  summary: string;
+  skillType: 'pressure' | 'feedback' | 'conflict' | 'ambiguity' | 'communication' | 'help' | 'mistakes';
+  competencies: string[];
+  trigger: 'start_of_day' | 'mid_sprint' | 'end_of_day' | 'after_activity' | 'random';
+  contextVariables: ContextVariable[];
+  scenarioTemplate: {
+    setup: string;
+    message: string;
+    sender: string;
+    senderRole: string;
+  };
+  responseOptions: {
+    id: string;
+    label: string;
+    description: string;
+    isRecommended: boolean;
+    evaluationNotes: string;
+  }[];
+  evaluationCriteria: {
+    dimension: string;
+    question: string;
+    weight: number;
+  }[];
+  followUpTemplates: {
+    condition: string;
+    message: string;
+  }[];
+  industryExamples: Record<string, {
+    context: string;
+    specificMessage: string;
+  }>;
+  cooldownSprints: number;
+}
+
+export type ProblemTemplate = BugTemplate | FeatureTemplate | SoftSkillTemplate;
+
+export interface SprintTheme {
+  id: string;
+  name: string;
+  description: string;
+  industries: string[];
+  suggestedTemplates: {
+    bugs: string[];
+    features: string[];
+    softSkills: string[];
+  };
+}
+
+export interface GeneratedSprintBacklog {
+  theme: SprintTheme;
+  tickets: {
+    templateId: string;
+    type: 'bug' | 'feature';
+    day: number;
+    appliedContext: Record<string, string>;
+    generatedTicket: {
+      title: string;
+      description: string;
+      acceptanceCriteria: string[];
+      difficulty: TemplateDifficulty;
+    };
+  }[];
+  softSkillEvents: {
+    templateId: string;
+    day: number;
+    trigger: string;
+    appliedContext: Record<string, string>;
+    generatedScenario: {
+      setup: string;
+      message: string;
+      sender: string;
+      senderRole: string;
+    };
+  }[];
+  ceremonies: {
+    planning: { day: number; script: string[] };
+    standups: { day: number; script: string[] }[];
+    review: { day: number; script: string[] };
+    retro: { day: number; script: string[] };
+  };
+}

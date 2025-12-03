@@ -1,0 +1,136 @@
+{
+  "id": "code-review-feedback",
+  "version": "1.0.0",
+  "category": "soft_skill",
+  "name": "Receiving Code Review Feedback",
+  "summary": "Senior engineer leaves critical feedback on your PR",
+  "skillType": "feedback",
+  "competencies": ["feedback-reception", "communication", "growth-mindset", "professionalism"],
+  "trigger": "after_activity",
+  "contextVariables": [
+    {
+      "key": "reviewer",
+      "description": "Who reviewed the code",
+      "examples": {
+        "fintech": "Marcus (Senior Engineer)",
+        "healthcare": "Dr. Chen (Tech Lead)",
+        "ecommerce": "Lisa (Principal Engineer)",
+        "saas": "Jordan (Staff Engineer)"
+      }
+    },
+    {
+      "key": "prTitle",
+      "description": "What the PR was about",
+      "examples": {
+        "fintech": "Fix timezone display",
+        "healthcare": "Add patient validation",
+        "ecommerce": "Implement cart caching",
+        "saas": "Refactor auth flow"
+      }
+    },
+    {
+      "key": "feedbackType",
+      "description": "Nature of the criticism",
+      "examples": {
+        "fintech": "code structure and naming",
+        "healthcare": "security concerns",
+        "ecommerce": "performance issues",
+        "saas": "test coverage gaps"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "setup": "You submitted your PR for '{prTitle}' and just received a code review notification.",
+    "message": "I've left some comments on your PR. The approach works but there are some issues with {feedbackType} that we should address before merging. A few of the comments might seem nitpicky but they're important for maintainability. Let me know if you have questions about any of them.",
+    "sender": "{reviewer}",
+    "senderRole": "Senior Engineer"
+  },
+  "responseOptions": [
+    {
+      "id": "defensive",
+      "label": "Get defensive",
+      "description": "I tested it thoroughly and it works. These changes seem unnecessary.",
+      "isRecommended": false,
+      "evaluationNotes": "Defensiveness blocks learning and damages team relationships"
+    },
+    {
+      "id": "passive-agree",
+      "label": "Passively agree",
+      "description": "Ok, I'll fix everything.",
+      "isRecommended": false,
+      "evaluationNotes": "Passive agreement without understanding misses learning opportunity"
+    },
+    {
+      "id": "thank-and-clarify",
+      "label": "Thank and ask for clarification",
+      "description": "Thanks for the thorough review! I'll address these. Quick question about comment #3 - could you explain the concern about the naming convention?",
+      "isRecommended": true,
+      "evaluationNotes": "Shows appreciation while seeking to understand"
+    },
+    {
+      "id": "discuss-tradeoffs",
+      "label": "Discuss tradeoffs",
+      "description": "Thanks for the feedback! I see your point on most of these. For the structure comment - I went this route because of X. Would you still prefer the other approach?",
+      "isRecommended": true,
+      "evaluationNotes": "Engages in technical discussion while staying open"
+    },
+    {
+      "id": "request-sync",
+      "label": "Request a sync",
+      "description": "Thanks! There are a few comments I'd love to discuss. Would you have 15 minutes to walk through them together?",
+      "isRecommended": true,
+      "evaluationNotes": "Proactive about learning, values reviewer's time"
+    }
+  ],
+  "evaluationCriteria": [
+    {
+      "dimension": "receptiveness",
+      "question": "Did they remain open to the feedback?",
+      "weight": 30
+    },
+    {
+      "dimension": "professionalism",
+      "question": "Did they respond professionally without defensiveness?",
+      "weight": 25
+    },
+    {
+      "dimension": "learning-orientation",
+      "question": "Did they seek to understand the reasoning?",
+      "weight": 25
+    },
+    {
+      "dimension": "communication",
+      "question": "Did they communicate clearly and respectfully?",
+      "weight": 20
+    }
+  ],
+  "followUpTemplates": [
+    {
+      "condition": "user_asked_clarification",
+      "message": "Good question! The naming thing is about our convention where we prefix private methods with underscore. Makes it easier to spot at a glance. Happy to pair on it if that helps!"
+    },
+    {
+      "condition": "user_discussed_tradeoffs",
+      "message": "Ah I see what you were going for. That's a valid approach too. In this case I'd still lean toward the other way because of [reason], but I can see the merit in your thinking."
+    },
+    {
+      "condition": "user_was_defensive",
+      "message": "I understand it works - my comments are more about long-term maintainability. These patterns help when other people need to work on this code later. Happy to discuss if you'd like."
+    }
+  ],
+  "industryExamples": {
+    "fintech": {
+      "context": "Security-focused review",
+      "specificMessage": "I've flagged some security concerns - we need to sanitize that input before it hits the database. Also some naming suggestions to match our patterns."
+    },
+    "healthcare": {
+      "context": "Compliance review",
+      "specificMessage": "Good work on the feature! I've left comments about HIPAA compliance - we need to ensure PHI is handled correctly in the logging."
+    },
+    "ecommerce": {
+      "context": "Performance review",
+      "specificMessage": "This will work but I'm concerned about the N+1 query in the loop. Let's discuss how to batch this for better performance."
+    }
+  },
+  "cooldownSprints": 2
+}

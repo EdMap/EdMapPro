@@ -1,0 +1,103 @@
+{
+  "id": "error-handling",
+  "version": "1.0.0",
+  "category": "feature",
+  "name": "Error Handling & Retry Logic",
+  "summary": "Add proper error handling with user-friendly messages and retry capability",
+  "description": "Implement robust error handling that catches failures gracefully, shows helpful messages to users, and provides retry options where appropriate.",
+  "difficulty": ["supported", "independent"],
+  "roles": ["developer"],
+  "languages": ["javascript", "python"],
+  "competencies": ["implementation", "user-experience", "resilience"],
+  "contextVariables": [
+    {
+      "key": "operation",
+      "description": "The operation that might fail",
+      "examples": {
+        "fintech": "payment processing",
+        "healthcare": "appointment booking",
+        "ecommerce": "order submission",
+        "saas": "file upload"
+      }
+    },
+    {
+      "key": "failureType",
+      "description": "Common failure scenario",
+      "examples": {
+        "fintech": "bank timeout",
+        "healthcare": "provider unavailable",
+        "ecommerce": "inventory conflict",
+        "saas": "network interruption"
+      }
+    },
+    {
+      "key": "retryStrategy",
+      "description": "How to handle retries",
+      "examples": {
+        "fintech": "exponential backoff",
+        "healthcare": "immediate retry with fallback",
+        "ecommerce": "user-initiated retry",
+        "saas": "automatic retry 3 times"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "Add error handling for {operation}",
+    "ticketDescription": "When {failureType} occurs during {operation}, users see a generic error or blank screen. We need proper error handling with clear messages and {retryStrategy} capability.",
+    "acceptanceCriteria": [
+      "Network errors show user-friendly message",
+      "Retry button appears for recoverable errors",
+      "Non-recoverable errors provide next steps",
+      "Loading state shown during retry"
+    ],
+    "technicalRequirements": [
+      "Catch all possible error types",
+      "Log errors for debugging",
+      "Implement retry with backoff",
+      "Show different UI for different error types"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "Add error handling and retry logic to a data fetching hook.",
+    "codeTemplate": "function useFetchData(url) {\n  const [data, setData] = useState(null);\n  const [error, setError] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [retryCount, setRetryCount] = useState(0);\n  \n  const fetchData = async () => {\n    try {\n      setLoading(true);\n      setError(null);\n      const response = await fetch(url);\n      \n      if (!response.ok) {\n        throw new Error(`HTTP error: ${response.status}`);\n      }\n      \n      const result = await response.json();\n      setData(result);\n    } catch (err) {\n      setError(___BLANK_1___);\n    } finally {\n      setLoading(false);\n    }\n  };\n  \n  const retry = () => {\n    setRetryCount(___BLANK_2___);\n    fetchData();\n  };\n  \n  useEffect(() => {\n    fetchData();\n  }, [url]);\n  \n  return { data, error, loading, retry, retryCount };\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["err.message", "err", "err.message || 'Something went wrong'"],
+        "hint": "Store the error message or the error object for display"
+      },
+      {
+        "id": "blank2",
+        "placeholder": "___BLANK_2___",
+        "correctAnswers": ["prev => prev + 1", "retryCount + 1", "c => c + 1"],
+        "hint": "Increment the retry counter"
+      }
+    ],
+    "solutionCode": "function useFetchData(url) {\n  const [data, setData] = useState(null);\n  const [error, setError] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [retryCount, setRetryCount] = useState(0);\n  \n  const fetchData = async () => {\n    try {\n      setLoading(true);\n      setError(null);\n      const response = await fetch(url);\n      \n      if (!response.ok) {\n        throw new Error(`HTTP error: ${response.status}`);\n      }\n      \n      const result = await response.json();\n      setData(result);\n    } catch (err) {\n      setError(err.message || 'Something went wrong');\n    } finally {\n      setLoading(false);\n    }\n  };\n  \n  const retry = () => {\n    setRetryCount(prev => prev + 1);\n    fetchData();\n  };\n  \n  useEffect(() => {\n    fetchData();\n  }, [url]);\n  \n  return { data, error, loading, retry, retryCount };\n}",
+    "successMessage": "Now the hook handles errors gracefully and supports retry!"
+  },
+  "hints": [
+    "Always wrap async operations in try/catch",
+    "Provide a way for users to retry failed operations",
+    "Consider what information to show in the error message"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "payment retry",
+      "specificContext": "Bank timeout during payment with automatic retry",
+      "businessValue": "Increases successful transaction rate"
+    },
+    "healthcare": {
+      "feature": "booking recovery",
+      "specificContext": "Appointment slot conflicts handled gracefully",
+      "businessValue": "Reduces user frustration and abandonment"
+    },
+    "ecommerce": {
+      "feature": "checkout resilience",
+      "specificContext": "Network issues during checkout with cart preservation",
+      "businessValue": "Prevents lost sales"
+    }
+  },
+  "cooldownSprints": 2
+}

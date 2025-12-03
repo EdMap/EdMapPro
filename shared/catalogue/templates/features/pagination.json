@@ -1,0 +1,93 @@
+{
+  "id": "pagination",
+  "version": "1.0.0",
+  "category": "feature",
+  "name": "Pagination Implementation",
+  "summary": "Add pagination to large data lists for better performance",
+  "description": "Implement pagination to handle large datasets efficiently, improving page load times and user experience.",
+  "difficulty": ["supported", "independent"],
+  "roles": ["developer"],
+  "languages": ["javascript", "python"],
+  "competencies": ["implementation", "api-design", "performance"],
+  "contextVariables": [
+    {
+      "key": "dataType",
+      "description": "The type of data being paginated",
+      "examples": {
+        "fintech": "transactions",
+        "healthcare": "patients",
+        "ecommerce": "products",
+        "saas": "users"
+      }
+    },
+    {
+      "key": "paginationType",
+      "description": "Type of pagination to implement",
+      "examples": {
+        "fintech": "cursor-based for transactions",
+        "healthcare": "offset-based for patient list",
+        "ecommerce": "infinite scroll for products",
+        "saas": "numbered pages for user table"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "Add pagination to {dataType} list",
+    "ticketDescription": "The {dataType} list loads all records at once, causing slow page loads with large datasets. Implement {paginationType} to load data in chunks of 20 items.",
+    "acceptanceCriteria": [
+      "Only 20 items load initially",
+      "Next/Previous navigation works correctly",
+      "Total count is displayed",
+      "Loading state during page transitions"
+    ],
+    "technicalRequirements": [
+      "Backend API supports pagination params",
+      "Frontend tracks current page state",
+      "Handle edge cases (empty, last page)",
+      "URL reflects current page for sharing"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "Implement pagination controls for a list component.",
+    "codeTemplate": "function PaginatedList({ items, totalItems, pageSize, currentPage, onPageChange }) {\n  const totalPages = Math.ceil(totalItems / pageSize);\n  \n  const handlePrevious = () => {\n    if (currentPage > 1) {\n      onPageChange(___BLANK_1___);\n    }\n  };\n  \n  const handleNext = () => {\n    if (currentPage < totalPages) {\n      onPageChange(___BLANK_2___);\n    }\n  };\n  \n  return (\n    <div>\n      <ul>\n        {items.map(item => <li key={item.id}>{item.name}</li>)}\n      </ul>\n      \n      <div className=\"pagination\">\n        <button onClick={handlePrevious} disabled={currentPage === 1}>\n          Previous\n        </button>\n        <span>Page {currentPage} of {totalPages}</span>\n        <button onClick={handleNext} disabled={currentPage === totalPages}>\n          Next\n        </button>\n      </div>\n    </div>\n  );\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["currentPage - 1", "currentPage-1"],
+        "hint": "Go to the previous page number"
+      },
+      {
+        "id": "blank2",
+        "placeholder": "___BLANK_2___",
+        "correctAnswers": ["currentPage + 1", "currentPage+1"],
+        "hint": "Go to the next page number"
+      }
+    ],
+    "solutionCode": "function PaginatedList({ items, totalItems, pageSize, currentPage, onPageChange }) {\n  const totalPages = Math.ceil(totalItems / pageSize);\n  \n  const handlePrevious = () => {\n    if (currentPage > 1) {\n      onPageChange(currentPage - 1);\n    }\n  };\n  \n  const handleNext = () => {\n    if (currentPage < totalPages) {\n      onPageChange(currentPage + 1);\n    }\n  };\n  \n  return (\n    <div>\n      <ul>\n        {items.map(item => <li key={item.id}>{item.name}</li>)}\n      </ul>\n      \n      <div className=\"pagination\">\n        <button onClick={handlePrevious} disabled={currentPage === 1}>\n          Previous\n        </button>\n        <span>Page {currentPage} of {totalPages}</span>\n        <button onClick={handleNext} disabled={currentPage === totalPages}>\n          Next\n        </button>\n      </div>\n    </div>\n  );\n}",
+    "successMessage": "Pagination controls work correctly!"
+  },
+  "hints": [
+    "Calculate total pages by dividing total items by page size",
+    "Disable buttons at boundaries (first/last page)",
+    "Consider URL state for bookmarkable pages"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "transaction history",
+      "specificContext": "Cursor-based pagination for efficient large history",
+      "businessValue": "Fast loading even with years of data"
+    },
+    "healthcare": {
+      "feature": "patient search",
+      "specificContext": "Search results with page numbers",
+      "businessValue": "Quick navigation through large patient databases"
+    },
+    "ecommerce": {
+      "feature": "product listing",
+      "specificContext": "Infinite scroll with load more button",
+      "businessValue": "Seamless browsing experience"
+    }
+  },
+  "cooldownSprints": 3
+}

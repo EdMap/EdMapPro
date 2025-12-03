@@ -1,0 +1,99 @@
+{
+  "id": "null-check-missing",
+  "version": "1.0.0",
+  "category": "bug",
+  "name": "Missing Null Check",
+  "summary": "App crashes when accessing property of undefined/null value",
+  "description": "A common bug where code attempts to access a property or method on a value that could be null or undefined, causing a runtime crash.",
+  "difficulty": ["guided", "supported"],
+  "roles": ["developer"],
+  "languages": ["javascript", "python"],
+  "competencies": ["debugging", "defensive-programming", "error-handling"],
+  "contextVariables": [
+    {
+      "key": "dataType",
+      "description": "The type of data that might be missing",
+      "examples": {
+        "fintech": "payment method",
+        "healthcare": "emergency contact",
+        "ecommerce": "shipping address",
+        "saas": "user profile"
+      }
+    },
+    {
+      "key": "action",
+      "description": "What the user was trying to do",
+      "examples": {
+        "fintech": "complete a purchase",
+        "healthcare": "book an appointment",
+        "ecommerce": "checkout",
+        "saas": "access their dashboard"
+      }
+    },
+    {
+      "key": "errorLocation",
+      "description": "Where the error occurs",
+      "examples": {
+        "fintech": "checkout page",
+        "healthcare": "booking confirmation",
+        "ecommerce": "order summary",
+        "saas": "settings page"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "App crashes on {errorLocation} when {dataType} is not set",
+    "ticketDescription": "Users who haven't configured their {dataType} see a blank page when trying to {action}. The console shows 'Cannot read property of undefined'. This affects approximately 5% of our users.",
+    "acceptanceCriteria": [
+      "Page loads even when {dataType} is not configured",
+      "User sees a helpful message prompting them to add their {dataType}",
+      "No console errors occur"
+    ],
+    "filesToInvestigate": [
+      "src/components/{Feature}Page.tsx",
+      "src/hooks/use{Feature}.ts"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "The component tries to access nested properties without checking if the parent object exists first.",
+    "codeTemplate": "function DisplayInfo({ user }) {\n  // Bug: crashes if user.settings is undefined\n  const theme = user.settings.theme;\n  const notifications = user.settings.notifications;\n  \n  return (\n    <div>\n      <p>Theme: {theme}</p>\n      <p>Notifications: {notifications ? 'On' : 'Off'}</p>\n    </div>\n  );\n}\n\n// Fix: Add null check\nfunction DisplayInfoFixed({ user }) {\n  const theme = ___BLANK_1___;\n  const notifications = user?.settings?.notifications;\n  \n  return (\n    <div>\n      <p>Theme: {theme || 'Default'}</p>\n      <p>Notifications: {notifications ? 'On' : 'Off'}</p>\n    </div>\n  );\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["user?.settings?.theme", "user && user.settings && user.settings.theme", "user?.settings?.theme ?? 'default'"],
+        "hint": "Use optional chaining (?.) to safely access nested properties"
+      }
+    ],
+    "fixedCode": "function DisplayInfoFixed({ user }) {\n  const theme = user?.settings?.theme;\n  const notifications = user?.settings?.notifications;\n  \n  return (\n    <div>\n      <p>Theme: {theme || 'Default'}</p>\n      <p>Notifications: {notifications ? 'On' : 'Off'}</p>\n    </div>\n  );\n}",
+    "successMessage": "Great! Optional chaining prevents the crash when properties are missing."
+  },
+  "hints": [
+    "Check if any objects could be undefined before accessing their properties",
+    "JavaScript's optional chaining operator (?.) can help here",
+    "Consider what should happen when data is missing"
+  ],
+  "commonMistakes": [
+    "Only checking the first level of nesting",
+    "Using || instead of ?? for default values (0 and '' are falsy)",
+    "Not providing a meaningful fallback for the UI"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "payment method display",
+      "specificContext": "Users without a saved card see a crash on the checkout page",
+      "testScenario": "New user with no payment methods tries to view checkout"
+    },
+    "healthcare": {
+      "feature": "emergency contact",
+      "specificContext": "Patient profile crashes if emergency contact not filled in",
+      "testScenario": "Patient who skipped optional fields views their profile"
+    },
+    "ecommerce": {
+      "feature": "shipping address",
+      "specificContext": "Order confirmation crashes for digital-only purchases",
+      "testScenario": "Customer buying digital download reaches order summary"
+    }
+  },
+  "cooldownSprints": 2
+}

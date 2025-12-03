@@ -1,0 +1,150 @@
+{
+  "version": "1.0.0",
+  "description": "Phase 4: Dynamic Sprint Generation Templates",
+  "templates": {
+    "bugs": [
+      {
+        "id": "timezone-display",
+        "file": "bugs/timezone-bug.json",
+        "name": "Timezone Display Issue",
+        "difficulty": ["guided", "supported", "independent"]
+      },
+      {
+        "id": "null-check-missing",
+        "file": "bugs/null-check-bug.json",
+        "name": "Missing Null Check",
+        "difficulty": ["guided", "supported"]
+      },
+      {
+        "id": "race-condition-async",
+        "file": "bugs/race-condition-bug.json",
+        "name": "Async Race Condition",
+        "difficulty": ["supported", "independent", "expert"]
+      },
+      {
+        "id": "off-by-one-error",
+        "file": "bugs/off-by-one-bug.json",
+        "name": "Off-By-One Error",
+        "difficulty": ["guided", "supported"]
+      },
+      {
+        "id": "type-coercion-arithmetic",
+        "file": "bugs/type-coercion-bug.json",
+        "name": "Type Coercion in Arithmetic",
+        "difficulty": ["guided", "supported"]
+      },
+      {
+        "id": "stale-closure",
+        "file": "bugs/stale-closure-bug.json",
+        "name": "Stale Closure",
+        "difficulty": ["supported", "independent"]
+      },
+      {
+        "id": "async-state-update",
+        "file": "bugs/async-state-bug.json",
+        "name": "Async State Update After Unmount",
+        "difficulty": ["supported", "independent"]
+      }
+    ],
+    "features": [
+      {
+        "id": "input-validation",
+        "file": "features/input-validation.json",
+        "name": "Input Validation",
+        "difficulty": ["guided", "supported"]
+      },
+      {
+        "id": "error-handling",
+        "file": "features/error-handling.json",
+        "name": "Error Handling & Retry Logic",
+        "difficulty": ["supported", "independent"]
+      },
+      {
+        "id": "loading-states",
+        "file": "features/loading-states.json",
+        "name": "Loading States & Skeleton UI",
+        "difficulty": ["guided", "supported"]
+      },
+      {
+        "id": "pagination",
+        "file": "features/pagination.json",
+        "name": "Pagination Implementation",
+        "difficulty": ["supported", "independent"]
+      }
+    ],
+    "soft_skills": [
+      {
+        "id": "deadline-pressure",
+        "file": "soft-skills/deadline-pressure.json",
+        "name": "Deadline Pressure",
+        "skillType": "pressure"
+      },
+      {
+        "id": "code-review-feedback",
+        "file": "soft-skills/code-review-feedback.json",
+        "name": "Receiving Code Review Feedback",
+        "skillType": "feedback"
+      },
+      {
+        "id": "teammate-asks-help",
+        "file": "soft-skills/teammate-asks-help.json",
+        "name": "Teammate Asks for Help",
+        "skillType": "help"
+      },
+      {
+        "id": "unclear-requirements",
+        "file": "soft-skills/unclear-requirements.json",
+        "name": "Unclear Requirements",
+        "skillType": "ambiguity"
+      }
+    ]
+  },
+  "themes": [
+    {
+      "id": "reliability",
+      "name": "System Reliability",
+      "description": "Focus on making the system more reliable and resilient",
+      "suggestedTemplates": {
+        "bugs": ["race-condition-async", "async-state-update"],
+        "features": ["error-handling"],
+        "softSkills": ["deadline-pressure"]
+      }
+    },
+    {
+      "id": "user-experience",
+      "name": "User Experience",
+      "description": "Improving the user experience and interface",
+      "suggestedTemplates": {
+        "bugs": ["timezone-display", "null-check-missing"],
+        "features": ["loading-states", "input-validation"],
+        "softSkills": ["unclear-requirements"]
+      }
+    },
+    {
+      "id": "performance",
+      "name": "Performance Optimization",
+      "description": "Making the application faster and more efficient",
+      "suggestedTemplates": {
+        "bugs": ["stale-closure", "off-by-one-error"],
+        "features": ["pagination"],
+        "softSkills": ["code-review-feedback"]
+      }
+    },
+    {
+      "id": "data-integrity",
+      "name": "Data Integrity",
+      "description": "Ensuring data is accurate and consistent",
+      "suggestedTemplates": {
+        "bugs": ["type-coercion-arithmetic", "off-by-one-error"],
+        "features": ["input-validation"],
+        "softSkills": ["teammate-asks-help"]
+      }
+    }
+  ],
+  "stats": {
+    "totalBugTemplates": 7,
+    "totalFeatureTemplates": 4,
+    "totalSoftSkillTemplates": 4,
+    "totalThemes": 4
+  }
+}

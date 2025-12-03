@@ -1,0 +1,160 @@
+{
+  "id": "deadline-pressure",
+  "version": "1.0.0",
+  "category": "soft_skill",
+  "name": "Deadline Pressure",
+  "summary": "Manager asks if you can deliver faster than planned",
+  "skillType": "pressure",
+  "competencies": ["communication", "time-management", "negotiation", "assertiveness"],
+  "trigger": "mid_sprint",
+  "contextVariables": [
+    {
+      "key": "manager",
+      "description": "Who is making the request",
+      "examples": {
+        "fintech": "Sarah (Product Manager)",
+        "healthcare": "James (Director)",
+        "ecommerce": "Maria (PM)",
+        "saas": "Alex (VP Engineering)"
+      }
+    },
+    {
+      "key": "reason",
+      "description": "Why the deadline is being pushed",
+      "examples": {
+        "fintech": "big enterprise client demo scheduled",
+        "healthcare": "FDA inspector arriving",
+        "ecommerce": "Black Friday coming earlier",
+        "saas": "investor meeting moved up"
+      }
+    },
+    {
+      "key": "feature",
+      "description": "What needs to ship early",
+      "examples": {
+        "fintech": "the retry logic for failed transfers",
+        "healthcare": "the audit logging feature",
+        "ecommerce": "the new checkout flow",
+        "saas": "the analytics dashboard"
+      }
+    },
+    {
+      "key": "originalDeadline",
+      "description": "When it was supposed to be done",
+      "examples": {
+        "fintech": "next Wednesday",
+        "healthcare": "end of next week",
+        "ecommerce": "in 2 weeks",
+        "saas": "next sprint"
+      }
+    },
+    {
+      "key": "newDeadline",
+      "description": "When they want it now",
+      "examples": {
+        "fintech": "Friday",
+        "healthcare": "Thursday",
+        "ecommerce": "this Friday",
+        "saas": "tomorrow EOD"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "setup": "You're in the middle of working on your current ticket when you get a message.",
+    "message": "Hey! Quick question - {reason}. Any chance we can ship {feature} by {newDeadline} instead of {originalDeadline}?",
+    "sender": "{manager}",
+    "senderRole": "Product Manager"
+  },
+  "responseOptions": [
+    {
+      "id": "agree-immediately",
+      "label": "Agree immediately",
+      "description": "Sure, I can make that work!",
+      "isRecommended": false,
+      "evaluationNotes": "Agreeing without assessing feasibility can lead to overcommitment and stress"
+    },
+    {
+      "id": "push-back",
+      "label": "Push back firmly",
+      "description": "That's not possible, the feature isn't ready and needs more time.",
+      "isRecommended": false,
+      "evaluationNotes": "Direct refusal without alternatives can damage relationships"
+    },
+    {
+      "id": "ask-clarifying",
+      "label": "Ask clarifying questions",
+      "description": "Let me understand the situation better. What specifically needs to be ready for the demo?",
+      "isRecommended": true,
+      "evaluationNotes": "Shows engagement and helps identify the real requirements"
+    },
+    {
+      "id": "negotiate-scope",
+      "label": "Negotiate scope",
+      "description": "I can have the core functionality ready by then if we defer the edge case handling. Would that work?",
+      "isRecommended": true,
+      "evaluationNotes": "Offers a solution while being realistic about constraints"
+    },
+    {
+      "id": "buy-time",
+      "label": "Buy time to assess",
+      "description": "Let me check my current tasks and get back to you in an hour with what's possible.",
+      "isRecommended": true,
+      "evaluationNotes": "Professional approach - takes time to give an accurate answer"
+    }
+  ],
+  "evaluationCriteria": [
+    {
+      "dimension": "communication",
+      "question": "Did they communicate clearly and professionally?",
+      "weight": 25
+    },
+    {
+      "dimension": "problem-solving",
+      "question": "Did they offer alternatives or solutions?",
+      "weight": 30
+    },
+    {
+      "dimension": "assertiveness",
+      "question": "Did they advocate for realistic timelines?",
+      "weight": 25
+    },
+    {
+      "dimension": "collaboration",
+      "question": "Did they try to understand the business need?",
+      "weight": 20
+    }
+  ],
+  "followUpTemplates": [
+    {
+      "condition": "user_agreed_immediately",
+      "message": "Great, thanks! I'll let the client know. Let me know if you hit any blockers."
+    },
+    {
+      "condition": "user_asked_questions",
+      "message": "Good question! For the demo, we really just need {feature} working for the happy path. The error handling can wait."
+    },
+    {
+      "condition": "user_negotiated",
+      "message": "That would actually work perfectly for the demo. Let's do that - I'll update the stakeholders."
+    },
+    {
+      "condition": "user_pushed_back",
+      "message": "I understand. What if we brought in Marcus to help? Or is there anything else we could deprioritize?"
+    }
+  ],
+  "industryExamples": {
+    "fintech": {
+      "context": "Enterprise client demo",
+      "specificMessage": "Our biggest enterprise client just scheduled a demo for Friday. Any chance we can ship the retry logic by then instead of next Wednesday?"
+    },
+    "healthcare": {
+      "context": "Regulatory inspection",
+      "specificMessage": "The FDA inspector is coming Monday. Any chance we can have the audit logging feature ready by Thursday instead of end of next week?"
+    },
+    "ecommerce": {
+      "context": "Sales event",
+      "specificMessage": "Marketing just moved up the Black Friday prep. Can we have the new checkout flow ready by this Friday instead of in 2 weeks?"
+    }
+  },
+  "cooldownSprints": 2
+}

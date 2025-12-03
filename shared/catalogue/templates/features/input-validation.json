@@ -1,0 +1,96 @@
+{
+  "id": "input-validation",
+  "version": "1.0.0",
+  "category": "feature",
+  "name": "Input Validation",
+  "summary": "Add client and server-side validation to form inputs",
+  "description": "Implement proper input validation to prevent invalid data from being submitted and provide helpful error messages to users.",
+  "difficulty": ["guided", "supported"],
+  "roles": ["developer"],
+  "languages": ["javascript", "python"],
+  "competencies": ["implementation", "user-experience", "security-awareness"],
+  "contextVariables": [
+    {
+      "key": "formType",
+      "description": "The type of form being validated",
+      "examples": {
+        "fintech": "payment form",
+        "healthcare": "patient registration",
+        "ecommerce": "checkout form",
+        "saas": "user signup"
+      }
+    },
+    {
+      "key": "fieldType",
+      "description": "The specific field needing validation",
+      "examples": {
+        "fintech": "credit card number",
+        "healthcare": "date of birth",
+        "ecommerce": "shipping address",
+        "saas": "email address"
+      }
+    },
+    {
+      "key": "businessRule",
+      "description": "Specific validation requirement",
+      "examples": {
+        "fintech": "Luhn algorithm check for card numbers",
+        "healthcare": "age must be between 0 and 120",
+        "ecommerce": "ZIP code must match state",
+        "saas": "password must have special character"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "Add validation to {formType}",
+    "ticketDescription": "Currently the {formType} accepts any input. We need to add validation for {fieldType} to ensure {businessRule}. Invalid inputs should show clear error messages.",
+    "acceptanceCriteria": [
+      "Invalid inputs show descriptive error messages",
+      "Form cannot be submitted with invalid data",
+      "Validation runs on blur and on submit",
+      "Server also validates (don't trust client only)"
+    ],
+    "technicalRequirements": [
+      "Use Zod or Yup for schema validation",
+      "Display inline error messages",
+      "Disable submit button when form is invalid"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "Add email validation to a signup form using Zod.",
+    "codeTemplate": "import { z } from 'zod';\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\n\n// Define validation schema\nconst signupSchema = z.object({\n  email: z.string()\n    .min(1, 'Email is required')\n    .___BLANK_1___('Invalid email format'),\n  password: z.string()\n    .min(8, 'Password must be at least 8 characters'),\n});\n\nfunction SignupForm() {\n  const { register, handleSubmit, formState: { errors } } = useForm({\n    resolver: zodResolver(signupSchema)\n  });\n  \n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <input {...register('email')} />\n      {errors.email && <span>{errors.email.message}</span>}\n      {/* ... */}\n    </form>\n  );\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["email", "Email"],
+        "hint": "Zod has a built-in method for validating email format"
+      }
+    ],
+    "solutionCode": "import { z } from 'zod';\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\n\nconst signupSchema = z.object({\n  email: z.string()\n    .min(1, 'Email is required')\n    .email('Invalid email format'),\n  password: z.string()\n    .min(8, 'Password must be at least 8 characters'),\n});\n\nfunction SignupForm() {\n  const { register, handleSubmit, formState: { errors } } = useForm({\n    resolver: zodResolver(signupSchema)\n  });\n  \n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <input {...register('email')} />\n      {errors.email && <span>{errors.email.message}</span>}\n      {/* ... */}\n    </form>\n  );\n}",
+    "successMessage": "The .email() validator ensures proper email format!"
+  },
+  "hints": [
+    "Consider what makes a valid email format",
+    "Zod provides built-in validators for common patterns",
+    "Error messages should help users fix the problem"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "payment card validation",
+      "specificContext": "Validate credit card using Luhn algorithm",
+      "businessValue": "Prevents declined transactions and fraud"
+    },
+    "healthcare": {
+      "feature": "patient intake form",
+      "specificContext": "Validate DOB, insurance ID format",
+      "businessValue": "Ensures accurate patient records"
+    },
+    "ecommerce": {
+      "feature": "checkout address",
+      "specificContext": "Validate ZIP matches state, phone format",
+      "businessValue": "Reduces failed deliveries"
+    }
+  },
+  "cooldownSprints": 2
+}

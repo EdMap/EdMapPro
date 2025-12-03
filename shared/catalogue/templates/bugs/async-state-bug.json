@@ -1,0 +1,95 @@
+{
+  "id": "async-state-update",
+  "version": "1.0.0",
+  "category": "bug",
+  "name": "Async State Update After Unmount",
+  "summary": "Setting state on unmounted component causes memory leak warning",
+  "description": "A React bug where an async operation completes after the component unmounts, attempting to update state and causing the 'Can't perform state update on unmounted component' warning.",
+  "difficulty": ["supported", "independent"],
+  "roles": ["developer"],
+  "languages": ["javascript"],
+  "competencies": ["debugging", "react-hooks", "async-programming"],
+  "contextVariables": [
+    {
+      "key": "operation",
+      "description": "The async operation causing issues",
+      "examples": {
+        "fintech": "fetching account data",
+        "healthcare": "loading patient records",
+        "ecommerce": "fetching product details",
+        "saas": "loading dashboard data"
+      }
+    },
+    {
+      "key": "trigger",
+      "description": "What causes the unmount",
+      "examples": {
+        "fintech": "navigating away during load",
+        "healthcare": "switching between patients",
+        "ecommerce": "quick tab switching",
+        "saas": "closing a modal while loading"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "Memory leak warning when {trigger}",
+    "ticketDescription": "Console shows 'Can't perform a React state update on an unmounted component' when {trigger} during {operation}. While this doesn't break the app, it indicates a memory leak and poor cleanup.",
+    "acceptanceCriteria": [
+      "No console warnings about unmounted component updates",
+      "Async operations are properly cancelled on unmount",
+      "No memory leaks from pending requests"
+    ],
+    "filesToInvestigate": [
+      "src/hooks/useFetch{Feature}.ts",
+      "src/components/{Feature}Page.tsx"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "The useEffect doesn't cleanup pending async operations when the component unmounts.",
+    "codeTemplate": "function UserProfile({ userId }) {\n  const [user, setUser] = useState(null);\n  const [loading, setLoading] = useState(true);\n  \n  useEffect(() => {\n    // Bug: No cleanup - setState called after unmount\n    fetchUser(userId).then(data => {\n      setUser(data);\n      setLoading(false);\n    });\n  }, [userId]);\n  \n  if (loading) return <Spinner />;\n  return <div>{user.name}</div>;\n}\n\n// Fix: Use cleanup flag\nfunction UserProfileFixed({ userId }) {\n  const [user, setUser] = useState(null);\n  const [loading, setLoading] = useState(true);\n  \n  useEffect(() => {\n    let ___BLANK_1___ = false;\n    \n    fetchUser(userId).then(data => {\n      if (!cancelled) {\n        setUser(data);\n        setLoading(false);\n      }\n    });\n    \n    return () => {\n      ___BLANK_2___ = true;\n    };\n  }, [userId]);\n  \n  if (loading) return <Spinner />;\n  return <div>{user?.name}</div>;\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["cancelled", "isCancelled", "ignore", "unmounted"],
+        "hint": "Create a flag to track if the effect should be cancelled"
+      },
+      {
+        "id": "blank2",
+        "placeholder": "___BLANK_2___",
+        "correctAnswers": ["cancelled", "isCancelled", "ignore", "unmounted"],
+        "hint": "Set the flag to true in the cleanup function"
+      }
+    ],
+    "fixedCode": "function UserProfileFixed({ userId }) {\n  const [user, setUser] = useState(null);\n  const [loading, setLoading] = useState(true);\n  \n  useEffect(() => {\n    let cancelled = false;\n    \n    fetchUser(userId).then(data => {\n      if (!cancelled) {\n        setUser(data);\n        setLoading(false);\n      }\n    });\n    \n    return () => {\n      cancelled = true;\n    };\n  }, [userId]);\n  \n  if (loading) return <Spinner />;\n  return <div>{user?.name}</div>;\n}",
+    "successMessage": "The cleanup flag prevents state updates after unmount!"
+  },
+  "hints": [
+    "useEffect can return a cleanup function that runs on unmount",
+    "Use a flag to track whether the component is still mounted",
+    "AbortController is another option for cancelling fetch requests"
+  ],
+  "commonMistakes": [
+    "Using useState for the cancelled flag (causes re-render)",
+    "Not handling all setState calls in the async chain",
+    "Forgetting to check the flag after each await"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "account details",
+      "specificContext": "Navigation during account fetch causes warning",
+      "testScenario": "Click account, quickly navigate away"
+    },
+    "healthcare": {
+      "feature": "patient records",
+      "specificContext": "Switching patients before data loads",
+      "testScenario": "Rapidly switch between patient profiles"
+    },
+    "ecommerce": {
+      "feature": "product page",
+      "specificContext": "Back button during product load",
+      "testScenario": "Open product, immediately press back"
+    }
+  },
+  "cooldownSprints": 3
+}

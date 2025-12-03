@@ -1,0 +1,99 @@
+{
+  "id": "timezone-display",
+  "version": "1.0.0",
+  "category": "bug",
+  "name": "Timezone Display Issue",
+  "summary": "Date/time displays in wrong timezone for users",
+  "description": "A common bug where timestamps are displayed in UTC or server timezone instead of the user's local timezone, causing confusion.",
+  "difficulty": ["guided", "supported", "independent"],
+  "roles": ["developer"],
+  "languages": ["javascript", "python"],
+  "competencies": ["debugging", "javascript-fundamentals", "date-handling"],
+  "contextVariables": [
+    {
+      "key": "feature",
+      "description": "The feature showing incorrect times",
+      "examples": {
+        "fintech": "transaction history",
+        "healthcare": "appointment scheduler",
+        "ecommerce": "order tracking",
+        "saas": "activity log"
+      }
+    },
+    {
+      "key": "userLocation",
+      "description": "Where the affected users are located",
+      "examples": {
+        "fintech": "Singapore",
+        "healthcare": "London",
+        "ecommerce": "Tokyo",
+        "saas": "Sydney"
+      }
+    },
+    {
+      "key": "impact",
+      "description": "Business impact of the bug",
+      "examples": {
+        "fintech": "daily reconciliation errors",
+        "healthcare": "patients missing appointments",
+        "ecommerce": "customer complaints about delivery times",
+        "saas": "confusion in audit logs"
+      }
+    }
+  ],
+  "scenarioTemplate": {
+    "ticketTitle": "{feature} shows incorrect time for {userLocation} users",
+    "ticketDescription": "Users in {userLocation} are seeing timestamps in UTC instead of their local timezone. This is causing {impact}. For example, an event at 8pm local time shows as the next day.",
+    "acceptanceCriteria": [
+      "Timestamps display in the user's configured timezone",
+      "Date filters work correctly with local dates",
+      "Existing tests continue to pass"
+    ],
+    "filesToInvestigate": [
+      "src/utils/dateFormatters.ts",
+      "src/components/{Feature}List.tsx"
+    ]
+  },
+  "codeExercise": {
+    "problemDescription": "The formatDisplayDate function uses hardcoded 'UTC' timezone instead of the user's configured timezone.",
+    "codeTemplate": "export function formatDisplayDate(\n  timestamp: string,\n  userTimezone: string = 'UTC'\n): string {\n  const date = new Date(timestamp);\n  \n  const options: Intl.DateTimeFormatOptions = {\n    year: 'numeric',\n    month: 'short',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    timeZone: ___BLANK_1___\n  };\n  \n  return date.toLocaleString('en-US', options);\n}",
+    "blanks": [
+      {
+        "id": "blank1",
+        "placeholder": "___BLANK_1___",
+        "correctAnswers": ["userTimezone", "'userTimezone'"],
+        "hint": "Look at the function parameter - what variable holds the user's timezone preference?"
+      }
+    ],
+    "fixedCode": "export function formatDisplayDate(\n  timestamp: string,\n  userTimezone: string = 'UTC'\n): string {\n  const date = new Date(timestamp);\n  \n  const options: Intl.DateTimeFormatOptions = {\n    year: 'numeric',\n    month: 'short',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    timeZone: userTimezone\n  };\n  \n  return date.toLocaleString('en-US', options);\n}",
+    "successMessage": "By using userTimezone, dates will now display correctly for users in any timezone!"
+  },
+  "hints": [
+    "Check how dates are being formatted - what timezone is being used?",
+    "Look at the function parameters - is there a timezone variable available?",
+    "The Intl.DateTimeFormatOptions has a timeZone property"
+  ],
+  "commonMistakes": [
+    "Hardcoding 'UTC' instead of using the parameter",
+    "Forgetting to pass the timezone when calling the function",
+    "Using getTimezoneOffset() incorrectly"
+  ],
+  "industryExamples": {
+    "fintech": {
+      "feature": "transaction history",
+      "specificContext": "Merchants see transactions timestamped in UTC, causing issues with daily cash reconciliation",
+      "testScenario": "A transaction at 8pm CST shows as 2am UTC the next day"
+    },
+    "healthcare": {
+      "feature": "appointment scheduler",
+      "specificContext": "Patients in different timezones see wrong appointment times",
+      "testScenario": "A 3pm appointment in London shows as 3pm UTC to US patients"
+    },
+    "ecommerce": {
+      "feature": "delivery tracking",
+      "specificContext": "Estimated delivery times confuse international customers",
+      "testScenario": "Delivery scheduled for 2pm local time shows wrong for different regions"
+    }
+  },
+  "cooldownSprints": 3
+}
