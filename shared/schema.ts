@@ -314,6 +314,10 @@ export const jobPostings = pgTable("job_postings", {
   interviewStages: integer("interview_stages").notNull().default(3), // Number of interview stages
   isActive: boolean("is_active").notNull().default(true),
   postedAt: timestamp("posted_at").defaultNow().notNull(),
+  // Phase 3: Narrative Architecture Fields
+  projectTemplateSlug: text("project_template_slug"), // Links to project template
+  narrativeContext: jsonb("narrative_context"), // Industry, domain, team topology overrides
+  journeyLength: jsonb("journey_length"), // { minSprints, maxSprints }
 });
 
 export const jobGlossary = pgTable("job_glossary", {
@@ -833,6 +837,286 @@ export interface ReadinessScore {
   }[];
   gaps: string[]; // Competency slugs needing improvement
   strengths: string[]; // Competency slugs showing strength
+}
+
+// ============================================================================
+// PHASE 3: NARRATIVE ARCHITECTURE TABLES
+// ============================================================================
+
+// Difficulty bands for progression
+export const difficultyBandEnum = ['guided', 'supported', 'independent', 'expert'] as const;
+export type DifficultyBand = typeof difficultyBandEnum[number];
+
+// Arc types
+export const arcTypeEnum = ['onboarding', 'sprint'] as const;
+export type ArcType = typeof arcTypeEnum[number];
+
+// Activity types
+export const activityTypeEnum = [
+  'team_chat',
+  'documentation_reading', 
+  'standup_meeting',
+  'sprint_planning',
+  'ticket_work',
+  'code_exercise',
+  'code_review',
+  'pr_creation',
+  'demo_presentation',
+  'retrospective',
+  'one_on_one',
+  'incident_response',
+  'reflection',
+  'soft_skill_event'
+] as const;
+export type ActivityType = typeof activityTypeEnum[number];
+
+// Ceremony types
+export const ceremonyTypeEnum = [
+  'sprint_planning',
+  'daily_standup', 
+  'sprint_review',
+  'sprint_retrospective',
+  'manager_1_1',
+  'final_1_1'
+] as const;
+export type CeremonyType = typeof ceremonyTypeEnum[number];
+
+// Progression Paths - defines level transitions (Intern→Junior, Junior→Mid, etc.)
+export const progressionPaths = pgTable("progression_paths", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(), // "intern_to_junior", "junior_to_mid"
+  entryLevel: text("entry_level").notNull(), // "intern", "junior", "mid"
+  exitLevel: text("exit_level").notNull(), // "junior", "mid", "senior"
+  role: text("role").notNull(), // "developer", "pm", "qa", etc.
+  displayName: text("display_name").notNull(), // "Intern → Junior Ready"
+  description: text("description").notNull(),
+  requirements: jsonb("requirements").notNull(), // { minSprints, readinessThreshold, requiredCompetencies }
+  difficultyProgression: jsonb("difficulty_progression").notNull(), // How difficulty increases over sprints
+  exitBadge: text("exit_badge"), // Badge awarded on completion
+  competencyFocus: text("competency_focus").array(), // Primary competencies for this path
+  estimatedDuration: jsonb("estimated_duration").notNull(), // { minWeeks, maxWeeks }
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Project Templates - simulated project/team environments
+export const projectTemplates = pgTable("project_templates", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(), // "novapay", "chatflow", "shopstack"
+  name: text("name").notNull(), // "NovaPay"
+  description: text("description").notNull(),
+  industry: text("industry").notNull(), // "fintech", "social", "ecommerce"
+  domain: text("domain").notNull(), // "payments", "messaging", "inventory"
+  teamTopology: text("team_topology").notNull(), // "startup", "enterprise", "agency"
+  team: jsonb("team").notNull(), // Team member templates with personas
+  codebase: jsonb("codebase").notNull(), // Codebase structure, key files, bug patterns
+  backlogThemes: jsonb("backlog_themes").notNull(), // Feature areas for sprint generation
+  bugTemplates: jsonb("bug_templates").notNull(), // Bug patterns for exercises
+  featureTemplates: jsonb("feature_templates").notNull(), // Feature patterns for exercises
+  softSkillPacks: jsonb("soft_skill_packs").notNull(), // Soft skill event templates
+  sprintCadence: integer("sprint_cadence").notNull().default(10), // Days per sprint
+  techStack: text("tech_stack").array(), // ["react", "node", "postgres"]
+  language: text("language").notNull().default('javascript'), // Primary language
+  progressionPathId: integer("progression_path_id").references(() => progressionPaths.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// User Journeys - user's journey through a progression path
+export const userJourneys = pgTable("user_journeys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  progressionPathId: integer("progression_path_id").references(() => progressionPaths.id).notNull(),
+  projectTemplateId: integer("project_template_id").references(() => projectTemplates.id).notNull(),
+  jobApplicationId: integer("job_application_id").references(() => jobApplications.id), // Links to job application
+  status: text("status").notNull().default('active'), // 'active', 'paused', 'completed', 'graduated', 'abandoned'
+  currentArcId: integer("current_arc_id"), // Will be set after arcs are created
+  currentSprintNumber: integer("current_sprint_number").notNull().default(0), // 0 = onboarding
+  completedSprints: integer("completed_sprints").notNull().default(0),
+  readinessScore: integer("readiness_score").notNull().default(0), // 0-100
+  exitTrigger: text("exit_trigger"), // 'user_choice', 'readiness_threshold', 'max_sprints', null if not exited
+  graduatedAt: timestamp("graduated_at"),
+  badgeAwarded: text("badge_awarded"),
+  journeyMetadata: jsonb("journey_metadata").notNull().default('{}'), // Additional journey state
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Journey Arcs - arcs within a journey (onboarding, sprint 1, sprint 2, etc.)
+export const journeyArcs = pgTable("journey_arcs", {
+  id: serial("id").primaryKey(),
+  journeyId: integer("journey_id").references(() => userJourneys.id).notNull(),
+  arcType: text("arc_type").notNull(), // 'onboarding' or 'sprint'
+  arcOrder: integer("arc_order").notNull(), // Sequence: 1 = onboarding, 2 = sprint 1, etc.
+  name: text("name").notNull(), // "Onboarding", "Sprint 1", etc.
+  description: text("description"),
+  status: text("status").notNull().default('pending'), // 'pending', 'active', 'completed'
+  difficultyBand: text("difficulty_band").notNull().default('guided'), // 'guided', 'supported', 'independent'
+  durationDays: integer("duration_days").notNull().default(5),
+  competencyFocus: text("competency_focus").array(), // Primary competencies for this arc
+  isFinalArc: boolean("is_final_arc").notNull().default(false),
+  arcData: jsonb("arc_data").notNull().default('{}'), // Arc-specific data (scripted content, etc.)
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Sprints - sprint-specific data for sprint arcs
+export const sprints = pgTable("sprints", {
+  id: serial("id").primaryKey(),
+  arcId: integer("arc_id").references(() => journeyArcs.id).notNull(),
+  sprintNumber: integer("sprint_number").notNull(),
+  goal: text("goal").notNull(), // Sprint goal
+  theme: text("theme").notNull(), // Sprint theme from backlog themes
+  backlog: jsonb("backlog").notNull(), // Generated backlog items
+  userTickets: jsonb("user_tickets").notNull(), // Tickets assigned to user
+  teamTickets: jsonb("team_tickets").notNull(), // Tickets for AI team members
+  storyPointsTarget: integer("story_points_target").notNull().default(8),
+  storyPointsCompleted: integer("story_points_completed").notNull().default(0),
+  softSkillEvents: jsonb("soft_skill_events").notNull().default('[]'), // Scheduled soft skill events
+  midSprintEvents: jsonb("mid_sprint_events").notNull().default('[]'), // Dynamic disruptions
+  ceremonies: jsonb("ceremonies").notNull(), // Ceremony scripts and states
+  sprintState: jsonb("sprint_state").notNull().default('{}'), // Current sprint state
+  generationMetadata: jsonb("generation_metadata"), // How this sprint was generated
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Sprint Activities - individual activities within a sprint day
+export const sprintActivities = pgTable("sprint_activities", {
+  id: serial("id").primaryKey(),
+  sprintId: integer("sprint_id").references(() => sprints.id).notNull(),
+  dayNumber: integer("day_number").notNull(), // Day within the sprint (1-10)
+  activityOrder: integer("activity_order").notNull(), // Order within the day
+  activityType: text("activity_type").notNull(), // From activityTypeEnum
+  ceremonyType: text("ceremony_type"), // If this is a ceremony
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default('pending'), // 'pending', 'in_progress', 'completed', 'skipped'
+  isRequired: boolean("is_required").notNull().default(true),
+  estimatedMinutes: integer("estimated_minutes").notNull().default(15),
+  competencyTags: text("competency_tags").array(), // Competencies practiced
+  activityData: jsonb("activity_data").notNull().default('{}'), // Activity-specific content
+  userResponse: jsonb("user_response"), // User's actions/responses
+  evaluation: jsonb("evaluation"), // AI evaluation of user's performance
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Competency Snapshots - snapshots of competency state at key points
+export const competencySnapshots = pgTable("competency_snapshots", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  journeyId: integer("journey_id").references(() => userJourneys.id).notNull(),
+  arcId: integer("arc_id").references(() => journeyArcs.id),
+  sprintId: integer("sprint_id").references(() => sprints.id),
+  snapshotType: text("snapshot_type").notNull(), // 'arc_start', 'arc_end', 'sprint_end', 'journey_end'
+  readinessScore: integer("readiness_score").notNull(),
+  competencyScores: jsonb("competency_scores").notNull(), // { [slug]: { band, confidence, score } }
+  strengths: text("strengths").array(),
+  gaps: text("gaps").array(),
+  recommendations: jsonb("recommendations"), // AI-generated recommendations
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for Phase 3 tables
+export const insertProgressionPathSchema = createInsertSchema(progressionPaths).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectTemplateSchema = createInsertSchema(projectTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserJourneySchema = createInsertSchema(userJourneys).omit({
+  id: true,
+  startedAt: true,
+  lastActivityAt: true,
+});
+
+export const insertJourneyArcSchema = createInsertSchema(journeyArcs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSprintSchema = createInsertSchema(sprints).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSprintActivitySchema = createInsertSchema(sprintActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCompetencySnapshotSchema = createInsertSchema(competencySnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for Phase 3 tables
+export type InsertProgressionPath = z.infer<typeof insertProgressionPathSchema>;
+export type ProgressionPath = typeof progressionPaths.$inferSelect;
+
+export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
+export type ProjectTemplate = typeof projectTemplates.$inferSelect;
+
+export type InsertUserJourney = z.infer<typeof insertUserJourneySchema>;
+export type UserJourney = typeof userJourneys.$inferSelect;
+
+export type InsertJourneyArc = z.infer<typeof insertJourneyArcSchema>;
+export type JourneyArc = typeof journeyArcs.$inferSelect;
+
+export type InsertSprint = z.infer<typeof insertSprintSchema>;
+export type Sprint = typeof sprints.$inferSelect;
+
+export type InsertSprintActivity = z.infer<typeof insertSprintActivitySchema>;
+export type SprintActivity = typeof sprintActivities.$inferSelect;
+
+export type InsertCompetencySnapshot = z.infer<typeof insertCompetencySnapshotSchema>;
+export type CompetencySnapshot = typeof competencySnapshots.$inferSelect;
+
+// Journey state interface for frontend consumption
+export interface JourneyState {
+  journey: UserJourney;
+  currentArc: JourneyArc | null;
+  currentSprint: Sprint | null;
+  currentDay: number;
+  todayActivities: SprintActivity[];
+  readinessScore: number;
+  canGraduate: boolean;
+  exitOptions: {
+    userChoice: boolean;
+    readinessThreshold: boolean;
+    maxSprints: boolean;
+  };
+}
+
+// Sprint generation request
+export interface SprintGenerationRequest {
+  journeyId: number;
+  sprintNumber: number;
+  difficultyBand: DifficultyBand;
+  previousSprints: Sprint[];
+  userCompetencyGaps: string[];
+  avoidThemes: string[];
+  avoidTemplates: string[];
+}
+
+// Progression requirements
+export interface ProgressionRequirements {
+  minSprints: number;
+  maxSprints: number;
+  readinessThreshold: number;
+  requiredCompetencies: {
+    slug: string;
+    minBand: MasteryBand;
+  }[];
 }
 
 // Job Offer Details Structure - mimics real job offers

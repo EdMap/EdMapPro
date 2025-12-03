@@ -1684,6 +1684,407 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // PHASE 3: NARRATIVE ARCHITECTURE ROUTES
+  // ============================================================================
+
+  // GET /api/progression-paths - Get all progression paths
+  app.get("/api/progression-paths", async (req, res) => {
+    try {
+      const role = req.query.role as string;
+      const entryLevel = req.query.entryLevel as string;
+      const paths = await storage.getProgressionPaths({ role, entryLevel });
+      res.json(paths);
+    } catch (error) {
+      console.error("Failed to get progression paths:", error);
+      res.status(500).json({ message: "Failed to get progression paths" });
+    }
+  });
+
+  // GET /api/progression-paths/:slug - Get single progression path
+  app.get("/api/progression-paths/:slug", async (req, res) => {
+    try {
+      const path = await storage.getProgressionPath(req.params.slug);
+      if (!path) {
+        return res.status(404).json({ message: "Progression path not found" });
+      }
+      res.json(path);
+    } catch (error) {
+      console.error("Failed to get progression path:", error);
+      res.status(500).json({ message: "Failed to get progression path" });
+    }
+  });
+
+  // GET /api/project-templates - Get all project templates
+  app.get("/api/project-templates", async (req, res) => {
+    try {
+      const language = req.query.language as string;
+      const industry = req.query.industry as string;
+      const templates = await storage.getProjectTemplates({ language, industry });
+      res.json(templates);
+    } catch (error) {
+      console.error("Failed to get project templates:", error);
+      res.status(500).json({ message: "Failed to get project templates" });
+    }
+  });
+
+  // GET /api/project-templates/:slug - Get single project template
+  app.get("/api/project-templates/:slug", async (req, res) => {
+    try {
+      const template = await storage.getProjectTemplate(req.params.slug);
+      if (!template) {
+        return res.status(404).json({ message: "Project template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Failed to get project template:", error);
+      res.status(500).json({ message: "Failed to get project template" });
+    }
+  });
+
+  // GET /api/user/:userId/journey - Get user's active journey state
+  app.get("/api/user/:userId/journey", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const activeJourney = await storage.getUserActiveJourney(userId);
+      
+      if (!activeJourney) {
+        return res.json({ journey: null, state: null });
+      }
+      
+      const state = await storage.getJourneyState(activeJourney.id);
+      res.json({ journey: activeJourney, state });
+    } catch (error) {
+      console.error("Failed to get user journey:", error);
+      res.status(500).json({ message: "Failed to get user journey" });
+    }
+  });
+
+  // GET /api/user/:userId/journeys - Get all user journeys
+  app.get("/api/user/:userId/journeys", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const journeys = await storage.getUserJourneys(userId);
+      res.json(journeys);
+    } catch (error) {
+      console.error("Failed to get user journeys:", error);
+      res.status(500).json({ message: "Failed to get user journeys" });
+    }
+  });
+
+  // POST /api/user/:userId/journey/start - Start a new journey
+  app.post("/api/user/:userId/journey/start", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { progressionPathSlug, projectTemplateSlug, jobApplicationId } = req.body;
+
+      // Check for existing active journey
+      const existingJourney = await storage.getUserActiveJourney(userId);
+      if (existingJourney) {
+        return res.status(400).json({ message: "User already has an active journey" });
+      }
+
+      // Get progression path and project template
+      const progressionPath = await storage.getProgressionPath(progressionPathSlug);
+      if (!progressionPath) {
+        return res.status(404).json({ message: "Progression path not found" });
+      }
+
+      const projectTemplate = await storage.getProjectTemplate(projectTemplateSlug);
+      if (!projectTemplate) {
+        return res.status(404).json({ message: "Project template not found" });
+      }
+
+      // Create journey
+      const journey = await storage.createJourney({
+        userId,
+        progressionPathId: progressionPath.id,
+        projectTemplateId: projectTemplate.id,
+        jobApplicationId: jobApplicationId || null,
+        status: 'active',
+        currentSprintNumber: 0,
+        completedSprints: 0,
+        readinessScore: 0,
+        journeyMetadata: {}
+      });
+
+      // Create onboarding arc
+      const onboardingArc = await storage.createJourneyArc({
+        journeyId: journey.id,
+        arcType: 'onboarding',
+        arcOrder: 1,
+        name: 'Onboarding',
+        description: 'First week at your new job',
+        status: 'active',
+        difficultyBand: 'guided',
+        durationDays: 5,
+        competencyFocus: ['professional-communication', 'codebase-navigation', 'git-workflow'],
+        isFinalArc: false,
+        arcData: {}
+      });
+
+      // Update journey with current arc
+      await storage.updateJourney(journey.id, { currentArcId: onboardingArc.id });
+
+      const state = await storage.getJourneyState(journey.id);
+      res.json({ journey, state });
+    } catch (error) {
+      console.error("Failed to start journey:", error);
+      res.status(500).json({ message: "Failed to start journey" });
+    }
+  });
+
+  // GET /api/journey/:journeyId - Get journey details
+  app.get("/api/journey/:journeyId", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const journey = await storage.getJourney(journeyId);
+      
+      if (!journey) {
+        return res.status(404).json({ message: "Journey not found" });
+      }
+      
+      const state = await storage.getJourneyState(journeyId);
+      res.json({ journey, state });
+    } catch (error) {
+      console.error("Failed to get journey:", error);
+      res.status(500).json({ message: "Failed to get journey" });
+    }
+  });
+
+  // GET /api/journey/:journeyId/arcs - Get all arcs for a journey
+  app.get("/api/journey/:journeyId/arcs", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const arcs = await storage.getJourneyArcs(journeyId);
+      res.json(arcs);
+    } catch (error) {
+      console.error("Failed to get journey arcs:", error);
+      res.status(500).json({ message: "Failed to get journey arcs" });
+    }
+  });
+
+  // GET /api/journey/:journeyId/current-sprint - Get current sprint details
+  app.get("/api/journey/:journeyId/current-sprint", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const journey = await storage.getJourney(journeyId);
+      
+      if (!journey) {
+        return res.status(404).json({ message: "Journey not found" });
+      }
+
+      const currentArc = await storage.getCurrentArc(journeyId);
+      if (!currentArc || currentArc.arcType !== 'sprint') {
+        return res.json({ sprint: null, activities: [] });
+      }
+
+      const sprint = await storage.getSprintByArc(currentArc.id);
+      if (!sprint) {
+        return res.json({ sprint: null, activities: [] });
+      }
+
+      const activities = await storage.getSprintActivities(sprint.id);
+      res.json({ sprint, activities });
+    } catch (error) {
+      console.error("Failed to get current sprint:", error);
+      res.status(500).json({ message: "Failed to get current sprint" });
+    }
+  });
+
+  // POST /api/journey/:journeyId/complete-activity - Complete an activity and record competency delta
+  app.post("/api/journey/:journeyId/complete-activity", async (req, res) => {
+    try {
+      const { progressionEngine } = await import("./services/progression-engine");
+      const journeyId = parseInt(req.params.journeyId);
+      const { activityId, userResponse, evaluation } = req.body;
+
+      const result = await progressionEngine.completeActivity(
+        journeyId,
+        activityId,
+        userResponse,
+        evaluation
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to complete activity:", error);
+      res.status(500).json({ message: "Failed to complete activity" });
+    }
+  });
+
+  // POST /api/journey/:journeyId/complete-sprint - Complete current sprint
+  app.post("/api/journey/:journeyId/complete-sprint", async (req, res) => {
+    try {
+      const { progressionEngine } = await import("./services/progression-engine");
+      const journeyId = parseInt(req.params.journeyId);
+
+      const result = await progressionEngine.completeSprint(journeyId);
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to complete sprint:", error);
+      res.status(500).json({ message: "Failed to complete sprint" });
+    }
+  });
+
+  // GET /api/journey/:journeyId/exit-eligibility - Check if user can exit/graduate
+  app.get("/api/journey/:journeyId/exit-eligibility", async (req, res) => {
+    try {
+      const { progressionEngine } = await import("./services/progression-engine");
+      const journeyId = parseInt(req.params.journeyId);
+
+      const eligibility = await progressionEngine.checkExitEligibility(journeyId);
+      res.json(eligibility);
+    } catch (error) {
+      console.error("Failed to check exit eligibility:", error);
+      res.status(500).json({ message: "Failed to check exit eligibility" });
+    }
+  });
+
+  // GET /api/journey/:journeyId/summary - Get full progression summary
+  app.get("/api/journey/:journeyId/summary", async (req, res) => {
+    try {
+      const { progressionEngine } = await import("./services/progression-engine");
+      const journeyId = parseInt(req.params.journeyId);
+
+      const summary = await progressionEngine.getProgressionSummary(journeyId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Failed to get progression summary:", error);
+      res.status(500).json({ message: "Failed to get progression summary" });
+    }
+  });
+
+  // POST /api/user/:userId/competency-delta - Record a competency delta
+  app.post("/api/user/:userId/competency-delta", async (req, res) => {
+    try {
+      const { progressionEngine } = await import("./services/progression-engine");
+      const userId = parseInt(req.params.userId);
+      const { journeyId, competencySlug, source, evidenceType, score, activityId } = req.body;
+
+      const result = await progressionEngine.calculateDelta({
+        userId,
+        journeyId,
+        competencySlug,
+        source,
+        evidenceType,
+        score,
+        activityId
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to record competency delta:", error);
+      res.status(500).json({ message: "Failed to record competency delta" });
+    }
+  });
+
+  // POST /api/journey/:journeyId/graduate - Trigger graduation
+  app.post("/api/journey/:journeyId/graduate", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const { exitTrigger } = req.body; // 'user_choice', 'readiness_threshold', 'max_sprints'
+
+      const journey = await storage.getJourney(journeyId);
+      if (!journey) {
+        return res.status(404).json({ message: "Journey not found" });
+      }
+
+      // Get progression path for badge
+      const progressionPath = await storage.getProgressionPathById(journey.progressionPathId);
+
+      // Take final competency snapshot
+      const userReadiness = await storage.getUserReadiness(journey.userId);
+      await storage.createCompetencySnapshot({
+        userId: journey.userId,
+        journeyId: journey.id,
+        snapshotType: 'journey_end',
+        readinessScore: userReadiness.overallScore,
+        competencyScores: userReadiness.competencyBreakdown.reduce((acc, c) => {
+          acc[c.slug] = { band: c.band, confidence: c.confidence, score: c.evidenceCount };
+          return acc;
+        }, {} as Record<string, { band: string; confidence: number; score: number }>),
+        strengths: userReadiness.strengths,
+        gaps: userReadiness.gaps
+      });
+
+      // Update journey
+      const updatedJourney = await storage.updateJourney(journeyId, {
+        status: 'graduated',
+        exitTrigger,
+        graduatedAt: new Date(),
+        completedAt: new Date(),
+        badgeAwarded: progressionPath?.exitBadge || null
+      });
+
+      res.json({ journey: updatedJourney, badge: progressionPath?.exitBadge });
+    } catch (error) {
+      console.error("Failed to graduate journey:", error);
+      res.status(500).json({ message: "Failed to graduate journey" });
+    }
+  });
+
+  // GET /api/journey/:journeyId/snapshots - Get competency snapshots
+  app.get("/api/journey/:journeyId/snapshots", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const snapshots = await storage.getCompetencySnapshots(journeyId);
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Failed to get competency snapshots:", error);
+      res.status(500).json({ message: "Failed to get competency snapshots" });
+    }
+  });
+
+  // GET /api/sprint/:sprintId - Get sprint details
+  app.get("/api/sprint/:sprintId", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const sprint = await storage.getSprint(sprintId);
+      
+      if (!sprint) {
+        return res.status(404).json({ message: "Sprint not found" });
+      }
+      
+      const activities = await storage.getSprintActivities(sprintId);
+      res.json({ sprint, activities });
+    } catch (error) {
+      console.error("Failed to get sprint:", error);
+      res.status(500).json({ message: "Failed to get sprint" });
+    }
+  });
+
+  // GET /api/sprint/:sprintId/activities - Get sprint activities
+  app.get("/api/sprint/:sprintId/activities", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const dayNumber = req.query.day ? parseInt(req.query.day as string) : undefined;
+      const activities = await storage.getSprintActivities(sprintId, dayNumber);
+      res.json(activities);
+    } catch (error) {
+      console.error("Failed to get sprint activities:", error);
+      res.status(500).json({ message: "Failed to get sprint activities" });
+    }
+  });
+
+  // PATCH /api/activity/:activityId - Update activity
+  app.patch("/api/activity/:activityId", async (req, res) => {
+    try {
+      const activityId = parseInt(req.params.activityId);
+      const updates = req.body;
+      const activity = await storage.updateSprintActivity(activityId, updates);
+      
+      if (!activity) {
+        return res.status(404).json({ message: "Activity not found" });
+      }
+      
+      res.json(activity);
+    } catch (error) {
+      console.error("Failed to update activity:", error);
+      res.status(500).json({ message: "Failed to update activity" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

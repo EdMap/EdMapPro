@@ -5,6 +5,7 @@ import {
   interviewSessions, interviewQuestions, interviewFeedback,
   companies, jobPostings, jobGlossary, jobApplications, interviewTemplates, applicationStages,
   competencies, simulationCatalogue, roleAdapters, competencyLedger, portfolioArtifacts,
+  progressionPaths, projectTemplates, userJourneys, journeyArcs, sprints, sprintActivities, competencySnapshots,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -29,6 +30,14 @@ import {
   type CompetencyLedger, type InsertCompetencyLedger,
   type PortfolioArtifact, type InsertPortfolioArtifact,
   type ReadinessScore,
+  type ProgressionPath, type InsertProgressionPath,
+  type ProjectTemplate, type InsertProjectTemplate,
+  type UserJourney, type InsertUserJourney,
+  type JourneyArc, type InsertJourneyArc,
+  type Sprint, type InsertSprint,
+  type SprintActivity, type InsertSprintActivity,
+  type CompetencySnapshot, type InsertCompetencySnapshot,
+  type JourneyState,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
@@ -170,6 +179,49 @@ export interface IStorage {
   getUserPortfolio(userId: number): Promise<PortfolioArtifact[]>;
   getPortfolioArtifact(id: number): Promise<PortfolioArtifact | undefined>;
   createPortfolioArtifact(artifact: InsertPortfolioArtifact): Promise<PortfolioArtifact>;
+  
+  // Phase 3: Progression Path operations
+  getProgressionPaths(filters?: { role?: string; entryLevel?: string }): Promise<ProgressionPath[]>;
+  getProgressionPath(slug: string): Promise<ProgressionPath | undefined>;
+  getProgressionPathById(id: number): Promise<ProgressionPath | undefined>;
+  createProgressionPath(path: InsertProgressionPath): Promise<ProgressionPath>;
+  
+  // Phase 3: Project Template operations
+  getProjectTemplates(filters?: { language?: string; industry?: string }): Promise<ProjectTemplate[]>;
+  getProjectTemplate(slug: string): Promise<ProjectTemplate | undefined>;
+  getProjectTemplateById(id: number): Promise<ProjectTemplate | undefined>;
+  createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate>;
+  
+  // Phase 3: User Journey operations
+  getUserJourneys(userId: number): Promise<UserJourney[]>;
+  getUserActiveJourney(userId: number): Promise<UserJourney | undefined>;
+  getJourney(id: number): Promise<UserJourney | undefined>;
+  createJourney(journey: InsertUserJourney): Promise<UserJourney>;
+  updateJourney(id: number, updates: Partial<UserJourney>): Promise<UserJourney | undefined>;
+  getJourneyState(journeyId: number): Promise<JourneyState | null>;
+  
+  // Phase 3: Journey Arc operations
+  getJourneyArcs(journeyId: number): Promise<JourneyArc[]>;
+  getJourneyArc(id: number): Promise<JourneyArc | undefined>;
+  getCurrentArc(journeyId: number): Promise<JourneyArc | undefined>;
+  createJourneyArc(arc: InsertJourneyArc): Promise<JourneyArc>;
+  updateJourneyArc(id: number, updates: Partial<JourneyArc>): Promise<JourneyArc | undefined>;
+  
+  // Phase 3: Sprint operations
+  getSprint(id: number): Promise<Sprint | undefined>;
+  getSprintByArc(arcId: number): Promise<Sprint | undefined>;
+  createSprint(sprint: InsertSprint): Promise<Sprint>;
+  updateSprint(id: number, updates: Partial<Sprint>): Promise<Sprint | undefined>;
+  
+  // Phase 3: Sprint Activity operations
+  getSprintActivities(sprintId: number, dayNumber?: number): Promise<SprintActivity[]>;
+  getSprintActivity(id: number): Promise<SprintActivity | undefined>;
+  createSprintActivity(activity: InsertSprintActivity): Promise<SprintActivity>;
+  updateSprintActivity(id: number, updates: Partial<SprintActivity>): Promise<SprintActivity | undefined>;
+  
+  // Phase 3: Competency Snapshot operations
+  getCompetencySnapshots(journeyId: number): Promise<CompetencySnapshot[]>;
+  createCompetencySnapshot(snapshot: InsertCompetencySnapshot): Promise<CompetencySnapshot>;
 }
 
 export class MemStorage implements IStorage {
@@ -2562,6 +2614,301 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       ...artifact,
       createdAt: new Date(),
       updatedAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  // ============================================================================
+  // PHASE 3: NARRATIVE ARCHITECTURE OPERATIONS
+  // ============================================================================
+
+  // Progression Path operations
+  async getProgressionPaths(filters?: { role?: string; entryLevel?: string }): Promise<ProgressionPath[]> {
+    const conditions: any[] = [];
+    
+    if (filters?.role) {
+      conditions.push(eq(progressionPaths.role, filters.role));
+    }
+    if (filters?.entryLevel) {
+      conditions.push(eq(progressionPaths.entryLevel, filters.entryLevel));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(progressionPaths).where(and(...conditions));
+    }
+    return await db.select().from(progressionPaths);
+  }
+
+  async getProgressionPath(slug: string): Promise<ProgressionPath | undefined> {
+    const results = await db.select().from(progressionPaths).where(eq(progressionPaths.slug, slug));
+    return results[0];
+  }
+
+  async getProgressionPathById(id: number): Promise<ProgressionPath | undefined> {
+    const results = await db.select().from(progressionPaths).where(eq(progressionPaths.id, id));
+    return results[0];
+  }
+
+  async createProgressionPath(path: InsertProgressionPath): Promise<ProgressionPath> {
+    const results = await db.insert(progressionPaths).values({
+      ...path,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  // Project Template operations
+  async getProjectTemplates(filters?: { language?: string; industry?: string }): Promise<ProjectTemplate[]> {
+    const conditions: any[] = [];
+    
+    if (filters?.language) {
+      conditions.push(eq(projectTemplates.language, filters.language));
+    }
+    if (filters?.industry) {
+      conditions.push(eq(projectTemplates.industry, filters.industry));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(projectTemplates).where(and(...conditions));
+    }
+    return await db.select().from(projectTemplates);
+  }
+
+  async getProjectTemplate(slug: string): Promise<ProjectTemplate | undefined> {
+    const results = await db.select().from(projectTemplates).where(eq(projectTemplates.slug, slug));
+    return results[0];
+  }
+
+  async getProjectTemplateById(id: number): Promise<ProjectTemplate | undefined> {
+    const results = await db.select().from(projectTemplates).where(eq(projectTemplates.id, id));
+    return results[0];
+  }
+
+  async createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate> {
+    const results = await db.insert(projectTemplates).values({
+      ...template,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  // User Journey operations
+  async getUserJourneys(userId: number): Promise<UserJourney[]> {
+    return await db.select().from(userJourneys)
+      .where(eq(userJourneys.userId, userId))
+      .orderBy(desc(userJourneys.startedAt));
+  }
+
+  async getUserActiveJourney(userId: number): Promise<UserJourney | undefined> {
+    const results = await db.select().from(userJourneys)
+      .where(and(
+        eq(userJourneys.userId, userId),
+        eq(userJourneys.status, 'active')
+      ))
+      .limit(1);
+    return results[0];
+  }
+
+  async getJourney(id: number): Promise<UserJourney | undefined> {
+    const results = await db.select().from(userJourneys).where(eq(userJourneys.id, id));
+    return results[0];
+  }
+
+  async createJourney(journey: InsertUserJourney): Promise<UserJourney> {
+    const results = await db.insert(userJourneys).values({
+      ...journey,
+      status: journey.status || 'active',
+      currentSprintNumber: journey.currentSprintNumber || 0,
+      completedSprints: journey.completedSprints || 0,
+      readinessScore: journey.readinessScore || 0,
+      journeyMetadata: journey.journeyMetadata || {},
+      startedAt: new Date(),
+      lastActivityAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateJourney(id: number, updates: Partial<UserJourney>): Promise<UserJourney | undefined> {
+    const results = await db.update(userJourneys)
+      .set({
+        ...updates,
+        lastActivityAt: new Date()
+      })
+      .where(eq(userJourneys.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async getJourneyState(journeyId: number): Promise<JourneyState | null> {
+    const journey = await this.getJourney(journeyId);
+    if (!journey) return null;
+
+    const currentArc = journey.currentArcId 
+      ? await this.getJourneyArc(journey.currentArcId) 
+      : await this.getCurrentArc(journeyId);
+    
+    let currentSprint: Sprint | null = null;
+    let todayActivities: SprintActivity[] = [];
+    
+    if (currentArc && currentArc.arcType === 'sprint') {
+      currentSprint = await this.getSprintByArc(currentArc.id) || null;
+      if (currentSprint) {
+        const sprintState = currentSprint.sprintState as { currentDay?: number } || {};
+        const currentDay = sprintState.currentDay || 1;
+        todayActivities = await this.getSprintActivities(currentSprint.id, currentDay);
+      }
+    }
+
+    // Get progression path for exit requirements
+    const progressionPath = await this.getProgressionPathById(journey.progressionPathId);
+    const requirements = progressionPath?.requirements as { minSprints?: number; maxSprints?: number; readinessThreshold?: number } || {};
+    
+    const canGraduate = journey.completedSprints >= (requirements.minSprints || 2) && 
+      (journey.readinessScore >= (requirements.readinessThreshold || 85) || 
+       journey.completedSprints >= (requirements.maxSprints || 8));
+
+    return {
+      journey,
+      currentArc: currentArc || null,
+      currentSprint,
+      currentDay: currentSprint ? ((currentSprint.sprintState as { currentDay?: number })?.currentDay || 1) : 1,
+      todayActivities,
+      readinessScore: journey.readinessScore,
+      canGraduate,
+      exitOptions: {
+        userChoice: journey.completedSprints >= (requirements.minSprints || 2),
+        readinessThreshold: journey.readinessScore >= (requirements.readinessThreshold || 85),
+        maxSprints: journey.completedSprints >= (requirements.maxSprints || 8)
+      }
+    };
+  }
+
+  // Journey Arc operations
+  async getJourneyArcs(journeyId: number): Promise<JourneyArc[]> {
+    return await db.select().from(journeyArcs)
+      .where(eq(journeyArcs.journeyId, journeyId))
+      .orderBy(journeyArcs.arcOrder);
+  }
+
+  async getJourneyArc(id: number): Promise<JourneyArc | undefined> {
+    const results = await db.select().from(journeyArcs).where(eq(journeyArcs.id, id));
+    return results[0];
+  }
+
+  async getCurrentArc(journeyId: number): Promise<JourneyArc | undefined> {
+    const results = await db.select().from(journeyArcs)
+      .where(and(
+        eq(journeyArcs.journeyId, journeyId),
+        eq(journeyArcs.status, 'active')
+      ))
+      .limit(1);
+    return results[0];
+  }
+
+  async createJourneyArc(arc: InsertJourneyArc): Promise<JourneyArc> {
+    const results = await db.insert(journeyArcs).values({
+      ...arc,
+      status: arc.status || 'pending',
+      difficultyBand: arc.difficultyBand || 'guided',
+      durationDays: arc.durationDays || 5,
+      isFinalArc: arc.isFinalArc || false,
+      arcData: arc.arcData || {},
+      createdAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateJourneyArc(id: number, updates: Partial<JourneyArc>): Promise<JourneyArc | undefined> {
+    const results = await db.update(journeyArcs)
+      .set(updates)
+      .where(eq(journeyArcs.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Sprint operations
+  async getSprint(id: number): Promise<Sprint | undefined> {
+    const results = await db.select().from(sprints).where(eq(sprints.id, id));
+    return results[0];
+  }
+
+  async getSprintByArc(arcId: number): Promise<Sprint | undefined> {
+    const results = await db.select().from(sprints).where(eq(sprints.arcId, arcId));
+    return results[0];
+  }
+
+  async createSprint(sprint: InsertSprint): Promise<Sprint> {
+    const results = await db.insert(sprints).values({
+      ...sprint,
+      storyPointsTarget: sprint.storyPointsTarget || 8,
+      storyPointsCompleted: sprint.storyPointsCompleted || 0,
+      softSkillEvents: sprint.softSkillEvents || [],
+      midSprintEvents: sprint.midSprintEvents || [],
+      sprintState: sprint.sprintState || {},
+      createdAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateSprint(id: number, updates: Partial<Sprint>): Promise<Sprint | undefined> {
+    const results = await db.update(sprints)
+      .set(updates)
+      .where(eq(sprints.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Sprint Activity operations
+  async getSprintActivities(sprintId: number, dayNumber?: number): Promise<SprintActivity[]> {
+    const conditions = [eq(sprintActivities.sprintId, sprintId)];
+    
+    if (dayNumber !== undefined) {
+      conditions.push(eq(sprintActivities.dayNumber, dayNumber));
+    }
+    
+    return await db.select().from(sprintActivities)
+      .where(and(...conditions))
+      .orderBy(sprintActivities.dayNumber, sprintActivities.activityOrder);
+  }
+
+  async getSprintActivity(id: number): Promise<SprintActivity | undefined> {
+    const results = await db.select().from(sprintActivities).where(eq(sprintActivities.id, id));
+    return results[0];
+  }
+
+  async createSprintActivity(activity: InsertSprintActivity): Promise<SprintActivity> {
+    const results = await db.insert(sprintActivities).values({
+      ...activity,
+      status: activity.status || 'pending',
+      isRequired: activity.isRequired ?? true,
+      estimatedMinutes: activity.estimatedMinutes || 15,
+      activityData: activity.activityData || {},
+      createdAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateSprintActivity(id: number, updates: Partial<SprintActivity>): Promise<SprintActivity | undefined> {
+    const results = await db.update(sprintActivities)
+      .set(updates)
+      .where(eq(sprintActivities.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Competency Snapshot operations
+  async getCompetencySnapshots(journeyId: number): Promise<CompetencySnapshot[]> {
+    return await db.select().from(competencySnapshots)
+      .where(eq(competencySnapshots.journeyId, journeyId))
+      .orderBy(competencySnapshots.createdAt);
+  }
+
+  async createCompetencySnapshot(snapshot: InsertCompetencySnapshot): Promise<CompetencySnapshot> {
+    const results = await db.insert(competencySnapshots).values({
+      ...snapshot,
+      createdAt: new Date()
     }).returning();
     return results[0];
   }
