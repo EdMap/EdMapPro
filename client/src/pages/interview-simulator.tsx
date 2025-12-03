@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSearch, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,7 +24,10 @@ import {
   User as UserIcon,
   Send,
   Loader2,
-  Target
+  Target,
+  Database,
+  TestTube,
+  Server
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,6 +36,14 @@ import { cn } from "@/lib/utils";
 import { getPersonaStyle } from "@/lib/persona-styles";
 import { InterviewPanelHeader, PersonaRoster } from "@/components/simulation/team-interview-panel";
 import type { User as UserType, InterviewSession } from "@shared/schema";
+import { 
+  useAvailableRoles, 
+  useAvailableLevels, 
+  useInterviewConfig,
+  type Role,
+  type Level,
+  type AvailableRole
+} from "@/hooks/use-adapters";
 
 import interviewConfigData from "@shared/catalogue/interview/interview-config.json";
 
@@ -40,10 +51,21 @@ const iconMap: Record<string, any> = {
   Code,
   Briefcase,
   Lightbulb,
-  Brain
+  Brain,
+  Database,
+  TestTube,
+  Server
 };
 
-const targetRoles = interviewConfigData.content.targetRoles.map(role => ({
+const roleIconMap: Record<string, any> = {
+  developer: Code,
+  pm: Briefcase,
+  qa: TestTube,
+  devops: Server,
+  data_science: Database,
+};
+
+const legacyTargetRoles = interviewConfigData.content.targetRoles.map(role => ({
   value: role.value,
   label: role.label,
   icon: iconMap[role.icon as keyof typeof iconMap] || Code
@@ -155,6 +177,31 @@ export default function InterviewSimulator() {
     queryKey: ["/api/users", user?.id, "interviews"],
     enabled: !!user?.id,
   });
+
+  // Phase 2: Fetch available roles from adapters API
+  const { data: availableRoles = [], isLoading: rolesLoading } = useAvailableRoles();
+  
+  // Fetch available levels for selected role
+  const { data: availableLevels = [], isLoading: levelsLoading } = useAvailableLevels(targetRole);
+  
+  // Fetch interview configuration for selected role/level
+  const { data: interviewConfig, isLoading: configLoading } = useInterviewConfig(
+    targetRole, 
+    difficulty // Map difficulty to level for now
+  );
+
+  // Map available roles to display format with icons
+  const targetRoles = useMemo(() => {
+    if (availableRoles.length === 0) {
+      return legacyTargetRoles;
+    }
+    return availableRoles.map((role: AvailableRole) => ({
+      value: role.role,
+      label: role.displayName,
+      description: role.description,
+      icon: roleIconMap[role.role] || Code
+    }));
+  }, [availableRoles]);
 
   const startInterviewMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -682,26 +729,42 @@ export default function InterviewSimulator() {
           <CardContent className="space-y-8">
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">Target Role</Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {targetRoles.map((role) => {
-                  const Icon = role.icon;
-                  return (
-                    <Button
-                      key={role.value}
-                      variant={targetRole === role.value ? "default" : "outline"}
-                      className={cn(
-                        "h-auto py-4 flex flex-col items-center justify-center",
-                        targetRole === role.value && "bg-blue-600 hover:bg-blue-700"
-                      )}
-                      onClick={() => setTargetRole(role.value)}
-                      data-testid={`button-role-${role.value}`}
-                    >
-                      <Icon className="h-6 w-6 mb-2" />
-                      <span className="text-sm">{role.label}</span>
-                    </Button>
-                  );
-                })}
-              </div>
+              {rolesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  <span className="ml-2 text-gray-500">Loading roles...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {targetRoles.map((role: any) => {
+                    const Icon = role.icon;
+                    return (
+                      <Button
+                        key={role.value}
+                        variant={targetRole === role.value ? "default" : "outline"}
+                        className={cn(
+                          "h-auto py-4 flex flex-col items-center justify-center text-center",
+                          targetRole === role.value && "bg-blue-600 hover:bg-blue-700"
+                        )}
+                        onClick={() => setTargetRole(role.value)}
+                        data-testid={`button-role-${role.value}`}
+                        title={role.description}
+                      >
+                        <Icon className="h-6 w-6 mb-2" />
+                        <span className="text-sm font-medium">{role.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+              {interviewConfig && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="text-xs text-blue-700 dark:text-blue-300">
+                    <span className="font-medium">Focus areas:</span>{' '}
+                    {interviewConfig.focusAreas.join(', ')}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

@@ -1526,6 +1526,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // Phase 2: Adapter Configuration APIs
+  // ============================================
+
+  // GET /api/adapters/interview-config - Get interview configuration for role/level
+  app.get("/api/adapters/interview-config", async (req, res) => {
+    try {
+      const { adapterService, normalizeRole, normalizeLevel } = await import("./services/adapter-service");
+      
+      const role = req.query.role as string;
+      const level = req.query.level as string;
+
+      if (!role || !level) {
+        return res.status(400).json({ message: "Role and level are required" });
+      }
+
+      const config = await adapterService.getInterviewConfiguration({
+        role: normalizeRole(role),
+        level: normalizeLevel(level),
+      });
+
+      if (!config) {
+        return res.status(404).json({ message: "Configuration not found for role/level" });
+      }
+
+      res.json(config);
+    } catch (error) {
+      console.error("Failed to get interview config:", error);
+      res.status(500).json({ message: "Failed to get interview configuration" });
+    }
+  });
+
+  // GET /api/adapters/workspace-config - Get workspace configuration for role/level/language
+  app.get("/api/adapters/workspace-config", async (req, res) => {
+    try {
+      const { adapterService, normalizeRole, normalizeLevel } = await import("./services/adapter-service");
+      
+      const role = req.query.role as string;
+      const level = req.query.level as string;
+      const language = (req.query.language as string) || 'javascript';
+
+      if (!role || !level) {
+        return res.status(400).json({ message: "Role and level are required" });
+      }
+
+      const config = await adapterService.getWorkspaceConfiguration({
+        role: normalizeRole(role),
+        level: normalizeLevel(level),
+        language: language as 'javascript' | 'python' | 'c_cpp',
+      });
+
+      if (!config) {
+        return res.status(404).json({ message: "Configuration not found for role/level" });
+      }
+
+      res.json(config);
+    } catch (error) {
+      console.error("Failed to get workspace config:", error);
+      res.status(500).json({ message: "Failed to get workspace configuration" });
+    }
+  });
+
+  // GET /api/adapters/interview-questions - Get interview question configuration
+  app.get("/api/adapters/interview-questions", async (req, res) => {
+    try {
+      const { adapterService, normalizeRole, normalizeLevel } = await import("./services/adapter-service");
+      
+      const role = req.query.role as string;
+      const level = req.query.level as string;
+
+      if (!role || !level) {
+        return res.status(400).json({ message: "Role and level are required" });
+      }
+
+      const config = await adapterService.getInterviewQuestionConfig({
+        role: normalizeRole(role),
+        level: normalizeLevel(level),
+      });
+
+      if (!config) {
+        return res.status(404).json({ message: "Configuration not found for role/level" });
+      }
+
+      res.json(config);
+    } catch (error) {
+      console.error("Failed to get interview question config:", error);
+      res.status(500).json({ message: "Failed to get interview question configuration" });
+    }
+  });
+
+  // GET /api/adapters/workspace-problems - Get workspace problem configuration
+  app.get("/api/adapters/workspace-problems", async (req, res) => {
+    try {
+      const { adapterService, normalizeRole, normalizeLevel } = await import("./services/adapter-service");
+      
+      const role = req.query.role as string;
+      const level = req.query.level as string;
+      const language = (req.query.language as string) || 'javascript';
+
+      if (!role || !level) {
+        return res.status(400).json({ message: "Role and level are required" });
+      }
+
+      const config = await adapterService.getWorkspaceProblemConfig({
+        role: normalizeRole(role),
+        level: normalizeLevel(level),
+        language: language as 'javascript' | 'python' | 'c_cpp',
+      });
+
+      if (!config) {
+        return res.status(404).json({ message: "Configuration not found for role/level" });
+      }
+
+      res.json(config);
+    } catch (error) {
+      console.error("Failed to get workspace problem config:", error);
+      res.status(500).json({ message: "Failed to get workspace problem configuration" });
+    }
+  });
+
+  // GET /api/adapters/available-roles - Get all available roles
+  app.get("/api/adapters/available-roles", async (req, res) => {
+    try {
+      const { adapterService } = await import("./services/adapter-service");
+      const roles = await adapterService.getAvailableRoles();
+      res.json(roles);
+    } catch (error) {
+      console.error("Failed to get available roles:", error);
+      res.status(500).json({ message: "Failed to get available roles" });
+    }
+  });
+
+  // GET /api/adapters/available-levels/:role - Get available levels for a role
+  app.get("/api/adapters/available-levels/:role", async (req, res) => {
+    try {
+      const { adapterService, normalizeRole } = await import("./services/adapter-service");
+      const role = normalizeRole(req.params.role);
+      const levels = await adapterService.getAvailableLevels(role);
+      res.json(levels);
+    } catch (error) {
+      console.error("Failed to get available levels:", error);
+      res.status(500).json({ message: "Failed to get available levels" });
+    }
+  });
+
+  // GET /api/adapters/available-languages/:role - Get available languages for a role
+  app.get("/api/adapters/available-languages/:role", async (req, res) => {
+    try {
+      const { adapterService, normalizeRole } = await import("./services/adapter-service");
+      const role = normalizeRole(req.params.role);
+      const languages = await adapterService.getAvailableLanguages(role);
+      res.json(languages);
+    } catch (error) {
+      console.error("Failed to get available languages:", error);
+      res.status(500).json({ message: "Failed to get available languages" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
