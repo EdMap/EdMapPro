@@ -1297,6 +1297,175 @@ interface GenerationGuardrails {
 }
 ```
 
+### Scalability to Other Levels
+
+The Sprint Generation Pipeline is **level-agnostic**. The same engine powers all progression paths:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              SAME PIPELINE, DIFFERENT PARAMETERS                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  SPRINT GENERATOR                                                            │
+│       │                                                                      │
+│       ├── Intern → Junior                                                    │
+│       │   └── Params: guided difficulty, basic bugs, supportive team         │
+│       │                                                                      │
+│       ├── Junior → Mid                                                       │
+│       │   └── Params: supported difficulty, system design, mentoring others  │
+│       │                                                                      │
+│       └── Mid → Senior                                                       │
+│           └── Params: independent difficulty, architecture, leadership       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### What Changes Per Level
+
+| Dimension | Intern → Junior | Junior → Mid | Mid → Senior |
+|-----------|-----------------|--------------|--------------|
+| **Difficulty Band** | guided → supported | supported → independent | independent → expert |
+| **Ticket Complexity** | Single-file bugs | Multi-service features | Architecture changes |
+| **Problem Templates** | Basic patterns | System design patterns | Cross-team problems |
+| **User's Role** | Individual contributor | Mentor + contributor | Tech lead + architect |
+| **Soft Skills** | Receiving feedback | Giving feedback, mentoring | Managing conflict, influencing |
+| **Team Dynamics** | Supportive seniors | Mixed, some juniors to mentor | Challenging stakeholders |
+| **Ambiguity** | Clear requirements | Some gaps to fill | Strategic decisions |
+| **Scope** | Single ticket | Multi-ticket coordination | Cross-team initiatives |
+
+#### Level-Specific Problem Templates
+
+```json
+{
+  "problemTemplates": {
+    "intern_junior": [
+      { "id": "bug-null-check", "description": "Missing null check causing crash" },
+      { "id": "bug-timezone", "description": "Timezone handling issue" },
+      { "id": "feature-validation", "description": "Add form validation" },
+      { "id": "feature-error-message", "description": "Improve error messages" }
+    ],
+    "junior_mid": [
+      { "id": "design-api", "description": "Design REST API for new feature" },
+      { "id": "refactor-module", "description": "Refactor module for testability" },
+      { "id": "performance-query", "description": "Optimize slow database query" },
+      { "id": "incident-debug", "description": "Debug production incident" },
+      { "id": "mentor-review", "description": "Review and mentor junior's PR" }
+    ],
+    "mid_senior": [
+      { "id": "architecture-decision", "description": "Make architecture decision with tradeoffs" },
+      { "id": "cross-team-coordination", "description": "Coordinate feature across 3 teams" },
+      { "id": "technical-strategy", "description": "Define technical strategy for quarter" },
+      { "id": "stakeholder-negotiation", "description": "Negotiate scope with product/business" },
+      { "id": "team-scaling", "description": "Plan team scaling and hiring" }
+    ]
+  }
+}
+```
+
+#### Level-Specific Soft Skill Events
+
+```json
+{
+  "softSkillEvents": {
+    "intern_junior": [
+      { "type": "receiving_feedback", "description": "Senior gives constructive criticism on your PR" },
+      { "type": "asking_for_help", "description": "You're stuck, need to ask for help effectively" },
+      { "type": "unclear_requirements", "description": "PM's requirements are vague, need to clarify" },
+      { "type": "deadline_pressure", "description": "Sprint ending, your ticket isn't done" }
+    ],
+    "junior_mid": [
+      { "type": "giving_feedback", "description": "Review junior's code, give constructive feedback" },
+      { "type": "mentoring", "description": "Junior is stuck, help them without doing it for them" },
+      { "type": "technical_disagreement", "description": "Peer disagrees with your approach, defend or adapt" },
+      { "type": "scope_negotiation", "description": "PM wants more, negotiate realistic scope" },
+      { "type": "incident_leadership", "description": "Lead the response to a production incident" }
+    ],
+    "mid_senior": [
+      { "type": "conflict_resolution", "description": "Two team members in conflict, mediate" },
+      { "type": "stakeholder_pushback", "description": "VP questions your technical decision" },
+      { "type": "resource_constraints", "description": "Not enough engineers, prioritize ruthlessly" },
+      { "type": "strategic_tradeoff", "description": "Speed vs quality decision with business impact" },
+      { "type": "cross_team_alignment", "description": "Other team's priorities conflict with yours" }
+    ]
+  }
+}
+```
+
+#### Level-Specific Team Dynamics
+
+| Level | User's Position | Team Composition |
+|-------|-----------------|------------------|
+| **Intern → Junior** | Newest member | Supportive seniors, helpful PM, patient tech lead |
+| **Junior → Mid** | Experienced IC | Mix of seniors and juniors (you mentor the juniors) |
+| **Mid → Senior** | Tech lead | Juniors, mids, challenging stakeholders, peer leads |
+
+```typescript
+interface LevelSpecificTeamConfig {
+  level: 'intern' | 'junior' | 'mid' | 'senior';
+  
+  userRole: {
+    title: string;                  // "Software Engineer I", "Senior Engineer", etc.
+    responsibilities: string[];
+    autonomyLevel: 'low' | 'medium' | 'high';
+  };
+  
+  teamComposition: {
+    reportsToUser: number;          // 0 for intern, 0-1 for junior, 2-4 for mid+
+    peersAboveUser: number;         // Many for intern, few for senior
+    peersBelowUser: number;         // 0 for intern, some for mid, many for senior
+  };
+  
+  interactionPatterns: {
+    primaryMentor: boolean;         // Intern has a dedicated mentor
+    mentoringOthers: boolean;       // Mid+ mentors juniors
+    stakeholderAccess: 'limited' | 'regular' | 'frequent';
+    crossTeamWork: 'rare' | 'occasional' | 'frequent';
+  };
+}
+```
+
+#### The Generator Adapts Automatically
+
+```typescript
+function generateSprint(
+  progressionPath: ProgressionPath,
+  sprintNumber: number,
+  userProgress: UserProgress
+): GeneratedSprint {
+  
+  // 1. Determine difficulty band based on progression path + sprint number
+  const difficultyBand = calculateDifficultyBand(
+    progressionPath.difficultyProgression,
+    sprintNumber
+  );
+  
+  // 2. Select problem templates for this level
+  const templates = getProblemTemplates(progressionPath.entryLevel);
+  
+  // 3. Select soft skill events for this level
+  const softSkillPool = getSoftSkillEvents(progressionPath.entryLevel);
+  
+  // 4. Configure team dynamics for this level
+  const teamConfig = getTeamConfig(progressionPath.entryLevel);
+  
+  // 5. Generate sprint using standard pipeline
+  return sprintGenerationPipeline({
+    difficultyBand,
+    problemTemplates: templates,
+    softSkillPool,
+    teamConfig,
+    userCompetencyGaps: userProgress.gaps,
+    previousSprints: userProgress.completedSprints
+  });
+}
+```
+
+This means:
+- **One codebase** powers all progression paths
+- **Content packs** (problem templates, soft skills) are swapped based on level
+- **Team dynamics** adjust automatically
+- **New progression paths** can be added by creating new content packs
+
 ---
 
 ## Scripted vs AI-Generated Content
