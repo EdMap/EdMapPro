@@ -1346,3 +1346,214 @@ export interface GeneratedSprintBacklog {
     retro: { day: number; script: string[] };
   };
 }
+
+// =====================================================
+// Phase 5: Sprint Tickets, Ceremonies, Git Workflow
+// =====================================================
+
+export type TicketStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
+export type TicketType = 'bug' | 'feature';
+export type CeremonyStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+export type GitCommandType = 'clone' | 'checkout' | 'branch' | 'add' | 'commit' | 'push' | 'pull' | 'fetch' | 'merge' | 'rebase' | 'status' | 'log' | 'diff';
+export type PRStatus = 'draft' | 'open' | 'changes_requested' | 'approved' | 'merged' | 'closed';
+
+// Sprint Tickets - individual work items with Git state
+export const sprintTickets = pgTable("sprint_tickets", {
+  id: serial("id").primaryKey(),
+  sprintId: integer("sprint_id").references(() => sprints.id).notNull(),
+  ticketKey: text("ticket_key").notNull(), // e.g., "ACME-42"
+  templateId: text("template_id"), // Reference to template used
+  type: text("type").notNull(), // 'bug' | 'feature'
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  acceptanceCriteria: jsonb("acceptance_criteria").notNull().default('[]'),
+  storyPoints: integer("story_points").notNull().default(2),
+  status: text("status").notNull().default('todo'), // TicketStatus
+  priority: text("priority").notNull().default('medium'),
+  dayAssigned: integer("day_assigned").notNull().default(1),
+  gitState: jsonb("git_state").notNull().default('{}'), // GitTicketState
+  codeExercise: jsonb("code_exercise"), // Code exercise data from template
+  prDetails: jsonb("pr_details"), // PR information
+  reviewComments: jsonb("review_comments").default('[]'),
+  competenciesPracticed: text("competencies_practiced").array(),
+  evaluation: jsonb("evaluation"), // AI evaluation of work
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Ceremony Instances - tracking ceremony execution
+export const ceremonyInstances = pgTable("ceremony_instances", {
+  id: serial("id").primaryKey(),
+  sprintId: integer("sprint_id").references(() => sprints.id).notNull(),
+  ceremonyType: text("ceremony_type").notNull(), // CeremonyType
+  dayNumber: integer("day_number").notNull(),
+  status: text("status").notNull().default('pending'), // CeremonyStatus
+  script: jsonb("script").notNull().default('[]'), // Ceremony script/prompts
+  teamMessages: jsonb("team_messages").notNull().default('[]'), // AI team member messages
+  userResponses: jsonb("user_responses").notNull().default('[]'), // User's responses
+  actionItems: jsonb("action_items").default('[]'), // For retro
+  commitments: jsonb("commitments").default('[]'), // For planning
+  feedback: jsonb("feedback"), // Manager feedback for 1:1
+  competencyDeltas: jsonb("competency_deltas"), // Competency changes from this ceremony
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Git Sessions - one per ticket, tracks Git state
+export const gitSessions = pgTable("git_sessions", {
+  id: serial("id").primaryKey(),
+  ticketId: integer("ticket_id").references(() => sprintTickets.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  repoName: text("repo_name").notNull(),
+  currentBranch: text("current_branch").notNull().default('main'),
+  isCloned: boolean("is_cloned").notNull().default(false),
+  stagedFiles: text("staged_files").array().default([]),
+  commits: jsonb("commits").notNull().default('[]'), // Local commit history
+  remoteSyncStatus: text("remote_sync_status").notNull().default('synced'), // 'synced', 'ahead', 'behind', 'diverged'
+  prStatus: text("pr_status"), // PRStatus
+  prUrl: text("pr_url"),
+  lastFetchAt: timestamp("last_fetch_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Git Events - individual Git commands executed
+export const gitEvents = pgTable("git_events", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => gitSessions.id).notNull(),
+  commandType: text("command_type").notNull(), // GitCommandType
+  rawCommand: text("raw_command").notNull(), // Full command string
+  isValid: boolean("is_valid").notNull().default(true),
+  output: text("output"), // Simulated output
+  errorMessage: text("error_message"),
+  stateChange: jsonb("state_change"), // What changed in git state
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for Phase 5 tables
+export const insertSprintTicketSchema = createInsertSchema(sprintTickets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCeremonyInstanceSchema = createInsertSchema(ceremonyInstances).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertGitSessionSchema = createInsertSchema(gitSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertGitEventSchema = createInsertSchema(gitEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for Phase 5 tables
+export type InsertSprintTicket = z.infer<typeof insertSprintTicketSchema>;
+export type SprintTicket = typeof sprintTickets.$inferSelect;
+
+export type InsertCeremonyInstance = z.infer<typeof insertCeremonyInstanceSchema>;
+export type CeremonyInstance = typeof ceremonyInstances.$inferSelect;
+
+export type InsertGitSession = z.infer<typeof insertGitSessionSchema>;
+export type GitSession = typeof gitSessions.$inferSelect;
+
+export type InsertGitEvent = z.infer<typeof insertGitEventSchema>;
+export type GitEvent = typeof gitEvents.$inferSelect;
+
+// Git state for a ticket
+export interface GitTicketState {
+  branchName: string | null;
+  branchCreatedAt: string | null;
+  commits: {
+    hash: string;
+    message: string;
+    timestamp: string;
+  }[];
+  isPushed: boolean;
+  prCreated: boolean;
+  prApproved: boolean;
+  isMerged: boolean;
+}
+
+// PR Details structure
+export interface PRDetails {
+  title: string;
+  description: string;
+  targetBranch: string;
+  sourceBranch: string;
+  status: PRStatus;
+  reviewers: string[];
+  checksStatus: 'pending' | 'passing' | 'failing';
+  comments: {
+    author: string;
+    authorRole: string;
+    message: string;
+    file?: string;
+    line?: number;
+    timestamp: string;
+  }[];
+  approvedBy: string[];
+  createdAt: string;
+  mergedAt?: string;
+}
+
+// Ceremony user response
+export interface CeremonyUserResponse {
+  promptId: string;
+  response: string;
+  timestamp: string;
+}
+
+// Standup response structure
+export interface StandupResponse {
+  yesterday: string;
+  today: string;
+  blockers: string;
+}
+
+// Retro item structure
+export interface RetroItem {
+  id: string;
+  category: 'went_well' | 'improve' | 'action_item';
+  content: string;
+  votes: number;
+  author: 'user' | string; // 'user' or AI team member name
+}
+
+// Sprint overview for dashboard
+export interface SprintOverview {
+  sprint: Sprint;
+  tickets: SprintTicket[];
+  ceremonies: CeremonyInstance[];
+  currentDay: number;
+  ticketStats: {
+    todo: number;
+    inProgress: number;
+    inReview: number;
+    done: number;
+  };
+  upcomingCeremonies: CeremonyInstance[];
+  todayActivities: SprintActivity[];
+}
+
+// Journey dashboard data
+export interface JourneyDashboard {
+  journey: UserJourney;
+  currentArc: JourneyArc | null;
+  currentSprint: SprintOverview | null;
+  readinessScore: number;
+  competencyScores: Record<string, { score: number; band: MasteryBand }>;
+  timeline: {
+    arcs: (JourneyArc & { sprints: Sprint[] })[];
+    currentPosition: { arcIndex: number; sprintIndex: number };
+  };
+  canGraduate: boolean;
+  estimatedSprintsRemaining: number;
+}

@@ -6,6 +6,7 @@ import {
   companies, jobPostings, jobGlossary, jobApplications, interviewTemplates, applicationStages,
   competencies, simulationCatalogue, roleAdapters, competencyLedger, portfolioArtifacts,
   progressionPaths, projectTemplates, userJourneys, journeyArcs, sprints, sprintActivities, competencySnapshots,
+  sprintTickets, ceremonyInstances, gitSessions, gitEvents,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -38,6 +39,12 @@ import {
   type SprintActivity, type InsertSprintActivity,
   type CompetencySnapshot, type InsertCompetencySnapshot,
   type JourneyState,
+  type SprintTicket, type InsertSprintTicket,
+  type CeremonyInstance, type InsertCeremonyInstance,
+  type GitSession, type InsertGitSession,
+  type GitEvent, type InsertGitEvent,
+  type SprintOverview, type JourneyDashboard,
+  type MasteryBand,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -223,6 +230,34 @@ export interface IStorage {
   // Phase 3: Competency Snapshot operations
   getCompetencySnapshots(journeyId: number): Promise<CompetencySnapshot[]>;
   createCompetencySnapshot(snapshot: InsertCompetencySnapshot): Promise<CompetencySnapshot>;
+  
+  // Phase 5: Sprint Ticket operations
+  getSprintTickets(sprintId: number): Promise<SprintTicket[]>;
+  getSprintTicket(id: number): Promise<SprintTicket | undefined>;
+  getSprintTicketByKey(sprintId: number, ticketKey: string): Promise<SprintTicket | undefined>;
+  createSprintTicket(ticket: InsertSprintTicket): Promise<SprintTicket>;
+  updateSprintTicket(id: number, updates: Partial<SprintTicket>): Promise<SprintTicket | undefined>;
+  
+  // Phase 5: Ceremony Instance operations
+  getCeremonyInstances(sprintId: number): Promise<CeremonyInstance[]>;
+  getCeremonyInstance(id: number): Promise<CeremonyInstance | undefined>;
+  getCeremonyByType(sprintId: number, ceremonyType: string, dayNumber?: number): Promise<CeremonyInstance | undefined>;
+  createCeremonyInstance(ceremony: InsertCeremonyInstance): Promise<CeremonyInstance>;
+  updateCeremonyInstance(id: number, updates: Partial<CeremonyInstance>): Promise<CeremonyInstance | undefined>;
+  
+  // Phase 5: Git Session operations
+  getGitSession(ticketId: number): Promise<GitSession | undefined>;
+  getGitSessionById(id: number): Promise<GitSession | undefined>;
+  createGitSession(session: InsertGitSession): Promise<GitSession>;
+  updateGitSession(id: number, updates: Partial<GitSession>): Promise<GitSession | undefined>;
+  
+  // Phase 5: Git Event operations
+  getGitEvents(sessionId: number): Promise<GitEvent[]>;
+  createGitEvent(event: InsertGitEvent): Promise<GitEvent>;
+  
+  // Phase 5: Dashboard data operations
+  getSprintOverview(sprintId: number): Promise<SprintOverview | null>;
+  getJourneyDashboard(journeyId: number): Promise<JourneyDashboard | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -2925,6 +2960,242 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       createdAt: new Date()
     }).returning();
     return results[0];
+  }
+
+  // Phase 5: Sprint Ticket operations
+  async getSprintTickets(sprintId: number): Promise<SprintTicket[]> {
+    return await db.select().from(sprintTickets)
+      .where(eq(sprintTickets.sprintId, sprintId))
+      .orderBy(sprintTickets.dayAssigned, sprintTickets.priority);
+  }
+
+  async getSprintTicket(id: number): Promise<SprintTicket | undefined> {
+    const results = await db.select().from(sprintTickets).where(eq(sprintTickets.id, id));
+    return results[0];
+  }
+
+  async getSprintTicketByKey(sprintId: number, ticketKey: string): Promise<SprintTicket | undefined> {
+    const results = await db.select().from(sprintTickets)
+      .where(and(
+        eq(sprintTickets.sprintId, sprintId),
+        eq(sprintTickets.ticketKey, ticketKey)
+      ));
+    return results[0];
+  }
+
+  async createSprintTicket(ticket: InsertSprintTicket): Promise<SprintTicket> {
+    const results = await db.insert(sprintTickets).values({
+      ...ticket,
+      status: ticket.status || 'todo',
+      priority: ticket.priority || 'medium',
+      storyPoints: ticket.storyPoints || 2,
+      dayAssigned: ticket.dayAssigned || 1,
+      gitState: ticket.gitState || {},
+      acceptanceCriteria: ticket.acceptanceCriteria || [],
+      reviewComments: ticket.reviewComments || [],
+      createdAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateSprintTicket(id: number, updates: Partial<SprintTicket>): Promise<SprintTicket | undefined> {
+    const results = await db.update(sprintTickets)
+      .set(updates)
+      .where(eq(sprintTickets.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Phase 5: Ceremony Instance operations
+  async getCeremonyInstances(sprintId: number): Promise<CeremonyInstance[]> {
+    return await db.select().from(ceremonyInstances)
+      .where(eq(ceremonyInstances.sprintId, sprintId))
+      .orderBy(ceremonyInstances.dayNumber);
+  }
+
+  async getCeremonyInstance(id: number): Promise<CeremonyInstance | undefined> {
+    const results = await db.select().from(ceremonyInstances).where(eq(ceremonyInstances.id, id));
+    return results[0];
+  }
+
+  async getCeremonyByType(sprintId: number, ceremonyType: string, dayNumber?: number): Promise<CeremonyInstance | undefined> {
+    const conditions = [
+      eq(ceremonyInstances.sprintId, sprintId),
+      eq(ceremonyInstances.ceremonyType, ceremonyType)
+    ];
+    
+    if (dayNumber !== undefined) {
+      conditions.push(eq(ceremonyInstances.dayNumber, dayNumber));
+    }
+    
+    const results = await db.select().from(ceremonyInstances)
+      .where(and(...conditions))
+      .orderBy(desc(ceremonyInstances.dayNumber));
+    return results[0];
+  }
+
+  async createCeremonyInstance(ceremony: InsertCeremonyInstance): Promise<CeremonyInstance> {
+    const results = await db.insert(ceremonyInstances).values({
+      ...ceremony,
+      status: ceremony.status || 'pending',
+      script: ceremony.script || [],
+      teamMessages: ceremony.teamMessages || [],
+      userResponses: ceremony.userResponses || [],
+      actionItems: ceremony.actionItems || [],
+      commitments: ceremony.commitments || [],
+      createdAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateCeremonyInstance(id: number, updates: Partial<CeremonyInstance>): Promise<CeremonyInstance | undefined> {
+    const results = await db.update(ceremonyInstances)
+      .set(updates)
+      .where(eq(ceremonyInstances.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Phase 5: Git Session operations
+  async getGitSession(ticketId: number): Promise<GitSession | undefined> {
+    const results = await db.select().from(gitSessions).where(eq(gitSessions.ticketId, ticketId));
+    return results[0];
+  }
+
+  async getGitSessionById(id: number): Promise<GitSession | undefined> {
+    const results = await db.select().from(gitSessions).where(eq(gitSessions.id, id));
+    return results[0];
+  }
+
+  async createGitSession(session: InsertGitSession): Promise<GitSession> {
+    const results = await db.insert(gitSessions).values({
+      ...session,
+      currentBranch: session.currentBranch || 'main',
+      isCloned: session.isCloned || false,
+      stagedFiles: session.stagedFiles || [],
+      commits: session.commits || [],
+      remoteSyncStatus: session.remoteSyncStatus || 'synced',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateGitSession(id: number, updates: Partial<GitSession>): Promise<GitSession | undefined> {
+    const results = await db.update(gitSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(gitSessions.id, id))
+      .returning();
+    return results[0];
+  }
+
+  // Phase 5: Git Event operations
+  async getGitEvents(sessionId: number): Promise<GitEvent[]> {
+    return await db.select().from(gitEvents)
+      .where(eq(gitEvents.sessionId, sessionId))
+      .orderBy(gitEvents.createdAt);
+  }
+
+  async createGitEvent(event: InsertGitEvent): Promise<GitEvent> {
+    const results = await db.insert(gitEvents).values({
+      ...event,
+      isValid: event.isValid ?? true,
+      createdAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  // Phase 5: Dashboard data operations
+  async getSprintOverview(sprintId: number): Promise<SprintOverview | null> {
+    const sprint = await this.getSprint(sprintId);
+    if (!sprint) return null;
+
+    const tickets = await this.getSprintTickets(sprintId);
+    const ceremonies = await this.getCeremonyInstances(sprintId);
+    const activities = await this.getSprintActivities(sprintId);
+
+    const ticketStats = {
+      todo: tickets.filter(t => t.status === 'todo').length,
+      inProgress: tickets.filter(t => t.status === 'in_progress').length,
+      inReview: tickets.filter(t => t.status === 'in_review').length,
+      done: tickets.filter(t => t.status === 'done').length,
+    };
+
+    const upcomingCeremonies = ceremonies.filter(c => c.status === 'pending');
+    const sprintState = sprint.sprintState as { currentDay?: number } | null;
+    const currentDay = sprintState?.currentDay || 1;
+    const todayActivities = activities.filter(a => a.dayNumber === currentDay);
+
+    return {
+      sprint,
+      tickets,
+      ceremonies,
+      currentDay,
+      ticketStats,
+      upcomingCeremonies,
+      todayActivities,
+    };
+  }
+
+  async getJourneyDashboard(journeyId: number): Promise<JourneyDashboard | null> {
+    const journey = await this.getJourney(journeyId);
+    if (!journey) return null;
+
+    const arcs = await this.getJourneyArcs(journeyId);
+    const currentArc = arcs.find(arc => arc.status === 'in_progress') || null;
+    
+    let currentSprint: SprintOverview | null = null;
+    if (currentArc) {
+      const sprint = await this.getSprintByArc(currentArc.id);
+      if (sprint) {
+        currentSprint = await this.getSprintOverview(sprint.id);
+      }
+    }
+
+    const readinessScore = journey.readinessScore || 0;
+    const competencyScores: Record<string, { score: number; band: MasteryBand }> = {};
+    
+    const ledgerEntries = await this.getUserCompetencyLedger(journey.userId);
+    for (const entry of ledgerEntries) {
+      const competency = await db.select().from(competencies).where(eq(competencies.id, entry.competencyId));
+      if (competency[0]) {
+        competencyScores[competency[0].slug] = {
+          score: entry.confidence,
+          band: entry.currentBand as MasteryBand,
+        };
+      }
+    }
+
+    const allSprints = await this.getSprintsByJourney(journeyId);
+    const arcsWithSprints = arcs.map(arc => ({
+      ...arc,
+      sprints: allSprints.filter(s => s.arcId === arc.id),
+    }));
+
+    const currentArcIndex = currentArc ? arcs.findIndex(a => a.id === currentArc.id) : -1;
+    const currentSprintIndex = currentSprint ? 
+      arcsWithSprints[currentArcIndex]?.sprints.findIndex(s => s.id === currentSprint?.sprint.id) ?? -1 : -1;
+
+    const progressionPath = await this.getProgressionPathById(journey.progressionPathId);
+    const requirements = progressionPath?.requirements as { minSprints?: number } | null;
+    const minSprintsRequired = requirements?.minSprints || 3;
+    
+    const canGraduate = readinessScore >= 85 && journey.completedSprints >= minSprintsRequired;
+    const estimatedSprintsRemaining = Math.max(0, Math.ceil((85 - readinessScore) / 10));
+
+    return {
+      journey,
+      currentArc,
+      currentSprint,
+      readinessScore,
+      competencyScores,
+      timeline: {
+        arcs: arcsWithSprints,
+        currentPosition: { arcIndex: currentArcIndex, sprintIndex: currentSprintIndex },
+      },
+      canGraduate,
+      estimatedSprintsRemaining,
+    };
   }
 }
 
