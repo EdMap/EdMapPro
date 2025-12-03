@@ -68,6 +68,8 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 | `docs/PRODUCT_ROADMAP.md` | Complete product strategy and implementation plan |
 | `shared/catalogue/index.json` | Catalogue structure and content type definitions |
 | `shared/catalogue/README.md` | Catalogue documentation and usage guide |
+| `shared/catalogue/service.ts` | Query-based catalogue service (Phase 1-ready interface) |
+| `shared/catalogue/loaders.ts` | Zod schemas and validation helpers for catalogue content |
 | `shared/catalogue/workspace/` | Workspace simulator extracted content (team, docs, activities, tickets) |
 | `shared/catalogue/interview/` | Interview simulator extracted content (questions, rubrics, personas) |
 | `client/src/components/simulation/intern-onboarding-session.tsx` | Current workspace simulation (4k lines, to be modularized) |
@@ -106,23 +108,29 @@ See `docs/PRODUCT_ROADMAP.md` for detailed phase descriptions.
 
 ## Recent Updates
 
-### Phase 0 In Progress: Content Extraction & Migration (December 2025)
+### Phase 0 Complete: Content Extraction & Service Layer (December 2025)
 **Extraction Complete:**
 - Extracted all hardcoded content to JSON catalogue files (15 files total)
 - **Workspace Catalogue**: team-members.json, documentation-day1.json, activities-day1.json, activities-day2.json, ticket-timezone-bug.json, standup-script.json, dev-setup-steps.json, git-workflow-steps.json, codebase-structure.json, code-exercise-timezone.json, branch-creation.json
 - **Interview Catalogue**: question-banks.json, interview-config.json, evaluation-rubrics.json, team-personas.json
 - Created catalogue index and documentation at `shared/catalogue/`
-- Created typed loader utility with Zod validation at `shared/catalogue/loaders.ts`
 
-**Component Migration (In Progress):**
-- `intern-onboarding-session.tsx`: Migrated standup script, dev setup steps, git workflow, codebase structure, code exercise, branch validation to use JSON imports
-- `interview-simulator.tsx`: Migrated target roles, interview types, and difficulties to use JSON imports
-- Remaining: interview-session.tsx, langchain-interview-session.tsx, backend orchestrators
+**Service Layer (Phase 1-Ready):**
+- Created `shared/catalogue/service.ts` with query-based interface matching future API signature
+- `CatalogueQuery` interface: `{ simulator, type, role, level, language, day }`
+- `CatalogueItem` structure: `{ meta: {...adapterTags}, content: T }`
+- Strict filtering: queries only return items with matching tags (mirrors Phase 1 API behavior)
+- In Phase 1, only the service implementation changes (JSON → API), not components
+
+**Component Migration:**
+- `intern-onboarding-session.tsx`: Uses JSON imports for Day 2 exercises (standup, dev-setup, git, codebase, code-exercise, branch)
+- `interview-simulator.tsx`: Uses JSON imports for config (roles, types, difficulties)
+- Validation helpers: validateSetupCommand, validateGitCommand, validateBranchName, validateCodeBlank
 
 **Technical Details:**
-- Added `resolveJsonModule: true` to tsconfig.json for JSON imports
+- Added `resolveJsonModule: true` to tsconfig.json
 - Using `@shared/catalogue/...` import path alias
-- Validation helpers in loaders.ts: validateSetupCommand, validateGitCommand, validateBranchName, validateCodeBlank
+- Service layer preserves JSON `type` field verbatim for Phase 1 DB mapping
 
 ### Strategic Planning (December 2025)
 - Defined competency-based progression framework (Explorer → Contributor → Junior Ready)

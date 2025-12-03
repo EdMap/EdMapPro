@@ -92,7 +92,15 @@ class CatalogueService {
     const codebaseData = await import("./workspace/codebase-structure.json");
     const codeExerciseData = await import("./workspace/code-exercise-timezone.json");
     const branchData = await import("./workspace/branch-creation.json");
+    const teamMembersData = await import("./workspace/team-members.json");
+    const documentationDay1Data = await import("./workspace/documentation-day1.json");
+    const activitiesDay1Data = await import("./workspace/activities-day1.json");
+    const activitiesDay2Data = await import("./workspace/activities-day2.json");
+    const ticketData = await import("./workspace/ticket-timezone-bug.json");
     const interviewConfigData = await import("./interview/interview-config.json");
+    const questionBanksData = await import("./interview/question-banks.json");
+    const evaluationRubricsData = await import("./interview/evaluation-rubrics.json");
+    const teamPersonasData = await import("./interview/team-personas.json");
 
     this.registerItem("workspace-standup-day2", {
       meta: {
@@ -172,6 +180,67 @@ class CatalogueService {
       content: branchData.content
     });
 
+    this.registerItem("workspace-team-members", {
+      meta: {
+        id: "workspace-team-members",
+        type: "team_members",
+        simulator: "workspace",
+        version: teamMembersData.version
+      },
+      content: teamMembersData.content
+    });
+
+    this.registerItem("workspace-documentation-day1", {
+      meta: {
+        id: "workspace-documentation-day1",
+        type: "onboarding_documentation",
+        simulator: "workspace",
+        version: documentationDay1Data.version,
+        role: documentationDay1Data.metadata?.role as RoleType,
+        language: documentationDay1Data.metadata?.language as LanguageType,
+        day: documentationDay1Data.metadata?.day
+      },
+      content: documentationDay1Data.content
+    });
+
+    this.registerItem("workspace-activities-day1", {
+      meta: {
+        id: "workspace-activities-day1",
+        type: "daily_activities",
+        simulator: "workspace",
+        version: activitiesDay1Data.version,
+        role: activitiesDay1Data.metadata?.role as RoleType,
+        language: activitiesDay1Data.metadata?.language as LanguageType,
+        day: activitiesDay1Data.metadata?.day
+      },
+      content: activitiesDay1Data.content
+    });
+
+    this.registerItem("workspace-activities-day2", {
+      meta: {
+        id: "workspace-activities-day2",
+        type: "daily_activities",
+        simulator: "workspace",
+        version: activitiesDay2Data.version,
+        role: activitiesDay2Data.metadata?.role as RoleType,
+        language: activitiesDay2Data.metadata?.language as LanguageType,
+        day: activitiesDay2Data.metadata?.day
+      },
+      content: activitiesDay2Data.content
+    });
+
+    this.registerItem("workspace-ticket-timezone-bug", {
+      meta: {
+        id: "workspace-ticket-timezone-bug",
+        type: "ticket",
+        simulator: "workspace",
+        version: ticketData.version,
+        role: ticketData.metadata?.role as RoleType,
+        language: ticketData.metadata?.language as LanguageType
+      },
+      content: ticketData.content
+    });
+
     this.registerItem("interview-configuration", {
       meta: {
         id: "interview-configuration",
@@ -180,6 +249,36 @@ class CatalogueService {
         version: interviewConfigData.version
       },
       content: interviewConfigData.content
+    });
+
+    this.registerItem("interview-question-banks", {
+      meta: {
+        id: "interview-question-banks",
+        type: "question_bank",
+        simulator: "interview",
+        version: questionBanksData.version
+      },
+      content: questionBanksData.content
+    });
+
+    this.registerItem("interview-evaluation-rubrics", {
+      meta: {
+        id: "interview-evaluation-rubrics",
+        type: "evaluation_rubrics",
+        simulator: "interview",
+        version: evaluationRubricsData.version
+      },
+      content: evaluationRubricsData.content
+    });
+
+    this.registerItem("interview-team-personas", {
+      meta: {
+        id: "interview-team-personas",
+        type: "team_personas",
+        simulator: "interview",
+        version: teamPersonasData.version
+      },
+      content: teamPersonasData.content
     });
 
     this.initialized = true;
