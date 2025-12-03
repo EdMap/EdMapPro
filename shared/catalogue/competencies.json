@@ -1,0 +1,232 @@
+{
+  "version": "1.0.0",
+  "type": "competencies",
+  "description": "Core competencies for the edmap progression framework",
+  "categories": {
+    "foundational_habits": "Basic professional behaviors that form the foundation",
+    "core_delivery": "Technical and process skills for delivering work",
+    "professional_impact": "Advanced skills for team and business impact"
+  },
+  "competencies": [
+    {
+      "slug": "communication",
+      "name": "Professional Communication",
+      "summary": "Clear, timely, and appropriate communication with team members",
+      "category": "foundational_habits",
+      "role": null,
+      "rubric": {
+        "explorer": {
+          "description": "Learning to communicate in professional contexts",
+          "behaviors": ["Responds to messages within reasonable time", "Asks clarifying questions when confused", "Uses appropriate tone in written communication"]
+        },
+        "contributor": {
+          "description": "Communicates effectively with team",
+          "behaviors": ["Proactively shares status updates", "Adapts communication style to audience", "Documents decisions and rationale"]
+        },
+        "junior_ready": {
+          "description": "Communication drives team alignment",
+          "behaviors": ["Facilitates discussions effectively", "Resolves misunderstandings proactively", "Creates clear documentation for others"]
+        }
+      },
+      "skills": ["standup-updates", "status-reporting", "written-clarity", "active-listening"]
+    },
+    {
+      "slug": "time-management",
+      "name": "Time Management",
+      "summary": "Effectively managing time, priorities, and deadlines",
+      "category": "foundational_habits",
+      "role": null,
+      "rubric": {
+        "explorer": {
+          "description": "Learning to estimate and track time",
+          "behaviors": ["Tracks time spent on tasks", "Asks for help when stuck", "Communicates blockers early"]
+        },
+        "contributor": {
+          "description": "Manages own time effectively",
+          "behaviors": ["Provides reasonable estimates", "Prioritizes tasks appropriately", "Meets most deadlines"]
+        },
+        "junior_ready": {
+          "description": "Reliable time management",
+          "behaviors": ["Consistently accurate estimates", "Proactively manages scope", "Helps team with planning"]
+        }
+      },
+      "skills": ["estimation", "prioritization", "deadline-awareness", "blocker-escalation"]
+    },
+    {
+      "slug": "feedback-reception",
+      "name": "Receiving Feedback",
+      "summary": "Accepting and acting on feedback constructively",
+      "category": "foundational_habits",
+      "role": null,
+      "rubric": {
+        "explorer": {
+          "description": "Open to receiving feedback",
+          "behaviors": ["Listens without becoming defensive", "Asks for clarification on feedback", "Thanks reviewer for feedback"]
+        },
+        "contributor": {
+          "description": "Actively seeks and applies feedback",
+          "behaviors": ["Requests specific feedback", "Implements feedback promptly", "Shows improvement over time"]
+        },
+        "junior_ready": {
+          "description": "Feedback drives continuous improvement",
+          "behaviors": ["Anticipates feedback areas", "Synthesizes feedback from multiple sources", "Mentors others on improvement"]
+        }
+      },
+      "skills": ["active-listening", "growth-mindset", "self-reflection", "improvement-tracking"]
+    },
+    {
+      "slug": "debugging",
+      "name": "Debugging",
+      "summary": "Systematically identifying and fixing code issues",
+      "category": "core_delivery",
+      "role": "developer",
+      "rubric": {
+        "explorer": {
+          "description": "Learning systematic debugging approach",
+          "behaviors": ["Reads error messages carefully", "Uses console.log for investigation", "Searches for similar issues online"]
+        },
+        "contributor": {
+          "description": "Debugs issues independently",
+          "behaviors": ["Uses debugger tools effectively", "Isolates problems systematically", "Documents root causes"]
+        },
+        "junior_ready": {
+          "description": "Expert debugger who helps others",
+          "behaviors": ["Debugs complex multi-system issues", "Creates debugging guides", "Teaches debugging techniques"]
+        }
+      },
+      "skills": ["error-analysis", "systematic-investigation", "tool-usage", "root-cause-analysis"]
+    },
+    {
+      "slug": "git-workflow",
+      "name": "Git Workflow",
+      "summary": "Using version control effectively in team settings",
+      "category": "core_delivery",
+      "role": "developer",
+      "rubric": {
+        "explorer": {
+          "description": "Learning basic git commands",
+          "behaviors": ["Creates branches for work", "Writes basic commit messages", "Pushes changes to remote"]
+        },
+        "contributor": {
+          "description": "Follows team git conventions",
+          "behaviors": ["Writes descriptive commit messages", "Handles merge conflicts", "Uses feature branch workflow"]
+        },
+        "junior_ready": {
+          "description": "Git power user",
+          "behaviors": ["Uses interactive rebase", "Reviews git history effectively", "Helps team with git issues"]
+        }
+      },
+      "skills": ["branching", "committing", "merging", "history-navigation"]
+    },
+    {
+      "slug": "code-review",
+      "name": "Code Review",
+      "summary": "Giving and receiving code reviews effectively",
+      "category": "core_delivery",
+      "role": "developer",
+      "rubric": {
+        "explorer": {
+          "description": "Learning code review basics",
+          "behaviors": ["Responds to review comments", "Makes requested changes", "Asks questions about suggestions"]
+        },
+        "contributor": {
+          "description": "Participates actively in reviews",
+          "behaviors": ["Provides constructive feedback", "Catches common issues", "Explains rationale for changes"]
+        },
+        "junior_ready": {
+          "description": "Trusted reviewer",
+          "behaviors": ["Reviews for architecture and design", "Mentors through reviews", "Balances speed and thoroughness"]
+        }
+      },
+      "skills": ["giving-feedback", "receiving-feedback", "code-quality", "mentoring"]
+    },
+    {
+      "slug": "codebase-navigation",
+      "name": "Codebase Navigation",
+      "summary": "Understanding and navigating unfamiliar codebases",
+      "category": "core_delivery",
+      "role": "developer",
+      "rubric": {
+        "explorer": {
+          "description": "Learning to explore codebases",
+          "behaviors": ["Follows file structure conventions", "Uses search to find code", "Reads documentation"]
+        },
+        "contributor": {
+          "description": "Navigates codebase confidently",
+          "behaviors": ["Understands module boundaries", "Traces code flow", "Identifies patterns used"]
+        },
+        "junior_ready": {
+          "description": "Deep codebase understanding",
+          "behaviors": ["Maps system architecture", "Identifies technical debt", "Proposes improvements"]
+        }
+      },
+      "skills": ["file-exploration", "pattern-recognition", "documentation-reading", "architecture-understanding"]
+    },
+    {
+      "slug": "testing",
+      "name": "Testing",
+      "summary": "Writing and running tests to ensure code quality",
+      "category": "core_delivery",
+      "role": "developer",
+      "rubric": {
+        "explorer": {
+          "description": "Learning testing basics",
+          "behaviors": ["Runs existing tests", "Writes simple unit tests", "Understands test output"]
+        },
+        "contributor": {
+          "description": "Writes comprehensive tests",
+          "behaviors": ["Covers edge cases", "Uses appropriate test types", "Maintains test quality"]
+        },
+        "junior_ready": {
+          "description": "Testing champion",
+          "behaviors": ["Designs test strategies", "Improves test infrastructure", "Mentors on testing"]
+        }
+      },
+      "skills": ["unit-testing", "integration-testing", "test-design", "coverage-analysis"]
+    },
+    {
+      "slug": "collaboration",
+      "name": "Team Collaboration",
+      "summary": "Working effectively with team members on shared goals",
+      "category": "professional_impact",
+      "role": null,
+      "rubric": {
+        "explorer": {
+          "description": "Learning team dynamics",
+          "behaviors": ["Participates in team meetings", "Helps when asked", "Follows team processes"]
+        },
+        "contributor": {
+          "description": "Active team contributor",
+          "behaviors": ["Volunteers for tasks", "Supports teammates proactively", "Shares knowledge"]
+        },
+        "junior_ready": {
+          "description": "Team multiplier",
+          "behaviors": ["Improves team processes", "Facilitates collaboration", "Resolves team conflicts"]
+        }
+      },
+      "skills": ["pairing", "knowledge-sharing", "process-improvement", "conflict-resolution"]
+    },
+    {
+      "slug": "problem-solving",
+      "name": "Problem Solving",
+      "summary": "Breaking down complex problems into manageable pieces",
+      "category": "professional_impact",
+      "role": null,
+      "rubric": {
+        "explorer": {
+          "description": "Learning problem decomposition",
+          "behaviors": ["Breaks problems into steps", "Asks clarifying questions", "Tries multiple approaches"]
+        },
+        "contributor": {
+          "description": "Solves problems independently",
+          "behaviors": ["Identifies root causes", "Proposes multiple solutions", "Considers trade-offs"]
+        },
+        "junior_ready": {
+          "description": "Strategic problem solver",
+          "behaviors": ["Anticipates problems", "Designs systemic solutions", "Teaches problem-solving"]
+        }
+      },
+      "skills": ["decomposition", "analysis", "creativity", "systematic-thinking"]
+    }
+  ]
+}

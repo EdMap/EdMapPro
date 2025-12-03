@@ -1,0 +1,226 @@
+{
+  "version": "1.0.0",
+  "type": "role_adapters",
+  "description": "Role adapter configurations for different career paths",
+  "adapters": [
+    {
+      "role": "developer",
+      "displayName": "Software Developer",
+      "description": "Build and maintain software systems, write code, debug issues, and collaborate with team",
+      "levels": {
+        "intern": {
+          "title": "Intern Developer",
+          "expectations": ["Complete guided tasks", "Learn codebase basics", "Ask questions actively"],
+          "scaffolding": "high",
+          "complexity": "simple"
+        },
+        "junior": {
+          "title": "Junior Developer",
+          "expectations": ["Complete tickets independently", "Participate in code reviews", "Debug common issues"],
+          "scaffolding": "medium",
+          "complexity": "moderate"
+        },
+        "mid": {
+          "title": "Mid-level Developer",
+          "expectations": ["Design features", "Mentor juniors", "Handle complex debugging"],
+          "scaffolding": "low",
+          "complexity": "complex"
+        },
+        "senior": {
+          "title": "Senior Developer",
+          "expectations": ["Architect systems", "Lead technical decisions", "Drive best practices"],
+          "scaffolding": "none",
+          "complexity": "advanced"
+        }
+      },
+      "languageOverrides": {
+        "javascript": {
+          "toolchain": ["npm", "node", "vite", "jest"],
+          "frameworks": ["React", "Express", "Next.js"]
+        },
+        "python": {
+          "toolchain": ["pip", "pytest", "venv"],
+          "frameworks": ["Django", "Flask", "FastAPI"]
+        },
+        "c_cpp": {
+          "toolchain": ["gcc", "cmake", "gtest"],
+          "frameworks": ["STL", "Boost"]
+        }
+      },
+      "simulatorSettings": {
+        "workspace": {
+          "focusAreas": ["coding", "debugging", "git", "code-review", "testing"],
+          "teamInteractions": ["tech-lead", "senior-engineer", "qa-engineer", "product-manager"]
+        },
+        "interview": {
+          "focusAreas": ["technical", "system-design", "coding-challenges"],
+          "panelRoles": ["tech-lead", "peer-engineer", "engineering-manager"]
+        }
+      }
+    },
+    {
+      "role": "pm",
+      "displayName": "Product Manager",
+      "description": "Define product vision, prioritize features, and coordinate with stakeholders",
+      "levels": {
+        "intern": {
+          "title": "PM Intern",
+          "expectations": ["Assist with research", "Document requirements", "Shadow meetings"],
+          "scaffolding": "high",
+          "complexity": "simple"
+        },
+        "junior": {
+          "title": "Associate PM",
+          "expectations": ["Write user stories", "Manage backlog", "Run standups"],
+          "scaffolding": "medium",
+          "complexity": "moderate"
+        },
+        "mid": {
+          "title": "Product Manager",
+          "expectations": ["Define roadmap", "Make trade-off decisions", "Present to stakeholders"],
+          "scaffolding": "low",
+          "complexity": "complex"
+        },
+        "senior": {
+          "title": "Senior PM",
+          "expectations": ["Set product strategy", "Lead cross-functional initiatives", "Mentor PMs"],
+          "scaffolding": "none",
+          "complexity": "advanced"
+        }
+      },
+      "simulatorSettings": {
+        "workspace": {
+          "focusAreas": ["requirements", "prioritization", "stakeholder-management", "metrics"],
+          "teamInteractions": ["engineering-lead", "designer", "data-analyst", "executive"]
+        },
+        "interview": {
+          "focusAreas": ["product-sense", "analytical", "execution", "leadership"],
+          "panelRoles": ["senior-pm", "engineering-partner", "design-partner"]
+        }
+      }
+    },
+    {
+      "role": "qa",
+      "displayName": "QA Engineer",
+      "description": "Ensure software quality through testing, automation, and process improvement",
+      "levels": {
+        "intern": {
+          "title": "QA Intern",
+          "expectations": ["Execute test cases", "Report bugs", "Learn test tools"],
+          "scaffolding": "high",
+          "complexity": "simple"
+        },
+        "junior": {
+          "title": "Junior QA",
+          "expectations": ["Write test cases", "Perform regression testing", "Use automation basics"],
+          "scaffolding": "medium",
+          "complexity": "moderate"
+        },
+        "mid": {
+          "title": "QA Engineer",
+          "expectations": ["Design test strategies", "Build automation frameworks", "Mentor juniors"],
+          "scaffolding": "low",
+          "complexity": "complex"
+        },
+        "senior": {
+          "title": "Senior QA Engineer",
+          "expectations": ["Define quality standards", "Lead test architecture", "Drive process improvements"],
+          "scaffolding": "none",
+          "complexity": "advanced"
+        }
+      },
+      "simulatorSettings": {
+        "workspace": {
+          "focusAreas": ["test-planning", "bug-reporting", "automation", "regression"],
+          "teamInteractions": ["developer", "pm", "devops", "support"]
+        },
+        "interview": {
+          "focusAreas": ["testing-methodology", "automation", "quality-processes"],
+          "panelRoles": ["qa-lead", "developer", "engineering-manager"]
+        }
+      }
+    },
+    {
+      "role": "devops",
+      "displayName": "DevOps Engineer",
+      "description": "Build and maintain infrastructure, CI/CD pipelines, and deployment systems",
+      "levels": {
+        "intern": {
+          "title": "DevOps Intern",
+          "expectations": ["Learn CI/CD basics", "Monitor systems", "Document processes"],
+          "scaffolding": "high",
+          "complexity": "simple"
+        },
+        "junior": {
+          "title": "Junior DevOps",
+          "expectations": ["Maintain pipelines", "Handle deployments", "Basic troubleshooting"],
+          "scaffolding": "medium",
+          "complexity": "moderate"
+        },
+        "mid": {
+          "title": "DevOps Engineer",
+          "expectations": ["Design infrastructure", "Implement automation", "Handle incidents"],
+          "scaffolding": "low",
+          "complexity": "complex"
+        },
+        "senior": {
+          "title": "Senior DevOps",
+          "expectations": ["Architect cloud systems", "Lead reliability initiatives", "Mentor team"],
+          "scaffolding": "none",
+          "complexity": "advanced"
+        }
+      },
+      "simulatorSettings": {
+        "workspace": {
+          "focusAreas": ["infrastructure", "ci-cd", "monitoring", "security"],
+          "teamInteractions": ["developer", "security", "platform-team", "on-call"]
+        },
+        "interview": {
+          "focusAreas": ["infrastructure", "automation", "reliability", "troubleshooting"],
+          "panelRoles": ["devops-lead", "sre", "developer"]
+        }
+      }
+    },
+    {
+      "role": "data_science",
+      "displayName": "Data Scientist",
+      "description": "Analyze data, build models, and derive insights to drive business decisions",
+      "levels": {
+        "intern": {
+          "title": "Data Science Intern",
+          "expectations": ["Clean data", "Create visualizations", "Learn ML basics"],
+          "scaffolding": "high",
+          "complexity": "simple"
+        },
+        "junior": {
+          "title": "Junior Data Scientist",
+          "expectations": ["Build basic models", "Analyze datasets", "Present findings"],
+          "scaffolding": "medium",
+          "complexity": "moderate"
+        },
+        "mid": {
+          "title": "Data Scientist",
+          "expectations": ["Design experiments", "Deploy models", "Drive data strategy"],
+          "scaffolding": "low",
+          "complexity": "complex"
+        },
+        "senior": {
+          "title": "Senior Data Scientist",
+          "expectations": ["Lead research initiatives", "Architect data systems", "Mentor team"],
+          "scaffolding": "none",
+          "complexity": "advanced"
+        }
+      },
+      "simulatorSettings": {
+        "workspace": {
+          "focusAreas": ["data-analysis", "modeling", "experimentation", "visualization"],
+          "teamInteractions": ["analyst", "engineer", "pm", "stakeholder"]
+        },
+        "interview": {
+          "focusAreas": ["statistics", "machine-learning", "product-analytics", "experimentation"],
+          "panelRoles": ["data-lead", "ml-engineer", "product-partner"]
+        }
+      }
+    }
+  ]
+}
