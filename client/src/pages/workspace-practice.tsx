@@ -127,6 +127,8 @@ export default function WorkspacePractice() {
     enabled: !!(user as any)?.id,
   });
 
+  const { data: adapterRoles = [], isLoading: rolesLoading } = useAvailableRoles();
+
   const createSessionMutation = useMutation({
     mutationFn: async (config: any) => {
       const response = await apiRequest("POST", "/api/sessions", config);
@@ -316,9 +318,6 @@ export default function WorkspacePractice() {
 
   const inProgressSessions = practiceSessions.filter((p: any) => p.status === 'in_progress');
   const completedSessions = practiceSessions.filter((p: any) => p.status === 'completed');
-
-  // Phase 2: Fetch available roles from adapters API
-  const { data: adapterRoles = [], isLoading: rolesLoading } = useAvailableRoles();
 
   // Role icon mapping
   const roleIconMap: Record<string, any> = {
