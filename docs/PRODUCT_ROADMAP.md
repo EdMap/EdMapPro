@@ -190,86 +190,273 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 
 ---
 
-### Phase 3: Progression Engine (2 weeks)
-**Goal**: Unified competency tracking
+### Phase 3: Progression Engine & Narrative Schema (3 weeks)
+**Goal**: Unified competency tracking + narrative data structures
 
-**Components:**
-- Competency Ledger (stores mastery scores)
-- Delta Calculator (computes changes after simulation)
-- Readiness Engine (aggregates → mastery band)
-- Dashboard (heatmap, progression, recommendations)
+> **Updated**: Now includes narrative schema to support dynamic sprint generation
 
-**Outcome**: Users see unified progress across both simulators
+**3A: Schema & Data Models (1 week)**
+- Add `journey_arcs` table (type, order, projectTemplateId, isFinalArc)
+- Add `sprints` table (arcId, sprintNumber, goal, backlog, state)
+- Add `sprint_activities` table (sprintId, day, type, status)
+- Add `project_templates` table (team, codebase, themes, softSkillPacks)
+- Add `progression_paths` table (entryLevel, exitLevel, requirements, badge)
+- Extend `job_postings` with `projectTemplateId` and `narrativeProfile`
+
+**3B: Progression Engine (1 week)**
+- Delta Calculator: Compute competency changes after activities
+- Readiness Engine: Aggregate scores → mastery band
+- Exit Trigger Logic: Check readiness threshold, min/max sprints
+- Graduation Suggestion: Notify user when ready
+
+**3C: Progress Dashboard (1 week)**
+- Competency heatmap visualization
+- Journey timeline (arcs completed, current sprint)
+- Gap analysis and recommendations
+- Readiness score display
+
+**APIs Added:**
+- `GET /api/user/:id/journey` - Current journey state
+- `POST /api/user/:id/journey/start` - Start journey from job posting
+- `GET /api/user/:id/journey/current-sprint` - Current sprint details
+- `POST /api/user/:id/journey/complete-activity` - Mark activity done + record delta
+- `GET /api/progression-paths` - Available progression paths
+
+**Outcome**: Foundation for dynamic narratives + users see unified progress
 
 ---
 
-### Phase 4: Journey & Practice UX (3-4 weeks)
-**Goal**: New user flows with catalogue-powered content
+### Phase 4: Dynamic Sprint Generation (3-4 weeks)
+**Goal**: AI-powered sprint assembly from catalogue templates
 
-**Features:**
-- Unified Home Hub with readiness indicator
-- Journey dashboard with arc timeline
-- Practice catalogue browser with filters
-- Component modularization (Shell + Modules pattern)
+> **New Phase**: Core narrative engine that generates unique sprints
 
-**Outcome**: New UX matching product vision
+**4A: Sprint Generator Service (1.5 weeks)**
+- Theme selection (avoiding recent themes)
+- Backlog generation from problem templates
+- User ticket assignment based on difficulty band
+- Soft skill event scheduling
+- Day-by-day activity planning
+
+**4B: Problem Template Authoring (1 week)**
+- Create 20+ bug templates (timezone, null check, race condition, etc.)
+- Create 15+ feature templates (validation, error handling, etc.)
+- Create 10+ soft skill event templates
+- Cooldown and variety tracking
+
+**4C: Workspace Orchestrator Updates (1 week)**
+- Consume generated sprint payloads
+- Dynamic ceremony scripts (standup, planning, review, retro)
+- AI team member responses based on sprint context
+- Mid-sprint event injection
+
+**4D: Quality Guardrails (0.5 weeks)**
+- Validation: solvable, appropriate difficulty, narrative consistent
+- Fallback to scripted templates on generation failure
+- Telemetry for generated content quality
+
+**APIs Added:**
+- `POST /api/journey/:id/generate-sprint` - Generate next sprint
+- `GET /api/sprint/:id/ceremonies` - Get ceremony scripts for sprint
+- `POST /api/sprint/:id/soft-skill-event` - Trigger soft skill scenario
+
+**Outcome**: Each sprint is dynamically generated, ensuring variety
 
 ---
 
-### Phase 5: Multi-Role Expansion (2-3 weeks)
-**Goal**: Add PM, QA, DevOps, Data Science
+### Phase 5: Journey UX & Ceremony UI (3 weeks)
+**Goal**: New user flows with sprint-based narrative
+
+> **Merged**: Combines previous UX phase with ceremony implementation
+
+**5A: Journey Dashboard (1 week)**
+- Arc timeline visualization
+- Current sprint progress
+- Upcoming ceremonies
+- "Complete Journey" button (exit trigger)
+
+**5B: Ceremony UI Components (1.5 weeks)**
+- Sprint Planning UI (backlog review, task selection, commitment)
+- Daily Standup UI (team updates, user input, blockers)
+- Sprint Review UI (demo to stakeholders, feedback)
+- Retrospective UI (what went well, improvements)
+- 1:1 / Final 1:1 UI (feedback, goals, graduation)
+
+**5C: Sprint Board UI (0.5 weeks)**
+- Kanban-style ticket board
+- Ticket detail view with code exercise
+- PR creation flow
+- Code review interface
+
+**Outcome**: Users experience full sprint ceremonies with dynamic content
+
+---
+
+### Phase 6: Multi-Role Content Packs (2-3 weeks)
+**Goal**: Extend to PM, QA, DevOps, Data Science
+
+> **Updated**: Now includes level-specific content packs
 
 **Per Role:**
+- Problem templates appropriate to role
+- Soft skill events appropriate to role
+- Role-specific competencies
 - Interview adapters (question focus, cases)
 - Workspace adapters (problems, artifacts)
-- Content seeding (20 behavioral, 15 role-specific, arcs)
-- AI orchestrator updates (role-aware prompts)
 
-**Outcome**: Platform works for 5 career tracks
+**Per Level (Intern→Junior, Junior→Mid, Mid→Senior):**
+- Level-specific problem templates
+- Level-specific soft skill events
+- Level-specific team dynamics
+- Difficulty band configurations
+
+**Content Required:**
+| Role | Bug Templates | Feature Templates | Soft Skill Events |
+|------|---------------|-------------------|-------------------|
+| Developer | 20 | 15 | 10 |
+| PM | N/A | 15 (requirements, roadmaps) | 15 |
+| QA | 15 (test scenarios) | 10 | 10 |
+| DevOps | 15 (infra issues) | 10 | 10 |
+| Data Science | 15 (data issues) | 10 | 10 |
+
+**Outcome**: Platform works for 5 roles × 3 levels = 15 progression paths
 
 ---
 
-### Phase 6: Portfolio & Credentialing (2 weeks)
-**Goal**: Employer-facing differentiation
+### Phase 7: Portfolio, Credentialing & Exit (2 weeks)
+**Goal**: Employer-facing differentiation + graduation flow
 
-**Features:**
+**7A: Final 1:1 & Graduation (1 week)**
+- Journey review (all sprints, key moments)
+- Competency assessment visualization
+- Portfolio compilation (best PRs, docs, reviews)
+- Badge award (if thresholds met)
+- Exit experience → Portfolio view
+
+**7B: Portfolio System (1 week)**
 - Timeline view of artifacts
-- Competency breakdown visualization
-- Feedback history
-- Junior Ready badge
+- Competency breakdown
+- Feedback history from all 1:1s
 - Shareable profile / PDF export
+- Badge display
 
-**Outcome**: Graduates prove readiness to employers
+**Outcome**: Graduates prove readiness with verifiable portfolio
 
 ---
 
-### Phase 7: Language Adapters (1-2 weeks)
+### Phase 8: Language Adapters (1-2 weeks)
 **Goal**: C/C++ and Python for Developer role
 
-| Language | Adaptations |
-|----------|-------------|
-| C/C++ | Memory bugs, compilation, pointers, gtest |
-| Python | Type errors, async, pytest, venvs |
-| JavaScript | (exists) Async bugs, npm, Jest |
+| Language | Problem Adaptations |
+|----------|---------------------|
+| C/C++ | Memory bugs, segfaults, pointers, Makefiles, gtest |
+| Python | Type errors, async/await, pytest, venvs, imports |
+| JavaScript | (exists) Async bugs, npm, Jest, TypeScript |
 
-**Outcome**: Developer track for multiple tech stacks
+**Per Language:**
+- Code exercise templates
+- Bug patterns
+- Toolchain simulation (build, test, lint)
+- Error messages
+
+**Outcome**: Developer track for 3 tech stacks
 
 ---
 
-## Timeline Summary
+## Updated Timeline Summary
 
-| Phase | Duration | Focus |
-|-------|----------|-------|
-| Phase 0 | 1-2 weeks | Extract content to JSON |
-| Phase 1 | 2-3 weeks | Shared schema, catalogue API |
-| Phase 2 | 2-3 weeks | Role + Level adapters |
-| Phase 3 | 2 weeks | Progression engine |
-| Phase 4 | 3-4 weeks | New UX |
-| Phase 5 | 2-3 weeks | Multi-role expansion |
-| Phase 6 | 2 weeks | Portfolio + credentialing |
-| Phase 7 | 1-2 weeks | Language adapters |
+| Phase | Duration | Focus | Status |
+|-------|----------|-------|--------|
+| Phase 0 | 1-2 weeks | Extract content to JSON | ✅ Complete |
+| Phase 1 | 2-3 weeks | Shared schema, catalogue API | ✅ Complete |
+| Phase 2 | 2-3 weeks | Role + Level adapters | ✅ Complete |
+| **Phase 3** | **3 weeks** | **Progression engine + narrative schema** | 🔄 Next |
+| **Phase 4** | **3-4 weeks** | **Dynamic sprint generation** | ⏳ Planned |
+| **Phase 5** | **3 weeks** | **Journey UX + ceremony UI** | ⏳ Planned |
+| **Phase 6** | **2-3 weeks** | **Multi-role content packs** | ⏳ Planned |
+| **Phase 7** | **2 weeks** | **Portfolio + graduation** | ⏳ Planned |
+| **Phase 8** | **1-2 weeks** | **Language adapters** | ⏳ Planned |
 
-**Total**: ~15-20 weeks for full implementation
+**Total**: ~17-22 weeks for full implementation
+
+---
+
+## Phase Dependencies
+
+```
+Phase 0-2 (Complete)
+     │
+     ▼
+Phase 3: Progression + Schema ──────────────────┐
+     │                                           │
+     ▼                                           │
+Phase 4: Dynamic Sprint Generation ◄─────────────┤
+     │                                           │
+     ▼                                           │
+Phase 5: Journey UX + Ceremony UI                │
+     │                                           │
+     ├──────────────────────────────────────────►│
+     │                                           │
+     ▼                                           ▼
+Phase 6: Multi-Role Content ◄───────────── Phase 7: Portfolio + Graduation
+     │
+     ▼
+Phase 8: Language Adapters
+```
+
+**Critical Path**: Phase 3 → Phase 4 → Phase 5 → Phase 7
+
+---
+
+## Risk Assessment
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| AI generation quality inconsistent | High | Guardrails, fallback to scripted, human review flag |
+| AI generation costs too high | Medium | Caching, batched generation, cost monitoring |
+| Schema changes break existing features | High | Migrations, feature flags, backward compatibility |
+| Content authoring bottleneck | Medium | Prioritize Developer role, template-based approach |
+| Sprint generation too slow | Medium | Pre-generate next sprint, background processing |
+
+---
+
+## What's Already Built (Phases 0-2)
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| Catalogue JSON files | ✅ | `shared/catalogue/workspace/`, `shared/catalogue/interview/` |
+| Catalogue service | ✅ | `shared/catalogue/service.ts` |
+| Database tables (competencies, catalogue, role_adapters) | ✅ | `shared/schema.ts` |
+| Adapter service | ✅ | `server/services/adapter-service.ts` |
+| Adapter hooks | ✅ | `client/src/hooks/use-adapters.ts` |
+| Intern onboarding (Days 1-2) | ✅ | `client/src/components/simulation/intern-onboarding-session.tsx` |
+| Workspace orchestrator | ✅ | `server/services/workspace-orchestrator.ts` |
+| Interview simulator | ✅ | `client/src/pages/interview-simulator.tsx` |
+| Job board & applications | ✅ | Various |
+
+## What Needs to Be Built (Phases 3-8)
+
+| Component | Phase | Priority |
+|-----------|-------|----------|
+| Journey arc schema | 3 | P0 |
+| Sprint schema | 3 | P0 |
+| Project template schema | 3 | P0 |
+| Progression path schema | 3 | P0 |
+| Delta calculator | 3 | P0 |
+| Exit trigger logic | 3 | P0 |
+| Progress dashboard | 3 | P1 |
+| Sprint generator service | 4 | P0 |
+| Problem templates (20+) | 4 | P0 |
+| Soft skill templates (10+) | 4 | P0 |
+| Dynamic ceremony scripts | 4 | P1 |
+| Quality guardrails | 4 | P1 |
+| Journey dashboard UI | 5 | P0 |
+| Ceremony UI components | 5 | P0 |
+| Sprint board UI | 5 | P1 |
+| Multi-role content | 6 | P2 |
+| Final 1:1 UI | 7 | P0 |
+| Portfolio system | 7 | P1 |
+| Language adapters | 8 | P2 |
 
 ---
 
