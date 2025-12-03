@@ -4,6 +4,7 @@ import {
   workspaceProgress,
   interviewSessions, interviewQuestions, interviewFeedback,
   companies, jobPostings, jobGlossary, jobApplications, interviewTemplates, applicationStages,
+  competencies, simulationCatalogue, roleAdapters, competencyLedger, portfolioArtifacts,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -21,10 +22,16 @@ import {
   type JobApplication, type InsertJobApplication,
   type InterviewTemplate, type InsertInterviewTemplate,
   type ApplicationStage, type InsertApplicationStage,
-  type OfferDetails
+  type OfferDetails,
+  type Competency, type InsertCompetency,
+  type SimulationCatalogue, type InsertSimulationCatalogue,
+  type RoleAdapter, type InsertRoleAdapter,
+  type CompetencyLedger, type InsertCompetencyLedger,
+  type PortfolioArtifact, type InsertPortfolioArtifact,
+  type ReadinessScore,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -131,6 +138,38 @@ export interface IStorage {
   createWorkspaceProgress(progress: InsertWorkspaceProgress): Promise<WorkspaceProgress>;
   updateWorkspaceProgress(id: number, updates: Partial<WorkspaceProgress>): Promise<WorkspaceProgress | undefined>;
   restartWorkspaceProgress(sessionId: number): Promise<WorkspaceProgress | undefined>;
+  
+  // Phase 1: Competency operations
+  getCompetencies(filters?: { role?: string; category?: string }): Promise<Competency[]>;
+  getCompetency(slug: string): Promise<Competency | undefined>;
+  
+  // Phase 1: Simulation Catalogue operations
+  getCatalogueItems(filters?: { 
+    simulator?: string; 
+    type?: string;
+    role?: string; 
+    level?: string; 
+    language?: string;
+    day?: number;
+  }): Promise<SimulationCatalogue[]>;
+  getCatalogueItem(externalId: string): Promise<SimulationCatalogue | undefined>;
+  getCatalogueItemById(id: number): Promise<SimulationCatalogue | undefined>;
+  
+  // Phase 1: Role Adapter operations
+  getRoleAdapters(): Promise<RoleAdapter[]>;
+  getRoleAdapter(role: string): Promise<RoleAdapter | undefined>;
+  
+  // Phase 1: Competency Ledger operations
+  getUserCompetencyLedger(userId: number): Promise<CompetencyLedger[]>;
+  getUserCompetencyEntry(userId: number, competencyId: number): Promise<CompetencyLedger | undefined>;
+  createCompetencyEntry(entry: InsertCompetencyLedger): Promise<CompetencyLedger>;
+  updateCompetencyEntry(id: number, updates: Partial<CompetencyLedger>): Promise<CompetencyLedger | undefined>;
+  getUserReadiness(userId: number): Promise<ReadinessScore>;
+  
+  // Phase 1: Portfolio Artifact operations
+  getUserPortfolio(userId: number): Promise<PortfolioArtifact[]>;
+  getPortfolioArtifact(id: number): Promise<PortfolioArtifact | undefined>;
+  createPortfolioArtifact(artifact: InsertPortfolioArtifact): Promise<PortfolioArtifact>;
 }
 
 export class MemStorage implements IStorage {
@@ -2325,6 +2364,206 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         totalTime: 285 * 60, // Total interview duration in seconds
       });
     }
+  }
+
+  // Phase 1: Competency operations
+  async getCompetencies(filters?: { role?: string; category?: string }): Promise<Competency[]> {
+    let query = db.select().from(competencies);
+    
+    const conditions: any[] = [];
+    if (filters?.role) {
+      conditions.push(or(eq(competencies.role, filters.role), sql`${competencies.role} IS NULL`));
+    }
+    if (filters?.category) {
+      conditions.push(eq(competencies.category, filters.category));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(competencies).where(and(...conditions));
+    }
+    return await db.select().from(competencies);
+  }
+
+  async getCompetency(slug: string): Promise<Competency | undefined> {
+    const results = await db.select().from(competencies).where(eq(competencies.slug, slug));
+    return results[0];
+  }
+
+  // Phase 1: Simulation Catalogue operations
+  async getCatalogueItems(filters?: { 
+    simulator?: string; 
+    type?: string;
+    role?: string; 
+    level?: string; 
+    language?: string;
+    day?: number;
+  }): Promise<SimulationCatalogue[]> {
+    const conditions: any[] = [];
+    
+    if (filters?.simulator) {
+      conditions.push(eq(simulationCatalogue.simulator, filters.simulator));
+    }
+    if (filters?.type) {
+      conditions.push(eq(simulationCatalogue.type, filters.type));
+    }
+    if (filters?.role) {
+      conditions.push(or(eq(simulationCatalogue.role, filters.role), sql`${simulationCatalogue.role} IS NULL`));
+    }
+    if (filters?.level) {
+      conditions.push(or(eq(simulationCatalogue.level, filters.level), sql`${simulationCatalogue.level} IS NULL`));
+    }
+    if (filters?.language) {
+      conditions.push(or(eq(simulationCatalogue.language, filters.language), sql`${simulationCatalogue.language} IS NULL`));
+    }
+    if (filters?.day !== undefined) {
+      conditions.push(eq(simulationCatalogue.day, filters.day));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(simulationCatalogue).where(and(...conditions));
+    }
+    return await db.select().from(simulationCatalogue);
+  }
+
+  async getCatalogueItem(externalId: string): Promise<SimulationCatalogue | undefined> {
+    const results = await db.select().from(simulationCatalogue).where(eq(simulationCatalogue.externalId, externalId));
+    return results[0];
+  }
+
+  async getCatalogueItemById(id: number): Promise<SimulationCatalogue | undefined> {
+    const results = await db.select().from(simulationCatalogue).where(eq(simulationCatalogue.id, id));
+    return results[0];
+  }
+
+  // Phase 1: Role Adapter operations
+  async getRoleAdapters(): Promise<RoleAdapter[]> {
+    return await db.select().from(roleAdapters);
+  }
+
+  async getRoleAdapter(role: string): Promise<RoleAdapter | undefined> {
+    const results = await db.select().from(roleAdapters).where(eq(roleAdapters.role, role));
+    return results[0];
+  }
+
+  // Phase 1: Competency Ledger operations
+  async getUserCompetencyLedger(userId: number): Promise<CompetencyLedger[]> {
+    return await db.select().from(competencyLedger)
+      .where(eq(competencyLedger.userId, userId));
+  }
+
+  async getUserCompetencyEntry(userId: number, competencyId: number): Promise<CompetencyLedger | undefined> {
+    const results = await db.select().from(competencyLedger)
+      .where(and(
+        eq(competencyLedger.userId, userId),
+        eq(competencyLedger.competencyId, competencyId)
+      ));
+    return results[0];
+  }
+
+  async createCompetencyEntry(entry: InsertCompetencyLedger): Promise<CompetencyLedger> {
+    const results = await db.insert(competencyLedger).values({
+      ...entry,
+      currentBand: entry.currentBand || 'explorer',
+      evidenceCount: entry.evidenceCount || 0,
+      confidence: entry.confidence || 0,
+      history: entry.history || [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return results[0];
+  }
+
+  async updateCompetencyEntry(id: number, updates: Partial<CompetencyLedger>): Promise<CompetencyLedger | undefined> {
+    const results = await db.update(competencyLedger)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(competencyLedger.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async getUserReadiness(userId: number): Promise<ReadinessScore> {
+    // Get all competencies for this user
+    const ledgerEntries = await this.getUserCompetencyLedger(userId);
+    const allCompetencies = await this.getCompetencies();
+    
+    // Build competency map for quick lookup
+    const competencyMap = new Map(allCompetencies.map(c => [c.id, c]));
+    
+    // Build breakdown with existing data
+    const competencyBreakdown = allCompetencies.map(comp => {
+      const entry = ledgerEntries.find(e => e.competencyId === comp.id);
+      return {
+        slug: comp.slug,
+        name: comp.name,
+        band: (entry?.currentBand || 'explorer') as 'explorer' | 'contributor' | 'junior_ready',
+        confidence: entry?.confidence || 0,
+        evidenceCount: entry?.evidenceCount || 0,
+      };
+    });
+    
+    // Calculate band weights: explorer=1, contributor=2, junior_ready=3
+    const bandWeights: Record<string, number> = { 'explorer': 1, 'contributor': 2, 'junior_ready': 3 };
+    const avgWeight = competencyBreakdown.length > 0
+      ? competencyBreakdown.reduce((sum, c) => sum + (bandWeights[c.band] || 1), 0) / competencyBreakdown.length
+      : 1;
+    
+    // Determine overall band based on average weight
+    let currentBand: 'explorer' | 'contributor' | 'junior_ready';
+    if (avgWeight >= 2.5) {
+      currentBand = 'junior_ready';
+    } else if (avgWeight >= 1.5) {
+      currentBand = 'contributor';
+    } else {
+      currentBand = 'explorer';
+    }
+    
+    // Calculate overall score (0-100 based on bands and confidence)
+    const avgConfidence = competencyBreakdown.length > 0
+      ? competencyBreakdown.reduce((sum, c) => sum + c.confidence, 0) / competencyBreakdown.length
+      : 0;
+    const overallScore = Math.round((avgWeight / 3) * 100 * 0.7 + avgConfidence * 0.3);
+    
+    // Identify gaps (low confidence or explorer band)
+    const gaps = competencyBreakdown
+      .filter(c => c.band === 'explorer' || c.confidence < 30)
+      .map(c => c.slug);
+    
+    // Identify strengths (high confidence and contributor or above)
+    const strengths = competencyBreakdown
+      .filter(c => c.band !== 'explorer' && c.confidence >= 70)
+      .map(c => c.slug);
+    
+    return {
+      overallScore,
+      currentBand,
+      competencyBreakdown,
+      gaps,
+      strengths,
+    };
+  }
+
+  // Phase 1: Portfolio Artifact operations
+  async getUserPortfolio(userId: number): Promise<PortfolioArtifact[]> {
+    return await db.select().from(portfolioArtifacts)
+      .where(eq(portfolioArtifacts.userId, userId))
+      .orderBy(desc(portfolioArtifacts.createdAt));
+  }
+
+  async getPortfolioArtifact(id: number): Promise<PortfolioArtifact | undefined> {
+    const results = await db.select().from(portfolioArtifacts).where(eq(portfolioArtifacts.id, id));
+    return results[0];
+  }
+
+  async createPortfolioArtifact(artifact: InsertPortfolioArtifact): Promise<PortfolioArtifact> {
+    const results = await db.insert(portfolioArtifacts).values({
+      ...artifact,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return results[0];
   }
 }
 

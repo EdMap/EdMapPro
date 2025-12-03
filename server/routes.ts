@@ -1254,6 +1254,278 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // Phase 1: Catalogue, Competency & Progression APIs
+  // ============================================
+
+  // GET /api/catalogue - List catalogue items with filters
+  app.get("/api/catalogue", async (req, res) => {
+    try {
+      const filters: {
+        simulator?: string;
+        type?: string;
+        role?: string;
+        level?: string;
+        language?: string;
+        day?: number;
+      } = {};
+
+      if (req.query.simulator) filters.simulator = req.query.simulator as string;
+      if (req.query.type) filters.type = req.query.type as string;
+      if (req.query.role) filters.role = req.query.role as string;
+      if (req.query.level) filters.level = req.query.level as string;
+      if (req.query.language) filters.language = req.query.language as string;
+      if (req.query.day) filters.day = parseInt(req.query.day as string);
+
+      const items = await storage.getCatalogueItems(filters);
+      res.json(items);
+    } catch (error) {
+      console.error("Failed to get catalogue items:", error);
+      res.status(500).json({ message: "Failed to get catalogue items" });
+    }
+  });
+
+  // GET /api/catalogue/:externalId - Get single catalogue item by external ID
+  app.get("/api/catalogue/:externalId", async (req, res) => {
+    try {
+      const item = await storage.getCatalogueItem(req.params.externalId);
+      if (!item) {
+        return res.status(404).json({ message: "Catalogue item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get catalogue item" });
+    }
+  });
+
+  // GET /api/competencies - List all competencies with optional filters
+  app.get("/api/competencies", async (req, res) => {
+    try {
+      const filters: { role?: string; category?: string } = {};
+
+      if (req.query.role) filters.role = req.query.role as string;
+      if (req.query.category) filters.category = req.query.category as string;
+
+      const items = await storage.getCompetencies(filters);
+      res.json(items);
+    } catch (error) {
+      console.error("Failed to get competencies:", error);
+      res.status(500).json({ message: "Failed to get competencies" });
+    }
+  });
+
+  // GET /api/competencies/:slug - Get single competency by slug
+  app.get("/api/competencies/:slug", async (req, res) => {
+    try {
+      const competency = await storage.getCompetency(req.params.slug);
+      if (!competency) {
+        return res.status(404).json({ message: "Competency not found" });
+      }
+      res.json(competency);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get competency" });
+    }
+  });
+
+  // GET /api/role-adapters - List all role adapters
+  app.get("/api/role-adapters", async (req, res) => {
+    try {
+      const adapters = await storage.getRoleAdapters();
+      res.json(adapters);
+    } catch (error) {
+      console.error("Failed to get role adapters:", error);
+      res.status(500).json({ message: "Failed to get role adapters" });
+    }
+  });
+
+  // GET /api/role-adapters/:role - Get single role adapter
+  app.get("/api/role-adapters/:role", async (req, res) => {
+    try {
+      const adapter = await storage.getRoleAdapter(req.params.role);
+      if (!adapter) {
+        return res.status(404).json({ message: "Role adapter not found" });
+      }
+      res.json(adapter);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get role adapter" });
+    }
+  });
+
+  // GET /api/user/:id/readiness - Get user's readiness score
+  app.get("/api/user/:id/readiness", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const readiness = await storage.getUserReadiness(userId);
+      res.json(readiness);
+    } catch (error) {
+      console.error("Failed to get user readiness:", error);
+      res.status(500).json({ message: "Failed to get user readiness" });
+    }
+  });
+
+  // POST /api/user/:id/competency-delta - Record competency evidence
+  app.post("/api/user/:id/competency-delta", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      // Validate the delta payload
+      const deltaSchema = z.object({
+        competencySlug: z.string(),
+        source: z.enum(['workspace', 'interview']),
+        catalogueItemId: z.number().optional(),
+        evidenceType: z.string(),
+        evidenceData: z.record(z.unknown()).optional(),
+        score: z.number().min(0).max(100).optional(),
+      });
+
+      const delta = deltaSchema.parse(req.body);
+
+      // Find the competency by slug
+      const competency = await storage.getCompetency(delta.competencySlug);
+      if (!competency) {
+        return res.status(404).json({ message: `Competency '${delta.competencySlug}' not found` });
+      }
+
+      // Get or create competency ledger entry for this user
+      let entry = await storage.getUserCompetencyEntry(userId, competency.id);
+      
+      if (!entry) {
+        entry = await storage.createCompetencyEntry({
+          userId,
+          competencyId: competency.id,
+          currentBand: 'explorer',
+          evidenceCount: 0,
+          confidence: 0,
+          history: [],
+        });
+      }
+
+      // Calculate new values
+      const newEvidenceCount = entry.evidenceCount + 1;
+      const newConfidence = Math.min(100, entry.confidence + (delta.score ? Math.round(delta.score / 10) : 5));
+      
+      // Determine if band should upgrade
+      let newBand = entry.currentBand;
+      if (newEvidenceCount >= 10 && newConfidence >= 70 && entry.currentBand === 'explorer') {
+        newBand = 'contributor';
+      } else if (newEvidenceCount >= 25 && newConfidence >= 85 && entry.currentBand === 'contributor') {
+        newBand = 'junior_ready';
+      }
+
+      // Build history event
+      const historyEvent = {
+        timestamp: new Date().toISOString(),
+        source: delta.source,
+        evidenceType: delta.evidenceType,
+        catalogueItemId: delta.catalogueItemId,
+        score: delta.score,
+        bandBefore: entry.currentBand,
+        bandAfter: newBand,
+      };
+
+      const existingHistory = Array.isArray(entry.history) ? entry.history : [];
+
+      // Update the entry
+      const updatedEntry = await storage.updateCompetencyEntry(entry.id, {
+        evidenceCount: newEvidenceCount,
+        confidence: newConfidence,
+        currentBand: newBand,
+        lastEvidenceAt: new Date(),
+        history: [...existingHistory, historyEvent],
+      });
+
+      res.json({
+        competencySlug: delta.competencySlug,
+        previousBand: entry.currentBand,
+        currentBand: newBand,
+        evidenceCount: newEvidenceCount,
+        confidence: newConfidence,
+        bandChanged: entry.currentBand !== newBand,
+        entry: updatedEntry,
+      });
+    } catch (error) {
+      console.error("Failed to record competency delta:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request body", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to record competency delta" });
+    }
+  });
+
+  // GET /api/user/:id/portfolio - Get user's portfolio artifacts
+  app.get("/api/user/:id/portfolio", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const artifacts = await storage.getUserPortfolio(userId);
+      res.json(artifacts);
+    } catch (error) {
+      console.error("Failed to get user portfolio:", error);
+      res.status(500).json({ message: "Failed to get user portfolio" });
+    }
+  });
+
+  // POST /api/user/:id/portfolio - Add portfolio artifact
+  app.post("/api/user/:id/portfolio", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const artifactSchema = z.object({
+        source: z.enum(['workspace', 'interview', 'upload']),
+        catalogueItemId: z.number().optional(),
+        title: z.string(),
+        artifactType: z.string(),
+        summary: z.string().optional(),
+        artifactData: z.record(z.unknown()),
+        evidenceCompetencies: z.array(z.string()).optional(),
+      });
+
+      const artifactInput = artifactSchema.parse(req.body);
+
+      const artifact = await storage.createPortfolioArtifact({
+        userId,
+        ...artifactInput,
+      });
+
+      res.status(201).json(artifact);
+    } catch (error) {
+      console.error("Failed to create portfolio artifact:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request body", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create portfolio artifact" });
+    }
+  });
+
+  // GET /api/user/:id/competency-ledger - Get user's competency ledger entries
+  app.get("/api/user/:id/competency-ledger", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const entries = await storage.getUserCompetencyLedger(userId);
+      res.json(entries);
+    } catch (error) {
+      console.error("Failed to get user competency ledger:", error);
+      res.status(500).json({ message: "Failed to get user competency ledger" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
