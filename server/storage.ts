@@ -40,7 +40,7 @@ import {
   type JourneyState,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, sql } from "drizzle-orm";
+import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -210,6 +210,7 @@ export interface IStorage {
   // Phase 3: Sprint operations
   getSprint(id: number): Promise<Sprint | undefined>;
   getSprintByArc(arcId: number): Promise<Sprint | undefined>;
+  getSprintsByJourney(journeyId: number): Promise<Sprint[]>;
   createSprint(sprint: InsertSprint): Promise<Sprint>;
   updateSprint(id: number, updates: Partial<Sprint>): Promise<Sprint | undefined>;
   
@@ -2837,6 +2838,19 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
   async getSprintByArc(arcId: number): Promise<Sprint | undefined> {
     const results = await db.select().from(sprints).where(eq(sprints.arcId, arcId));
     return results[0];
+  }
+
+  async getSprintsByJourney(journeyId: number): Promise<Sprint[]> {
+    const arcs = await this.getJourneyArcs(journeyId);
+    const arcIds = arcs.map(arc => arc.id);
+    
+    if (arcIds.length === 0) return [];
+    
+    const results = await db.select().from(sprints)
+      .where(inArray(sprints.arcId, arcIds))
+      .orderBy(sprints.sprintNumber);
+    
+    return results;
   }
 
   async createSprint(sprint: InsertSprint): Promise<Sprint> {

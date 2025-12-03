@@ -401,6 +401,121 @@ class ProgressionEngine {
       arcs
     };
   }
+
+  async startNewSprint(journeyId: number): Promise<{
+    sprint: Sprint;
+    arc: JourneyArc;
+    generatedBacklog: {
+      tickets: Array<{
+        templateId: string;
+        type: string;
+        day: number;
+        generatedTicket: {
+          title: string;
+          description: string;
+          acceptanceCriteria: string[];
+          difficulty: string;
+        };
+      }>;
+      softSkillEvents: Array<{
+        templateId: string;
+        day: number;
+        trigger: string;
+        generatedScenario: {
+          setup: string;
+          message: string;
+          sender: string;
+          senderRole: string;
+        };
+      }>;
+      theme: { id: string; name: string; description: string };
+    };
+  }> {
+    const { sprintGenerator } = await import("./sprint-generator");
+    
+    const journey = await storage.getJourney(journeyId);
+    if (!journey) {
+      throw new Error(`Journey not found: ${journeyId}`);
+    }
+
+    if (!journey.progressionPathId) {
+      throw new Error(`Journey ${journeyId} has no progression path configured`);
+    }
+
+    const previousSprints = await storage.getSprintsByJourney(journeyId);
+    
+    let readiness;
+    try {
+      readiness = await this.calculateReadinessScore(journey.userId);
+    } catch (error) {
+      console.warn(`Failed to calculate readiness for journey ${journeyId}, using empty gaps:`, error);
+      readiness = { gaps: [] as string[], strengths: [], overallScore: 0, competencyBreakdown: [] };
+    }
+    
+    const newSprintNumber = (journey.currentSprintNumber || 0) + 1;
+    const difficultyBand = await this.getDifficultyForSprint(
+      journey.progressionPathId,
+      newSprintNumber
+    );
+
+    const generatedBacklog = await sprintGenerator.generateSprint({
+      journeyId,
+      sprintNumber: newSprintNumber,
+      difficultyBand,
+      previousSprints: previousSprints as any[],
+      userCompetencyGaps: readiness.gaps,
+      avoidThemes: [],
+      avoidTemplates: []
+    });
+
+    const arcs = await storage.getJourneyArcs(journeyId);
+    const newArcOrder = arcs.length + 1;
+
+    const arc = await storage.createJourneyArc({
+      journeyId,
+      name: `Sprint ${newSprintNumber}`,
+      arcType: 'sprint',
+      arcOrder: newArcOrder,
+      status: 'active',
+      difficultyBand,
+      durationDays: 5,
+      arcData: {
+        theme: generatedBacklog.theme,
+        ceremonies: generatedBacklog.ceremonies
+      }
+    });
+
+    const sprint = await storage.createSprint({
+      arcId: arc.id,
+      sprintNumber: newSprintNumber,
+      goal: `Complete ${generatedBacklog.theme.name} sprint objectives`,
+      theme: generatedBacklog.theme.name,
+      backlog: generatedBacklog.tickets,
+      userTickets: generatedBacklog.tickets.filter((t: any) => t.type === 'bug' || t.type === 'feature'),
+      teamTickets: [],
+      ceremonies: generatedBacklog.ceremonies,
+      generationMetadata: {
+        themeId: generatedBacklog.theme.id,
+        usedTemplateIds: [
+          ...generatedBacklog.tickets.map((t: any) => t.templateId),
+          ...generatedBacklog.softSkillEvents.map((e: any) => e.templateId)
+        ],
+        difficultyBand,
+        generatedAt: new Date().toISOString()
+      }
+    });
+
+    await storage.updateJourney(journeyId, {
+      currentArcId: arc.id,
+      currentSprintNumber: newSprintNumber
+    });
+
+    return {
+      sprint,
+      arc,
+      generatedBacklog
+    };
+  }
 }
 
 export const progressionEngine = new ProgressionEngine();

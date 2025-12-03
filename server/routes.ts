@@ -1927,6 +1927,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/journey/:journeyId/start-new-sprint - Start a new sprint with generated backlog
+  app.post("/api/journey/:journeyId/start-new-sprint", async (req, res) => {
+    try {
+      const { progressionEngine } = await import("./services/progression-engine");
+      const journeyId = parseInt(req.params.journeyId);
+
+      const result = await progressionEngine.startNewSprint(journeyId);
+      res.json({
+        sprint: result.sprint,
+        arc: result.arc,
+        backlog: {
+          tickets: result.generatedBacklog.tickets,
+          softSkillEvents: result.generatedBacklog.softSkillEvents,
+          theme: result.generatedBacklog.theme
+        }
+      });
+    } catch (error) {
+      console.error("Failed to start new sprint:", error);
+      res.status(500).json({ message: "Failed to start new sprint" });
+    }
+  });
+
   // GET /api/journey/:journeyId/exit-eligibility - Check if user can exit/graduate
   app.get("/api/journey/:journeyId/exit-eligibility", async (req, res) => {
     try {
