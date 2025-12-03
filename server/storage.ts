@@ -2465,45 +2465,59 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
 
     console.log('Seeding sprint workflow data...');
 
-    // First, create a progression path
-    const [progressionPath] = await db.insert(progressionPaths).values({
-      slug: 'intern-to-junior',
-      entryLevel: 'intern',
-      exitLevel: 'junior',
-      role: 'developer',
-      displayName: 'Intern to Junior Developer',
-      description: 'Progress from Intern to Junior Ready through realistic work simulations',
-      requirements: { minSprints: 3, maxSprints: 8, readinessThreshold: 85 },
-      difficultyProgression: { startDifficulty: 1, endDifficulty: 3, curve: 'linear' },
-      exitBadge: 'Junior Ready Developer',
-      competencyFocus: ['code-quality', 'git-workflow', 'communication', 'problem-solving'],
-      estimatedDuration: '4-8 weeks',
-    }).returning();
+    // Get or create progression path
+    let progressionPath;
+    const existingPaths = await db.select().from(progressionPaths).where(eq(progressionPaths.slug, 'intern-to-junior')).limit(1);
+    if (existingPaths.length > 0) {
+      progressionPath = existingPaths[0];
+    } else {
+      const [newPath] = await db.insert(progressionPaths).values({
+        slug: 'intern-to-junior',
+        entryLevel: 'intern',
+        exitLevel: 'junior',
+        role: 'developer',
+        displayName: 'Intern to Junior Developer',
+        description: 'Progress from Intern to Junior Ready through realistic work simulations',
+        requirements: { minSprints: 3, maxSprints: 8, readinessThreshold: 85 },
+        difficultyProgression: { startDifficulty: 1, endDifficulty: 3, curve: 'linear' },
+        exitBadge: 'Junior Ready Developer',
+        competencyFocus: ['code-quality', 'git-workflow', 'communication', 'problem-solving'],
+        estimatedDuration: '4-8 weeks',
+      }).returning();
+      progressionPath = newPath;
+    }
 
-    // Create a project template
-    const [projectTemplate] = await db.insert(projectTemplates).values({
-      slug: 'novapay-payment-platform',
-      name: 'NovaPay Payment Platform',
-      description: 'A fintech payment processing platform for small businesses',
-      industry: 'fintech',
-      domain: 'payments',
-      teamTopology: { structure: 'squad', size: 6 },
-      team: [
-        { id: 'tm-1', name: 'Sarah Chen', role: 'Engineering Manager', avatar: null },
-        { id: 'tm-2', name: 'Marcus Johnson', role: 'Senior Developer', avatar: null },
-        { id: 'tm-3', name: 'Priya Patel', role: 'Product Manager', avatar: null },
-        { id: 'tm-4', name: 'Alex Rivera', role: 'QA Engineer', avatar: null },
-      ],
-      codebase: { language: 'typescript', framework: 'react', complexity: 'medium' },
-      backlogThemes: ['payments', 'user-management', 'dashboard', 'notifications'],
-      bugTemplates: ['null-pointer', 'ui-responsive', 'api-error-handling'],
-      featureTemplates: ['add-field', 'loading-state', 'validation'],
-      softSkillPacks: ['standup', 'code-review', 'pair-programming'],
-      sprintCadence: 10,
-      techStack: ['TypeScript', 'React', 'Node.js', 'PostgreSQL'],
-      language: 'typescript',
-      progressionPathId: progressionPath.id,
-    }).returning();
+    // Get or create project template
+    let projectTemplate;
+    const existingTemplates = await db.select().from(projectTemplates).where(eq(projectTemplates.slug, 'novapay-payment-platform')).limit(1);
+    if (existingTemplates.length > 0) {
+      projectTemplate = existingTemplates[0];
+    } else {
+      const [newTemplate] = await db.insert(projectTemplates).values({
+        slug: 'novapay-payment-platform',
+        name: 'NovaPay Payment Platform',
+        description: 'A fintech payment processing platform for small businesses',
+        industry: 'fintech',
+        domain: 'payments',
+        teamTopology: { structure: 'squad', size: 6 },
+        team: [
+          { id: 'tm-1', name: 'Sarah Chen', role: 'Engineering Manager', avatar: null },
+          { id: 'tm-2', name: 'Marcus Johnson', role: 'Senior Developer', avatar: null },
+          { id: 'tm-3', name: 'Priya Patel', role: 'Product Manager', avatar: null },
+          { id: 'tm-4', name: 'Alex Rivera', role: 'QA Engineer', avatar: null },
+        ],
+        codebase: { language: 'typescript', framework: 'react', complexity: 'medium' },
+        backlogThemes: ['payments', 'user-management', 'dashboard', 'notifications'],
+        bugTemplates: ['null-pointer', 'ui-responsive', 'api-error-handling'],
+        featureTemplates: ['add-field', 'loading-state', 'validation'],
+        softSkillPacks: ['standup', 'code-review', 'pair-programming'],
+        sprintCadence: 10,
+        techStack: ['TypeScript', 'React', 'Node.js', 'PostgreSQL'],
+        language: 'typescript',
+        progressionPathId: progressionPath.id,
+      }).returning();
+      projectTemplate = newTemplate;
+    }
 
     // Create a journey for user 1 with accepted application
     const journey = await this.createJourney({
@@ -2529,8 +2543,14 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       journeyId: journey.id,
       arcType: 'sprint',
       arcOrder: 1,
+      name: 'Sprint 1: Onboarding',
+      description: 'Your first sprint - get familiar with the codebase and team',
       status: 'active',
-      arcMetadata: { theme: 'Onboarding' },
+      difficultyBand: 'guided',
+      durationDays: 10,
+      competencyFocus: ['code-quality', 'git-workflow'],
+      isFinalArc: false,
+      arcData: { theme: 'Onboarding' },
     }).returning();
 
     // Update journey with current arc
@@ -2568,6 +2588,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     const ticketData = [
       {
         sprintId: sprint.id,
+        ticketKey: 'NOVA-101',
         title: 'Fix login button not responding on mobile',
         description: 'Users report that the login button on mobile devices does not respond to taps. Investigate and fix the issue.',
         type: 'bug' as const,
@@ -2575,12 +2596,11 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         status: 'todo' as const,
         storyPoints: 3,
         acceptanceCriteria: ['Login button responds to taps on iOS and Android', 'No regression on desktop'],
-        labels: ['mobile', 'urgent'],
-        gitBranch: null,
-        prUrl: null,
+        dayAssigned: 1,
       },
       {
         sprintId: sprint.id,
+        ticketKey: 'NOVA-102',
         title: 'Add loading spinner to dashboard',
         description: 'The dashboard currently shows a blank screen while loading data. Add a loading spinner for better UX.',
         type: 'feature' as const,
@@ -2588,12 +2608,11 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         status: 'todo' as const,
         storyPoints: 2,
         acceptanceCriteria: ['Spinner displays while data is loading', 'Spinner disappears when data loads'],
-        labels: ['ux', 'dashboard'],
-        gitBranch: null,
-        prUrl: null,
+        dayAssigned: 1,
       },
       {
         sprintId: sprint.id,
+        ticketKey: 'NOVA-103',
         title: 'Review onboarding documentation',
         description: 'Read through the developer onboarding docs and note any questions or unclear sections.',
         type: 'feature' as const,
@@ -2601,12 +2620,11 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         status: 'todo' as const,
         storyPoints: 1,
         acceptanceCriteria: ['Docs reviewed', 'Questions documented'],
-        labels: ['onboarding'],
-        gitBranch: null,
-        prUrl: null,
+        dayAssigned: 2,
       },
       {
         sprintId: sprint.id,
+        ticketKey: 'NOVA-104',
         title: 'Fix null pointer in payment processing',
         description: 'The payment processing module throws a null pointer exception when the user has no saved cards.',
         type: 'bug' as const,
@@ -2614,12 +2632,11 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         status: 'todo' as const,
         storyPoints: 5,
         acceptanceCriteria: ['No crash when user has no saved cards', 'Proper error message shown'],
-        labels: ['payments', 'critical'],
-        gitBranch: null,
-        prUrl: null,
+        dayAssigned: 3,
       },
       {
         sprintId: sprint.id,
+        ticketKey: 'NOVA-105',
         title: 'Update user profile API endpoint',
         description: 'Add email verification field to the user profile API response.',
         type: 'feature' as const,
@@ -2627,9 +2644,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         status: 'todo' as const,
         storyPoints: 2,
         acceptanceCriteria: ['API returns emailVerified field', 'Field is boolean'],
-        labels: ['api', 'user-profile'],
-        gitBranch: null,
-        prUrl: null,
+        dayAssigned: 4,
       },
     ];
 
@@ -2643,22 +2658,30 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         sprintId: sprint.id,
         ceremonyType: 'planning' as const,
         status: 'pending' as const,
-        scheduledFor: new Date(),
-        duration: 60,
-        outcome: null,
+        dayNumber: 1,
       },
       {
         sprintId: sprint.id,
         ceremonyType: 'standup' as const,
         status: 'pending' as const,
-        scheduledFor: new Date(),
-        duration: 15,
-        outcome: null,
+        dayNumber: 2,
+      },
+      {
+        sprintId: sprint.id,
+        ceremonyType: 'review' as const,
+        status: 'pending' as const,
+        dayNumber: 10,
+      },
+      {
+        sprintId: sprint.id,
+        ceremonyType: 'retrospective' as const,
+        status: 'pending' as const,
+        dayNumber: 10,
       },
     ];
 
     for (const ceremony of ceremonyData) {
-      await this.createCeremony(ceremony);
+      await this.createCeremonyInstance(ceremony);
     }
 
     console.log('Sprint workflow data seeded successfully!');
@@ -3357,7 +3380,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     if (!journey) return null;
 
     const arcs = await this.getJourneyArcs(journeyId);
-    const currentArc = arcs.find(arc => arc.status === 'in_progress') || null;
+    const currentArc = arcs.find(arc => arc.status === 'active' || arc.status === 'in_progress') || null;
     
     let currentSprint: SprintOverview | null = null;
     if (currentArc) {
