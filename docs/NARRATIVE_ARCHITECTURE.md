@@ -908,7 +908,7 @@ Lookup: jobPosting.projectTemplateId = "novapay-template"
 Load ProjectTemplate "novapay-template"
            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  ASSEMBLE ONBOARDING ARC                                     │
+│  ASSEMBLE ONBOARDING ARC (Mostly Scripted)                   │
 │                                                              │
 │  1. Team Members: Load from template.team                    │
 │  2. Documentation: Load from template.documentation          │
@@ -921,18 +921,380 @@ Load ProjectTemplate "novapay-template"
 User completes Onboarding
            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  ASSEMBLE SPRINT 1                                           │
+│  DYNAMICALLY GENERATE SPRINT N                               │
 │                                                              │
-│  1. Sprint Goal: Generate from template.backlog.themes       │
-│  2. Backlog Items: Select 3-5 from template.backlog          │
-│  3. Assign User: 1-2 tickets at appropriate complexity       │
-│  4. Ceremonies: Load scripts from catalogue                  │
-│  5. Mid-Sprint Event: 30% chance, select from template       │
-│  6. Soft Skills: Select 2-3 scenarios                        │
+│  → See "Dynamic Sprint Generation" section below             │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
            ↓
-Repeat for Sprint 2, 3... until Junior Ready
+Repeat until Exit Trigger fires
+```
+
+---
+
+## Dynamic Sprint Generation
+
+After onboarding, **each sprint is dynamically generated** to ensure variety and prevent repetition. The system combines:
+- **Seed content** from the catalogue (problem templates, scenario structures)
+- **AI generation** for variations, dialogue, and contextual details
+- **Progression rules** to ensure appropriate difficulty
+
+### Why Dynamic Generation?
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Fully Scripted** | Consistent, predictable | Repetitive on replay, limited replayability |
+| **Fully AI-Generated** | Infinite variety | Inconsistent quality, may break narrative |
+| **Hybrid (Our Approach)** | Variety + consistency | More complex to build |
+
+### Sprint Generation Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SPRINT GENERATION PIPELINE                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  INPUTS:                                                                 │
+│  ├── Project Template (team, codebase, themes)                          │
+│  ├── User Progress (completed sprints, competency scores, gaps)         │
+│  ├── Sprint Number (determines difficulty band)                         │
+│  └── Previous Sprint State (what happened, what to avoid repeating)     │
+│                                                                          │
+│                              ↓                                           │
+│                                                                          │
+│  STEP 1: SELECT SPRINT THEME                                            │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Choose theme not used in recent sprints:                         │   │
+│  │  • "Payment Processing Reliability"                               │   │
+│  │  • "Fraud Detection Features"                                     │   │
+│  │  • "Performance Optimization"                                     │   │
+│  │  • "Customer Dashboard Improvements"                              │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                              ↓                                           │
+│                                                                          │
+│  STEP 2: GENERATE BACKLOG                                               │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  AI generates 5-8 tickets based on:                               │   │
+│  │  • Theme selected                                                 │   │
+│  │  • Difficulty band for this sprint                                │   │
+│  │  • Problem templates from catalogue                               │   │
+│  │  • User's competency gaps (prioritize weak areas)                 │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                              ↓                                           │
+│                                                                          │
+│  STEP 3: SELECT USER TICKETS                                            │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Assign 1-3 tickets to user:                                      │   │
+│  │  • At least one technical (bug, feature)                          │   │
+│  │  • Optionally one soft-skill heavy (ambiguous requirements)       │   │
+│  │  • Complexity matches difficulty band                             │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                              ↓                                           │
+│                                                                          │
+│  STEP 4: GENERATE SOFT SKILL EVENTS                                     │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Roll for 2-4 events, avoiding recent repeats:                    │   │
+│  │  • Code review conflict                                           │   │
+│  │  • Requirement change mid-sprint                                  │   │
+│  │  • Peer disagreement in standup                                   │   │
+│  │  • Production incident (urgent interrupt)                         │   │
+│  │  • Scope creep pressure from PM                                   │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                              ↓                                           │
+│                                                                          │
+│  STEP 5: SCHEDULE EVENTS ACROSS DAYS                                    │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Place events throughout the sprint:                              │   │
+│  │  • Day 1: Sprint Planning                                         │   │
+│  │  • Day 2-3: Work begins, optional early conflict                  │   │
+│  │  • Day 4-5: Mid-sprint event (incident, requirement change)       │   │
+│  │  • Day 6-7: Push to complete, possible deadline pressure          │   │
+│  │  • Day 8: Sprint Review                                           │   │
+│  │  • Day 9: Retrospective + 1:1                                     │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                              ↓                                           │
+│                                                                          │
+│  OUTPUT: Complete Sprint Definition                                      │
+│  ├── Sprint Goal                                                        │
+│  ├── Backlog (with generated tickets)                                   │
+│  ├── User's assigned tickets (with generated code/bugs)                 │
+│  ├── Scheduled soft skill events                                        │
+│  └── Ceremony prompts (for AI team members)                             │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Dynamic Ticket Generation
+
+```typescript
+interface TicketGenerator {
+  // Inputs
+  inputs: {
+    projectTemplate: ProjectTemplate;
+    sprintTheme: string;
+    difficultyBand: 'guided' | 'supported' | 'independent';
+    userCompetencyGaps: string[];
+    previousTickets: Ticket[];       // Avoid repetition
+  };
+  
+  // Generation process
+  generate(): GeneratedTicket {
+    // 1. Select problem template from catalogue
+    const template = selectProblemTemplate({
+      type: this.inputs.difficultyBand === 'guided' ? 'bug' : 'feature',
+      competencies: this.inputs.userCompetencyGaps,
+      notIn: this.inputs.previousTickets.map(t => t.templateId)
+    });
+    
+    // 2. AI generates variations
+    const ticket = aiGenerate({
+      prompt: `Generate a ${template.type} ticket for a ${this.inputs.sprintTheme} sprint.
+               Base it on this template: ${template.description}
+               Make it appropriate for ${this.inputs.difficultyBand} difficulty.
+               The codebase is: ${this.inputs.projectTemplate.codebase.description}`,
+      schema: TicketSchema
+    });
+    
+    // 3. Generate the actual code/bug
+    const codeArtifact = generateCodeArtifact({
+      ticket,
+      codebaseStructure: this.inputs.projectTemplate.codebase,
+      bugPattern: template.bugPattern
+    });
+    
+    return { ticket, codeArtifact };
+  };
+}
+
+interface GeneratedTicket {
+  id: string;
+  title: string;                    // AI-generated, contextual
+  description: string;              // AI-generated, detailed
+  acceptanceCriteria: string[];     // AI-generated
+  storyPoints: number;              // Based on difficulty band
+  type: 'bug' | 'feature' | 'chore';
+  
+  // The actual technical content
+  codeArtifact: {
+    affectedFiles: string[];
+    buggyCode?: string;             // For bugs: the broken code
+    expectedFix?: string;           // For evaluation
+    testCases?: TestCase[];
+  };
+  
+  // Metadata
+  competencies: string[];           // What this ticket practices
+  templateId: string;               // Which catalogue template it's based on
+}
+```
+
+### Problem Template Examples (Catalogue)
+
+The catalogue contains **problem templates** that the AI uses as seeds:
+
+```json
+{
+  "templates": [
+    {
+      "id": "bug-timezone-formatting",
+      "type": "bug",
+      "category": "date-handling",
+      "difficulty": ["guided", "supported"],
+      "description": "Date displays incorrectly across timezones",
+      "bugPattern": "Uses local timezone instead of UTC for display",
+      "affectedArea": "date formatting utilities",
+      "competencies": ["debugging", "testing"],
+      "variations": [
+        "Payment timestamps show wrong time",
+        "Transaction dates off by hours",
+        "Scheduled payments trigger at wrong time"
+      ]
+    },
+    {
+      "id": "bug-race-condition",
+      "type": "bug",
+      "category": "concurrency",
+      "difficulty": ["supported", "independent"],
+      "description": "Data inconsistency under concurrent updates",
+      "bugPattern": "Missing locks or transactions on shared resource",
+      "affectedArea": "database operations",
+      "competencies": ["debugging", "system-design"],
+      "variations": [
+        "Double-charge on rapid button clicks",
+        "Balance mismatch after concurrent transfers",
+        "Inventory count goes negative"
+      ]
+    },
+    {
+      "id": "feature-validation",
+      "type": "feature",
+      "category": "input-handling",
+      "difficulty": ["guided", "supported"],
+      "description": "Add input validation to a form",
+      "featurePattern": "Validate user input with appropriate error messages",
+      "affectedArea": "form components",
+      "competencies": ["code-quality", "testing"],
+      "variations": [
+        "Credit card number validation",
+        "Email format validation",
+        "Password strength requirements"
+      ]
+    },
+    {
+      "id": "feature-error-handling",
+      "type": "feature",
+      "category": "resilience",
+      "difficulty": ["supported", "independent"],
+      "description": "Improve error handling for API failures",
+      "featurePattern": "Add retry logic, fallbacks, and user feedback",
+      "affectedArea": "API client layer",
+      "competencies": ["debugging", "system-design", "code-quality"],
+      "variations": [
+        "Payment gateway timeout handling",
+        "Third-party API rate limiting",
+        "Graceful degradation when service unavailable"
+      ]
+    }
+  ]
+}
+```
+
+### Soft Skill Event Generation
+
+```typescript
+interface SoftSkillEventGenerator {
+  inputs: {
+    sprintNumber: number;
+    userCompetencyGaps: string[];    // Include soft skills
+    previousEvents: SoftSkillEvent[];
+    teamDynamics: TeamMember[];
+  };
+  
+  generate(): SoftSkillEvent[] {
+    const events: SoftSkillEvent[] = [];
+    
+    // Determine how many events based on sprint number
+    const eventCount = Math.min(2 + Math.floor(sprintNumber / 2), 4);
+    
+    // Select event types, avoiding recent repeats
+    const availableTypes = [
+      'code_review_conflict',
+      'requirement_change',
+      'peer_disagreement',
+      'production_incident',
+      'scope_creep',
+      'deadline_pressure',
+      'unclear_feedback',
+      'team_member_absence'
+    ].filter(type => !recentlyUsed(type, this.inputs.previousEvents));
+    
+    // Prioritize events that practice user's weak competencies
+    const prioritized = prioritizeByCompetencyGaps(
+      availableTypes, 
+      this.inputs.userCompetencyGaps
+    );
+    
+    // Generate each event with AI
+    for (let i = 0; i < eventCount; i++) {
+      const eventType = prioritized[i];
+      const event = aiGenerate({
+        prompt: `Generate a "${eventType}" scenario for sprint ${sprintNumber}.
+                 Team members: ${this.inputs.teamDynamics.map(m => m.name).join(', ')}
+                 Make it realistic and challenging but fair.`,
+        schema: SoftSkillEventSchema
+      });
+      events.push(event);
+    }
+    
+    return events;
+  };
+}
+
+interface SoftSkillEvent {
+  id: string;
+  type: string;
+  scheduledDay: number;             // Which day of sprint
+  scheduledMoment: string;          // 'standup' | 'mid_work' | 'review' | etc.
+  
+  scenario: {
+    setup: string;                  // Context for the AI
+    triggerMessage: string;         // What the team member says
+    involvedMembers: string[];      // Who's involved
+  };
+  
+  evaluation: {
+    competencies: string[];
+    successCriteria: string[];
+  };
+}
+```
+
+### Ensuring Variety Across Sprints
+
+```typescript
+interface SprintHistory {
+  // Track what's been used to avoid repetition
+  usedThemes: string[];
+  usedTicketTemplates: string[];
+  usedSoftSkillTypes: string[];
+  usedConflictPairings: string[];   // e.g., "user-Marcus", "user-Priya"
+  
+  // Cooldown periods
+  cooldowns: {
+    themes: 2;                       // Can't reuse theme for 2 sprints
+    ticketTemplates: 3;              // Can't reuse template for 3 sprints
+    softSkillTypes: 2;               // Can't repeat same scenario type
+    conflictPairings: 3;             // Different people for conflicts
+  };
+}
+
+function canUse(item: string, history: string[], cooldown: number): boolean {
+  const recentHistory = history.slice(-cooldown);
+  return !recentHistory.includes(item);
+}
+```
+
+### Generation vs Selection Breakdown
+
+| Element | Generation Method |
+|---------|-------------------|
+| **Sprint Theme** | Selected from template pool, avoiding recent |
+| **Backlog Tickets (full list)** | AI-generated based on theme + templates |
+| **User's Tickets (code/bugs)** | AI-generated code from problem templates |
+| **Standup Dialogue** | AI-generated based on sprint state |
+| **Code Review Comments** | AI-generated based on user's actual code |
+| **Soft Skill Scenarios** | AI-generated from event templates |
+| **Retro Discussion** | AI-generated based on what happened |
+| **1:1 Feedback** | AI-generated based on user's performance |
+
+### Quality Guardrails
+
+To ensure generated content is coherent and fair:
+
+```typescript
+interface GenerationGuardrails {
+  // Content must be...
+  validation: {
+    solvable: boolean;               // Bug has a fix, feature is achievable
+    appropriateDifficulty: boolean;  // Matches difficulty band
+    narrativeConsistent: boolean;    // Fits project/team context
+    notRepetitive: boolean;          // Hasn't been used recently
+  };
+  
+  // Human review for edge cases
+  flagForReview: {
+    ifDifficultyMismatch: boolean;
+    ifNarrativeBreak: boolean;
+    ifUserComplaint: boolean;
+  };
+  
+  // Fallback to scripted content
+  fallback: {
+    onGenerationFailure: 'use_scripted_template';
+    onQualityFailure: 'regenerate_with_feedback';
+    maxRetries: 3;
+  };
+}
 ```
 
 ---
