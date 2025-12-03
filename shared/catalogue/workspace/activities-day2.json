@@ -1,0 +1,199 @@
+{
+  "version": "1.0.0",
+  "type": "daily_activities",
+  "description": "Day 2 activities and progression for workspace simulation",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "scenario": "intern_onboarding",
+    "day": 2
+  },
+  "content": {
+    "day": {
+      "number": 2,
+      "theme": "First coding task",
+      "title": "Your First Ticket",
+      "description": "Time to write some code! Today you'll fix a real bug and learn the team's development workflow."
+    },
+    "activities": [
+      {
+        "id": "standup",
+        "order": 1,
+        "title": "Morning Standup",
+        "shortTitle": "Morning standup completed",
+        "description": "Join the daily sync and share your update",
+        "fullDescription": "Morning standup with Sarah",
+        "icon": "Users",
+        "iconColor": "text-blue-600",
+        "bgColor": "bg-blue-100",
+        "type": "conversation",
+        "viewMode": "day2-standup",
+        "progressWeight": 10,
+        "unlockCondition": null,
+        "completionCheck": "standupComplete"
+      },
+      {
+        "id": "dev-setup",
+        "order": 2,
+        "title": "Dev Environment Setup",
+        "shortTitle": "Dev environment set up",
+        "description": "Clone the repo and get it running locally",
+        "fullDescription": "Set up dev environment (clone, install, run)",
+        "icon": "Terminal",
+        "iconColor": "text-green-600",
+        "bgColor": "bg-green-100",
+        "type": "terminal-steps",
+        "viewMode": "day2-dev-setup",
+        "progressWeight": 10,
+        "unlockCondition": "standupComplete",
+        "completionCheck": "devSetupComplete"
+      },
+      {
+        "id": "ticket-review",
+        "order": 3,
+        "title": "Review Your Ticket",
+        "shortTitle": "Reviewed ticket",
+        "description": "Understand what you're building before you code",
+        "fullDescription": "Review your ticket",
+        "icon": "Clipboard",
+        "iconColor": "text-purple-600",
+        "bgColor": "bg-purple-100",
+        "type": "ticket-display",
+        "viewMode": "day2-ticket",
+        "progressWeight": 5,
+        "unlockCondition": "devSetupComplete",
+        "completionCheck": "ticketReviewed"
+      },
+      {
+        "id": "create-branch",
+        "order": 4,
+        "title": "Create Feature Branch",
+        "shortTitle": "Created branch",
+        "description": "Isolate your work on a new branch",
+        "fullDescription": "Create a feature branch",
+        "icon": "GitBranch",
+        "iconColor": "text-cyan-600",
+        "bgColor": "bg-cyan-100",
+        "type": "git-command",
+        "viewMode": "day2-branch",
+        "progressWeight": 5,
+        "unlockCondition": "ticketReviewed",
+        "completionCheck": "branchCreated"
+      },
+      {
+        "id": "explore-codebase",
+        "order": 5,
+        "title": "Explore Codebase",
+        "shortTitle": "Explored codebase and found dateFormatters.ts",
+        "description": "Navigate to find where to make changes",
+        "fullDescription": "Explore the codebase and find the bug",
+        "icon": "FolderOpen",
+        "iconColor": "text-blue-600",
+        "bgColor": "bg-blue-100",
+        "type": "file-explorer",
+        "viewMode": "day2-codebase",
+        "progressWeight": 10,
+        "unlockCondition": "branchCreated",
+        "completionCheck": "codebaseExplored"
+      },
+      {
+        "id": "code-fix",
+        "order": 6,
+        "title": "Fix the Bug",
+        "shortTitle": "Fixed the timezone bug",
+        "description": "Apply the timezone fix",
+        "fullDescription": "Fix the timezone bug",
+        "icon": "Code",
+        "iconColor": "text-purple-600",
+        "bgColor": "bg-purple-100",
+        "type": "code-editor",
+        "viewMode": "day2-code-fix",
+        "progressWeight": 20,
+        "unlockCondition": "codebaseExplored",
+        "completionCheck": "codeFixComplete"
+      },
+      {
+        "id": "test-fix",
+        "order": 7,
+        "title": "Test Your Fix",
+        "shortTitle": "Tested the fix",
+        "description": "Verify the bug is actually fixed",
+        "fullDescription": "Test your fix locally",
+        "icon": "Play",
+        "iconColor": "text-green-600",
+        "bgColor": "bg-green-100",
+        "type": "browser-preview",
+        "viewMode": "day2-test-fix",
+        "progressWeight": 10,
+        "unlockCondition": "codeFixComplete",
+        "completionCheck": "testFixComplete"
+      },
+      {
+        "id": "git-workflow",
+        "order": 8,
+        "title": "Git Workflow",
+        "shortTitle": "Completed Git workflow",
+        "description": "Stage, commit, and push your changes",
+        "fullDescription": "Git workflow (branch, commit, push)",
+        "icon": "GitCommit",
+        "iconColor": "text-gray-600",
+        "bgColor": "bg-gray-100",
+        "type": "git-commands",
+        "viewMode": "day2-git",
+        "progressWeight": 15,
+        "unlockCondition": "testFixComplete",
+        "completionCheck": "gitWorkflowComplete"
+      },
+      {
+        "id": "create-pr",
+        "order": 9,
+        "title": "Create Pull Request",
+        "shortTitle": "Created pull request",
+        "description": "Open a PR for code review",
+        "fullDescription": "Create pull request",
+        "icon": "GitPullRequest",
+        "iconColor": "text-purple-600",
+        "bgColor": "bg-purple-100",
+        "type": "pr-form",
+        "viewMode": "day2-pr",
+        "progressWeight": 10,
+        "unlockCondition": "gitWorkflowComplete",
+        "completionCheck": "prCreated"
+      },
+      {
+        "id": "reflection",
+        "order": 10,
+        "title": "End-of-Day Reflection",
+        "shortTitle": "Completed end-of-day reflection",
+        "description": "Reflect on what you learned today",
+        "fullDescription": "End-of-day reflection",
+        "icon": "Lightbulb",
+        "iconColor": "text-amber-600",
+        "bgColor": "bg-amber-100",
+        "type": "reflection",
+        "viewMode": "day2-reflection",
+        "progressWeight": 5,
+        "unlockCondition": "prCreated",
+        "completionCheck": "reflectionComplete"
+      }
+    ],
+    "completionMessage": {
+      "title": "Amazing work!",
+      "description": "You've completed your first coding day and created your first pull request!",
+      "summary": [
+        "Participated in morning standup",
+        "Set up local development environment",
+        "Fixed the timezone bug",
+        "Created your first PR"
+      ],
+      "nextDay": {
+        "preview": "Tomorrow Sarah will review your code and you'll learn how to respond to feedback!",
+        "buttonText": "Continue to Day 3"
+      }
+    },
+    "progressCalculation": {
+      "formula": "standup(10) + devSetup(10) + ticket(5) + branch(5) + codebase(10) + codeFix(20) + testFix(10) + git(15) + pr(10) + reflection(5)",
+      "totalWeight": 100
+    }
+  }
+}

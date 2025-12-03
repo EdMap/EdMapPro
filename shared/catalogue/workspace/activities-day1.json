@@ -1,0 +1,95 @@
+{
+  "version": "1.0.0",
+  "type": "daily_activities",
+  "description": "Day 1 activities and progression for workspace simulation",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "scenario": "intern_onboarding",
+    "day": 1
+  },
+  "content": {
+    "day": {
+      "number": 1,
+      "theme": "Welcome aboard",
+      "title": "Your First Day",
+      "description": "Your first week as a software engineering intern starts now. Take your time getting to know the team and understanding the project."
+    },
+    "activities": [
+      {
+        "id": "read-docs",
+        "order": 1,
+        "title": "Read Onboarding Docs",
+        "shortTitle": "Read project documentation",
+        "description": "Learn about the product and your mission",
+        "fullDescription": "Read project documentation (Product & Users, How We Work)",
+        "icon": "BookOpen",
+        "iconColor": "text-orange-600",
+        "bgColor": "bg-orange-100",
+        "type": "documentation",
+        "viewMode": "documentation",
+        "requiredSections": ["product", "users", "norms", "workflow"],
+        "progressWeight": 30,
+        "unlockCondition": null,
+        "completionCheck": "docsRead"
+      },
+      {
+        "id": "meet-team",
+        "order": 2,
+        "title": "Meet the Team",
+        "shortTitle": "Meet the team",
+        "description": "1-on-1 introductions with your teammates",
+        "fullDescription": "Meet the team (1-on-1 introductions with Sarah, Marcus, Priya, Alex, Jordan)",
+        "icon": "Users",
+        "iconColor": "text-blue-600",
+        "bgColor": "bg-blue-100",
+        "type": "team-introductions",
+        "viewMode": "team-intro",
+        "membersToMeet": ["Marcus", "Priya", "Alex", "Jordan"],
+        "progressWeight": 40,
+        "unlockCondition": "docsRead",
+        "completionCheck": "allTeamMet",
+        "subActivities": [
+          { "id": "meet-marcus", "label": "Met Marcus" },
+          { "id": "meet-priya", "label": "Met Priya" },
+          { "id": "meet-alex", "label": "Met Alex" },
+          { "id": "meet-jordan", "label": "Met Jordan" }
+        ]
+      },
+      {
+        "id": "comprehension-check",
+        "order": 3,
+        "title": "Chat with Sarah",
+        "shortTitle": "Completed comprehension check",
+        "description": "Share what you learned from the docs",
+        "fullDescription": "Comprehension check with Sarah",
+        "icon": "MessageCircle",
+        "iconColor": "text-green-600",
+        "bgColor": "bg-green-100",
+        "type": "conversation",
+        "viewMode": "comprehension-check",
+        "targetMember": "Sarah",
+        "progressWeight": 30,
+        "unlockCondition": "allTeamMet",
+        "completionCheck": "comprehensionComplete"
+      }
+    ],
+    "completionMessage": {
+      "title": "Great job!",
+      "description": "You've completed your first day at NovaPay.",
+      "summary": [
+        "Read through onboarding documentation",
+        "Met all team members",
+        "Had a comprehension check with Sarah"
+      ],
+      "nextDay": {
+        "preview": "Tomorrow you'll join your first standup, set up your development environment, and start working on your first ticket!",
+        "buttonText": "Continue to Day 2"
+      }
+    },
+    "progressCalculation": {
+      "formula": "(docsRead * 30) + (completedIntros / totalIntros * 40) + (comprehensionComplete * 30)",
+      "totalWeight": 100
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0",
+  "type": "team_members",
+  "description": "Team member definitions for workspace simulation",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "scenario": "intern_onboarding"
+  },
+  "content": {
+    "team": {
+      "name": "Payments Team",
+      "company": "NovaPay",
+      "project": "Merchant Dashboard"
+    },
+    "members": [
+      {
+        "id": "sarah",
+        "name": "Sarah",
+        "role": "Tech Lead",
+        "personality": "Supportive, patient mentor who explains concepts clearly and encourages questions",
+        "expertise": ["code review", "architecture", "debugging", "mentorship"],
+        "communicationStyle": "Direct but encouraging. Uses examples to explain complex concepts.",
+        "avatar": {
+          "seed": "sarah-tech-lead",
+          "style": "avataaars",
+          "fallbackColor": "bg-blue-500",
+          "fallbackInitials": "S"
+        },
+        "availability": "Primary mentor, always available for questions",
+        "askFor": ["Code questions", "PR reviews", "Architecture decisions"]
+      },
+      {
+        "id": "marcus",
+        "name": "Marcus",
+        "role": "Senior Engineer",
+        "personality": "Experienced developer who shares practical tips and war stories",
+        "expertise": ["backend", "database", "performance", "debugging"],
+        "communicationStyle": "Casual, uses real-world examples. Shares lessons from past experiences.",
+        "avatar": {
+          "seed": "marcus-senior-dev",
+          "style": "avataaars",
+          "fallbackColor": "bg-green-500",
+          "fallbackInitials": "M"
+        },
+        "availability": "Happy to help, especially on backend questions",
+        "askFor": ["Backend questions", "Database queries", "Performance tips"]
+      },
+      {
+        "id": "priya",
+        "name": "Priya",
+        "role": "Product Manager",
+        "personality": "User-focused PM who helps understand the 'why' behind features",
+        "expertise": ["requirements", "user research", "prioritization", "stakeholder management"],
+        "communicationStyle": "Collaborative, often asks clarifying questions. Thinks about edge cases.",
+        "avatar": {
+          "seed": "priya-product-mgr",
+          "style": "avataaars",
+          "fallbackColor": "bg-purple-500",
+          "fallbackInitials": "P"
+        },
+        "availability": "Available for requirement clarifications",
+        "askFor": ["Requirements", "User context", "Priorities", "Acceptance criteria"]
+      },
+      {
+        "id": "alex",
+        "name": "Alex",
+        "role": "QA Engineer",
+        "personality": "Detail-oriented QA who catches edge cases and helps think through testing",
+        "expertise": ["testing", "edge cases", "bug reproduction", "test automation"],
+        "communicationStyle": "Precise, asks about edge cases. Helps think through test scenarios.",
+        "avatar": {
+          "seed": "alex-qa-engineer",
+          "style": "avataaars",
+          "fallbackColor": "bg-orange-500",
+          "fallbackInitials": "A"
+        },
+        "availability": "Good resource for testing strategies",
+        "askFor": ["Testing strategies", "Bug verification", "Edge cases"]
+      },
+      {
+        "id": "jordan",
+        "name": "Jordan",
+        "role": "Junior Developer",
+        "personality": "Fellow junior who recently went through onboarding, shares relatable tips",
+        "expertise": ["onboarding tips", "codebase navigation", "beginner perspective"],
+        "communicationStyle": "Friendly, relatable. Shares what they wish they knew when starting.",
+        "avatar": {
+          "seed": "jordan-intern",
+          "style": "avataaars",
+          "fallbackColor": "bg-teal-500",
+          "fallbackInitials": "J"
+        },
+        "availability": "Great for peer support and onboarding tips",
+        "askFor": ["Onboarding tips", "Codebase navigation", "What to expect"]
+      }
+    ],
+    "avatarConfig": {
+      "baseUrl": "https://api.dicebear.com/7.x",
+      "backgroundColors": "b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf"
+    }
+  }
+}

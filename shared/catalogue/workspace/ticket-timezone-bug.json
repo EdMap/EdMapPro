@@ -1,0 +1,251 @@
+{
+  "version": "1.0.0",
+  "type": "ticket",
+  "description": "Timezone bug ticket for Day 2 coding exercise",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "scenario": "intern_onboarding",
+    "difficulty": "beginner",
+    "competencies": ["debugging", "javascript", "date-handling"]
+  },
+  "content": {
+    "ticket": {
+      "id": "PAY-1234",
+      "type": "Bug",
+      "status": "In Progress",
+      "priority": "Medium",
+      "sprint": "Sprint 14",
+      "title": "Transactions show incorrect time for non-UTC merchants",
+      "description": "Merchants in timezones other than UTC see transaction timestamps in UTC instead of their local time. For example, a transaction at 8pm CST shows as 2am the next day, causing confusion during daily reconciliation.",
+      "acceptanceCriteria": [
+        "Transactions display in the merchant's configured timezone",
+        "Date filters work correctly with local dates",
+        "Existing tests pass"
+      ],
+      "assignee": {
+        "name": "You",
+        "initials": "Y",
+        "color": "teal"
+      },
+      "reporter": {
+        "name": "Priya",
+        "initials": "P",
+        "color": "pink"
+      },
+      "filesToInvestigate": [
+        "client/src/utils/dateFormatters.ts",
+        "client/src/components/TransactionList.tsx"
+      ]
+    },
+    "codeExercise": {
+      "targetFile": "client/src/utils/dateFormatters.ts",
+      "problemDescription": "The formatTransactionDate function uses hardcoded 'UTC' timezone instead of the merchant's configured timezone.",
+      "codeTemplate": {
+        "language": "typescript",
+        "code": "export function formatTransactionDate(\n  timestamp: string,\n  merchantTimezone: string = 'UTC'\n): string {\n  const date = new Date(timestamp);\n  \n  // TODO: Convert to merchant's timezone\n  const options: Intl.DateTimeFormatOptions = {\n    year: 'numeric',\n    month: 'short',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    timeZone: ___BLANK_1___  // Fill in the timezone\n  };\n  \n  return date.toLocaleString('en-US', options);\n}",
+        "blanks": [
+          {
+            "id": "blank1",
+            "placeholder": "???",
+            "correctAnswer": "merchantTimezone",
+            "hint": "Look at the function parameter - what variable holds the merchant's timezone preference?"
+          }
+        ]
+      },
+      "fixedCode": {
+        "language": "typescript",
+        "code": "export function formatTransactionDate(\n  timestamp: string,\n  merchantTimezone: string = 'UTC'\n): string {\n  const date = new Date(timestamp);\n  \n  const options: Intl.DateTimeFormatOptions = {\n    year: 'numeric',\n    month: 'short',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    timeZone: merchantTimezone\n  };\n  \n  return date.toLocaleString('en-US', options);\n}"
+      },
+      "successMessage": "By using merchantTimezone, transactions will now display in the merchant's local time!"
+    },
+    "testScenario": {
+      "merchant": {
+        "name": "Maria's Coffee Shop",
+        "timezone": "CST"
+      },
+      "transactions": [
+        {
+          "amount": "$24.50",
+          "type": "Card Payment",
+          "buggyDisplay": "Feb 15, 2:30 AM UTC",
+          "fixedDisplay": "Feb 14, 8:30 PM CST"
+        },
+        {
+          "amount": "$8.75",
+          "type": "Card Payment",
+          "buggyDisplay": "Feb 15, 1:15 AM UTC",
+          "fixedDisplay": "Feb 14, 7:15 PM CST"
+        },
+        {
+          "amount": "$15.00",
+          "type": "Card Payment",
+          "buggyDisplay": "Feb 15, 12:45 AM UTC",
+          "fixedDisplay": "Feb 14, 6:45 PM CST"
+        }
+      ]
+    },
+    "fileStructure": [
+      {
+        "name": "client",
+        "type": "folder",
+        "children": [
+          {
+            "name": "src",
+            "type": "folder",
+            "children": [
+              {
+                "name": "components",
+                "type": "folder",
+                "children": [
+                  { "name": "TransactionList.tsx", "type": "file", "highlight": true }
+                ]
+              },
+              {
+                "name": "utils",
+                "type": "folder",
+                "children": [
+                  { "name": "dateFormatters.ts", "type": "file", "highlight": true, "target": true }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "server",
+        "type": "folder",
+        "children": [
+          { "name": "routes", "type": "folder" },
+          { "name": "services", "type": "folder" }
+        ]
+      },
+      {
+        "name": "shared",
+        "type": "folder",
+        "children": [
+          {
+            "name": "types",
+            "type": "folder",
+            "children": [
+              { "name": "merchant.ts", "type": "file" }
+            ]
+          }
+        ]
+      }
+    ],
+    "gitWorkflow": {
+      "branchNaming": {
+        "pattern": "fix/description or feature/description",
+        "examples": ["fix/timezone-display", "fix/transaction-date-bug"],
+        "validation": {
+          "notAllowed": ["main", "master"],
+          "recommended": ["fix", "timezone", "bug"]
+        }
+      },
+      "steps": [
+        {
+          "id": "add",
+          "instruction": "Stage your changes for commit",
+          "hint": "Use git add to include the files you modified",
+          "validCommands": ["git add .", "git add -a", "git add dateformatters"],
+          "successOutput": ""
+        },
+        {
+          "id": "commit",
+          "instruction": "Commit your changes with a message describing what you fixed",
+          "hint": "Use git commit -m \"your descriptive message\"",
+          "validPatterns": ["git commit -m", "timezone", "fix", "date"],
+          "successOutput": "[fix/timezone-display abc1234] Fix timezone display for merchant transactions\n 1 file changed, 2 insertions(+), 2 deletions(-)"
+        },
+        {
+          "id": "push",
+          "instruction": "Push your branch to the remote repository",
+          "hint": "Use git push origin followed by your branch name",
+          "validPatterns": ["git push"],
+          "successOutput": "Enumerating objects: 5, done.\nCounting objects: 100% (5/5), done.\nWriting objects: 100% (3/3), 312 bytes | 312.00 KiB/s, done.\nremote: Create a pull request:\nremote:   https://github.com/novapay/merchant-dashboard/pull/new/fix/timezone-display"
+        }
+      ]
+    },
+    "prTemplate": {
+      "titlePlaceholder": "Fix timezone display for merchant transactions",
+      "descriptionTemplate": "## What changed\n- Updated formatTransactionDate to use merchant's timezone\n\n## Why\nMerchants were seeing transactions in UTC instead of their local time, causing confusion during reconciliation.\n\n## Testing\nTested with CST timezone, transactions now display correctly.",
+      "reviewers": ["Sarah"],
+      "labels": ["bug", "frontend"]
+    },
+    "devSetup": {
+      "steps": [
+        {
+          "id": "clone",
+          "instruction": "Clone the repository to your machine",
+          "command": "git clone https://github.com/novapay/merchant-dashboard.git",
+          "hint": "Use git clone followed by the repo URL"
+        },
+        {
+          "id": "install",
+          "instruction": "Install project dependencies",
+          "command": "npm install",
+          "hint": "Use npm install or npm i"
+        },
+        {
+          "id": "run",
+          "instruction": "Start the development server",
+          "command": "npm run dev",
+          "hint": "Use npm run dev to start the app"
+        }
+      ],
+      "successMessage": "Dev environment ready! The app is running locally at http://localhost:5173"
+    },
+    "standup": {
+      "format": {
+        "structure": ["Yesterday", "Today", "Blockers"],
+        "duration": "15 minutes"
+      },
+      "script": [
+        {
+          "sender": "Sarah",
+          "role": "Tech Lead",
+          "content": "Morning team! Let's do a quick standup. Marcus, you're up first.",
+          "delay": 0
+        },
+        {
+          "sender": "Marcus",
+          "role": "Senior Engineer",
+          "content": "Yesterday: Finished the Stripe webhook handlers and got them deployed to staging. Today: Testing edge cases on the payment retry flow - specifically around network timeouts. Blockers: None, all good.",
+          "delay": 4000
+        },
+        {
+          "sender": "Sarah",
+          "role": "Tech Lead",
+          "content": "Thanks Marcus. Alex?",
+          "delay": 2500
+        },
+        {
+          "sender": "Alex",
+          "role": "QA Engineer",
+          "content": "Yesterday: Wrote integration tests for the new checkout flow. Today: Setting up the test environment for payment retries. Blockers: None.",
+          "delay": 4000
+        },
+        {
+          "sender": "Sarah",
+          "role": "Tech Lead",
+          "content": "Great, thanks Alex. Priya?",
+          "delay": 2500
+        },
+        {
+          "sender": "Priya",
+          "role": "Product Manager",
+          "content": "Yesterday: Finalized requirements for the merchant analytics dashboard. Today: Writing user stories for the next sprint. Blockers: Waiting on design mockups, but should have them by EOD.",
+          "delay": 5000
+        },
+        {
+          "sender": "Sarah",
+          "role": "Tech Lead",
+          "content": "{userName}, you're up!",
+          "delay": 3000,
+          "userNamePlaceholder": true
+        }
+      ]
+    }
+  }
+}

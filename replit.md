@@ -66,6 +66,10 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 | File | Purpose |
 |------|---------|
 | `docs/PRODUCT_ROADMAP.md` | Complete product strategy and implementation plan |
+| `shared/catalogue/index.json` | Catalogue structure and content type definitions |
+| `shared/catalogue/README.md` | Catalogue documentation and usage guide |
+| `shared/catalogue/workspace/` | Workspace simulator extracted content (team, docs, activities, tickets) |
+| `shared/catalogue/interview/` | Interview simulator extracted content (questions, rubrics, personas) |
 | `client/src/components/simulation/intern-onboarding-session.tsx` | Current workspace simulation (4k lines, to be modularized) |
 | `client/src/pages/workspace-journey.tsx` | Journey mode entry point |
 | `client/src/pages/workspace-practice.tsx` | Practice mode entry point |
@@ -101,6 +105,14 @@ The system uses a monorepo structure to organize `client/`, `server/`, `shared/`
 See `docs/PRODUCT_ROADMAP.md` for detailed phase descriptions.
 
 ## Recent Updates
+
+### Phase 0 Complete: Content Extraction (December 2025)
+- Extracted all hardcoded content to JSON catalogue files
+- **Workspace Catalogue**: team-members.json, documentation-day1.json, activities-day1.json, activities-day2.json, ticket-timezone-bug.json
+- **Interview Catalogue**: question-banks.json, interview-config.json, evaluation-rubrics.json, team-personas.json
+- Created catalogue index and documentation at `shared/catalogue/`
+- Content structured for role/level/language adapters (currently: Developer + JavaScript)
+- Ready for Phase 1: Shared schema, catalogue API, component migration
 
 ### Strategic Planning (December 2025)
 - Defined competency-based progression framework (Explorer → Contributor → Junior Ready)

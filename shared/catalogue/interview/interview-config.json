@@ -1,0 +1,148 @@
+{
+  "version": "1.0.0",
+  "type": "interview_configuration",
+  "description": "Interview types, roles, difficulties, and stage settings",
+  "metadata": {
+    "lastUpdated": "2025-01"
+  },
+  "content": {
+    "targetRoles": [
+      { "value": "developer", "label": "Software Developer", "icon": "Code" },
+      { "value": "pm", "label": "Product Manager", "icon": "Briefcase" },
+      { "value": "designer", "label": "UX Designer", "icon": "Lightbulb" },
+      { "value": "data-scientist", "label": "Data Scientist", "icon": "Brain" }
+    ],
+    "interviewTypes": [
+      { 
+        "value": "behavioral", 
+        "label": "Behavioral Interview", 
+        "description": "Assess soft skills and past experiences",
+        "stageType": "behavioral"
+      },
+      { 
+        "value": "technical", 
+        "label": "Technical Interview", 
+        "description": "Evaluate technical knowledge and problem-solving",
+        "stageType": "technical"
+      },
+      { 
+        "value": "system-design", 
+        "label": "System Design", 
+        "description": "Test architectural thinking and design skills",
+        "stageType": "technical"
+      },
+      { 
+        "value": "case-study", 
+        "label": "Case Study", 
+        "description": "Analyze business problems and solutions",
+        "stageType": "case_study"
+      },
+      {
+        "value": "hr",
+        "label": "HR Screening",
+        "description": "Initial screening for culture fit and background",
+        "stageType": "hr_screening"
+      },
+      {
+        "value": "team",
+        "label": "Team Interview",
+        "description": "Multi-persona panel with different perspectives",
+        "stageType": "final"
+      }
+    ],
+    "difficulties": [
+      { "value": "easy", "label": "Entry Level", "description": "Junior positions, basic questions", "aliases": ["junior", "intern"] },
+      { "value": "medium", "label": "Mid Level", "description": "Standard industry expectations", "aliases": ["mid"] },
+      { "value": "hard", "label": "Senior Level", "description": "Advanced, challenging questions", "aliases": ["senior", "staff"] }
+    ],
+    "stageSettings": {
+      "hr_screening": {
+        "minDurationMs": 900000,
+        "maxDurationMs": 1800000,
+        "minQuestions": 4,
+        "maxQuestions": 12,
+        "criticalCriteria": ["background", "motivation", "culture_fit"],
+        "sufficiencyThresholds": {
+          "overall": 0.70,
+          "critical": 0.60,
+          "confidence": 0.75
+        }
+      },
+      "technical": {
+        "minDurationMs": 2100000,
+        "maxDurationMs": 3300000,
+        "minQuestions": 6,
+        "maxQuestions": 18,
+        "criticalCriteria": ["skills", "background"],
+        "sufficiencyThresholds": {
+          "overall": 0.75,
+          "critical": 0.70,
+          "confidence": 0.80
+        }
+      },
+      "behavioral": {
+        "minDurationMs": 1500000,
+        "maxDurationMs": 2400000,
+        "minQuestions": 5,
+        "maxQuestions": 15,
+        "criticalCriteria": ["behavioral", "culture_fit", "motivation"],
+        "sufficiencyThresholds": {
+          "overall": 0.70,
+          "critical": 0.65,
+          "confidence": 0.75
+        }
+      },
+      "final": {
+        "minDurationMs": 1500000,
+        "maxDurationMs": 2400000,
+        "minQuestions": 5,
+        "maxQuestions": 12,
+        "criticalCriteria": ["culture_fit", "motivation", "logistics"],
+        "sufficiencyThresholds": {
+          "overall": 0.75,
+          "critical": 0.70,
+          "confidence": 0.80
+        }
+      },
+      "case_study": {
+        "minDurationMs": 2400000,
+        "maxDurationMs": 3600000,
+        "minQuestions": 3,
+        "maxQuestions": 8,
+        "criticalCriteria": ["skills", "behavioral"],
+        "sufficiencyThresholds": {
+          "overall": 0.80,
+          "critical": 0.75,
+          "confidence": 0.85
+        }
+      }
+    },
+    "assessmentCriteria": [
+      { "id": "background", "label": "Background & Experience", "weight": 0.2 },
+      { "id": "skills", "label": "Technical Skills", "weight": 0.25 },
+      { "id": "behavioral", "label": "Behavioral Competencies", "weight": 0.2 },
+      { "id": "motivation", "label": "Motivation & Interest", "weight": 0.15 },
+      { "id": "culture_fit", "label": "Culture Fit", "weight": 0.15 },
+      { "id": "logistics", "label": "Logistics (availability, visa, salary)", "weight": 0.05 }
+    ],
+    "interviewStages": [
+      { "id": "greeting", "label": "Greeting", "description": "Initial hello and rapport building" },
+      { "id": "intro_exchange", "label": "Introduction Exchange", "description": "Brief introductions from both sides" },
+      { "id": "opening", "label": "Opening", "description": "First substantive question" },
+      { "id": "core", "label": "Core Questions", "description": "Main interview questions" },
+      { "id": "wrapup", "label": "Wrap-up", "description": "Final questions and closing" },
+      { "id": "closure", "label": "Closure", "description": "Thank you and next steps" }
+    ],
+    "questionPriorities": {
+      "desiredDepth": ["brief", "detailed", "in-depth"],
+      "status": ["pending", "asked", "covered_proactively", "skipped"]
+    },
+    "triageOutcomes": [
+      { "id": "satisfied", "description": "Answer fully addresses the question" },
+      { "id": "partial", "description": "Answer is incomplete, needs follow-up" },
+      { "id": "vague", "description": "Answer is too vague, needs clarification" },
+      { "id": "has_question", "description": "Candidate asked a question" },
+      { "id": "proactive_coverage", "description": "Candidate proactively addressed a planned topic" }
+    ]
+  }
+}

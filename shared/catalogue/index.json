@@ -1,0 +1,207 @@
+{
+  "version": "1.0.0",
+  "name": "edmap Simulation Catalogue",
+  "description": "Unified catalogue for Interview and Workspace simulators",
+  "metadata": {
+    "lastUpdated": "2025-01",
+    "currentlySupported": {
+      "roles": ["developer"],
+      "languages": ["javascript"],
+      "levels": ["junior", "mid", "senior"]
+    },
+    "plannedSupport": {
+      "roles": ["pm", "qa", "devops", "data_science"],
+      "languages": ["python", "c_cpp"],
+      "levels": ["intern"]
+    }
+  },
+  "structure": {
+    "interview": {
+      "path": "interview/",
+      "description": "Interview simulator content (pre-hire phase)",
+      "files": [
+        {
+          "name": "question-banks.json",
+          "type": "question_bank",
+          "description": "Interview questions organized by role, type, and difficulty"
+        },
+        {
+          "name": "interview-config.json",
+          "type": "interview_configuration",
+          "description": "Interview types, roles, difficulties, and stage settings"
+        },
+        {
+          "name": "evaluation-rubrics.json",
+          "type": "evaluation_rubrics",
+          "description": "Scoring criteria and evaluation guidelines"
+        },
+        {
+          "name": "team-personas.json",
+          "type": "team_personas",
+          "description": "Team interview personas and panel configurations"
+        }
+      ]
+    },
+    "workspace": {
+      "path": "workspace/",
+      "description": "Workspace simulator content (post-hire phase)",
+      "files": [
+        {
+          "name": "team-members.json",
+          "type": "team_members",
+          "description": "Team member definitions for workspace simulation"
+        },
+        {
+          "name": "documentation-day1.json",
+          "type": "onboarding_documentation",
+          "description": "Day 1 onboarding documentation content"
+        },
+        {
+          "name": "activities-day1.json",
+          "type": "daily_activities",
+          "description": "Day 1 activities and progression"
+        },
+        {
+          "name": "activities-day2.json",
+          "type": "daily_activities",
+          "description": "Day 2 activities and progression"
+        },
+        {
+          "name": "ticket-timezone-bug.json",
+          "type": "ticket",
+          "description": "Timezone bug ticket for Day 2 coding exercise"
+        }
+      ]
+    }
+  },
+  "adapters": {
+    "description": "Adapters transform catalogue content for specific contexts",
+    "types": {
+      "role": {
+        "description": "Adapts content for specific roles (Developer, PM, QA, etc.)",
+        "current": ["developer"],
+        "planned": ["pm", "qa", "devops", "data_science"]
+      },
+      "level": {
+        "description": "Adapts difficulty and expectations for experience level",
+        "current": ["junior", "mid", "senior"],
+        "planned": ["intern"]
+      },
+      "language": {
+        "description": "Adapts technical content for specific programming languages",
+        "current": ["javascript"],
+        "planned": ["python", "c_cpp"],
+        "appliesTo": ["developer"]
+      }
+    }
+  },
+  "contentTypes": {
+    "question_bank": {
+      "description": "Collection of interview questions",
+      "schema": {
+        "required": ["version", "type", "content"],
+        "content": {
+          "roles": "Record<roleId, { types: Record<type, Record<level, Question[]>> }>"
+        }
+      }
+    },
+    "interview_configuration": {
+      "description": "Interview types, roles, difficulties, and stage settings",
+      "schema": {
+        "required": ["version", "type", "content"],
+        "content": {
+          "targetRoles": "Role[]",
+          "interviewTypes": "InterviewType[]",
+          "difficulties": "Difficulty[]",
+          "stageSettings": "Record<stage, StageSettings>"
+        }
+      }
+    },
+    "evaluation_rubrics": {
+      "description": "Scoring and evaluation criteria for interviews",
+      "schema": {
+        "required": ["version", "type", "content"],
+        "content": {
+          "scoringScale": "{ min, max, labels }",
+          "evaluationDimensions": "Record<dimension, DimensionConfig>",
+          "finalReportStructure": "ReportConfig"
+        }
+      }
+    },
+    "team_personas": {
+      "description": "Interview personas for team/panel interviews",
+      "schema": {
+        "required": ["version", "type", "content"],
+        "content": {
+          "personas": "Record<personaId, PersonaConfig>",
+          "teamConfigurations": "Record<configId, TeamConfig>"
+        }
+      }
+    },
+    "daily_activities": {
+      "description": "Activities and progression for a simulation day",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "day": "{ number, theme, title, description }",
+          "activities": "Activity[]",
+          "completionMessage": "CompletionMessage"
+        }
+      }
+    },
+    "onboarding_documentation": {
+      "description": "Onboarding documentation content for workspace simulation",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "welcome": "WelcomeConfig",
+          "tabs": "Tab[]",
+          "sections": "Record<sectionId, SectionContent>"
+        }
+      }
+    },
+    "team_members": {
+      "description": "Team member definitions",
+      "schema": {
+        "required": ["version", "type", "content"],
+        "content": {
+          "team": "{ name, company, project }",
+          "members": "TeamMember[]"
+        }
+      }
+    },
+    "ticket": {
+      "description": "Bug fix or feature ticket for coding exercises",
+      "schema": {
+        "required": ["version", "type", "metadata", "content"],
+        "content": {
+          "ticket": "TicketDetails",
+          "codeExercise": "CodeExercise",
+          "gitWorkflow": "GitWorkflow"
+        }
+      }
+    }
+  },
+  "queryExamples": {
+    "getQuestionsByRoleAndLevel": {
+      "description": "Get interview questions for a specific role and level",
+      "path": "interview/question-banks.json",
+      "query": "content.roles[role].types[type][level]"
+    },
+    "getActivitiesForDay": {
+      "description": "Get activities for a specific simulation day",
+      "path": "workspace/activities-day{N}.json",
+      "query": "content.activities"
+    },
+    "getTeamMembers": {
+      "description": "Get team members for workspace simulation",
+      "path": "workspace/team-members.json",
+      "query": "content.members"
+    },
+    "getPersonaStyle": {
+      "description": "Get styling for a specific interview persona",
+      "path": "interview/team-personas.json",
+      "query": "content.personas[personaId].style"
+    }
+  }
+}

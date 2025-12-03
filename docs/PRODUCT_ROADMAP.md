@@ -304,3 +304,150 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 - Employers value the credential
 - Works across different training programs
 - Supports multiple career tracks
+
+---
+
+## Future: Enterprise Self-Serve Layer (Phase 8+)
+
+### Vision
+Enable B2B clients (bootcamps, coding schools, universities) to configure custom curricula through a self-serve portal, with simulations automatically assembled from the catalogue.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 ENTERPRISE CONFIGURATION LAYER                   │
+│               (B2B Client Self-Serve Portal)                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Enterprise Client (e.g., 42 London, Bootcamp X)                │
+│                        ↓                                        │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  REQUIREMENTS INPUT                                      │   │
+│  │                                                          │   │
+│  │  1. Select Role Track    [Developer ▼]                   │   │
+│  │  2. Select Language      [C/C++ ▼]                       │   │
+│  │  3. Target Level         [Intern → Junior ▼]             │   │
+│  │  4. Competency Focus     [☑ Debugging] [☑ Git] [☐ CI/CD] │   │
+│  │  5. Duration             [4 weeks ▼]                     │   │
+│  │  6. Custom Scenarios     [Upload JSON] or [Use Defaults] │   │
+│  │                                                          │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                        ↓                                        │
+│            SIMULATION BUILDER (Background)                      │
+│                        ↓                                        │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  AUTO-GENERATED CURRICULUM                               │   │
+│  │                                                          │   │
+│  │  Week 1: Onboarding Arc (from catalogue)                 │   │
+│  │  Week 2: First Sprint Arc (adapted for C/C++)            │   │
+│  │  Week 3: Code Review + Debugging Focus                   │   │
+│  │  Week 4: Final Evaluation                                │   │
+│  │                                                          │   │
+│  │  [Preview] [Edit] [Deploy to Cohort]                     │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    SIMULATION ENGINE                             │
+│                                                                 │
+│  Catalogue → Adapters → Assembled Experience                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Enterprise Configuration Model
+
+```json
+{
+  "enterprise": "42 London",
+  "cohort": "2025 Intake",
+  "track": {
+    "role": "developer",
+    "language": "c_cpp",
+    "progression": ["intern", "junior"]
+  },
+  "competencies": {
+    "required": ["memory_management", "debugging", "git", "code_review"],
+    "optional": ["testing", "documentation"]
+  },
+  "structure": {
+    "duration_weeks": 12,
+    "arcs": [
+      { "name": "Foundations", "weeks": 4, "focus": "onboarding" },
+      { "name": "Core Skills", "weeks": 6, "focus": "sprints" },
+      { "name": "Ownership", "weeks": 2, "focus": "capstone" }
+    ]
+  },
+  "custom_scenarios": [
+    { "id": "42-memory-leak", "type": "technical", "source": "uploaded" }
+  ]
+}
+```
+
+### Enterprise Features (Future)
+
+| Feature | Description |
+|---------|-------------|
+| **Cohort Management** | Create cohorts, assign curricula, track progress |
+| **Custom Scenario Editor** | GUI for enterprises to create their own scenarios |
+| **AI Scenario Generation** | "Generate a debugging scenario about memory leaks" |
+| **White-Label** | Enterprise branding on student-facing UI |
+| **Analytics Dashboard** | Cohort performance, competency gaps, completion rates |
+| **LMS Integration** | Connect to Canvas, Moodle, etc. |
+| **API Access** | Programmatic curriculum configuration |
+
+### B2B Scaling Model
+
+```
+edmap Core Platform
+        ↓
+┌───────────────────────────────────────────────────────────────┐
+│                    ENTERPRISE LAYER                            │
+│                                                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
+│  │ 42 London   │  │ Bootcamp X  │  │ Bootcamp Y  │  ...      │
+│  │             │  │             │  │             │           │
+│  │ C/C++ Focus │  │ JS Focus    │  │ Python Focus│           │
+│  │ 12 weeks    │  │ 8 weeks     │  │ 16 weeks    │           │
+│  └─────────────┘  └─────────────┘  └─────────────┘           │
+│                                                               │
+│  Each enterprise configures their own curriculum              │
+│  System assembles from shared catalogue                       │
+│  Progress tracked per cohort                                  │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Why Current Architecture Enables This
+
+| Architecture Element | How It Supports Enterprise |
+|---------------------|---------------------------|
+| **Catalogue** | Content is modular, queryable, filterable |
+| **Role Adapters** | Switch between Developer/PM/QA without rebuilding |
+| **Language Adapters** | Same scenarios, different tech context |
+| **Level Adapters** | Calibrate for intern/junior/mid/senior |
+| **Competency Tags** | Filter by what enterprise wants to teach |
+| **JSON-based Scenarios** | Enterprises can upload custom content |
+| **Progression Engine** | Track students against competency rubrics |
+
+---
+
+## Updated Timeline (Including Enterprise)
+
+| Phase | Duration | Focus |
+|-------|----------|-------|
+| Phase 0 | 1-2 weeks | Extract content to JSON |
+| Phase 1 | 2-3 weeks | Shared schema, catalogue API |
+| Phase 2 | 2-3 weeks | Role + Level adapters |
+| Phase 3 | 2 weeks | Progression engine |
+| Phase 4 | 3-4 weeks | New UX |
+| Phase 5 | 2-3 weeks | Multi-role expansion |
+| Phase 6 | 2 weeks | Portfolio + credentialing |
+| Phase 7 | 1-2 weeks | Language adapters |
+| **Phase 8** | 3-4 weeks | **Enterprise self-serve portal** |
+| **Phase 9** | 2-3 weeks | **Cohort management + analytics** |
+| **Phase 10** | 2-3 weeks | **LMS integrations + API** |
+
+**Total with Enterprise**: ~25-35 weeks

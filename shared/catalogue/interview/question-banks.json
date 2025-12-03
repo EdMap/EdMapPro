@@ -1,0 +1,256 @@
+{
+  "version": "1.0.0",
+  "type": "question_bank",
+  "description": "Interview question banks organized by role, type, and difficulty level",
+  "metadata": {
+    "defaultLanguage": "en",
+    "lastUpdated": "2025-01"
+  },
+  "content": {
+    "roles": {
+      "software_engineer": {
+        "id": "software_engineer",
+        "label": "Software Engineer",
+        "aliases": ["developer", "swe", "software_developer"],
+        "types": {
+          "technical": {
+            "junior": [
+              {
+                "id": "tech-js-basics-1",
+                "question": "What is the difference between let, const, and var in JavaScript?",
+                "category": "technical",
+                "subcategory": "javascript_fundamentals",
+                "expectedCoverage": ["scope differences", "hoisting", "reassignment", "best practices"],
+                "followUpPotential": ["When would you use each?", "What about temporal dead zone?"]
+              },
+              {
+                "id": "tech-js-closures-1",
+                "question": "Explain the concept of closures in JavaScript with an example.",
+                "category": "technical",
+                "subcategory": "javascript_fundamentals",
+                "expectedCoverage": ["lexical scope", "function scope", "practical use cases"],
+                "followUpPotential": ["Can you give a real-world example?", "How do closures affect memory?"]
+              },
+              {
+                "id": "tech-string-reverse-1",
+                "question": "How would you reverse a string in your preferred programming language?",
+                "category": "technical",
+                "subcategory": "algorithms",
+                "expectedCoverage": ["multiple approaches", "time complexity", "edge cases"],
+                "followUpPotential": ["What's the time complexity?", "How would you handle Unicode?"]
+              }
+            ],
+            "mid": [
+              {
+                "id": "tech-api-design-1",
+                "question": "Design a REST API for a simple e-commerce application. What endpoints would you create?",
+                "category": "technical",
+                "subcategory": "system_design",
+                "expectedCoverage": ["CRUD operations", "resource naming", "HTTP methods", "authentication"],
+                "followUpPotential": ["How would you handle pagination?", "What about error handling?"]
+              },
+              {
+                "id": "tech-db-comparison-1",
+                "question": "Explain the difference between SQL and NoSQL databases. When would you use each?",
+                "category": "technical",
+                "subcategory": "databases",
+                "expectedCoverage": ["schema flexibility", "scaling", "ACID vs BASE", "use cases"],
+                "followUpPotential": ["What about consistency guarantees?", "Give an example from your experience"]
+              },
+              {
+                "id": "tech-caching-1",
+                "question": "How would you implement a simple caching mechanism in a web application?",
+                "category": "technical",
+                "subcategory": "performance",
+                "expectedCoverage": ["cache strategies", "invalidation", "TTL", "cache layers"],
+                "followUpPotential": ["How do you handle cache invalidation?", "What about distributed caching?"]
+              }
+            ],
+            "senior": [
+              {
+                "id": "tech-scale-1",
+                "question": "How would you design a system to handle 1 million concurrent users?",
+                "category": "technical",
+                "subcategory": "system_design",
+                "expectedCoverage": ["load balancing", "horizontal scaling", "caching", "database sharding"],
+                "followUpPotential": ["How would you handle failover?", "What monitoring would you use?"]
+              },
+              {
+                "id": "tech-microservices-1",
+                "question": "Explain microservices architecture and its trade-offs compared to monolithic design.",
+                "category": "technical",
+                "subcategory": "architecture",
+                "expectedCoverage": ["service boundaries", "communication patterns", "deployment complexity", "team autonomy"],
+                "followUpPotential": ["When would you NOT use microservices?", "How do you handle data consistency?"]
+              },
+              {
+                "id": "tech-realtime-1",
+                "question": "Describe your approach to implementing real-time features in a web application.",
+                "category": "technical",
+                "subcategory": "architecture",
+                "expectedCoverage": ["WebSockets", "polling alternatives", "scaling considerations", "state management"],
+                "followUpPotential": ["How would you handle reconnection?", "What about message ordering?"]
+              }
+            ]
+          },
+          "behavioral": {
+            "junior": [
+              {
+                "id": "beh-teamwork-1",
+                "question": "Tell me about your experience working in a team.",
+                "category": "behavioral",
+                "subcategory": "teamwork",
+                "lookFor": ["collaboration examples", "conflict resolution", "communication skills"],
+                "redFlags": ["solo hero mentality", "blame shifting"]
+              },
+              {
+                "id": "beh-challenge-1",
+                "question": "Describe a challenging project you worked on.",
+                "category": "behavioral",
+                "subcategory": "problem_solving",
+                "lookFor": ["problem identification", "approach taken", "lessons learned"],
+                "redFlags": ["vague answers", "no reflection on learning"]
+              },
+              {
+                "id": "beh-deadline-1",
+                "question": "How do you handle tight deadlines?",
+                "category": "behavioral",
+                "subcategory": "time_management",
+                "lookFor": ["prioritization", "communication", "realistic planning"],
+                "redFlags": ["always works overtime", "blames external factors"]
+              },
+              {
+                "id": "beh-learning-1",
+                "question": "Tell me about a time when you had to learn a new technology quickly.",
+                "category": "behavioral",
+                "subcategory": "learning",
+                "lookFor": ["learning approach", "resource utilization", "time management"],
+                "redFlags": ["no structured approach", "doesn't enjoy learning"]
+              }
+            ],
+            "mid": [
+              {
+                "id": "beh-difficult-member-1",
+                "question": "Tell me about a time when you had to work with a difficult team member.",
+                "category": "behavioral",
+                "subcategory": "conflict_resolution",
+                "lookFor": ["empathy", "direct communication", "positive outcome focus"],
+                "redFlags": ["badmouthing colleagues", "avoidance"]
+              },
+              {
+                "id": "beh-tech-debt-1",
+                "question": "Describe a project where you had to balance technical debt with new feature development.",
+                "category": "behavioral",
+                "subcategory": "decision_making",
+                "lookFor": ["trade-off analysis", "stakeholder communication", "prioritization"],
+                "redFlags": ["ignores tech debt", "can't articulate trade-offs"]
+              },
+              {
+                "id": "beh-code-review-1",
+                "question": "How do you handle code reviews and feedback?",
+                "category": "behavioral",
+                "subcategory": "feedback",
+                "lookFor": ["openness to feedback", "constructive criticism", "continuous improvement"],
+                "redFlags": ["defensive", "doesn't value reviews"]
+              }
+            ],
+            "senior": [
+              {
+                "id": "beh-tech-decision-1",
+                "question": "Tell me about a time when you had to make a difficult technical decision.",
+                "category": "behavioral",
+                "subcategory": "leadership",
+                "lookFor": ["decision framework", "stakeholder alignment", "outcome ownership"],
+                "redFlags": ["avoids decisions", "can't justify choices"]
+              },
+              {
+                "id": "beh-mentoring-1",
+                "question": "Describe your experience mentoring junior developers.",
+                "category": "behavioral",
+                "subcategory": "leadership",
+                "lookFor": ["teaching approach", "patience", "growth mindset"],
+                "redFlags": ["no interest in mentoring", "condescending attitude"]
+              },
+              {
+                "id": "beh-disagreement-1",
+                "question": "How do you handle disagreements with team members about technical approaches?",
+                "category": "behavioral",
+                "subcategory": "conflict_resolution",
+                "lookFor": ["respect for opinions", "data-driven arguments", "compromise ability"],
+                "redFlags": ["my way or highway", "avoids conflict entirely"]
+              }
+            ]
+          }
+        }
+      },
+      "product_manager": {
+        "id": "product_manager",
+        "label": "Product Manager",
+        "aliases": ["pm", "product"],
+        "types": {
+          "behavioral": {
+            "junior": [
+              {
+                "id": "pm-beh-experience-1",
+                "question": "Tell me about your experience with product development.",
+                "category": "behavioral",
+                "subcategory": "experience"
+              },
+              {
+                "id": "pm-beh-prioritize-1",
+                "question": "How do you prioritize features?",
+                "category": "behavioral",
+                "subcategory": "prioritization"
+              },
+              {
+                "id": "pm-beh-engineers-1",
+                "question": "Describe a time when you had to work with engineers.",
+                "category": "behavioral",
+                "subcategory": "collaboration"
+              }
+            ],
+            "mid": [
+              {
+                "id": "pm-beh-launch-1",
+                "question": "Tell me about a product you launched and its results.",
+                "category": "behavioral",
+                "subcategory": "execution"
+              },
+              {
+                "id": "pm-beh-stakeholders-1",
+                "question": "How do you handle competing stakeholder demands?",
+                "category": "behavioral",
+                "subcategory": "stakeholder_management"
+              },
+              {
+                "id": "pm-beh-research-1",
+                "question": "Describe your approach to user research.",
+                "category": "behavioral",
+                "subcategory": "user_research"
+              }
+            ],
+            "senior": [
+              {
+                "id": "pm-beh-pivot-1",
+                "question": "Tell me about a time when you had to pivot a product strategy.",
+                "category": "behavioral",
+                "subcategory": "strategy"
+              },
+              {
+                "id": "pm-beh-metrics-1",
+                "question": "How do you measure product success?",
+                "category": "behavioral",
+                "subcategory": "metrics"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "fallbackQuestions": [
+      "Tell me about your experience with software development.",
+      "What interests you about this role?",
+      "Describe a project you're proud of."
+    ]
+  }
+}

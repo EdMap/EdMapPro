@@ -1,0 +1,167 @@
+{
+  "version": "1.0.0",
+  "type": "evaluation_rubrics",
+  "description": "Evaluation criteria and scoring rubrics for interviews",
+  "metadata": {
+    "lastUpdated": "2025-01"
+  },
+  "content": {
+    "scoringScale": {
+      "min": 1,
+      "max": 10,
+      "labels": {
+        "1-2": "Poor - Major concerns, significant gaps",
+        "3-4": "Below Average - Some concerning gaps",
+        "5-6": "Average - Meets basic expectations",
+        "7-8": "Good - Strong performance with minor gaps",
+        "9-10": "Excellent - Exceptional performance"
+      }
+    },
+    "evaluationDimensions": {
+      "technical": {
+        "id": "technical",
+        "label": "Technical Knowledge",
+        "weight": 0.25,
+        "criteria": [
+          "Demonstrates understanding of core concepts",
+          "Can apply knowledge to practical scenarios",
+          "Shows depth in areas of claimed expertise",
+          "Can explain trade-offs and alternatives"
+        ],
+        "scoringGuide": {
+          "poor": "Cannot explain basic concepts, major knowledge gaps",
+          "average": "Understands basics but struggles with depth",
+          "good": "Strong knowledge, can discuss trade-offs",
+          "excellent": "Deep expertise, provides insightful analysis"
+        }
+      },
+      "problem_solving": {
+        "id": "problem_solving",
+        "label": "Problem Solving",
+        "weight": 0.25,
+        "criteria": [
+          "Breaks down problems systematically",
+          "Considers multiple approaches",
+          "Identifies edge cases and constraints",
+          "Communicates thought process clearly"
+        ],
+        "scoringGuide": {
+          "poor": "Cannot structure approach, gets stuck easily",
+          "average": "Basic problem breakdown, misses edge cases",
+          "good": "Systematic approach, identifies key considerations",
+          "excellent": "Elegant solutions, anticipates issues proactively"
+        }
+      },
+      "communication": {
+        "id": "communication",
+        "label": "Communication",
+        "weight": 0.25,
+        "criteria": [
+          "Articulates ideas clearly",
+          "Asks clarifying questions",
+          "Listens and responds appropriately",
+          "Adapts explanation to audience"
+        ],
+        "scoringGuide": {
+          "poor": "Unclear, doesn't engage with questions",
+          "average": "Basic communication, some clarity issues",
+          "good": "Clear and engaging, good dialogue",
+          "excellent": "Exceptional communicator, builds rapport"
+        }
+      },
+      "culture_fit": {
+        "id": "culture_fit",
+        "label": "Culture Fit",
+        "weight": 0.25,
+        "criteria": [
+          "Values align with team culture",
+          "Collaborative mindset demonstrated",
+          "Growth orientation evident",
+          "Genuine interest in role/company"
+        ],
+        "scoringGuide": {
+          "poor": "Misaligned values, concerning attitudes",
+          "average": "Neutral fit, some alignment",
+          "good": "Strong alignment, collaborative spirit",
+          "excellent": "Perfect fit, would elevate team culture"
+        }
+      }
+    },
+    "finalReportStructure": {
+      "sections": [
+        {
+          "id": "summary",
+          "label": "Executive Summary",
+          "description": "High-level assessment of candidate"
+        },
+        {
+          "id": "scores",
+          "label": "Dimension Scores",
+          "description": "Breakdown by evaluation dimension"
+        },
+        {
+          "id": "strengths",
+          "label": "Key Strengths",
+          "description": "What the candidate did well"
+        },
+        {
+          "id": "improvements",
+          "label": "Areas for Improvement",
+          "description": "Where the candidate could grow"
+        },
+        {
+          "id": "recommendations",
+          "label": "Recommendations",
+          "description": "Suggested next steps or focus areas"
+        },
+        {
+          "id": "decision",
+          "label": "Hiring Decision",
+          "description": "Recommendation on moving forward"
+        }
+      ],
+      "hiringDecisions": [
+        { "value": "strong_yes", "label": "Strong Yes", "threshold": 8.5 },
+        { "value": "yes", "label": "Yes", "threshold": 7.0 },
+        { "value": "maybe", "label": "Maybe", "threshold": 5.5 },
+        { "value": "no", "label": "No", "threshold": 4.0 },
+        { "value": "strong_no", "label": "Strong No", "threshold": 0 }
+      ]
+    },
+    "followUpLogic": {
+      "actions": [
+        { "id": "next_question", "description": "Move to next planned question" },
+        { "id": "follow_up", "description": "Ask a follow-up on current topic" },
+        { "id": "adjust_difficulty", "description": "Change question difficulty" },
+        { "id": "end_interview", "description": "Conclude the interview" }
+      ],
+      "difficultyAdjustment": ["easier", "same", "harder"],
+      "triggers": {
+        "follow_up": [
+          "Answer is vague or incomplete",
+          "Candidate mentioned interesting project",
+          "Need to probe deeper on a skill"
+        ],
+        "adjust_easier": [
+          "Candidate struggling with current level",
+          "Multiple low scores in a row"
+        ],
+        "adjust_harder": [
+          "Candidate exceeding expectations",
+          "Answers are too easy/rehearsed"
+        ],
+        "end_interview": [
+          "All critical criteria covered",
+          "Time limit reached",
+          "Clear hire/no-hire decision possible"
+        ]
+      }
+    },
+    "reflectionTriggers": {
+      "minWordCount": 15,
+      "probability": 0.4,
+      "excludeStages": ["opening", "wrapup"],
+      "description": "Occasionally reflect on candidate's answer to show active listening"
+    }
+  }
+}

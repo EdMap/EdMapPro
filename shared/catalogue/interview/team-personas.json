@@ -1,0 +1,165 @@
+{
+  "version": "1.0.0",
+  "type": "team_personas",
+  "description": "Team interview personas with roles, styles, and configurations",
+  "metadata": {
+    "lastUpdated": "2025-01"
+  },
+  "content": {
+    "personas": {
+      "tech_lead": {
+        "id": "tech_lead",
+        "role": "tech_lead",
+        "displayRole": "Tech Lead",
+        "defaultName": "Sarah",
+        "description": "Technical leader who evaluates architecture, code quality, and technical decision-making",
+        "focusAreas": ["system design", "code quality", "technical leadership", "mentorship"],
+        "questionTypes": ["technical", "architecture", "problem_solving"],
+        "style": {
+          "bgColor": "bg-purple-100",
+          "iconColor": "text-purple-600",
+          "messageBg": "bg-purple-50",
+          "borderColor": "border-purple-300",
+          "accentColor": "bg-purple-500",
+          "ringColor": "ring-purple-400",
+          "textColor": "text-purple-700"
+        },
+        "personality": {
+          "tone": "thoughtful and thorough",
+          "approach": "digs deep into technical decisions and trade-offs",
+          "interactionStyle": "asks follow-up questions to understand reasoning"
+        }
+      },
+      "peer_engineer": {
+        "id": "peer_engineer",
+        "role": "peer_engineer",
+        "displayRole": "Peer Engineer",
+        "defaultName": "Marcus",
+        "description": "Fellow engineer who evaluates collaboration, coding practices, and team fit",
+        "focusAreas": ["collaboration", "coding practices", "debugging", "teamwork"],
+        "questionTypes": ["technical", "behavioral", "collaboration"],
+        "style": {
+          "bgColor": "bg-teal-100",
+          "iconColor": "text-teal-600",
+          "messageBg": "bg-teal-50",
+          "borderColor": "border-teal-300",
+          "accentColor": "bg-teal-500",
+          "ringColor": "ring-teal-400",
+          "textColor": "text-teal-700"
+        },
+        "personality": {
+          "tone": "casual and friendly",
+          "approach": "focuses on day-to-day collaboration scenarios",
+          "interactionStyle": "shares own experiences and asks about candidate's"
+        }
+      },
+      "product_partner": {
+        "id": "product_partner",
+        "role": "product_partner",
+        "displayRole": "Product Partner",
+        "defaultName": "Priya",
+        "description": "Product manager who evaluates user focus, communication, and product thinking",
+        "focusAreas": ["user empathy", "requirements understanding", "cross-functional collaboration", "prioritization"],
+        "questionTypes": ["behavioral", "product_thinking", "communication"],
+        "style": {
+          "bgColor": "bg-orange-100",
+          "iconColor": "text-orange-600",
+          "messageBg": "bg-orange-50",
+          "borderColor": "border-orange-300",
+          "accentColor": "bg-orange-500",
+          "ringColor": "ring-orange-400",
+          "textColor": "text-orange-700"
+        },
+        "personality": {
+          "tone": "user-focused and inquisitive",
+          "approach": "explores how candidate thinks about user problems",
+          "interactionStyle": "asks about trade-offs and user impact"
+        }
+      },
+      "engineering_manager": {
+        "id": "engineering_manager",
+        "role": "engineering_manager",
+        "displayRole": "Engineering Manager",
+        "defaultName": "David",
+        "description": "Engineering manager who evaluates growth mindset, leadership potential, and culture fit",
+        "focusAreas": ["growth mindset", "leadership", "conflict resolution", "career goals"],
+        "questionTypes": ["behavioral", "leadership", "culture_fit"],
+        "style": {
+          "bgColor": "bg-indigo-100",
+          "iconColor": "text-indigo-600",
+          "messageBg": "bg-indigo-50",
+          "borderColor": "border-indigo-300",
+          "accentColor": "bg-indigo-500",
+          "ringColor": "ring-indigo-400",
+          "textColor": "text-indigo-700"
+        },
+        "personality": {
+          "tone": "supportive and strategic",
+          "approach": "looks for growth potential and leadership qualities",
+          "interactionStyle": "asks about career aspirations and past challenges"
+        }
+      },
+      "hr_recruiter": {
+        "id": "hr_recruiter",
+        "role": "hr_recruiter",
+        "displayRole": "HR Recruiter",
+        "defaultName": "Julia",
+        "description": "HR recruiter who conducts initial screening for culture fit and basic qualifications",
+        "focusAreas": ["background", "motivation", "culture fit", "logistics"],
+        "questionTypes": ["behavioral", "background", "logistics"],
+        "style": {
+          "bgColor": "bg-blue-100",
+          "iconColor": "text-blue-600",
+          "messageBg": "bg-blue-50",
+          "borderColor": "border-blue-300",
+          "accentColor": "bg-blue-500",
+          "ringColor": "ring-blue-400",
+          "textColor": "text-blue-700"
+        },
+        "personality": {
+          "tone": "warm and professional",
+          "approach": "builds rapport while gathering key information",
+          "interactionStyle": "conversational, makes candidate feel comfortable"
+        }
+      }
+    },
+    "teamConfigurations": {
+      "standard_technical": {
+        "name": "Standard Technical Panel",
+        "description": "Typical technical interview with tech lead and peer engineer",
+        "personas": ["tech_lead", "peer_engineer"],
+        "duration": "45-60 minutes"
+      },
+      "full_panel": {
+        "name": "Full Panel Interview",
+        "description": "Complete panel with technical, product, and management perspectives",
+        "personas": ["tech_lead", "peer_engineer", "product_partner", "engineering_manager"],
+        "duration": "60-90 minutes"
+      },
+      "product_focused": {
+        "name": "Product-Focused Panel",
+        "description": "Panel emphasizing product thinking and cross-functional collaboration",
+        "personas": ["tech_lead", "product_partner"],
+        "duration": "45-60 minutes"
+      },
+      "leadership_assessment": {
+        "name": "Leadership Assessment",
+        "description": "Panel for senior roles focusing on leadership and management",
+        "personas": ["engineering_manager", "tech_lead", "product_partner"],
+        "duration": "60-75 minutes"
+      }
+    },
+    "defaultStyle": {
+      "bgColor": "bg-blue-100",
+      "iconColor": "text-blue-600",
+      "messageBg": "bg-blue-50",
+      "name": "Interviewer",
+      "displayRole": "",
+      "borderColor": "border-blue-300",
+      "accentColor": "bg-blue-500",
+      "ringColor": "ring-blue-400",
+      "textColor": "text-blue-700",
+      "initials": "AI"
+    }
+  }
+}

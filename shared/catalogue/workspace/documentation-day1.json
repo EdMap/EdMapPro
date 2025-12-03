@@ -1,0 +1,191 @@
+{
+  "version": "1.0.0",
+  "type": "onboarding_documentation",
+  "description": "Day 1 onboarding documentation content for workspace simulation",
+  "metadata": {
+    "role": "developer",
+    "language": "javascript",
+    "scenario": "intern_onboarding",
+    "day": 1
+  },
+  "content": {
+    "welcome": {
+      "title": "Welcome to your first day!",
+      "description": "Before you meet the team, take 5-10 minutes to read through these onboarding docs. You'll learn what NovaPay does and what you'll be working on this week.",
+      "readingTime": "5-10 minutes",
+      "sectionCount": 4
+    },
+    "tabs": [
+      {
+        "id": "product",
+        "label": "Product & Users",
+        "icon": "Store",
+        "sections": ["product", "users"]
+      },
+      {
+        "id": "howwework",
+        "label": "How We Work",
+        "icon": "Users",
+        "sections": ["norms", "workflow"]
+      }
+    ],
+    "sections": {
+      "product": {
+        "id": "product",
+        "title": "What is Merchant Dashboard?",
+        "icon": "Store",
+        "tldr": {
+          "text": "Merchant Dashboard helps small business owners track their money. You'll be fixing a timezone bug in the Transactions page.",
+          "icon": "Lightbulb"
+        },
+        "content": {
+          "description": "**Merchant Dashboard** is the admin panel where NovaPay's business customers manage their payment operations. Think of it as their \"mission control\" for money.",
+          "features": [
+            {
+              "name": "Transactions",
+              "description": "View all customer payments, refunds, and chargebacks in real-time",
+              "icon": "CreditCard",
+              "iconColor": "text-green-600"
+            },
+            {
+              "name": "Payouts",
+              "description": "See when money hits their bank account (usually every 2 business days)",
+              "icon": "Calendar",
+              "iconColor": "text-blue-600"
+            },
+            {
+              "name": "Settings",
+              "description": "Update bank details, business info, and notification preferences",
+              "icon": "FileText",
+              "iconColor": "text-orange-600"
+            }
+          ],
+          "techStack": ["React", "Node.js", "PostgreSQL", "TypeScript"]
+        }
+      },
+      "users": {
+        "id": "users",
+        "title": "Who Uses It?",
+        "icon": "Users",
+        "content": {
+          "persona": {
+            "name": "Maria",
+            "title": "Coffee Shop Owner",
+            "business": "Bean There",
+            "location": "Austin, TX",
+            "timezone": "CST",
+            "description": "Maria runs \"Bean There\" in Austin, TX. Every morning she checks her dashboard to see yesterday's sales, verify tips were processed correctly, and confirm her weekly payout is on schedule.",
+            "badges": ["Small Business", "50-100 transactions/day", "CST Timezone"],
+            "avatar": {
+              "initials": "M",
+              "color": "amber"
+            }
+          },
+          "workflow": {
+            "title": "Maria's Daily Workflow:",
+            "steps": [
+              "Opens dashboard, checks total sales from yesterday",
+              "Filters transactions by payment type (card vs cash)",
+              "Checks if Friday's payout arrived in her bank",
+              "Downloads weekly report for her accountant"
+            ]
+          },
+          "problem": {
+            "title": "The Problem",
+            "description": "Maria is in Austin (CST) but transactions show in UTC. A sale at 8pm Monday shows as 2am Tuesday - confusing her daily reconciliation!",
+            "severity": "high"
+          }
+        }
+      },
+      "norms": {
+        "id": "norms",
+        "title": "Team Norms & Culture",
+        "icon": "MessageCircle",
+        "content": {
+          "description": "Every team has its own rhythm. Here's how we work together at NovaPay.",
+          "norms": [
+            {
+              "title": "Daily Standup at 10am",
+              "description": "Quick 15-min sync. Share what you did, what you're doing, and any blockers.",
+              "icon": "Clock",
+              "color": "blue"
+            },
+            {
+              "title": "Ask Early, Ask Often",
+              "description": "Stuck for more than 15 minutes? Reach out. No question is too small.",
+              "icon": "MessageCircle",
+              "color": "green"
+            },
+            {
+              "title": "Reviews = Learning",
+              "description": "Code review feedback is about the code, not about you. It's how we all improve.",
+              "icon": "GitPullRequest",
+              "color": "amber"
+            },
+            {
+              "title": "Document As You Go",
+              "description": "Comments and READMEs save future headaches. Write for future-you.",
+              "icon": "PenLine",
+              "color": "purple"
+            }
+          ],
+          "channels": {
+            "title": "Communication Channels:",
+            "items": [
+              { "name": "Slack #team-payments", "purpose": "Day-to-day team chat" },
+              { "name": "Slack DMs", "purpose": "Quick questions to individuals" },
+              { "name": "GitHub PRs", "purpose": "Code discussions and reviews" },
+              { "name": "Notion", "purpose": "Documentation and specs" }
+            ]
+          }
+        }
+      },
+      "workflow": {
+        "id": "workflow",
+        "title": "Development Flow",
+        "icon": "GitBranch",
+        "content": {
+          "pipeline": {
+            "title": "How We Ship Features:",
+            "steps": [
+              { "number": 1, "label": "Pick ticket", "color": "gray" },
+              { "number": 2, "label": "Branch", "color": "blue" },
+              { "number": 3, "label": "Code", "color": "purple" },
+              { "number": 4, "label": "PR", "color": "amber" },
+              { "number": 5, "label": "Review", "color": "orange" },
+              { "number": 6, "label": "Merge", "color": "green" }
+            ]
+          },
+          "codebase": {
+            "title": "Our Codebase:",
+            "repository": "novapay/merchant-dashboard",
+            "description": "Monorepo with client, server, and shared code",
+            "directories": [
+              { "name": "client/", "description": "React frontend", "color": "blue" },
+              { "name": "server/", "description": "Node.js API", "color": "green" },
+              { "name": "shared/", "description": "Types & utils", "color": "purple" }
+            ]
+          },
+          "conventions": {
+            "title": "Conventions:",
+            "items": [
+              { "label": "Branch names", "value": "fix/description or feature/description" },
+              { "label": "Commits", "value": "Clear, descriptive messages (\"Fix timezone display in transactions\")" },
+              { "label": "PRs", "value": "Include what, why, and how to test" },
+              { "label": "Comments", "value": "Explain the \"why\", not the \"what\"" }
+            ]
+          },
+          "contacts": {
+            "title": "Who to Ask:",
+            "people": [
+              { "name": "Sarah", "expertise": "Code questions, PR reviews, architecture", "initials": "S", "color": "blue" },
+              { "name": "Priya", "expertise": "Requirements, user context, priorities", "initials": "P", "color": "pink" },
+              { "name": "Marcus", "expertise": "Backend patterns, debugging, performance", "initials": "M", "color": "green" },
+              { "name": "Alex", "expertise": "Testing, edge cases, QA process", "initials": "A", "color": "orange" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
