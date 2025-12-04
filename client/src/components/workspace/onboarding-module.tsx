@@ -150,7 +150,7 @@ export function OnboardingModule({
   });
 
   const { data: workspace } = useQuery<{ workspaceMetadata?: { onboardingProgress?: OnboardingProgress } }>({
-    queryKey: ['/api/workspaces', workspaceId],
+    queryKey: [`/api/workspaces/${workspaceId}`],
   });
 
   useEffect(() => {
@@ -173,7 +173,7 @@ export function OnboardingModule({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}`] });
     }
   });
 
