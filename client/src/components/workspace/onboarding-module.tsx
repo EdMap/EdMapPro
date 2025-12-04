@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -149,6 +149,39 @@ export function OnboardingModule({
     comprehensionComplete: false
   });
 
+  const { data: workspace } = useQuery<{ workspaceMetadata?: { onboardingProgress?: OnboardingProgress } }>({
+    queryKey: ['/api/workspaces', workspaceId],
+  });
+
+  useEffect(() => {
+    if (workspace?.workspaceMetadata?.onboardingProgress) {
+      const savedProgress = workspace.workspaceMetadata.onboardingProgress;
+      setProgress(savedProgress);
+      if (savedProgress.docsRead) {
+        setExpandedDocs(savedProgress.docsRead);
+      }
+    }
+  }, [workspace]);
+
+  const saveProgressMutation = useMutation({
+    mutationFn: async (newProgress: OnboardingProgress) => {
+      return apiRequest('PATCH', `/api/workspaces/${workspaceId}`, {
+        workspaceMetadata: {
+          ...(workspace?.workspaceMetadata || {}),
+          onboardingProgress: newProgress
+        }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+    }
+  });
+
+  const updateProgress = (newProgress: OnboardingProgress) => {
+    setProgress(newProgress);
+    saveProgressMutation.mutate(newProgress);
+  };
+
   const teamIntroCount = Object.values(progress.teamIntrosComplete).filter(Boolean).length;
   const docsReadCount = Object.values(progress.docsRead).filter(Boolean).length;
   const allTeamIntrosComplete = teamIntroCount >= DEFAULT_TEAM.length;
@@ -174,23 +207,26 @@ export function OnboardingModule({
   });
 
   const handleTeamIntroComplete = (memberName: string) => {
-    setProgress(prev => ({
-      ...prev,
-      teamIntrosComplete: { ...prev.teamIntrosComplete, [memberName]: true }
-    }));
+    const newProgress = {
+      ...progress,
+      teamIntrosComplete: { ...progress.teamIntrosComplete, [memberName]: true }
+    };
+    updateProgress(newProgress);
     setSelectedMember(null);
   };
 
   const handleDocRead = (docId: string) => {
-    setProgress(prev => ({
-      ...prev,
-      docsRead: { ...prev.docsRead, [docId]: true }
-    }));
+    const newProgress = {
+      ...progress,
+      docsRead: { ...progress.docsRead, [docId]: true }
+    };
+    updateProgress(newProgress);
     setExpandedDocs(prev => ({ ...prev, [docId]: true }));
   };
 
   const handleComprehensionComplete = () => {
-    setProgress(prev => ({ ...prev, comprehensionComplete: true }));
+    const newProgress = { ...progress, comprehensionComplete: true };
+    updateProgress(newProgress);
   };
 
   const handleSendMessage = () => {
@@ -253,8 +289,10 @@ export function OnboardingModule({
     
     const memberName = selectedMember.name;
     const currentMessages = teamChatMessages[memberName] || [];
+    const userMessageText = teamChatInput;
+    const userMessageCount = currentMessages.filter(m => m.sender === 'You').length;
     
-    const newUserMessage = { sender: 'You', message: teamChatInput };
+    const newUserMessage = { sender: 'You', message: userMessageText };
     setTeamChatMessages(prev => ({
       ...prev,
       [memberName]: [...(prev[memberName] || []), newUserMessage]
@@ -264,10 +302,11 @@ export function OnboardingModule({
 
     await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700));
     
-    const response = getTeamMemberResponse(selectedMember, teamChatInput, currentMessages.length);
+    const response = getTeamMemberResponse(selectedMember, userMessageText, userMessageCount);
+    const aiResponse = { sender: memberName, message: response };
     setTeamChatMessages(prev => ({
       ...prev,
-      [memberName]: [...(prev[memberName] || []), newUserMessage, { sender: memberName, message: response }]
+      [memberName]: [...(prev[memberName] || []), aiResponse]
     }));
     setIsAIResponding(false);
   };
@@ -477,7 +516,8 @@ export function OnboardingModule({
   const renderTeamIntro = () => {
     if (selectedMember) {
       const memberMessages = teamChatMessages[selectedMember.name] || [];
-      const hasEnoughMessages = memberMessages.length >= 2;
+      const userMessageCount = memberMessages.filter(m => m.sender === 'You').length;
+      const hasEnoughMessages = userMessageCount >= 2;
       
       return (
         <div className="space-y-4">
