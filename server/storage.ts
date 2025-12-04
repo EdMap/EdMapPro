@@ -3595,12 +3595,21 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     currentSprint: Sprint | null
   ): { item: string; completed: boolean; required: boolean }[] {
     switch (phase) {
-      case 'onboarding':
+      case 'onboarding': {
+        const onboardingProgress = (workspace.workspaceMetadata as any)?.onboardingProgress;
+        const teamIntrosComplete = onboardingProgress?.teamIntrosComplete || {};
+        const docsRead = onboardingProgress?.docsRead || {};
+        const comprehensionComplete = onboardingProgress?.comprehensionComplete || false;
+        
+        const allTeamIntrosComplete = Object.values(teamIntrosComplete).filter(Boolean).length >= 3;
+        const allDocsRead = Object.values(docsRead).filter(Boolean).length >= 4;
+        
         return [
-          { item: 'Meet the team', completed: false, required: true },
-          { item: 'Read company documentation', completed: false, required: true },
-          { item: 'Complete comprehension check', completed: false, required: true },
+          { item: 'Meet the team', completed: allTeamIntrosComplete, required: true },
+          { item: 'Read company documentation', completed: allDocsRead, required: true },
+          { item: 'Complete comprehension check', completed: comprehensionComplete, required: true },
         ];
+      }
       case 'planning':
         return [
           { item: 'Review product backlog', completed: false, required: true },

@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import { 
   Users, 
   FileText, 
@@ -32,7 +33,7 @@ import {
   Coffee
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { WorkspacePhase } from "@/hooks/use-sprint-workflow";
+import { useAdvanceWorkspacePhase, type WorkspacePhase } from "@/hooks/use-sprint-workflow";
 
 interface TeamMember {
   name: string;
@@ -172,6 +173,9 @@ export function OnboardingModule({
     }
   }, [workspace]);
 
+  const [, navigate] = useLocation();
+  const advanceWorkspacePhase = useAdvanceWorkspacePhase();
+
   const saveProgressMutation = useMutation({
     mutationFn: async (newProgress: OnboardingProgress) => {
       return apiRequest('PATCH', `/api/workspaces/${workspaceId}`, {
@@ -183,6 +187,7 @@ export function OnboardingModule({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'state'] });
     }
   });
 
@@ -202,18 +207,14 @@ export function OnboardingModule({
     (progress.comprehensionComplete ? 34 : 0)
   );
 
-  const completePhase = useMutation({
-    mutationFn: async () => {
-      return apiRequest('PATCH', `/api/workspaces/${workspaceId}/phase`, {
-        newPhase: 'planning' as WorkspacePhase,
-        status: 'completed'
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
-      onComplete();
+  const handleStartPlanning = async () => {
+    try {
+      await advanceWorkspacePhase.mutateAsync({ workspaceId });
+      navigate(`/workspace/${workspaceId}/planning`);
+    } catch (error) {
+      console.error('Failed to advance to planning phase:', error);
     }
-  });
+  };
 
   const handleTeamIntroComplete = (memberName: string) => {
     const newProgress = {
@@ -531,8 +532,8 @@ export function OnboardingModule({
                 </div>
               </div>
               <Button 
-                onClick={() => completePhase.mutate()}
-                disabled={completePhase.isPending}
+                onClick={handleStartPlanning}
+                disabled={advanceWorkspacePhase.isPending}
                 className="bg-green-600 hover:bg-green-700"
                 data-testid="button-complete-onboarding"
               >
