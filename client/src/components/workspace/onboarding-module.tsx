@@ -259,11 +259,12 @@ export function OnboardingModule({
     setIsAIResponding(true);
 
     try {
-      const data = await apiRequest<{ response: string; sender: string }>('POST', `/api/workspaces/${workspaceId}/onboarding-chat`, {
+      const res = await apiRequest('POST', `/api/workspaces/${workspaceId}/onboarding-chat`, {
         teamMemberName: memberName,
         userMessage: userMessageText,
         conversationHistory: [...currentMessages, newUserMessage]
       });
+      const data = await res.json();
       
       const aiResponse = { sender: memberName, message: data.response };
       setTeamChatMessages(prev => ({
