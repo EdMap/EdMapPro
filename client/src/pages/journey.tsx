@@ -796,18 +796,30 @@ function ApplicationDetail({
             />
           </div>
 
-          {/* Subtle workspace link for accepted applications */}
+          {/* Workspace access card for accepted applications */}
           {application.status === 'accepted' && workspaceId && (
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={handleGoToWorkspace}
-                className="text-sm text-primary hover:underline flex items-center gap-1"
-                data-testid="link-view-workspace"
-              >
-                View your workspace at {application.job.company.name}
-                <ArrowRight className="h-3 w-3" />
-              </button>
-            </div>
+            <Card 
+              className="bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={handleGoToWorkspace}
+              data-testid="card-workspace-access"
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      Your Workspace
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Continue working at {application.job.company.name}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </CardContent>
+            </Card>
           )}
         </div>
       </ScrollArea>
@@ -1577,33 +1589,6 @@ export default function Journey() {
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
-      {/* Active Journey Banner */}
-      {activeJourney && (
-        <div className="p-4 pb-0 bg-white dark:bg-gray-900">
-          <Link href={`/journey/${activeJourney.id}`}>
-            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 rounded-lg p-2">
-                    <Rocket className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">Active Onboarding Journey</h3>
-                    <p className="text-blue-100 text-sm">
-                      {activeJourney.journeyMetadata?.companyName || 'Your Company'} - Sprint in progress
-                    </p>
-                  </div>
-                </div>
-                <Button variant="secondary" size="sm" className="bg-white/20 text-white border-0 hover:bg-white/30">
-                  Open Dashboard
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      )}
-      
       {/* Journey Mode Banner */}
       <div className="p-4 pb-0 bg-white dark:bg-gray-900">
         <ModeBanner mode="journey" variant="banner" />
