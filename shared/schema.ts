@@ -1483,6 +1483,82 @@ export const insertWorkspacePhaseEventSchema = createInsertSchema(workspacePhase
 export type InsertWorkspaceInstance = z.infer<typeof insertWorkspaceInstanceSchema>;
 export type WorkspaceInstance = typeof workspaceInstances.$inferSelect;
 
+// Phase 6: Sprint Planning Session Tables
+export type PlanningPhase = 'context' | 'discussion' | 'commitment';
+
+export const planningSessions = pgTable("planning_sessions", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaceInstances.id).notNull(),
+  sprintId: integer("sprint_id").references(() => sprints.id),
+  role: text("role").notNull(), // 'developer' | 'pm' | 'qa' | etc.
+  level: text("level").notNull(), // 'intern' | 'junior' | 'mid' | 'senior'
+  currentPhase: text("current_phase").notNull().default('context'), // PlanningPhase
+  phaseCompletions: jsonb("phase_completions").notNull().default('{"context": false, "discussion": false, "commitment": false}'),
+  selectedItems: jsonb("selected_items").notNull().default('[]'), // Array of backlog item IDs selected for sprint
+  capacityUsed: integer("capacity_used").notNull().default(0),
+  goalStatement: text("goal_statement"),
+  commitmentSummary: text("commitment_summary"),
+  knowledgeCheckPassed: boolean("knowledge_check_passed").notNull().default(false),
+  status: text("status").notNull().default('active'), // 'active' | 'completed' | 'abandoned'
+  score: integer("score"), // Final planning score (0-100)
+  feedback: jsonb("feedback"), // Evaluation feedback
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const planningMessages = pgTable("planning_messages", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => planningSessions.id).notNull(),
+  sender: text("sender").notNull(), // 'User' or AI persona name
+  senderRole: text("sender_role").notNull(), // 'user' | 'pm' | 'developer' | 'qa' | etc.
+  message: text("message").notNull(),
+  phase: text("phase").notNull(), // PlanningPhase
+  isUser: boolean("is_user").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for planning tables
+export const insertPlanningSessionSchema = createInsertSchema(planningSessions).omit({
+  id: true,
+  startedAt: true,
+});
+
+export const insertPlanningMessageSchema = createInsertSchema(planningMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for planning tables
+export type InsertPlanningSession = z.infer<typeof insertPlanningSessionSchema>;
+export type PlanningSession = typeof planningSessions.$inferSelect;
+
+export type InsertPlanningMessage = z.infer<typeof insertPlanningMessageSchema>;
+export type PlanningMessage = typeof planningMessages.$inferSelect;
+
+// Planning session state for API responses
+export interface PlanningSessionState {
+  session: PlanningSession;
+  messages: PlanningMessage[];
+  backlogItems: {
+    id: string;
+    title: string;
+    description: string;
+    type: 'bug' | 'feature' | 'improvement';
+    priority: 'high' | 'medium' | 'low';
+    points: number;
+    selected: boolean;
+  }[];
+  capacity: number;
+  adapterConfig: {
+    role: string;
+    level: string;
+    facilitator: 'user' | 'ai';
+    showLearningObjectives: boolean;
+    showKnowledgeCheck: boolean;
+    canSkipPhases: boolean;
+  };
+}
+
 export type InsertWorkspacePhaseEvent = z.infer<typeof insertWorkspacePhaseEventSchema>;
 export type WorkspacePhaseEvent = typeof workspacePhaseEvents.$inferSelect;
 

@@ -8,6 +8,7 @@ import {
   progressionPaths, projectTemplates, userJourneys, journeyArcs, sprints, sprintActivities, competencySnapshots,
   sprintTickets, ceremonyInstances, gitSessions, gitEvents,
   workspaceInstances, workspacePhaseEvents,
+  planningSessions, planningMessages,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -49,6 +50,9 @@ import {
   type WorkspaceInstance, type InsertWorkspaceInstance,
   type WorkspacePhaseEvent, type InsertWorkspacePhaseEvent,
   type WorkspaceState, type WorkspacePhase,
+  type PlanningSession, type InsertPlanningSession,
+  type PlanningMessage, type InsertPlanningMessage,
+  type PlanningSessionState,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -279,6 +283,19 @@ export interface IStorage {
   // Phase 5: Workspace State operations
   getWorkspaceState(workspaceId: number): Promise<WorkspaceState | null>;
   advanceWorkspacePhase(workspaceId: number, payload?: Record<string, unknown>): Promise<WorkspaceInstance | undefined>;
+  
+  // Phase 6: Planning Session operations
+  getPlanningSession(id: number): Promise<PlanningSession | undefined>;
+  getPlanningSessionByWorkspace(workspaceId: number): Promise<PlanningSession | undefined>;
+  createPlanningSession(session: InsertPlanningSession): Promise<PlanningSession>;
+  updatePlanningSession(id: number, updates: Partial<PlanningSession>): Promise<PlanningSession | undefined>;
+  
+  // Phase 6: Planning Message operations
+  getPlanningMessages(sessionId: number): Promise<PlanningMessage[]>;
+  createPlanningMessage(message: InsertPlanningMessage): Promise<PlanningMessage>;
+  
+  // Phase 6: Planning Session State
+  getPlanningSessionState(workspaceId: number): Promise<PlanningSessionState | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -3706,6 +3723,125 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     });
 
     return this.updateWorkspaceInstance(workspaceId, { currentPhase: nextPhase });
+  }
+
+  // Phase 6: Planning Session operations
+  async getPlanningSession(id: number): Promise<PlanningSession | undefined> {
+    const [session] = await db.select().from(planningSessions).where(eq(planningSessions.id, id)).limit(1);
+    return session;
+  }
+
+  async getPlanningSessionByWorkspace(workspaceId: number): Promise<PlanningSession | undefined> {
+    const [session] = await db.select()
+      .from(planningSessions)
+      .where(and(
+        eq(planningSessions.workspaceId, workspaceId),
+        eq(planningSessions.status, 'active')
+      ))
+      .orderBy(desc(planningSessions.startedAt))
+      .limit(1);
+    return session;
+  }
+
+  async createPlanningSession(session: InsertPlanningSession): Promise<PlanningSession> {
+    const [created] = await db.insert(planningSessions).values(session).returning();
+    return created;
+  }
+
+  async updatePlanningSession(id: number, updates: Partial<PlanningSession>): Promise<PlanningSession | undefined> {
+    const [updated] = await db.update(planningSessions)
+      .set(updates)
+      .where(eq(planningSessions.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Phase 6: Planning Message operations
+  async getPlanningMessages(sessionId: number): Promise<PlanningMessage[]> {
+    return db.select()
+      .from(planningMessages)
+      .where(eq(planningMessages.sessionId, sessionId))
+      .orderBy(planningMessages.createdAt);
+  }
+
+  async createPlanningMessage(message: InsertPlanningMessage): Promise<PlanningMessage> {
+    const [created] = await db.insert(planningMessages).values(message).returning();
+    return created;
+  }
+
+  // Phase 6: Planning Session State
+  async getPlanningSessionState(workspaceId: number): Promise<PlanningSessionState | null> {
+    const session = await this.getPlanningSessionByWorkspace(workspaceId);
+    if (!session) return null;
+
+    const messages = await this.getPlanningMessages(session.id);
+    const workspace = await this.getWorkspaceInstance(workspaceId);
+    if (!workspace) return null;
+
+    const selectedItemIds = (session.selectedItems as string[]) || [];
+
+    const backlogItems = [
+      {
+        id: 'TICK-001',
+        title: 'Fix timezone display bug in user settings',
+        description: 'Users in different timezones see incorrect timestamps',
+        type: 'bug' as const,
+        priority: 'high' as const,
+        points: 3,
+        selected: selectedItemIds.includes('TICK-001')
+      },
+      {
+        id: 'TICK-002',
+        title: 'Implement user notifications',
+        description: 'Add in-app notification system for activity updates',
+        type: 'feature' as const,
+        priority: 'high' as const,
+        points: 5,
+        selected: selectedItemIds.includes('TICK-002')
+      },
+      {
+        id: 'TICK-003',
+        title: 'Improve loading state feedback',
+        description: 'Add skeleton loaders for better UX during data fetches',
+        type: 'improvement' as const,
+        priority: 'medium' as const,
+        points: 2,
+        selected: selectedItemIds.includes('TICK-003')
+      },
+      {
+        id: 'TICK-004',
+        title: 'Fix null check in payment flow',
+        description: 'Payment occasionally fails due to missing null checks',
+        type: 'bug' as const,
+        priority: 'high' as const,
+        points: 2,
+        selected: selectedItemIds.includes('TICK-004')
+      },
+      {
+        id: 'TICK-005',
+        title: 'Add pagination to user list',
+        description: 'User list becomes slow with many users, needs pagination',
+        type: 'feature' as const,
+        priority: 'medium' as const,
+        points: 3,
+        selected: selectedItemIds.includes('TICK-005')
+      }
+    ];
+
+    return {
+      session,
+      messages,
+      backlogItems,
+      capacity: 10,
+      adapterConfig: {
+        role: session.role,
+        level: session.level,
+        facilitator: session.role === 'pm' ? 'user' : 'ai',
+        showLearningObjectives: session.level === 'intern' || session.level === 'junior',
+        showKnowledgeCheck: session.level === 'intern',
+        canSkipPhases: session.level === 'mid' || session.level === 'senior',
+      }
+    };
   }
 }
 
