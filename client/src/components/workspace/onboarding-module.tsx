@@ -58,14 +58,6 @@ interface OnboardingModuleProps {
 
 const DEFAULT_TEAM: TeamMember[] = [
   {
-    name: "Sarah",
-    role: "Tech Lead",
-    personality: "Thoughtful and supportive",
-    expertise: ["Architecture", "Code Review", "Mentoring"],
-    availability: "Usually available 9am-6pm",
-    bio: "Sarah has been with the team for 3 years and loves helping new developers grow."
-  },
-  {
     name: "Marcus",
     role: "Senior Developer",
     personality: "Detail-oriented and patient",
@@ -251,46 +243,12 @@ export function OnboardingModule({
     return "Perfect! I think you're ready to move on. Tomorrow we'll get you set up with your development environment and you'll start working on your first ticket. Exciting times ahead! Feel free to reach out if you need anything.";
   };
 
-  const getTeamMemberResponse = (member: TeamMember, userMessage: string, messageCount: number): string => {
-    const responses: Record<string, string[]> = {
-      'Sarah': [
-        `Great question! I've been here for about 3 years now. I started as a senior developer and moved into the tech lead role about a year ago. Before this, I was at a fintech startup - similar domain actually, which helped me hit the ground running here.`,
-        `The thing I love most about this team is how collaborative everyone is. We do a lot of pair programming when tackling complex problems. My door is always open if you need help understanding the architecture or want a second pair of eyes on your code.`,
-        `Outside of work, I'm really into hiking and photography. Actually, a few of us on the team go on weekend hikes sometimes - you should join us once you're settled in! It's a great way to get to know people outside of standup meetings.`
-      ],
-      'Marcus': [
-        `Hey! Yeah, I've been with the company for about 2 years. Before this, I was at a large enterprise company doing backend work - quite different pace from here, but I love the startup energy. I get to actually see the impact of my work.`,
-        `My background is mostly in distributed systems and database optimization. If you ever run into performance issues or need help with SQL queries, just ping me. I actually enjoy debugging those kinds of problems - weird, I know!`,
-        `When I'm not coding, I'm usually tinkering with side projects or playing chess online. I'm also into cooking - I make a pretty mean biryani that I bring to team potlucks sometimes.`
-      ],
-      'Priya': [
-        `Hi there! Welcome to the team! I've been the PM here for about a year and a half. Before this, I was a product manager at a e-commerce company, so I have a soft spot for good user experiences.`,
-        `My role is basically to make sure we're building the right things. I work closely with customers to understand their pain points, and then translate that into features the team can build. If you ever want context on why we're building something, I'm your person!`,
-        `Fun fact about me - I'm a huge boardgame enthusiast. I host game nights at my place once a month and everyone's welcome. It's a nice way to unwind and bond with the team outside of work.`
-      ],
-      'Alex': [
-        `Hey! Nice to meet you! I've been doing QA here for about 18 months. Before this, I was a developer actually, but I found I really enjoyed the testing side of things more - I like breaking things and making sure they're solid before they go out.`,
-        `My philosophy is that quality is everyone's responsibility, so don't think of me as just "the person who finds bugs." I'm here to help the whole team ship better software. Feel free to loop me in early on your PRs - I'd rather catch issues before code review than after.`,
-        `Outside of work, I'm really into rock climbing and escape rooms. The problem-solving aspect of both really appeals to me - same reason I like QA work, I guess! Always looking for new climbing buddies if you're interested.`
-      ]
-    };
-
-    const memberResponses = responses[member.name] || [
-      `Thanks for asking! I really enjoy working here. The team is great and the problems we solve are interesting.`,
-      `My background is in ${member.expertise[0].toLowerCase()}, which is what I focus on here. Happy to chat more about it anytime!`,
-      `It's great to have you join the team! Let me know if you have any questions as you get settled in.`
-    ];
-
-    return memberResponses[Math.min(messageCount, memberResponses.length - 1)];
-  };
-
   const handleTeamChatSend = async () => {
     if (!teamChatInput.trim() || !selectedMember || isAIResponding) return;
     
     const memberName = selectedMember.name;
     const currentMessages = teamChatMessages[memberName] || [];
     const userMessageText = teamChatInput;
-    const userMessageCount = currentMessages.filter(m => m.sender === 'You').length;
     
     const newUserMessage = { sender: 'You', message: userMessageText };
     setTeamChatMessages(prev => ({
@@ -300,14 +258,28 @@ export function OnboardingModule({
     setTeamChatInput('');
     setIsAIResponding(true);
 
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700));
+    try {
+      const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/onboarding-chat`, {
+        teamMemberName: memberName,
+        userMessage: userMessageText,
+        conversationHistory: currentMessages
+      });
+      const data = await response.json();
+      
+      const aiResponse = { sender: memberName, message: data.response };
+      setTeamChatMessages(prev => ({
+        ...prev,
+        [memberName]: [...(prev[memberName] || []), aiResponse]
+      }));
+    } catch (error) {
+      console.error('Failed to get chat response:', error);
+      const fallbackResponse = { sender: memberName, message: "Sorry, I got distracted for a moment. What were you saying?" };
+      setTeamChatMessages(prev => ({
+        ...prev,
+        [memberName]: [...(prev[memberName] || []), fallbackResponse]
+      }));
+    }
     
-    const response = getTeamMemberResponse(selectedMember, userMessageText, userMessageCount);
-    const aiResponse = { sender: memberName, message: response };
-    setTeamChatMessages(prev => ({
-      ...prev,
-      [memberName]: [...(prev[memberName] || []), aiResponse]
-    }));
     setIsAIResponding(false);
   };
 

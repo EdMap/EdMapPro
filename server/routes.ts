@@ -3007,6 +3007,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/workspaces/:workspaceId/onboarding-chat - Chat with team members during onboarding
+  app.post("/api/workspaces/:workspaceId/onboarding-chat", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const { teamMemberName, userMessage, conversationHistory } = req.body;
+      
+      if (!teamMemberName || !userMessage) {
+        return res.status(400).json({ message: "teamMemberName and userMessage are required" });
+      }
+
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Team member personas for onboarding chat (personal/getting-to-know-you context)
+      const teamPersonas: Record<string, { role: string; personality: string; background: string }> = {
+        'Marcus': {
+          role: 'Senior Developer',
+          personality: 'Detail-oriented, patient, and helpful',
+          background: `Been with ${workspace.companyName} for about 2 years. Previously worked at a large enterprise company doing backend work. Enjoys distributed systems and database optimization. Outside work, tinkers with side projects, plays chess online, and cooks - makes a mean biryani.`
+        },
+        'Priya': {
+          role: 'Product Manager',
+          personality: 'Energetic, clear communicator, approachable',
+          background: `PM at ${workspace.companyName} for about 18 months. Previously a product manager at an e-commerce company. Bridges business needs and technical implementation. Huge boardgame enthusiast - hosts monthly game nights.`
+        },
+        'Alex': {
+          role: 'QA Engineer',
+          personality: 'Thorough, helpful, and friendly',
+          background: `QA engineer for about 18 months. Was a developer before but found they enjoyed testing more. Philosophy is that quality is everyone's responsibility. Into rock climbing and escape rooms in free time.`
+        }
+      };
+
+      const persona = teamPersonas[teamMemberName];
+      if (!persona) {
+        return res.status(400).json({ message: "Unknown team member" });
+      }
+
+      // Use Groq to generate response
+      const Groq = require('groq-sdk');
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+      const systemPrompt = `You are ${teamMemberName}, a ${persona.role} at ${workspace.companyName}. 
+Personality: ${persona.personality}
+Your background: ${persona.background}
+
+This is a casual getting-to-know-you chat with a new team member on their first day. They want to learn about you personally - your background, experience, interests, and what it's like working here.
+
+Guidelines:
+- Be warm, friendly, and welcoming
+- Share personal anecdotes and experiences
+- Ask them questions back to make it conversational
+- Keep responses conversational (2-4 sentences typically)
+- DO NOT discuss work tasks or technical problems - this is purely social
+- Reference your background naturally when relevant`;
+
+      const messages: any[] = [
+        { role: "system", content: systemPrompt }
+      ];
+
+      // Add conversation history
+      if (conversationHistory && Array.isArray(conversationHistory)) {
+        for (const msg of conversationHistory) {
+          messages.push({
+            role: msg.sender === 'You' ? 'user' : 'assistant',
+            content: msg.message
+          });
+        }
+      }
+
+      // Add current message
+      messages.push({ role: 'user', content: userMessage });
+
+      try {
+        const response = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages,
+          temperature: 0.8,
+          max_tokens: 300
+        });
+
+        const aiResponse = response.choices[0]?.message?.content || "Thanks for reaching out! Let me know if you have any questions.";
+        res.json({ response: aiResponse, sender: teamMemberName });
+      } catch (groqError) {
+        console.error('Groq API error:', groqError);
+        // Fallback responses
+        const fallbacks = [
+          `Hey! Great to meet you. I've been here for a while now and really enjoy the team culture. What brings you to ${workspace.companyName}?`,
+          `Welcome aboard! It's always exciting to have new people join. How are you finding your first day so far?`,
+          `Nice to connect! Feel free to ask me anything - about the team, the company, or just life in general here.`
+        ];
+        res.json({ 
+          response: fallbacks[Math.floor(Math.random() * fallbacks.length)], 
+          sender: teamMemberName 
+        });
+      }
+    } catch (error) {
+      console.error("Failed to process onboarding chat:", error);
+      res.status(500).json({ message: "Failed to process chat message" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
