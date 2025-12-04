@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Rocket, 
@@ -18,7 +19,8 @@ import {
   Circle,
   Lock,
   Briefcase,
-  ArrowRight
+  ArrowRight,
+  Building2
 } from "lucide-react";
 import {
   AlertDialog,
@@ -60,6 +62,12 @@ export default function WorkspaceJourney() {
 
   // Filter to only accepted applications
   const acceptedApplications = applications.filter((app: any) => app.status === 'accepted');
+
+  // Fetch user's active workspace instances
+  const { data: activeWorkspaces = [], isLoading: workspacesLoading } = useQuery<any[]>({
+    queryKey: [`/api/users/${(user as any)?.id}/workspaces`],
+    enabled: !!(user as any)?.id,
+  });
 
   const createSessionMutation = useMutation({
     mutationFn: async (config: any) => {
@@ -250,6 +258,22 @@ export default function WorkspaceJourney() {
     ? projects.filter((p: any) => p.category === 'intern-onboarding')
     : [];
 
+  // Filter active workspace instances (from job offers)
+  const activeWorkspacesList = Array.isArray(activeWorkspaces) 
+    ? activeWorkspaces.filter((w: any) => w.status === 'active')
+    : [];
+
+  if (workspacesLoading || applicationsLoading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <div className="max-w-5xl mx-auto">
@@ -266,6 +290,46 @@ export default function WorkspaceJourney() {
             Experience the complete 5-day onboarding journey. One company, start to finish.
           </p>
         </div>
+
+        {/* Active Workspaces from Accepted Job Offers */}
+        {activeWorkspacesList.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Active Workspaces</h2>
+            <div className="space-y-4">
+              {activeWorkspacesList.map((workspace: any) => (
+                <Card key={workspace.id} className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50" data-testid={`card-workspace-${workspace.id}`}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-xl bg-white border border-green-200 flex items-center justify-center">
+                          <Building2 className="h-7 w-7 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-lg font-semibold text-gray-900">{workspace.companyName}</h3>
+                            <Badge className="bg-green-100 text-green-800">Active</Badge>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {workspace.role} • {workspace.currentPhase.charAt(0).toUpperCase() + workspace.currentPhase.slice(1)} Phase
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => navigate(`/workspace/${workspace.id}`)}
+                        className="gap-2"
+                        data-testid={`button-enter-workspace-${workspace.id}`}
+                      >
+                        <Play className="h-4 w-4" />
+                        Enter Workspace
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {inProgressJourneys.length > 0 && (
           <div className="mb-8">

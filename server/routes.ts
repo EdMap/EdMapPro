@@ -1040,6 +1040,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's workspace instances
+  app.get("/api/users/:userId/workspaces", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const workspaces = await storage.getUserWorkspaceInstances(userId);
+      res.json(workspaces);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get workspaces" });
+    }
+  });
+
   // Create job application
   app.post("/api/applications", upload.single('cv'), async (req, res) => {
     try {
