@@ -2582,12 +2582,21 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       projectTemplate = newTemplate;
     }
 
+    // Get the job application with 'offer' status for user 1
+    const offerApplications = await db.select()
+      .from(jobApplications)
+      .where(eq(jobApplications.userId, 1))
+      .orderBy(jobApplications.id)
+      .limit(1);
+    
+    const jobApplicationId = offerApplications.length > 0 ? offerApplications[0].id : null;
+
     // Create a journey for user 1 with accepted application
     const journey = await this.createJourney({
       userId: 1,
       progressionPathId: progressionPath.id,
       projectTemplateId: projectTemplate.id,
-      jobApplicationId: 5, // Link to existing accepted application
+      jobApplicationId: jobApplicationId,
       status: 'in_progress',
       currentArcId: null,
       currentSprintNumber: 1,
