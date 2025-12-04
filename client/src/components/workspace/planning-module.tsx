@@ -383,8 +383,15 @@ export function PlanningModule({
   const [sprintGoal, setSprintGoal] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const { data: sessionState, isLoading } = useQuery<PlanningSessionState>({
+  const { data: sessionState, isLoading, refetch } = useQuery<PlanningSessionState>({
     queryKey: [`/api/workspaces/${workspaceId}/planning`],
+    queryFn: async () => {
+      const response = await fetch(`/api/workspaces/${workspaceId}/planning?_t=${Date.now()}`);
+      if (!response.ok) throw new Error('Failed to fetch planning session');
+      return response.json();
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
   
   const initSession = useMutation({
@@ -613,8 +620,8 @@ export function PlanningModule({
                   {session.currentPhase === 'commitment' && "Finalize the sprint commitment"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 overflow-hidden p-0">
-                <ScrollArea className="h-full p-4">
+              <CardContent className="flex-1 overflow-hidden p-0 min-h-[200px]">
+                <ScrollArea className="h-full min-h-[180px] p-4">
                   {messages.length === 0 && session.currentPhase === 'context' && (
                     <div className="text-center py-8 text-muted-foreground">
                       <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />

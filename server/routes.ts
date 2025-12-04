@@ -3014,7 +3014,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/workspaces/:workspaceId/planning", async (req, res) => {
     try {
       const workspaceId = parseInt(req.params.workspaceId);
+      
+      // Check if session exists and has no messages - insert welcome message if needed
+      const session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      if (session) {
+        const messages = await storage.getPlanningMessages(session.id);
+        if (messages.length === 0) {
+          // Session exists but has no messages - insert auto-start message
+          const adapter = getSprintPlanningAdapter(session.role, session.level);
+          if (adapter.engagement?.autoStartConversation && adapter.engagement?.autoStartMessage) {
+            await storage.createPlanningMessage({
+              sessionId: session.id,
+              sender: 'Priya',
+              senderRole: 'Product Manager',
+              message: adapter.engagement.autoStartMessage,
+              phase: 'context',
+              isUser: false,
+            });
+          }
+        }
+      }
+      
       const state = await storage.getPlanningSessionState(workspaceId);
+      // Prevent browser caching for dynamic planning state
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.set('Pragma', 'no-cache');
       res.json(state);
     } catch (error) {
       console.error("Failed to get planning session state:", error);
