@@ -614,11 +614,14 @@ function ApplicationDetail({
         try {
           const journeyResponse = await fetch(`/api/user/${userId}/journey`);
           if (journeyResponse.ok) {
-            const journey = await journeyResponse.json();
-            const workspaceResponse = await fetch(`/api/journeys/${journey.id}/workspace`);
-            if (workspaceResponse.ok) {
-              const workspace = await workspaceResponse.json();
-              setWorkspaceId(workspace.id);
+            const journeyData = await journeyResponse.json();
+            const journey = journeyData.journey;
+            if (journey?.id) {
+              const workspaceResponse = await fetch(`/api/journeys/${journey.id}/workspace`);
+              if (workspaceResponse.ok) {
+                const workspace = await workspaceResponse.json();
+                setWorkspaceId(workspace.id);
+              }
             }
           }
         } catch (error) {
