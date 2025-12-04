@@ -1432,6 +1432,78 @@ export const gitEvents = pgTable("git_events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Workspace Phase types
+export type WorkspacePhase = 'onboarding' | 'planning' | 'execution' | 'review' | 'retro';
+export type WorkspaceStatus = 'active' | 'paused' | 'completed';
+export type PhaseEventStatus = 'started' | 'completed';
+
+// Workspace Instances - created when job offer is accepted
+export const workspaceInstances = pgTable("workspace_instances", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  journeyId: integer("journey_id").references(() => userJourneys.id).notNull(),
+  jobApplicationId: integer("job_application_id").references(() => jobApplications.id),
+  projectTemplateId: integer("project_template_id").references(() => projectTemplates.id),
+  companyName: text("company_name").notNull(),
+  role: text("role").notNull(),
+  status: text("status").notNull().default('active'), // WorkspaceStatus
+  currentPhase: text("current_phase").notNull().default('onboarding'), // WorkspacePhase
+  currentSprintId: integer("current_sprint_id"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  workspaceMetadata: jsonb("workspace_metadata").notNull().default('{}'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Workspace Phase Events - tracks phase transitions
+export const workspacePhaseEvents = pgTable("workspace_phase_events", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaceInstances.id).notNull(),
+  phase: text("phase").notNull(), // WorkspacePhase
+  sprintId: integer("sprint_id"), // Nullable - only for sprint phases
+  status: text("status").notNull(), // PhaseEventStatus: 'started' | 'completed'
+  payload: jsonb("payload").default('{}'), // Phase-specific outputs (sprint goal, retro actions, etc.)
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for workspace tables
+export const insertWorkspaceInstanceSchema = createInsertSchema(workspaceInstances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkspacePhaseEventSchema = createInsertSchema(workspacePhaseEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for workspace tables
+export type InsertWorkspaceInstance = z.infer<typeof insertWorkspaceInstanceSchema>;
+export type WorkspaceInstance = typeof workspaceInstances.$inferSelect;
+
+export type InsertWorkspacePhaseEvent = z.infer<typeof insertWorkspacePhaseEventSchema>;
+export type WorkspacePhaseEvent = typeof workspacePhaseEvents.$inferSelect;
+
+// Workspace state for API responses
+export interface WorkspaceState {
+  workspace: WorkspaceInstance;
+  currentPhase: WorkspacePhase;
+  currentSprint: Sprint | null;
+  phaseChecklist: {
+    item: string;
+    completed: boolean;
+    required: boolean;
+  }[];
+  nextActions: {
+    action: string;
+    route: string;
+    priority: 'primary' | 'secondary';
+  }[];
+  phaseHistory: WorkspacePhaseEvent[];
+}
+
 // Insert schemas for Phase 5 tables
 export const insertSprintTicketSchema = createInsertSchema(sprintTickets).omit({
   id: true,

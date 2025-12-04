@@ -75,6 +75,138 @@ Junior Ready (can deliver independently)
 
 ---
 
+## Complete User Journey (Updated)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           PRE-HIRE PHASE                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│    Job Board → Application → INTERVIEW SIMULATOR → Offer → Accept           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           POST-HIRE PHASE                                    │
+│                        (Workspace Simulator)                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │                    WORKSPACE CREATED                                 │   │
+│   │              (e.g., "NovaPay" workspace)                             │   │
+│   │              Button: "Open Workspace"                                │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                       │
+│                                      ▼                                       │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │                    ONBOARDING (one-time)                             │   │
+│   │  • Meet the team (Sarah, Marcus, Priya, Alex, Jordan)                │   │
+│   │  • Read company & product documentation                              │   │
+│   │  • Comprehension check                                               │   │
+│   │  → Completes once, unlocks Sprint cycles                             │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                       │
+│                                      ▼                                       │
+│   ╔═════════════════════════════════════════════════════════════════════╗   │
+│   ║                    SPRINT CYCLE (repeats)                            ║   │
+│   ╠═════════════════════════════════════════════════════════════════════╣   │
+│   ║                                                                      ║   │
+│   ║   ┌─────────────────────────────────────────────────────────────┐    ║   │
+│   ║   │              SPRINT PLANNING                                 │    ║   │
+│   ║   │  • Review product backlog                                    │    ║   │
+│   ║   │  • Select priority items (features, bugs, tasks)             │    ║   │
+│   ║   │  • Break into smaller tasks                                  │    ║   │
+│   ║   │  • Commit to sprint scope                                    │    ║   │
+│   ║   │  → Outputs: Sprint Goal + Sprint Backlog                     │    ║   │
+│   ║   └─────────────────────────────────────────────────────────────┘    ║   │
+│   ║                              │                                        ║   │
+│   ║                              ▼                                        ║   │
+│   ║   ┌─────────────────────────────────────────────────────────────┐    ║   │
+│   ║   │              SPRINT EXECUTION                                │    ║   │
+│   ║   │  • Daily Standups (recurring ceremony)                       │    ║   │
+│   ║   │  • Kanban board work (pick up tickets, move columns)         │    ║   │
+│   ║   │  • Git workflow (branches, commits, PRs)                     │    ║   │
+│   ║   │  • Code review & collaboration                               │    ║   │
+│   ║   │  • Mid-sprint adjustments if needed                          │    ║   │
+│   ║   │  → When tickets done, unlocks Review                         │    ║   │
+│   ║   └─────────────────────────────────────────────────────────────┘    ║   │
+│   ║                              │                                        ║   │
+│   ║                              ▼                                        ║   │
+│   ║   ┌─────────────────────────────────────────────────────────────┐    ║   │
+│   ║   │              SPRINT REVIEW                                   │    ║   │
+│   ║   │  • Demo completed work to stakeholders                       │    ║   │
+│   ║   │  • Get feedback on deliverables                              │    ║   │
+│   ║   │  → Unlocks Retrospective                                     │    ║   │
+│   ║   └─────────────────────────────────────────────────────────────┘    ║   │
+│   ║                              │                                        ║   │
+│   ║                              ▼                                        ║   │
+│   ║   ┌─────────────────────────────────────────────────────────────┐    ║   │
+│   ║   │              SPRINT RETROSPECTIVE                            │    ║   │
+│   ║   │  • What went well?                                           │    ║   │
+│   ║   │  • What could improve?                                       │    ║   │
+│   ║   │  • Action items for next sprint                              │    ║   │
+│   ║   └─────────────────────────────────────────────────────────────┘    ║   │
+│   ║                              │                                        ║   │
+│   ║                              ▼                                        ║   │
+│   ║                [Next Sprint] ←──or──→ [Graduate]                      ║   │
+│   ╚═════════════════════════════════════════════════════════════════════╝   │
+│                                      │                                       │
+│                                      ▼                                       │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │                    JUNIOR READY!                                     │   │
+│   │              (Portfolio + Badge)                                     │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Workspace Phase Architecture
+
+### Phase Flow (replaces "Days" approach)
+
+| Phase | Type | Description | Gates |
+|-------|------|-------------|-------|
+| **Onboarding** | One-time | Team intros, docs, comprehension | Must complete before Sprint 1 |
+| **Sprint Planning** | Per-sprint | Backlog review, goal setting, commitment | Outputs Sprint Goal + Backlog |
+| **Sprint Execution** | Per-sprint | Daily work, standups, Kanban, Git | Tickets must be done for Review |
+| **Sprint Review** | Per-sprint | Demo to stakeholders, feedback | Completes before Retro |
+| **Sprint Retrospective** | Per-sprint | Reflection, action items | Triggers next sprint or graduation |
+
+### Phase State Machine
+
+```
+                    ┌──────────────────────────────────────────────┐
+                    │                                              │
+                    ▼                                              │
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  ┌─────────────┐
+│  Onboarding │──│  Planning   │──│  Execution  │──│   Review    │─┼──│    Retro    │
+│   (once)    │  │(per sprint) │  │(per sprint) │  │(per sprint) │ │  │(per sprint) │
+└─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │  └─────────────┘
+      │                                                             │         │
+      │                                                             │         │
+      ▼                                                             │         ▼
+   Complete ──────────────────────────────────────────────────────►├─► Next Sprint
+                                                                    │         or
+                                                                    │    Graduate
+                                                                    │
+                                                                    └──────────┘
+```
+
+### Phase UI Components
+
+| Phase | Primary UI | Key Actions |
+|-------|-----------|-------------|
+| Onboarding | Team intro cards, doc reader, quiz | Meet team, read docs, pass comprehension |
+| Planning | Backlog table, goal editor | Select items, set goal, commit |
+| Execution | Kanban board, Git panel, standup modal | Move tickets, create branches, attend standups |
+| Review | Demo presenter, feedback collector | Present work, receive feedback |
+| Retro | Reflection cards, action items | Add went-well/improve items, commit to actions |
+
+---
+
 ## Unified Architecture
 
 ### Adapter + Catalogue Pattern (Both Simulators)
@@ -100,43 +232,21 @@ Junior Ready (can deliver independently)
 │  │  ├── Junior             │    │  ├── JavaScript         │    │
 │  │  ├── Mid                │    │  └── Python             │    │
 │  │  └── Senior             │    │                         │    │
-│  │                         │    │                         │    │
-│  │  CATALOGUE              │    │  CATALOGUE              │    │
-│  │  ├── Behavioral Qs      │    │  ├── Technical Drills   │    │
-│  │  ├── Technical Qs       │    │  ├── Soft Skills Drills │    │
-│  │  ├── System Design      │    │  └── Sprint Arcs        │    │
-│  │  └── Case Studies       │    │                         │    │
+│  │                         │    │  PHASE MODULES          │    │
+│  │  CATALOGUE              │    │  ├── OnboardingModule   │    │
+│  │  ├── Behavioral Qs      │    │  ├── PlanningModule     │    │
+│  │  ├── Technical Qs       │    │  ├── ExecutionModule    │    │
+│  │  ├── System Design      │    │  ├── ReviewModule       │    │
+│  │  └── Case Studies       │    │  └── RetroModule        │    │
 │  └─────────────────────────┘    └─────────────────────────┘    │
 │                                                                 │
 │  ═══════════════════════════════════════════════════════════   │
 │                    SHARED COMPONENTS                            │
 │  • Competency Framework    • Readiness Engine                   │
 │  • Portfolio System        • AI Orchestrator                    │
+│  • Phase State Machine     • Workspace Instance Manager         │
 └─────────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## Complete User Journey
-
-```
-PRE-HIRE PHASE                    POST-HIRE PHASE
-──────────────                    ───────────────
-
-Job Board                         Workspace Simulator
-    ↓                                 ↓
-Application                       Progression Engine
-    ↓                                 ↓
-INTERVIEW SIMULATOR ═══════════> Junior Ready!
-    (Get the job)                 (Portfolio + Badge)
-```
-
-### Journey Path Chapters
-
-1. **Getting the Job** - Apply, interview (Interview Simulator), negotiate, accept
-2. **Onboarding** - Meet team, first tasks, learn codebase (Workspace Simulator)
-3. **First Sprints** - Build features, handle incidents, grow (Workspace Simulator)
-4. **Junior Ready** - Portfolio complete, badge earned
 
 ---
 
@@ -152,6 +262,8 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 
 **Outcome**: Same UX, but content is data-driven
 
+**Status**: ✅ Complete
+
 ---
 
 ### Phase 1: Shared Foundation (2-3 weeks)
@@ -164,44 +276,31 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 - `competency_ledger` - User mastery scores
 - `portfolio_artifacts` - Collected work samples
 
-**API Endpoints:**
-- `GET /api/catalogue?role=&level=&type=`
-- `GET /api/competencies`
-- `GET /api/user/:id/readiness`
-- `POST /api/user/:id/competency-delta`
-- `GET /api/user/:id/portfolio`
-
 **Outcome**: Unified catalogue API for both simulators
+
+**Status**: ✅ Complete
 
 ---
 
 ### Phase 2: Adapter Implementation (2-3 weeks)
 **Goal**: Role and level adapters for both simulators
 
-**Interview Adapters:**
-- Role Adapter: Question banks, evaluation criteria, personas
-- Level Adapter: Difficulty calibration, expectations
-
-**Workspace Adapters:**
-- Role Adapter: Problem sets, artifacts, team dynamics
-- Language Adapter: Code examples, tooling, errors
-
 **Outcome**: Dynamic configuration based on user's role/level/language
+
+**Status**: ✅ Complete
 
 ---
 
 ### Phase 3: Progression Engine & Narrative Schema (3 weeks)
 **Goal**: Unified competency tracking + narrative data structures
 
-> **Updated**: Now includes narrative schema to support dynamic sprint generation
-
 **3A: Schema & Data Models (1 week)**
 - Add `journey_arcs` table (type, order, projectTemplateId, isFinalArc)
 - Add `sprints` table (arcId, sprintNumber, goal, backlog, state)
-- Add `sprint_activities` table (sprintId, day, type, status)
+- Add `sprint_tickets` table (sprintId, ticketKey, type, status)
+- Add `ceremony_instances` table (sprintId, ceremonyType, status)
 - Add `project_templates` table (team, codebase, themes, softSkillPacks)
 - Add `progression_paths` table (entryLevel, exitLevel, requirements, badge)
-- Extend `job_postings` with `projectTemplateId` and `narrativeProfile`
 
 **3B: Progression Engine (1 week)**
 - Delta Calculator: Compute competency changes after activities
@@ -215,28 +314,18 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 - Gap analysis and recommendations
 - Readiness score display
 
-**APIs Added:**
-- `GET /api/user/:id/journey` - Current journey state
-- `POST /api/user/:id/journey/start` - Start journey from job posting
-- `GET /api/user/:id/journey/current-sprint` - Current sprint details
-- `POST /api/user/:id/journey/complete-activity` - Mark activity done + record delta
-- `GET /api/progression-paths` - Available progression paths
-
-**Outcome**: Foundation for dynamic narratives + users see unified progress
+**Status**: ✅ Complete
 
 ---
 
 ### Phase 4: Dynamic Sprint Generation (3-4 weeks)
 **Goal**: AI-powered sprint assembly from catalogue templates
 
-> **New Phase**: Core narrative engine that generates unique sprints
-
 **4A: Sprint Generator Service (1.5 weeks)**
 - Theme selection (avoiding recent themes)
 - Backlog generation from problem templates
 - User ticket assignment based on difficulty band
 - Soft skill event scheduling
-- Day-by-day activity planning
 
 **4B: Problem Template Authoring (1 week)**
 - Create 20+ bug templates (timezone, null check, race condition, etc.)
@@ -255,47 +344,57 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 - Fallback to scripted templates on generation failure
 - Telemetry for generated content quality
 
-**APIs Added:**
-- `POST /api/journey/:id/generate-sprint` - Generate next sprint
-- `GET /api/sprint/:id/ceremonies` - Get ceremony scripts for sprint
-- `POST /api/sprint/:id/soft-skill-event` - Trigger soft skill scenario
-
-**Outcome**: Each sprint is dynamically generated, ensuring variety
+**Status**: ✅ Complete
 
 ---
 
-### Phase 5: Journey UX & Ceremony UI (3 weeks)
-**Goal**: New user flows with sprint-based narrative
+### Phase 5: Workspace Phase Architecture (3-4 weeks) - IN PROGRESS
+**Goal**: Replace day-based flow with Scrum phase-based architecture
 
-> **Merged**: Combines previous UX phase with ceremony implementation
+> **Major Revision**: This phase now focuses on the complete workspace restructuring
 
-**5A: Journey Dashboard (1 week)**
-- Arc timeline visualization
-- Current sprint progress
-- Upcoming ceremonies
-- "Complete Journey" button (exit trigger)
+**5A: Workspace Instance System (1 week)**
+- Add `workspace_instances` table (userId, journeyId, jobApplicationId, status, currentPhase)
+- Add `workspace_phase_events` table (workspaceId, phase, status, completedAt, payload)
+- Create workspace on offer acceptance
+- Phase state machine with guards and transitions
+- API: `GET /api/workspaces/:id/state`
 
-**5B: Ceremony UI Components (1.5 weeks)**
-- Sprint Planning UI (backlog review, task selection, commitment)
-- Daily Standup UI (team updates, user input, blockers)
-- Sprint Review UI (demo to stakeholders, feedback)
-- Retrospective UI (what went well, improvements)
-- 1:1 / Final 1:1 UI (feedback, goals, graduation)
+**5B: Phase Modules (1.5 weeks)**
+- Extract onboarding content into `OnboardingModule` (team intros, docs, comprehension)
+- Create `PlanningModule` (backlog review, goal setting, commitment)
+- Create `ExecutionModule` (standups, Kanban, Git workflow)
+- Create `ReviewModule` (demo, stakeholder feedback)
+- Create `RetroModule` (reflection, action items)
 
-**5C: Sprint Board UI (0.5 weeks)**
-- Kanban-style ticket board
-- Ticket detail view with code exercise
-- PR creation flow
-- Code review interface
+**5C: Dashboard & Navigation UX (1 week)**
+- Phase stepper component (Onboarding → Planning → Execution → Review → Retro)
+- Workspace hero card with "Open Workspace" CTA on Journey page
+- Phase-gated CTAs (can't enter Execution until Planning complete)
+- Breadcrumb navigation (Journey → Workspace → Phase)
+- "Next Up" panel showing required actions
 
-**Outcome**: Users experience full sprint ceremonies with dynamic content
+**5D: Ceremony Integration (0.5 weeks)**
+- Sprint Planning ceremony outputs Sprint Goal + Backlog
+- Daily Standup during Execution phase
+- Sprint Review ceremony at end of Execution
+- Sprint Retrospective before next sprint
+
+**Key Changes from Previous Design:**
+| Old (Day-based) | New (Phase-based) |
+|-----------------|-------------------|
+| Day 1, Day 2, Day 3, Day 4 | Onboarding → Planning → Execution → Review → Retro |
+| Linear day progression | Cyclical sprint phases |
+| All activities in monolithic component | Modular phase components |
+| Implicit sprint planning | Explicit Planning phase with outputs |
+| Standup on specific day | Standups throughout Execution phase |
+
+**Status**: 🔄 In Progress (restructuring from day-based to phase-based)
 
 ---
 
 ### Phase 6: Multi-Role Content Packs (2-3 weeks)
 **Goal**: Extend to PM, QA, DevOps, Data Science
-
-> **Updated**: Now includes level-specific content packs
 
 **Per Role:**
 - Problem templates appropriate to role
@@ -321,6 +420,8 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 
 **Outcome**: Platform works for 5 roles × 3 levels = 15 progression paths
 
+**Status**: ⏳ Planned
+
 ---
 
 ### Phase 7: Portfolio, Credentialing & Exit (2 weeks)
@@ -342,6 +443,8 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 
 **Outcome**: Graduates prove readiness with verifiable portfolio
 
+**Status**: ⏳ Planned
+
 ---
 
 ### Phase 8: Language Adapters (1-2 weeks)
@@ -361,6 +464,8 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 
 **Outcome**: Developer track for 3 tech stacks
 
+**Status**: ⏳ Planned
+
 ---
 
 ## Updated Timeline Summary
@@ -370,41 +475,96 @@ INTERVIEW SIMULATOR ═══════════> Junior Ready!
 | Phase 0 | 1-2 weeks | Extract content to JSON | ✅ Complete |
 | Phase 1 | 2-3 weeks | Shared schema, catalogue API | ✅ Complete |
 | Phase 2 | 2-3 weeks | Role + Level adapters | ✅ Complete |
-| **Phase 3** | **3 weeks** | **Progression engine + narrative schema** | 🔄 Next |
-| **Phase 4** | **3-4 weeks** | **Dynamic sprint generation** | ⏳ Planned |
-| **Phase 5** | **3 weeks** | **Journey UX + ceremony UI** | ⏳ Planned |
-| **Phase 6** | **2-3 weeks** | **Multi-role content packs** | ⏳ Planned |
-| **Phase 7** | **2 weeks** | **Portfolio + graduation** | ⏳ Planned |
-| **Phase 8** | **1-2 weeks** | **Language adapters** | ⏳ Planned |
+| Phase 3 | 3 weeks | Progression engine + narrative schema | ✅ Complete |
+| Phase 4 | 3-4 weeks | Dynamic sprint generation | ✅ Complete |
+| **Phase 5** | **3-4 weeks** | **Workspace phase architecture** | 🔄 In Progress |
+| Phase 6 | 2-3 weeks | Multi-role content packs | ⏳ Planned |
+| Phase 7 | 2 weeks | Portfolio + graduation | ⏳ Planned |
+| Phase 8 | 1-2 weeks | Language adapters | ⏳ Planned |
 
 **Total**: ~17-22 weeks for full implementation
+
+---
+
+## Phase 5 Implementation Details
+
+### Schema Changes Required
+
+```typescript
+// workspace_instances - created when offer is accepted
+{
+  id: serial,
+  userId: integer,
+  journeyId: integer,
+  jobApplicationId: integer,
+  projectTemplateId: integer,
+  companyName: text,
+  role: text,
+  status: 'active' | 'completed' | 'paused',
+  currentPhase: 'onboarding' | 'planning' | 'execution' | 'review' | 'retro',
+  currentSprintId: integer,
+  onboardingCompletedAt: timestamp,
+  createdAt: timestamp
+}
+
+// workspace_phase_events - tracks phase transitions
+{
+  id: serial,
+  workspaceId: integer,
+  phase: text,
+  sprintId: integer (nullable),
+  status: 'started' | 'completed',
+  payload: jsonb, // phase-specific outputs (e.g., sprint goal, retro actions)
+  completedAt: timestamp,
+  createdAt: timestamp
+}
+```
+
+### API Endpoints Required
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/workspaces` | POST | Create workspace on offer accept |
+| `/api/workspaces/:id` | GET | Get workspace details |
+| `/api/workspaces/:id/state` | GET | Get current phase, checklist, next actions |
+| `/api/workspaces/:id/phase` | PATCH | Advance to next phase |
+| `/api/workspaces/:id/onboarding/complete` | POST | Complete onboarding |
+| `/api/workspaces/:id/planning/complete` | POST | Complete planning with goal/backlog |
+
+### UI Components Required
+
+| Component | Purpose |
+|-----------|---------|
+| `PhaseStepperComponent` | Visual phase progress indicator |
+| `WorkspaceHeroCard` | "Open Workspace" CTA on journey page |
+| `PhaseChecklist` | Required actions for current phase |
+| `NextUpPanel` | Upcoming ceremonies/actions |
+| `OnboardingModule` | Team intros, docs, comprehension |
+| `PlanningModule` | Backlog review, goal setting |
+| `ExecutionHub` | Kanban + standups + Git |
+| `ReviewModule` | Demo presenter |
+| `RetroModule` | Reflection cards |
 
 ---
 
 ## Phase Dependencies
 
 ```
-Phase 0-2 (Complete)
+Phase 0-4 (Complete)
      │
      ▼
-Phase 3: Progression + Schema ──────────────────┐
-     │                                           │
-     ▼                                           │
-Phase 4: Dynamic Sprint Generation ◄─────────────┤
-     │                                           │
-     ▼                                           │
-Phase 5: Journey UX + Ceremony UI                │
-     │                                           │
-     ├──────────────────────────────────────────►│
-     │                                           │
-     ▼                                           ▼
-Phase 6: Multi-Role Content ◄───────────── Phase 7: Portfolio + Graduation
-     │
-     ▼
-Phase 8: Language Adapters
+Phase 5: Workspace Phase Architecture ──────────────┐
+     │                                               │
+     ▼                                               │
+Phase 6: Multi-Role Content ◄────────────────────────┤
+     │                                               │
+     ├───────────────────────────────────────────────┤
+     │                                               │
+     ▼                                               ▼
+Phase 7: Portfolio + Graduation ◄─────────────── Phase 8: Language Adapters
 ```
 
-**Critical Path**: Phase 3 → Phase 4 → Phase 5 → Phase 7
+**Critical Path**: Phase 5 → Phase 6 → Phase 7
 
 ---
 
@@ -417,10 +577,11 @@ Phase 8: Language Adapters
 | Schema changes break existing features | High | Migrations, feature flags, backward compatibility |
 | Content authoring bottleneck | Medium | Prioritize Developer role, template-based approach |
 | Sprint generation too slow | Medium | Pre-generate next sprint, background processing |
+| Phase transition UX confusing | Medium | Clear stepper, contextual help, phase checklists |
 
 ---
 
-## What's Already Built (Phases 0-2)
+## What's Already Built (Phases 0-4)
 
 | Component | Status | Location |
 |-----------|--------|----------|
@@ -428,35 +589,28 @@ Phase 8: Language Adapters
 | Catalogue service | ✅ | `shared/catalogue/service.ts` |
 | Database tables (competencies, catalogue, role_adapters) | ✅ | `shared/schema.ts` |
 | Adapter service | ✅ | `server/services/adapter-service.ts` |
-| Adapter hooks | ✅ | `client/src/hooks/use-adapters.ts` |
-| Intern onboarding (Days 1-2) | ✅ | `client/src/components/simulation/intern-onboarding-session.tsx` |
-| Workspace orchestrator | ✅ | `server/services/workspace-orchestrator.ts` |
-| Interview simulator | ✅ | `client/src/pages/interview-simulator.tsx` |
-| Job board & applications | ✅ | Various |
+| Sprint schema (sprints, tickets, ceremonies) | ✅ | `shared/schema.ts` |
+| Sprint Hub (Kanban board) | ✅ | `client/src/pages/sprint-hub.tsx` |
+| Journey Dashboard | ✅ | `client/src/pages/journey-dashboard.tsx` |
+| Ceremony Session component | ✅ | `client/src/components/simulation/ceremony-session.tsx` |
+| Git workflow simulation | ✅ | `client/src/lib/git-simulator.ts` |
+| Sprint generator service | ✅ | `server/services/sprint-generator-service.ts` |
 
-## What Needs to Be Built (Phases 3-8)
+## What Needs to Be Built (Phase 5)
 
-| Component | Phase | Priority |
-|-----------|-------|----------|
-| Journey arc schema | 3 | P0 |
-| Sprint schema | 3 | P0 |
-| Project template schema | 3 | P0 |
-| Progression path schema | 3 | P0 |
-| Delta calculator | 3 | P0 |
-| Exit trigger logic | 3 | P0 |
-| Progress dashboard | 3 | P1 |
-| Sprint generator service | 4 | P0 |
-| Problem templates (20+) | 4 | P0 |
-| Soft skill templates (10+) | 4 | P0 |
-| Dynamic ceremony scripts | 4 | P1 |
-| Quality guardrails | 4 | P1 |
-| Journey dashboard UI | 5 | P0 |
-| Ceremony UI components | 5 | P0 |
-| Sprint board UI | 5 | P1 |
-| Multi-role content | 6 | P2 |
-| Final 1:1 UI | 7 | P0 |
-| Portfolio system | 7 | P1 |
-| Language adapters | 8 | P2 |
+| Component | Priority | Description |
+|-----------|----------|-------------|
+| `workspace_instances` schema | P0 | Track workspace per accepted offer |
+| `workspace_phase_events` schema | P0 | Track phase transitions |
+| Workspace state machine | P0 | Phase guards and transitions |
+| Workspace creation on offer accept | P0 | Trigger workspace instance creation |
+| PhaseStepperComponent | P0 | Visual phase indicator |
+| WorkspaceHeroCard | P0 | "Open Workspace" CTA |
+| OnboardingModule | P0 | Extract from intern-onboarding-session |
+| PlanningModule | P0 | New: Backlog review, goal setting |
+| Phase-gated navigation | P1 | Can't skip phases |
+| NextUpPanel | P1 | Show required actions |
+| Breadcrumb navigation | P1 | Journey → Workspace → Phase |
 
 ---
 
@@ -464,23 +618,23 @@ Phase 8: Language Adapters
 
 | File | Purpose |
 |------|---------|
-| `client/src/components/simulation/intern-onboarding-session.tsx` | Current workspace simulation (4k lines, to be modularized) |
-| `client/src/pages/workspace-journey.tsx` | Journey mode entry point |
-| `client/src/pages/workspace-practice.tsx` | Practice mode entry point |
-| `client/src/pages/interview-simulator.tsx` | Interview simulator |
+| `client/src/components/simulation/intern-onboarding-session.tsx` | Current onboarding (to be refactored into OnboardingModule) |
+| `client/src/pages/journey-dashboard.tsx` | Journey dashboard (needs phase stepper) |
+| `client/src/pages/sprint-hub.tsx` | Sprint execution UI (Kanban) |
+| `client/src/components/simulation/ceremony-session.tsx` | Ceremony chat UI |
 | `server/services/workspace-orchestrator.ts` | AI team member responses |
-| `shared/schema.ts` | Database schema (to be extended) |
+| `shared/schema.ts` | Database schema (needs workspace_instances) |
 
 ---
 
 ## Design Decisions
 
-1. **Curriculum-Agnostic**: Not coupled to specific programs (42 London, bootcamps)
-2. **Competency-Based**: Progress based on demonstrated skills, not time
-3. **Self-Paced**: No fixed timelines; adapts to learner speed
-4. **Unified Architecture**: Same patterns for both simulators
-5. **Role Adapters**: Technical problems change per role, soft problems stay universal
-6. **Language Adapters**: Same competencies, different technical contexts
+1. **Phase-Based, Not Day-Based**: Workspace progression follows Scrum phases, not arbitrary days
+2. **Onboarding is One-Time**: Happens once per workspace, before first sprint
+3. **Sprint Cycle is Repeatable**: Planning → Execution → Review → Retro cycles
+4. **Explicit Planning Outputs**: Sprint Goal and Backlog are captured artifacts
+5. **Phase Gates**: Can't skip phases; must complete current before advancing
+6. **Ceremony Integration**: Standups during Execution, Review/Retro are phase transitions
 
 ---
 
@@ -491,150 +645,14 @@ Phase 8: Language Adapters
 - Employers value the credential
 - Works across different training programs
 - Supports multiple career tracks
+- Users understand their current phase and next actions
+- Phase completion rates are high (low drop-off)
 
 ---
 
-## Future: Enterprise Self-Serve Layer (Phase 8+)
+## Future: Enterprise Self-Serve Layer (Phase 9+)
 
 ### Vision
 Enable B2B clients (bootcamps, coding schools, universities) to configure custom curricula through a self-serve portal, with simulations automatically assembled from the catalogue.
 
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                 ENTERPRISE CONFIGURATION LAYER                   │
-│               (B2B Client Self-Serve Portal)                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Enterprise Client (e.g., 42 London, Bootcamp X)                │
-│                        ↓                                        │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  REQUIREMENTS INPUT                                      │   │
-│  │                                                          │   │
-│  │  1. Select Role Track    [Developer ▼]                   │   │
-│  │  2. Select Language      [C/C++ ▼]                       │   │
-│  │  3. Target Level         [Intern → Junior ▼]             │   │
-│  │  4. Competency Focus     [☑ Debugging] [☑ Git] [☐ CI/CD] │   │
-│  │  5. Duration             [4 weeks ▼]                     │   │
-│  │  6. Custom Scenarios     [Upload JSON] or [Use Defaults] │   │
-│  │                                                          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                        ↓                                        │
-│            SIMULATION BUILDER (Background)                      │
-│                        ↓                                        │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  AUTO-GENERATED CURRICULUM                               │   │
-│  │                                                          │   │
-│  │  Week 1: Onboarding Arc (from catalogue)                 │   │
-│  │  Week 2: First Sprint Arc (adapted for C/C++)            │   │
-│  │  Week 3: Code Review + Debugging Focus                   │   │
-│  │  Week 4: Final Evaluation                                │   │
-│  │                                                          │   │
-│  │  [Preview] [Edit] [Deploy to Cohort]                     │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                             ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    SIMULATION ENGINE                             │
-│                                                                 │
-│  Catalogue → Adapters → Assembled Experience                    │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Enterprise Configuration Model
-
-```json
-{
-  "enterprise": "42 London",
-  "cohort": "2025 Intake",
-  "track": {
-    "role": "developer",
-    "language": "c_cpp",
-    "progression": ["intern", "junior"]
-  },
-  "competencies": {
-    "required": ["memory_management", "debugging", "git", "code_review"],
-    "optional": ["testing", "documentation"]
-  },
-  "structure": {
-    "duration_weeks": 12,
-    "arcs": [
-      { "name": "Foundations", "weeks": 4, "focus": "onboarding" },
-      { "name": "Core Skills", "weeks": 6, "focus": "sprints" },
-      { "name": "Ownership", "weeks": 2, "focus": "capstone" }
-    ]
-  },
-  "custom_scenarios": [
-    { "id": "42-memory-leak", "type": "technical", "source": "uploaded" }
-  ]
-}
-```
-
-### Enterprise Features (Future)
-
-| Feature | Description |
-|---------|-------------|
-| **Cohort Management** | Create cohorts, assign curricula, track progress |
-| **Custom Scenario Editor** | GUI for enterprises to create their own scenarios |
-| **AI Scenario Generation** | "Generate a debugging scenario about memory leaks" |
-| **White-Label** | Enterprise branding on student-facing UI |
-| **Analytics Dashboard** | Cohort performance, competency gaps, completion rates |
-| **LMS Integration** | Connect to Canvas, Moodle, etc. |
-| **API Access** | Programmatic curriculum configuration |
-
-### B2B Scaling Model
-
-```
-edmap Core Platform
-        ↓
-┌───────────────────────────────────────────────────────────────┐
-│                    ENTERPRISE LAYER                            │
-│                                                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
-│  │ 42 London   │  │ Bootcamp X  │  │ Bootcamp Y  │  ...      │
-│  │             │  │             │  │             │           │
-│  │ C/C++ Focus │  │ JS Focus    │  │ Python Focus│           │
-│  │ 12 weeks    │  │ 8 weeks     │  │ 16 weeks    │           │
-│  └─────────────┘  └─────────────┘  └─────────────┘           │
-│                                                               │
-│  Each enterprise configures their own curriculum              │
-│  System assembles from shared catalogue                       │
-│  Progress tracked per cohort                                  │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-```
-
-### Why Current Architecture Enables This
-
-| Architecture Element | How It Supports Enterprise |
-|---------------------|---------------------------|
-| **Catalogue** | Content is modular, queryable, filterable |
-| **Role Adapters** | Switch between Developer/PM/QA without rebuilding |
-| **Language Adapters** | Same scenarios, different tech context |
-| **Level Adapters** | Calibrate for intern/junior/mid/senior |
-| **Competency Tags** | Filter by what enterprise wants to teach |
-| **JSON-based Scenarios** | Enterprises can upload custom content |
-| **Progression Engine** | Track students against competency rubrics |
-
----
-
-## Updated Timeline (Including Enterprise)
-
-| Phase | Duration | Focus |
-|-------|----------|-------|
-| Phase 0 | 1-2 weeks | Extract content to JSON |
-| Phase 1 | 2-3 weeks | Shared schema, catalogue API |
-| Phase 2 | 2-3 weeks | Role + Level adapters |
-| Phase 3 | 2 weeks | Progression engine |
-| Phase 4 | 3-4 weeks | New UX |
-| Phase 5 | 2-3 weeks | Multi-role expansion |
-| Phase 6 | 2 weeks | Portfolio + credentialing |
-| Phase 7 | 1-2 weeks | Language adapters |
-| **Phase 8** | 3-4 weeks | **Enterprise self-serve portal** |
-| **Phase 9** | 2-3 weeks | **Cohort management + analytics** |
-| **Phase 10** | 2-3 weeks | **LMS integrations + API** |
-
-**Total with Enterprise**: ~25-35 weeks
+(Enterprise layer details remain as previously documented)
