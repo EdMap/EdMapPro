@@ -363,7 +363,7 @@ export function PlanningModule({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { data: sessionState, isLoading } = useQuery<PlanningSessionState>({
-    queryKey: ['/api/workspaces', workspaceId, 'planning'],
+    queryKey: [`/api/workspaces/${workspaceId}/planning`],
   });
   
   const initSession = useMutation({
@@ -372,7 +372,7 @@ export function PlanningModule({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
     }
   });
   
@@ -382,7 +382,7 @@ export function PlanningModule({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
       setInputMessage('');
     }
   });
@@ -396,7 +396,7 @@ export function PlanningModule({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
     }
   });
   
@@ -406,7 +406,7 @@ export function PlanningModule({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
     }
   });
   
@@ -416,9 +416,9 @@ export function PlanningModule({
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
       if (data.completed) {
-        onComplete(sessionState?.session.goalStatement || '', sessionState?.session.selectedItems || []);
+        onComplete(sessionState?.session.goalStatement || '', (sessionState?.session.selectedItems as string[]) || []);
       }
     }
   });
@@ -476,7 +476,7 @@ export function PlanningModule({
     }
   };
   
-  if (isLoading || !sessionState) {
+  if (isLoading || !sessionState || !sessionState.session) {
     return (
       <div className="h-full p-6" data-testid="planning-module-loading">
         <div className="space-y-4">
@@ -491,8 +491,14 @@ export function PlanningModule({
     );
   }
   
-  const { session, messages, backlogItems, capacity, adapterConfig } = sessionState;
-  const selectedItems = session.selectedItems || [];
+  const { 
+    session, 
+    messages = [], 
+    backlogItems = [], 
+    capacity = 20, 
+    adapterConfig = { role: role, level: 'intern', facilitator: 'ai', showLearningObjectives: true, showKnowledgeCheck: false, canSkipPhases: false }
+  } = sessionState;
+  const selectedItems = (session.selectedItems as string[] | null) || [];
   
   return (
     <div className="h-full flex flex-col" data-testid="planning-module">
