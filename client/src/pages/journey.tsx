@@ -307,20 +307,20 @@ function CelebrationModal({
   company,
   job,
   startDate,
-  onStartOnboarding
+  onGoToWorkspace
 }: {
   isOpen: boolean;
   onClose: () => void;
   company: { name: string; logo: string | null };
   job: { title: string; role: string };
   startDate: string;
-  onStartOnboarding: () => void;
+  onGoToWorkspace: () => void;
 }) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg text-center" data-testid="dialog-celebration">
         <div className="py-6">
-          {/* Confetti/celebration visual */}
+          {/* Celebration visual */}
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-100 to-emerald-200 dark:from-green-900/30 dark:to-emerald-800/30 animate-pulse" />
@@ -335,10 +335,10 @@ function CelebrationModal({
           {/* Celebration text */}
           <div className="space-y-2 mb-6">
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-              Offer Accepted! 🎉
+              Congratulations! 🎉
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400">
-              Welcome to <span className="font-semibold text-primary">{company.name}</span>
+              You've joined <span className="font-semibold text-primary">{company.name}</span>
             </p>
             <p className="text-gray-500 dark:text-gray-500">
               {job.title}
@@ -353,22 +353,23 @@ function CelebrationModal({
             </p>
           </div>
           
-          {/* CTA */}
+          {/* Simple close button */}
           <Button 
-            onClick={onStartOnboarding}
+            onClick={onClose}
             size="lg"
-            className="w-full h-14 text-lg font-semibold bg-green-600 hover:bg-green-700"
-            data-testid="button-start-onboarding"
+            className="w-full"
+            data-testid="button-close-celebration"
           >
-            <Rocket className="h-5 w-5 mr-2" />
-            Start Onboarding Journey
+            Got it
           </Button>
           
           <button
-            onClick={onClose}
-            className="mt-4 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            onClick={onGoToWorkspace}
+            className="mt-4 text-sm text-primary hover:underline flex items-center justify-center gap-1 mx-auto"
+            data-testid="link-go-to-workspace"
           >
-            I'll start later
+            Go to your workspace
+            <ArrowRight className="h-3 w-3" />
           </button>
         </div>
       </DialogContent>
@@ -652,12 +653,12 @@ function ApplicationDetail({
     }
   };
 
-  const handleStartOnboarding = () => {
+  const handleGoToWorkspace = () => {
     setCelebrationModal(false);
     if (workspaceId) {
       navigate(`/workspace/${workspaceId}`);
     } else {
-      navigate('/journey-dashboard');
+      navigate('/workspace/journey');
     }
   };
   
@@ -785,7 +786,7 @@ function ApplicationDetail({
         company={application.job.company}
         job={{ title: application.job.title, role: application.job.role }}
         startDate={application.offerDetails?.startDate || 'TBD'}
-        onStartOnboarding={handleStartOnboarding}
+        onGoToWorkspace={handleGoToWorkspace}
       />
     </div>
   );
