@@ -63,6 +63,26 @@ interface PlanningSession {
   knowledgeCheckPassed: boolean;
 }
 
+type EngagementMode = 'shadow' | 'guided' | 'active' | 'facilitator';
+type PhaseEngagement = 'observe' | 'respond' | 'lead';
+
+interface LevelEngagement {
+  mode: EngagementMode;
+  autoStartConversation: boolean;
+  teamTalkRatio: number;
+  phaseEngagement: {
+    context: PhaseEngagement;
+    discussion: PhaseEngagement;
+    commitment: PhaseEngagement;
+  };
+  promptSuggestions?: {
+    context: string[];
+    discussion: string[];
+    commitment: string[];
+  };
+  autoStartMessage: string;
+}
+
 interface PlanningSessionState {
   session: PlanningSession;
   messages: PlanningMessage[];
@@ -75,6 +95,7 @@ interface PlanningSessionState {
     showLearningObjectives: boolean;
     showKnowledgeCheck: boolean;
     canSkipPhases: boolean;
+    engagement: LevelEngagement;
   };
 }
 
@@ -491,14 +512,33 @@ export function PlanningModule({
     );
   }
   
+  const defaultEngagement: LevelEngagement = {
+    mode: 'guided',
+    autoStartConversation: true,
+    teamTalkRatio: 0.5,
+    phaseEngagement: { context: 'respond', discussion: 'respond', commitment: 'respond' },
+    autoStartMessage: 'Good morning team! Let\'s get started with our sprint planning.'
+  };
+  
   const { 
     session, 
     messages = [], 
     backlogItems = [], 
     capacity = 20, 
-    adapterConfig = { role: role, level: 'intern', facilitator: 'ai', showLearningObjectives: true, showKnowledgeCheck: false, canSkipPhases: false }
+    adapterConfig = { 
+      role: role, 
+      level: 'intern', 
+      facilitator: 'ai', 
+      showLearningObjectives: true, 
+      showKnowledgeCheck: false, 
+      canSkipPhases: false,
+      engagement: defaultEngagement
+    }
   } = sessionState;
   const selectedItems = (session.selectedItems as string[] | null) || [];
+  const engagement = adapterConfig.engagement || defaultEngagement;
+  const currentPhaseEngagement = engagement.phaseEngagement[session.currentPhase as keyof typeof engagement.phaseEngagement] || 'respond';
+  const promptSuggestions = engagement.promptSuggestions?.[session.currentPhase as keyof typeof engagement.promptSuggestions] || [];
   
   return (
     <div className="h-full flex flex-col" data-testid="planning-module">
@@ -539,13 +579,37 @@ export function PlanningModule({
           <div className="flex-1 overflow-hidden p-4">
             <Card className="h-full flex flex-col">
               <CardHeader className="pb-2 border-b">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Team Discussion
+                <CardTitle className="text-base flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Team Discussion
+                  </div>
+                  {engagement.mode === 'shadow' && (
+                    <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                      Observing
+                    </Badge>
+                  )}
+                  {engagement.mode === 'guided' && (
+                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                      Guided
+                    </Badge>
+                  )}
+                  {engagement.mode === 'active' && (
+                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                      Active
+                    </Badge>
+                  )}
+                  {engagement.mode === 'facilitator' && (
+                    <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                      Facilitating
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
-                  {session.currentPhase === 'context' && "Priya is presenting sprint priorities"}
-                  {session.currentPhase === 'discussion' && "Discuss items and estimate as a team"}
+                  {session.currentPhase === 'context' && currentPhaseEngagement === 'observe' && "Watch how Priya presents priorities - you'll be asked for questions later"}
+                  {session.currentPhase === 'context' && currentPhaseEngagement !== 'observe' && "Priya is presenting sprint priorities"}
+                  {session.currentPhase === 'discussion' && currentPhaseEngagement === 'observe' && "Observe how the team discusses and estimates together"}
+                  {session.currentPhase === 'discussion' && currentPhaseEngagement !== 'observe' && "Discuss items and estimate as a team"}
                   {session.currentPhase === 'commitment' && "Finalize the sprint commitment"}
                 </CardDescription>
               </CardHeader>
@@ -554,8 +618,17 @@ export function PlanningModule({
                   {messages.length === 0 && session.currentPhase === 'context' && (
                     <div className="text-center py-8 text-muted-foreground">
                       <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Send a message to start the planning discussion</p>
-                      <p className="text-sm mt-1">Try: "Hi team, ready to plan the sprint!"</p>
+                      {engagement.mode === 'shadow' ? (
+                        <>
+                          <p>The meeting is about to start...</p>
+                          <p className="text-sm mt-1">Priya will kick things off. Feel free to observe!</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>The meeting is about to start...</p>
+                          <p className="text-sm mt-1">Say hello to join the discussion!</p>
+                        </>
+                      )}
                     </div>
                   )}
                   {messages.map((msg) => (
@@ -564,12 +637,29 @@ export function PlanningModule({
                   <div ref={messagesEndRef} />
                 </ScrollArea>
               </CardContent>
-              <div className="p-4 border-t">
+              <div className="p-4 border-t space-y-2">
+                {promptSuggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {promptSuggestions.map((suggestion, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => setInputMessage(suggestion)}
+                        disabled={sendMessage.isPending}
+                        data-testid={`button-suggestion-${index}`}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Input
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Type your message..."
+                    placeholder={engagement.mode === 'shadow' ? "Type a question or observation..." : "Type your message..."}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     disabled={sendMessage.isPending}
                     data-testid="input-chat-message"

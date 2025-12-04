@@ -76,6 +76,7 @@ export interface SprintPlanningAdapter {
   uiControls: PlanningUIControls;
   difficulty: PlanningDifficulty;
   evaluation: PlanningEvaluation;
+  engagement: LevelEngagement;
   learningObjectives: PlanningLearningObjectives[];
 }
 
@@ -93,6 +94,26 @@ export interface RolePlanningAdapter {
   learningObjectives: PlanningLearningObjectives[];
 }
 
+export type EngagementMode = 'shadow' | 'guided' | 'active' | 'facilitator';
+export type PhaseEngagement = 'observe' | 'respond' | 'lead';
+
+export interface LevelEngagement {
+  mode: EngagementMode;
+  autoStartConversation: boolean;
+  teamTalkRatio: number;
+  phaseEngagement: {
+    context: PhaseEngagement;
+    discussion: PhaseEngagement;
+    commitment: PhaseEngagement;
+  };
+  promptSuggestions?: {
+    context: string[];
+    discussion: string[];
+    commitment: string[];
+  };
+  autoStartMessage: string;
+}
+
 export interface LevelPlanningOverlay {
   level: Level;
   displayName: string;
@@ -101,6 +122,7 @@ export interface LevelPlanningOverlay {
     guidanceLevel: string;
     toneAdjustment: string;
   };
+  engagement: LevelEngagement;
   uiOverrides: Partial<PlanningUIControls>;
   difficultyOverrides: Partial<PlanningDifficulty>;
   evaluationOverrides: Partial<PlanningEvaluation>;

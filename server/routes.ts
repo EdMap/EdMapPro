@@ -10,6 +10,7 @@ import { openaiService } from "./services/openai";
 import { workspaceOrchestrator } from "./services/workspace-orchestrator";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
+import { getSprintPlanningAdapter } from "@shared/adapters/planning";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -3033,8 +3034,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if active session exists
       let session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      let isNewSession = false;
       
       if (!session) {
+        isNewSession = true;
         // Create new session with workspace role/level
         session = await storage.createPlanningSession({
           workspaceId,
@@ -3047,6 +3050,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: 'active',
           knowledgeCheckPassed: false,
         });
+        
+        // Get adapter to auto-start conversation with welcome message
+        const adapter = getSprintPlanningAdapter(session.role, session.level);
+        
+        if (adapter.engagement?.autoStartConversation && adapter.engagement?.autoStartMessage) {
+          // Auto-insert Priya's welcome message
+          await storage.createPlanningMessage({
+            sessionId: session.id,
+            sender: 'Priya',
+            senderRole: 'Product Manager',
+            message: adapter.engagement.autoStartMessage,
+            phase: 'context',
+            isUser: false,
+          });
+        }
       }
       
       const state = await storage.getPlanningSessionState(workspaceId);
@@ -3108,7 +3126,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Get planning adapter for AI response
-      const { getSprintPlanningAdapter } = require('@shared/adapters/planning');
       const adapter = getSprintPlanningAdapter(session.role, session.level);
       
       // Get appropriate phase prompt

@@ -10,6 +10,7 @@ import type {
   SprintPlanningAdapter, 
   RolePlanningAdapter, 
   LevelPlanningOverlay,
+  LevelEngagement,
   PlanningUIControls,
   PlanningDifficulty,
   PlanningEvaluation,
@@ -69,6 +70,18 @@ const defaultEvaluation: PlanningEvaluation = {
   },
   passingThreshold: 60,
   requiredInteractions: 3
+};
+
+const defaultEngagement: LevelEngagement = {
+  mode: 'guided',
+  autoStartConversation: true,
+  teamTalkRatio: 0.5,
+  phaseEngagement: {
+    context: 'respond',
+    discussion: 'respond',
+    commitment: 'respond'
+  },
+  autoStartMessage: 'Good morning team! Let\'s get started with our sprint planning.'
 };
 
 function buildSystemPrompt(
@@ -133,6 +146,8 @@ export function getSprintPlanningAdapter(role: Role, level: Level): SprintPlanni
     facilitator: roleAdapter.prompts.facilitator
   };
   
+  const engagement: LevelEngagement = levelOverlay.engagement || defaultEngagement;
+  
   return {
     metadata: {
       role,
@@ -145,6 +160,7 @@ export function getSprintPlanningAdapter(role: Role, level: Level): SprintPlanni
     uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),
     difficulty: mergeDifficulty(roleAdapter.difficulty, levelOverlay.difficultyOverrides),
     evaluation: mergeEvaluation(roleAdapter.evaluation, levelOverlay.evaluationOverrides),
+    engagement,
     learningObjectives: roleAdapter.learningObjectives
   };
 }

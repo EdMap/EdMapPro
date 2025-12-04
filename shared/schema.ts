@@ -1535,6 +1535,27 @@ export type PlanningSession = typeof planningSessions.$inferSelect;
 export type InsertPlanningMessage = z.infer<typeof insertPlanningMessageSchema>;
 export type PlanningMessage = typeof planningMessages.$inferSelect;
 
+// Engagement mode types for planning
+export type EngagementMode = 'shadow' | 'guided' | 'active' | 'facilitator';
+export type PhaseEngagement = 'observe' | 'respond' | 'lead';
+
+export interface LevelEngagement {
+  mode: EngagementMode;
+  autoStartConversation: boolean;
+  teamTalkRatio: number;
+  phaseEngagement: {
+    context: PhaseEngagement;
+    discussion: PhaseEngagement;
+    commitment: PhaseEngagement;
+  };
+  promptSuggestions?: {
+    context: string[];
+    discussion: string[];
+    commitment: string[];
+  };
+  autoStartMessage: string;
+}
+
 // Planning session state for API responses
 export interface PlanningSessionState {
   session: PlanningSession;
@@ -1556,6 +1577,7 @@ export interface PlanningSessionState {
     showLearningObjectives: boolean;
     showKnowledgeCheck: boolean;
     canSkipPhases: boolean;
+    engagement?: LevelEngagement;
   };
 }
 

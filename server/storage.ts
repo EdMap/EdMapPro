@@ -56,6 +56,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
+import { getSprintPlanningAdapter } from "@shared/adapters/planning";
 
 export interface IStorage {
   // User operations
@@ -3828,6 +3829,8 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       }
     ];
 
+    const adapter = getSprintPlanningAdapter(session.role, session.level);
+
     return {
       session,
       messages,
@@ -3840,6 +3843,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         showLearningObjectives: session.level === 'intern' || session.level === 'junior',
         showKnowledgeCheck: session.level === 'intern',
         canSkipPhases: session.level === 'mid' || session.level === 'senior',
+        engagement: adapter.engagement,
       }
     };
   }

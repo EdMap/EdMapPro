@@ -46,15 +46,23 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
     - Intern: Heavy guidance, knowledge checks, AI nudges, no skipping
     - Junior: Moderate guidance, some autonomy, optional checks
     - Senior: Minimal guidance, complex scenarios, AI pushback
+  - **Level-Based Engagement System**: Differentiated interaction patterns per level:
+    - Engagement modes: `shadow` (observe), `guided` (prompted), `active` (contribute), `facilitator` (lead)
+    - Phase engagement: `observe`, `respond`, or `lead` per phase
+    - Auto-start conversation: PM (Priya) automatically kicks off planning with level-appropriate welcome
+    - Team talk ratio: Controls AI vs user speaking balance (85% AI for intern, 30% for senior)
+    - Prompt suggestions: Optional scaffolding chips for interns/juniors
+    - UI badges show current engagement mode (Observing, Guided, Active, Facilitating)
   - **Composable Adapter Architecture**:
     - Role adapters in `shared/adapters/planning/roles/` (base behavior per role)
-    - Level overlays in `shared/adapters/planning/levels/` (difficulty modifiers)
+    - Level overlays in `shared/adapters/planning/levels/` (difficulty modifiers + engagement)
     - Factory merges role + level: `getSprintPlanningAdapter(role, level)`
   - **SprintPlanningAdapter Interface**:
     - `prompts`: Role-specific system prompts and AI persona configuration
     - `uiControls`: Panel visibility, skip permissions, learning objectives
     - `difficulty`: Ticket complexity, ambiguity, conflict scenarios
     - `evaluation`: Rubric weights and passing thresholds
+    - `engagement`: Level-based interaction patterns and auto-start settings
   - **Hybrid UI**: Chat-based team discussion with phase progress indicator
   - **Data Model**: `planningSessions` table tracking phase progress, selected items, goal, commitment; `planningMessages` for conversation history
 - **Narrative Progression System (Phase 3)**: A dynamic journey system with configurable progression paths (Intern→Junior, Junior→Mid, Mid→Senior), story arcs (Onboarding, Sprints, Graduation), and competency tracking. Features include:

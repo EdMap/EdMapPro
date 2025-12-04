@@ -1,8 +1,9 @@
 /**
  * Mid-Level Planning Overlay
  * 
- * Low scaffolding, moderate complexity, some pushback scenarios.
- * AI expects confident participation and technical leadership.
+ * Active contributor mode - expected to drive estimation and challenge trade-offs.
+ * PM sets context briefly, then mid-level leads technical discussion.
+ * Low scaffolding, peer-level interaction with some pushback.
  */
 
 import type { LevelPlanningOverlay } from '../types';
@@ -13,14 +14,29 @@ export const midLevelOverlay: LevelPlanningOverlay = {
   scaffoldingLevel: 'low',
   
   promptModifiers: {
-    guidanceLevel: `This is a mid-level professional with solid experience.
-Expect them to participate confidently and contribute to discussions.
-Present moderately complex scenarios with some ambiguity.
-Encourage them to mentor others and share their expertise.`,
+    guidanceLevel: `This is a mid-level professional who should DRIVE the technical discussion.
+Priya sets context, then expects the mid-level to lead estimation and raise concerns.
+Other team members (Marcus, Alex) respond to the mid-level's input.
+Challenge their assumptions when appropriate - they should defend their estimates.`,
     
-    toneAdjustment: `Be professional and collaborative.
-Expect substantive contributions and clear communication.
-Provide gentle pushback on assumptions when appropriate.`
+    toneAdjustment: `Be professional and peer-level. Keep explanations concise.
+Push back when estimates seem off or scope unclear.
+Expect them to proactively identify risks and dependencies.
+Treat disagreements as collaborative problem-solving.`
+  },
+  
+  engagement: {
+    mode: 'active',
+    autoStartConversation: true,
+    teamTalkRatio: 0.45,
+    phaseEngagement: {
+      context: 'respond',
+      discussion: 'lead',
+      commitment: 'lead'
+    },
+    autoStartMessage: `Hey team, let's get into planning. I'll quickly share what's on the priority list from stakeholders, but I want us to dig into the details together.
+
+Here's what we're looking at...`
   },
   
   uiOverrides: {
