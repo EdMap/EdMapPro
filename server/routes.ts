@@ -1033,17 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:userId/applications", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const applications = await storage.getJobApplications(userId);
-      
-      // Attach job and company info
-      const applicationsWithDetails = await Promise.all(
-        applications.map(async (app) => {
-          const jobWithCompany = await storage.getJobPostingWithCompany(app.jobPostingId);
-          const stages = await storage.getApplicationStages(app.id);
-          return { ...app, job: jobWithCompany, stages };
-        })
-      );
-      
+      const applicationsWithDetails = await storage.getJobApplicationsWithDetails(userId);
       res.json(applicationsWithDetails);
     } catch (error) {
       res.status(500).json({ message: "Failed to get applications" });

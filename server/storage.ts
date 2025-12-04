@@ -136,6 +136,7 @@ export interface IStorage {
   
   // Job application operations
   getJobApplications(userId: number): Promise<JobApplication[]>;
+  getJobApplicationsWithDetails(userId: number): Promise<Array<JobApplication & { job: JobPosting & { company: Company }, stages: ApplicationStage[] }>>;
   getJobApplication(id: number): Promise<JobApplication | undefined>;
   createJobApplication(application: InsertJobApplication): Promise<JobApplication>;
   updateJobApplication(id: number, updates: Partial<JobApplication>): Promise<JobApplication | undefined>;
@@ -1628,6 +1629,48 @@ export class MemStorage implements IStorage {
       .where(eq(jobApplications.userId, userId))
       .orderBy(desc(jobApplications.createdAt));
     return results;
+  }
+
+  async getJobApplicationsWithDetails(userId: number): Promise<Array<JobApplication & { job: JobPosting & { company: Company }, stages: ApplicationStage[] }>> {
+    const applications = await db.select().from(jobApplications)
+      .where(eq(jobApplications.userId, userId))
+      .orderBy(desc(jobApplications.createdAt));
+    
+    if (applications.length === 0) {
+      return [];
+    }
+
+    const applicationIds = applications.map(app => app.id);
+    const jobPostingIds = applications.map(app => app.jobPostingId);
+
+    const [jobPostingsResults, stagesResults] = await Promise.all([
+      db.select().from(jobPostings)
+        .innerJoin(companies, eq(jobPostings.companyId, companies.id))
+        .where(inArray(jobPostings.id, jobPostingIds)),
+      db.select().from(applicationStages)
+        .where(inArray(applicationStages.applicationId, applicationIds))
+        .orderBy(applicationStages.stageOrder)
+    ]);
+
+    const jobPostingsMap = new Map(
+      jobPostingsResults.map(result => [
+        result.job_postings.id,
+        { ...result.job_postings, company: result.companies }
+      ])
+    );
+
+    const stagesByApplicationId = new Map<number, ApplicationStage[]>();
+    for (const stage of stagesResults) {
+      const stages = stagesByApplicationId.get(stage.applicationId) || [];
+      stages.push(stage);
+      stagesByApplicationId.set(stage.applicationId, stages);
+    }
+
+    return applications.map(app => ({
+      ...app,
+      job: jobPostingsMap.get(app.jobPostingId)!,
+      stages: stagesByApplicationId.get(app.id) || []
+    }));
   }
 
   async getJobApplication(id: number): Promise<JobApplication | undefined> {

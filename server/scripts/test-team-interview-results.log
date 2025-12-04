@@ -1,0 +1,348 @@
+
+████████████████████████████████████████████████████████████████████████████████
+TEAM INTERVIEW QUALITY TEST
+Candidate: Arsen Tadevosyan (42 London Student)
+Position: Software Engineering Intern at NovaPay
+Interviewers: Marcus (Engineering Manager) & Sarah (Tech Lead)
+████████████████████████████████████████████████████████████████████████████████
+
+================================================================================
+TEAM INTERVIEW - ITERATION 1
+================================================================================
+
+[Starting team interview with Marcus and Sarah...]
+
+Job journey data already exists in database, skipping seed...
+Workspace data already exists in database, skipping seed...
+[Team Interview] Starting with settings: {
+  experienceLevel: 'intern',
+  personas: [ 'Marcus', 'Sarah' ],
+  maxQuestions: 8
+}
+[Team Interview] Question backlog: {
+  total: 8,
+  byCategory: { learning: 3, collaboration: 2, technical: 2, curiosity: 1 }
+}
+[Sarah - Greeting]: {"messages":[{"personaId":"peer_engineer","content":"Hi Arsen, I'm Marcus, a Software Engineer at NovaPay, and I'll be leading your interview today. I'm excited to learn more about you and explore how you can contribute to our team. I'm joined by my colleague Sarah, our Tech Lead, and now I'll let her introduce herself."},{"personaId":"tech_lead","content":"Hi Arsen, it's lovely to meet you. I'm Sarah, a Tech Lead here at NovaPay, and I'm really looking forward to chatting with you today. Could you start by telling us a bit about yourself and what interested you in this internship opportunity?"}]}
+[CANDIDATE]: "Hello Sarah, it's great to meet you both. I'm Arsen, and I'm excited to be here today. As a 42 London student, I'm in the early stages of my programming journey, and I'm eager to learn from experienced professionals like yourselves - I'm particularly drawn to NovaPay's innovative approach and the opportunity to work with a talented team to tackle real-world challenges."
+
+[Sarah - Q1]: When you're learning something completely new - like a framework or language you've never used - how do you typically approach it?
+[CANDIDATE] (vague): I tend to break down new things into smaller components, try to grasp the basics, and then look up resources and join online communities to see what others have done, hoping to learn from their experiences and maybe get some guidance from more experienced folks.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'peer_engineer',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 1,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Marcus',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'learning_mindset'
+}
+[Marcus - Q2]: That's a great approach, Arsen! Breaking down complex topics into smaller components and seeking out resources and communities is a fantastic way to learn. I've definitely been in situations where I've spent hours trying to figure something out, only to realize I could have just asked for help. When you're working on a project and get stuck, what do you think is the most important thing to do next?
+[CANDIDATE] (asks_question): That's a really insightful question, Marcus. I'd love to understand what you mean by "getting stuck" on a project - are you referring to when I'm unsure of how to implement a specific feature, or when I'm facing a roadblock that's preventing me from making progress on the entire project?
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'peer_engineer',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 2,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Marcus',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 7,
+  criterion: 'learning_mindset'
+}
+[Marcus - Q3]: That's a great question to ask, Arsen! I love that you're thinking about what it means to be stuck on a project. For me, getting stuck can mean anything from not understanding a concept to not knowing how to implement a specific feature. When I'm in that situation, I try to break it down into smaller parts and see if I can find resources or communities that can help me out. But I'm curious, have you ever been in a situation where you were stuck on a problem for a while? How did you handle it?
+[CANDIDATE] (complete): I'd say, yes, I have been stuck on problems for a while, especially when working on complex projects like my minishell. In those situations, I usually try to take a step back, revisit the problem, and ask my peers at 42 for help. It's amazing how often just talking through the issue with someone who understands the concepts can help me see the solution more clearly.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'peer_engineer',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 3,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Marcus',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 7,
+  criterion: 'learning_mindset'
+}
+[Marcus - Q4]: That's really great to hear, Arsen! It's awesome that you're not afraid to ask for help when you're stuck. I think that's a really important skill for any engineer to have. When I was starting out, I used to get stuck on problems all the time, and it wasn't until I started asking for help that I really began to make progress. I'd like to explore this further - can you tell me about a time when you were stuck on a problem for a while? What did you do to get unstuck?
+[CANDIDATE] (complete): When I was working on the minishell project, I got stuck on implementing signal handling. I spent some time browsing through resources and online forums, but it wasn't until I joined a study group with my 42 peers that I was able to understand the concept better. With their help, I broke down the problem into smaller parts and implemented a workable solution.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'peer_engineer',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 4,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Forcing secondary persona turn - imbalance detected
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'learning_mindset'
+}
+[Sarah - Q5]: That's really great to hear, Arsen! It sounds like you have a good approach to getting unstuck, and it's awesome that you're not afraid to ask for help. I'd like to explore your curiosity a bit more. What would you want to learn in your first month with us?
+[CANDIDATE] (vague): I'm really excited about the opportunity to learn from your team and contribute to a project, but to be honest, I'm not sure what specific skills or areas I'd want to learn in my first month with you - I'd probably want to learn as much as possible about your workflow and get hands-on experience with your projects while also contributing to the team's discussions and problem-solving.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 5,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 7,
+  criterion: 'learning_mindset'
+}
+[Sarah - Q6]: That's really great to hear, Arsen! It sounds like you have a good attitude towards learning and contributing to the team. I'd like to explore your approach to collaboration a bit more. Can you tell me about a time when you had to work with someone else on a coding project? How did you handle communication and coordination?
+[CANDIDATE] (complete): Through 42's peer-learning model, I've had the opportunity to collaborate with fellow students on various projects, including our Common Core curriculum. In one instance, I worked with a teammate to implement a Unix-like system call in C, and we used GitHub for version control and communication. To handle coordination, we established a clear plan of action, assigned tasks, and regularly checked in with each other to ensure we were on the same page.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 6,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'collaboration'
+}
+[Sarah - Q7]: That's really great to hear, Arsen! It sounds like you have some good experience with collaboration and communication. I'd like to explore this further. Imagine you're working on a shared codebase with a teammate. How would you coordinate your work to avoid stepping on each other's toes?
+[CANDIDATE] (complete): I'd approach coordinating work with my teammate by suggesting we both create separate branches for our respective features, then regularly merge and review each other's code to ensure we're not introducing conflicts. I'd also propose we schedule bi-weekly meetings to discuss our progress, share concerns, and align on our shared goals. It's a great opportunity to learn from each other and improve our workflow together!
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 7,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'collaboration'
+}
+[Sarah - Q8]: That's really great to hear, Arsen! It sounds like you have a good approach to coordinating work with a teammate. I'd like to explore your technical skills a bit more. Can you walk me through how you'd approach debugging a simple issue, like a button on a webpage that doesn't work when clicked?
+[CANDIDATE] (vague): To be honest, I'd probably start by checking the button's event listener and making sure it's properly wired up, but I'm still learning about front-end debugging and could use some guidance on where to start troubleshooting.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 8,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'technical_foundations'
+}
+[Sarah - Q9]: That's a great start, Arsen! It's completely fine that you're still learning about front-end debugging. I think it's awesome that you're acknowledging areas where you need more guidance. Now, let's talk about code organization. How do you keep your code organized when working on a larger project?
+[CANDIDATE] (complete): Honestly, I'm still learning how to keep my code organized as I've mostly worked on smaller projects, but what I've found helpful is using Git for version control and breaking down larger projects into smaller modules. Through 42's peer-learning model, I've also learned the importance of commenting code and using clear variable names to make it easier for others (and myself) to understand the code later on.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 9,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 7,
+  criterion: 'technical_foundations'
+}
+[Sarah - Q10]: That's great to hear, Arsen! It's awesome that you're recognizing the importance of code organization and using tools like Git for version control. I think it's also really good that you're acknowledging areas where you need more guidance. Now, let's talk about problem-solving. If you were faced with a coding challenge that you'd never seen before, how would you approach it?
+[CANDIDATE] (complete): For me, the process of tackling an unknown challenge is about embracing the unknown and being willing to learn. At 42, I've learned to lean on my peers and the community for help when needed, and I'd definitely do the same in this scenario - asking for guidance, researching online resources, and experimenting with different approaches until I find a solution. It's a mindset that's allowed me to grow and improve so far, and I'm excited to continue developing this problem-solving approach in a professional setting.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 10,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'problem_solving'
+}
+[Sarah - Q11]: That's a great approach to problem-solving, Arsen! It's awesome that you're recognizing the importance of leaning on your peers and the community for help when needed. I think it's also really good that you're acknowledging the value of experimenting with different approaches until you find a solution. Now, I'd like to explore your curiosity and enthusiasm for learning a bit more. What would you want to learn in your first month with us?
+[CANDIDATE] (complete): I'm really excited about the opportunity to learn and grow with your team, and I think my first month would be a great time to dive deeper into areas like testing frameworks, continuous integration, and maybe even some advanced C++ features. I'd love to learn from experienced engineers and get hands-on experience with your tools and technologies. I'm aware that I'm still early in my career, and I'm eager to fill in knowledge gaps and develop a strong foundation for future growth.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 11,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'learning_mindset'
+}
+[Sarah - Q12]: That's great to hear, Arsen! It sounds like you have a strong desire to learn and grow with our team. I'm excited to see your enthusiasm for diving deeper into areas like testing frameworks and continuous integration. Now, I'd like to explore how you handle feedback and constructive criticism. Can you tell me about a time when you received feedback on your code or a project you worked on? How did you respond to it and what did you learn from the experience?
+[CANDIDATE] (partial): I recall a time when a peer reviewed my ft_printf project and pointed out a few issues with my implementation of variadic functions. I appreciated their feedback and was able to learn from it by refactoring my code to use a more efficient approach. From the experience, I took away the importance of seeking diverse perspectives and being open to constructive criticism in order to improve my coding skills.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 12,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'collaboration'
+}
+[Sarah - Q13]: That's great to hear, Arsen! It sounds like you have a good attitude towards receiving feedback and using it as an opportunity to learn and grow. I think it's awesome that you were able to take the feedback on your ft_printf project and use it to improve your coding skills. Now, I'd like to explore how you handle situations where you're stuck on a problem and can't seem to find a solution. What would you do if you were working on a project and hit a roadblock?
+[CANDIDATE] (partial): When I'm stuck on a problem, I usually try to break it down into smaller, more manageable parts, and then start researching online or asking my peers for help. I think it's really valuable to take a step back, recharge, and come back to the problem with fresh eyes, but I'm still working on developing a more systematic approach to debugging and troubleshooting - I tend to rely on intuition and trial-and-error, but I know I need to develop a more structured problem-solving strategy, especially when working on complex systems like the minishell project.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'tech_lead',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 13,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Sarah',
+  actionType: 'hand_off',
+  nextPersona: 'Marcus',
+  score: 8,
+  criterion: 'problem_solving'
+}
+[Team Interview] Handoff to: undefined
+[Team Interview] Detected address to: Marcus - generating immediate response
+[Sarah - Q14]: That's a great approach to handling roadblocks, Arsen! It's awesome that you're recognizing the importance of breaking down problems into smaller parts and seeking help when needed. I think it's also really good that you're aware of the need to develop a more systematic approach to debugging and troubleshooting. Marcus, did you want to jump in on collaboration and how we handle similar situations as a team?
+[Marcus - Follow-up]: Hey Arsen, I really appreciate your honesty about still developing a more systematic approach to debugging and troubleshooting. I totally get it - when I started, I spent hours stuck on a bug before asking for help. It's completely normal to not have all the answers, and I think it's great that you're recognizing the importance of seeking help when you need it. Can you tell me more about what you think would make it easier for you to ask for help when you're stuck on a problem? Is there anything that you've found helpful in your previous experiences, like a particular resource or support system?
+[CANDIDATE] (complete): I've found that having an open communication channel with my peers really helps, like how we're doing now, where we can bounce ideas off each other and share resources. At 42, I've learned to be proactive in asking for help early on, even if it feels uncomfortable, because I know that it's a normal part of the learning process and that everyone has been there. It's about taking the initiative to ask for help, rather than getting stuck for hours.
+
+[Telemetry] Chain activation: {
+  chainType: 'team_interview',
+  experienceLevel: 'intern',
+  activePersona: 'peer_engineer',
+  mode: 'practice',
+  sessionId: 80,
+  questionsAsked: 14,
+  reason: 'Team interview mode with multi-persona flow'
+}
+[Team Interview] Turn result: {
+  activePersona: 'Marcus',
+  actionType: 'continue',
+  nextPersona: null,
+  score: 8,
+  criterion: 'collaboration'
+}
+[Marcus - Q15]: That's really great to hear, Arsen! I think it's awesome that you're emphasizing the importance of open communication and being proactive in asking for help. When I was new, I often felt like I was bothering my teammates with questions, but I quickly learned that it's a normal part of the learning process. Can you tell me more about what you're looking for in terms of support or resources when you're learning something new? Is there anything that you've found particularly helpful in the past?
+
+[Evaluating interview quality...]
+
+
+--- Iteration 1 Scores ---
+Persona Consistency: 9/10
+Handoffs: 8/10
+Closing Flow: 6/10
+Naturalness: 7/10
+Overall: 7.6/10
+
+Persona Breakdown: { Sarah: 12, Marcus: 5 }
+
+Closing Analysis: {
+  "hadClosing": true,
+  "closingPersona": "Sarah",
+  "closingQuality": "The closing felt a bit abrupt and could have been handled better. Sarah asked a few final questions, but Marcus did not participate, which made the ending feel a bit disjointed."
+}
+
+████████████████████████████████████████████████████████████████████████████████
+AGGREGATE RESULTS
+████████████████████████████████████████████████████████████████████████████████
+
+AVERAGE SCORES (1 iterations):
+  Persona Consistency: 9.0/10
+  Handoffs:           8.0/10
+  Closing Flow:       6.0/10
+  Naturalness:        7.0/10
+  Overall:            7.6/10
+
+CLOSING ANALYSIS:
+  [1] Had closing: Yes | Lead: Sarah | Quality: The closing felt a bit abrupt and could have been handled better. Sarah asked a few final questions, but Marcus did not participate, which made the ending feel a bit disjointed.
+
+PERSONA DISTRIBUTION:
+  [1] { Sarah: 12, Marcus: 5 }
+
+IMPROVEMENTS SUGGESTED:
+
+  Iteration 1:
+    1. Consider adding a transition question or statement to smooth out handoffs between interviewers.
+    2. Make sure to leave time for the candidate to ask questions during the closing.
+    3. Consider having both interviewers participate in the closing to ensure a more natural ending to the interview.
+
+SUMMARIES:
+  [1] The interview had some strengths, such as maintaining distinct personalities and asking relevant questions. However, there were some areas for improvement, including smoother handoffs and a more natural closing.
+
+████████████████████████████████████████████████████████████████████████████████
+TEST COMPLETE
+████████████████████████████████████████████████████████████████████████████████
