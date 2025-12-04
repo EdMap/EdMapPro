@@ -99,6 +99,8 @@ export type PhaseEngagement = 'observe' | 'respond' | 'lead';
 
 export interface AutoStartStep {
   personaId: 'priya' | 'marcus' | 'alex';
+  personaName: string;
+  personaRole: string;
   message: string;
   phase: PlanningPhase;
   requiresUserResponse?: boolean;

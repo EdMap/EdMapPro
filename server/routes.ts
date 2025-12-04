@@ -3010,13 +3010,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ Phase 6: Sprint Planning Session Routes ============
 
-  // Helper to map personaId to full persona details
-  const PERSONA_MAP: Record<string, { name: string; role: string }> = {
-    priya: { name: 'Priya', role: 'Product Manager' },
-    marcus: { name: 'Marcus', role: 'Senior Developer' },
-    alex: { name: 'Alex', role: 'QA Engineer' },
-  };
-
   // GET /api/workspaces/:workspaceId/planning - Get planning session state
   app.get("/api/workspaces/:workspaceId/planning", async (req, res) => {
     try {
@@ -3024,22 +3017,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if session exists and needs auto-start messages
       const session = await storage.getPlanningSessionByWorkspace(workspaceId);
-      if (session) {
-        const messages = await storage.getPlanningMessages(session.id);
+      if (session && !session.autoStartInitialized) {
         const adapter = getSprintPlanningAdapter(session.role, session.level);
         
-        // Check if we need to insert auto-start sequence
-        if (messages.length === 0 && adapter.engagement?.autoStartConversation) {
+        // Check if we need to insert auto-start sequence (using flag for idempotency)
+        if (adapter.engagement?.autoStartConversation) {
           const sequence = adapter.engagement.autoStartSequence;
           
           if (sequence && sequence.length > 0) {
             // Insert all messages from the sequence until we hit one that requires user response
             for (const step of sequence) {
-              const persona = PERSONA_MAP[step.personaId] || { name: 'Team', role: 'Team Member' };
               await storage.createPlanningMessage({
                 sessionId: session.id,
-                sender: persona.name,
-                senderRole: persona.role,
+                sender: step.personaName,
+                senderRole: step.personaRole,
                 message: step.message,
                 phase: step.phase,
                 isUser: false,
@@ -3061,6 +3052,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isUser: false,
             });
           }
+          
+          // Mark auto-start as initialized to prevent duplicates
+          await storage.updatePlanningSession(session.id, { autoStartInitialized: true });
         }
       }
       
@@ -3102,6 +3096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           capacityUsed: 0,
           status: 'active',
           knowledgeCheckPassed: false,
+          autoStartInitialized: false,
         });
         
         // Get adapter to auto-start conversation with sequence
@@ -3113,11 +3108,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (sequence && sequence.length > 0) {
             // Insert all messages from the sequence until we hit one that requires user response
             for (const step of sequence) {
-              const persona = PERSONA_MAP[step.personaId] || { name: 'Team', role: 'Team Member' };
               await storage.createPlanningMessage({
                 sessionId: session.id,
-                sender: persona.name,
-                senderRole: persona.role,
+                sender: step.personaName,
+                senderRole: step.personaRole,
                 message: step.message,
                 phase: step.phase,
                 isUser: false,
@@ -3139,6 +3133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isUser: false,
             });
           }
+          
+          // Mark auto-start as initialized to prevent duplicates
+          await storage.updatePlanningSession(session.id, { autoStartInitialized: true });
         }
       }
       

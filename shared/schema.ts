@@ -1499,6 +1499,7 @@ export const planningSessions = pgTable("planning_sessions", {
   goalStatement: text("goal_statement"),
   commitmentSummary: text("commitment_summary"),
   knowledgeCheckPassed: boolean("knowledge_check_passed").notNull().default(false),
+  autoStartInitialized: boolean("auto_start_initialized").notNull().default(false), // Prevents duplicate auto-start messages on concurrent requests
   status: text("status").notNull().default('active'), // 'active' | 'completed' | 'abandoned'
   score: integer("score"), // Final planning score (0-100)
   feedback: jsonb("feedback"), // Evaluation feedback

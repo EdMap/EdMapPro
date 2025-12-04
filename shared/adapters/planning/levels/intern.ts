@@ -60,6 +60,8 @@ Alright team, let me walk through our priorities for this sprint...`,
     autoStartSequence: [
       {
         personaId: 'priya',
+        personaName: 'Priya',
+        personaRole: 'Product Manager',
         phase: 'context',
         message: `Good morning everyone! Thanks for joining our sprint planning. I see we have a new team member with us today - welcome!
 
@@ -69,6 +71,8 @@ Alright team, let me walk through our priorities for this sprint...`
       },
       {
         personaId: 'priya',
+        personaName: 'Priya',
+        personaRole: 'Product Manager',
         phase: 'context',
         message: `So for this sprint, we have a few high-priority items from stakeholders. First up is a timezone display bug that's affecting users in different regions - they're seeing incorrect timestamps. This one's been escalated by support.
 
@@ -76,6 +80,8 @@ We also need to implement the user notifications feature. Product has been askin
       },
       {
         personaId: 'marcus',
+        personaName: 'Marcus',
+        personaRole: 'Senior Developer',
         phase: 'context',
         message: `The timezone bug sounds like it could be in the date formatting utilities. I've seen similar issues before - usually it's a matter of storing everything in UTC and converting on display.
 
@@ -83,6 +89,8 @@ For the notifications feature, are we talking push notifications or just in-app?
       },
       {
         personaId: 'priya',
+        personaName: 'Priya',
+        personaRole: 'Product Manager',
         phase: 'context',
         message: `Good question, Marcus. For now, we're scoping it to in-app notifications only. Push notifications are on the roadmap for next quarter.
 
@@ -90,6 +98,8 @@ We also have a couple of bugs in the backlog - a null check issue in the payment
       },
       {
         personaId: 'alex',
+        personaName: 'Alex',
+        personaRole: 'QA Engineer',
         phase: 'context',
         message: `I can take a look at that payment flow bug - I was working in that area last sprint. The null check is probably in the order processing logic.
 
@@ -97,6 +107,8 @@ The pagination should be straightforward. We have the pattern established from t
       },
       {
         personaId: 'priya',
+        personaName: 'Priya',
+        personaRole: 'Product Manager',
         phase: 'context',
         message: `Great overview, team. Before we move to estimation, let me check in with our new team member.
 

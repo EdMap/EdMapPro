@@ -59,6 +59,8 @@ Let me share what's on our plate for this sprint...`,
     autoStartSequence: [
       {
         personaId: 'priya',
+        personaName: 'Priya',
+        personaRole: 'Product Manager',
         phase: 'context',
         message: `Morning team! Let's dive into our sprint planning. We've got some interesting work lined up, and I'm excited to hear everyone's thoughts.
 
@@ -66,11 +68,15 @@ Here's what's on our plate: we have a timezone bug that's been escalated, the us
       },
       {
         personaId: 'marcus',
+        personaName: 'Marcus',
+        personaRole: 'Senior Developer',
         phase: 'context',
         message: `The timezone bug shouldn't be too complex - probably a UTC conversion issue. The notifications feature is the bigger piece.`
       },
       {
         personaId: 'priya',
+        personaName: 'Priya',
+        personaRole: 'Product Manager',
         phase: 'context',
         message: `Agreed. Before we dive into estimates, I'd love to hear your initial thoughts. Any questions about the priorities or anything that stands out to you?`,
         requiresUserResponse: true
