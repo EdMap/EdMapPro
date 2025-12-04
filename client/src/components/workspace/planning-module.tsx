@@ -1,34 +1,33 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ListTodo, 
   Target, 
   CheckCircle2, 
-  Clock,
   ArrowLeft,
   ArrowRight,
-  Sparkles,
-  Users,
-  CalendarDays,
   Lightbulb,
   AlertCircle,
   Play,
   Bug,
   Wrench,
-  Star
+  Star,
+  Send,
+  MessageCircle,
+  GraduationCap,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { WorkspacePhase } from "@/hooks/use-sprint-workflow";
 
 interface BacklogItem {
   id: string;
@@ -38,6 +37,45 @@ interface BacklogItem {
   points: number;
   description: string;
   selected?: boolean;
+}
+
+interface PlanningMessage {
+  id: number;
+  sender: string;
+  senderRole: string;
+  message: string;
+  phase: string;
+  isUser: boolean;
+  createdAt: string;
+}
+
+interface PlanningSession {
+  id: number;
+  workspaceId: number;
+  role: string;
+  level: string;
+  currentPhase: string;
+  phaseCompletions: Record<string, boolean>;
+  selectedItems: string[];
+  capacityUsed: number;
+  goalStatement: string | null;
+  status: string;
+  knowledgeCheckPassed: boolean;
+}
+
+interface PlanningSessionState {
+  session: PlanningSession;
+  messages: PlanningMessage[];
+  backlogItems: BacklogItem[];
+  capacity: number;
+  adapterConfig: {
+    role: string;
+    level: string;
+    facilitator: 'user' | 'ai';
+    showLearningObjectives: boolean;
+    showKnowledgeCheck: boolean;
+    canSkipPhases: boolean;
+  };
 }
 
 interface PlanningModuleProps {
@@ -50,50 +88,25 @@ interface PlanningModuleProps {
   onBack?: () => void;
 }
 
-const SAMPLE_BACKLOG: BacklogItem[] = [
-  {
-    id: "TICKET-101",
-    title: "Fix timezone display in transaction history",
-    type: "bug",
-    priority: "high",
-    points: 3,
-    description: "Transactions are showing in UTC instead of merchant's local timezone"
-  },
-  {
-    id: "TICKET-102",
-    title: "Add export to CSV functionality",
-    type: "feature",
-    priority: "medium",
-    points: 5,
-    description: "Allow merchants to export their transaction data to CSV format"
-  },
-  {
-    id: "TICKET-103",
-    title: "Improve dashboard load time",
-    type: "improvement",
-    priority: "medium",
-    points: 8,
-    description: "Optimize queries and add caching to reduce dashboard load time"
-  },
-  {
-    id: "TICKET-104",
-    title: "Fix refund calculation rounding error",
-    type: "bug",
-    priority: "high",
-    points: 2,
-    description: "Partial refunds sometimes show incorrect amounts due to floating point errors"
-  },
-  {
-    id: "TICKET-105",
-    title: "Add search filters to transaction list",
-    type: "feature",
-    priority: "low",
-    points: 5,
-    description: "Add ability to filter transactions by date range, amount, and status"
-  }
+const PLANNING_PHASES = [
+  { id: 'context', label: 'Context', icon: Lightbulb, description: 'Understand priorities' },
+  { id: 'discussion', label: 'Discussion', icon: MessageCircle, description: 'Discuss & estimate' },
+  { id: 'commitment', label: 'Commitment', icon: CheckCircle2, description: 'Finalize sprint' }
 ];
 
-const SPRINT_CAPACITY = 13;
+const PERSONA_COLORS: Record<string, string> = {
+  'Priya': 'bg-purple-100 text-purple-700 border-purple-200',
+  'Marcus': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Alex': 'bg-green-100 text-green-700 border-green-200',
+  'default': 'bg-gray-100 text-gray-700 border-gray-200'
+};
+
+const PERSONA_AVATARS: Record<string, string> = {
+  'Priya': 'PM',
+  'Marcus': 'MD',
+  'Alex': 'AQ',
+  'You': 'ME'
+};
 
 function getTypeIcon(type: BacklogItem['type']) {
   switch (type) {
@@ -122,7 +135,219 @@ function getPriorityBadge(priority: BacklogItem['priority']) {
   }
 }
 
-type PlanningStep = 'backlog-review' | 'sprint-goal' | 'commitment';
+function PhaseProgress({ currentPhase, phaseCompletions }: { currentPhase: string; phaseCompletions: Record<string, boolean> }) {
+  return (
+    <div className="flex items-center gap-2 p-4 bg-muted/30 rounded-lg mb-6">
+      {PLANNING_PHASES.map((phase, index) => {
+        const Icon = phase.icon;
+        const isActive = currentPhase === phase.id;
+        const isCompleted = phaseCompletions[phase.id];
+        
+        return (
+          <div key={phase.id} className="flex items-center">
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg transition-all",
+              isActive && "bg-indigo-100 dark:bg-indigo-900/50 ring-2 ring-indigo-500",
+              isCompleted && !isActive && "bg-green-100 dark:bg-green-900/30",
+              !isActive && !isCompleted && "opacity-50"
+            )}>
+              <div className={cn(
+                "h-8 w-8 rounded-full flex items-center justify-center",
+                isActive && "bg-indigo-500 text-white",
+                isCompleted && !isActive && "bg-green-500 text-white",
+                !isActive && !isCompleted && "bg-muted text-muted-foreground"
+              )}>
+                {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              </div>
+              <div className="hidden sm:block">
+                <div className={cn(
+                  "text-sm font-medium",
+                  isActive && "text-indigo-700 dark:text-indigo-300"
+                )}>{phase.label}</div>
+                <div className="text-xs text-muted-foreground">{phase.description}</div>
+              </div>
+            </div>
+            {index < PLANNING_PHASES.length - 1 && (
+              <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ChatMessage({ message }: { message: PlanningMessage }) {
+  const colorClass = PERSONA_COLORS[message.sender] || PERSONA_COLORS.default;
+  const avatar = PERSONA_AVATARS[message.sender] || message.sender.substring(0, 2).toUpperCase();
+  
+  return (
+    <div className={cn(
+      "flex gap-3 mb-4",
+      message.isUser && "flex-row-reverse"
+    )}>
+      <Avatar className={cn("h-8 w-8", message.isUser ? "bg-indigo-100" : colorClass.split(' ')[0])}>
+        <AvatarFallback className={cn("text-xs", message.isUser ? "text-indigo-700" : "")}>{avatar}</AvatarFallback>
+      </Avatar>
+      <div className={cn(
+        "max-w-[80%] rounded-lg p-3",
+        message.isUser 
+          ? "bg-indigo-500 text-white" 
+          : "bg-white dark:bg-gray-800 border"
+      )}>
+        {!message.isUser && (
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium text-sm">{message.sender}</span>
+            <Badge variant="outline" className="text-xs py-0">{message.senderRole}</Badge>
+          </div>
+        )}
+        <p className={cn("text-sm", message.isUser ? "text-white" : "text-foreground")}>{message.message}</p>
+      </div>
+    </div>
+  );
+}
+
+function BacklogPanel({ 
+  items, 
+  selectedItems, 
+  capacity, 
+  onToggleItem,
+  disabled 
+}: { 
+  items: BacklogItem[]; 
+  selectedItems: string[]; 
+  capacity: number;
+  onToggleItem: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const selectedPoints = items
+    .filter(item => selectedItems.includes(item.id))
+    .reduce((sum, item) => sum + item.points, 0);
+  
+  const capacityUsed = (selectedPoints / capacity) * 100;
+  const isOverCapacity = selectedPoints > capacity;
+  
+  return (
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Sprint Backlog</CardTitle>
+            <CardDescription>Select items for this sprint</CardDescription>
+          </div>
+          <div className="text-right">
+            <div className={cn(
+              "text-lg font-bold",
+              isOverCapacity ? "text-red-600" : "text-green-600"
+            )}>
+              {selectedPoints}/{capacity}
+            </div>
+            <div className="text-xs text-muted-foreground">points</div>
+          </div>
+        </div>
+        <Progress 
+          value={Math.min(capacityUsed, 100)} 
+          className={cn("h-2 mt-2", isOverCapacity && "bg-red-100")}
+        />
+        {isOverCapacity && (
+          <div className="flex items-center gap-2 mt-2 text-red-600 text-xs">
+            <AlertCircle className="h-3 w-3" />
+            Over capacity
+          </div>
+        )}
+      </CardHeader>
+      <CardContent className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full pr-3">
+          <div className="space-y-2">
+            {items.map(item => {
+              const Icon = getTypeIcon(item.type);
+              const isSelected = selectedItems.includes(item.id);
+              
+              return (
+                <div 
+                  key={item.id}
+                  className={cn(
+                    "p-3 rounded-lg border transition-all",
+                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                    isSelected 
+                      ? "border-indigo-300 bg-indigo-50/50 dark:bg-indigo-900/20" 
+                      : "border-gray-200 hover:border-gray-300"
+                  )}
+                  onClick={() => !disabled && onToggleItem(item.id)}
+                  data-testid={`backlog-item-${item.id}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <Checkbox 
+                      checked={isSelected}
+                      onCheckedChange={() => !disabled && onToggleItem(item.id)}
+                      className="mt-1"
+                      disabled={disabled}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <span className="text-xs font-mono text-muted-foreground">{item.id}</span>
+                        <Badge className={cn("text-xs py-0", getTypeColor(item.type))} variant="secondary">
+                          <Icon className="h-2.5 w-2.5 mr-0.5" />
+                          {item.type}
+                        </Badge>
+                        <Badge className={cn("text-xs py-0", getPriorityBadge(item.priority))}>
+                          {item.priority}
+                        </Badge>
+                        <span className="text-xs font-medium text-indigo-600">{item.points}pts</span>
+                      </div>
+                      <h4 className="font-medium text-sm text-gray-900 dark:text-white">{item.title}</h4>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LearningObjectives({ phase, role, level }: { phase: string; role: string; level: string }) {
+  const objectives: Record<string, string[]> = {
+    context: [
+      "Understand sprint goals come from business priorities",
+      "Listen to how the PM presents context to the team",
+      "Ask clarifying questions about priorities"
+    ],
+    discussion: [
+      "Learn how teams estimate work together",
+      "Understand the importance of breaking down work",
+      "Practice raising concerns constructively"
+    ],
+    commitment: [
+      "See how teams make realistic commitments",
+      "Understand capacity planning basics",
+      "Learn to balance ambition with sustainability"
+    ]
+  };
+  
+  return (
+    <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-200 mb-4">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <GraduationCap className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-amber-900 dark:text-amber-100 text-sm mb-2">Learning Objectives</h4>
+            <ul className="space-y-1">
+              {objectives[phase]?.map((obj, i) => (
+                <li key={i} className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                  <span className="text-amber-500">•</span>
+                  {obj}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function PlanningModule({ 
   workspaceId, 
@@ -133,435 +358,307 @@ export function PlanningModule({
   onComplete,
   onBack 
 }: PlanningModuleProps) {
-  const [currentStep, setCurrentStep] = useState<PlanningStep>('backlog-review');
-  const [backlog, setBacklog] = useState<BacklogItem[]>(SAMPLE_BACKLOG);
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
   const [sprintGoal, setSprintGoal] = useState('');
-  const [goalNotes, setGoalNotes] = useState('');
-  const [teamFeedback, setTeamFeedback] = useState<string | null>(null);
-
-  const selectedPoints = backlog
-    .filter(item => selectedItems.includes(item.id))
-    .reduce((sum, item) => sum + item.points, 0);
-
-  const capacityUsed = (selectedPoints / SPRINT_CAPACITY) * 100;
-  const isOverCapacity = selectedPoints > SPRINT_CAPACITY;
-
-  const completePhase = useMutation({
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const { data: sessionState, isLoading } = useQuery<PlanningSessionState>({
+    queryKey: ['/api/workspaces', workspaceId, 'planning'],
+  });
+  
+  const initSession = useMutation({
     mutationFn: async () => {
-      return apiRequest('PATCH', `/api/workspaces/${workspaceId}/phase`, {
-        newPhase: 'execution' as WorkspacePhase,
-        status: 'completed',
-        payload: {
-          sprintGoal,
-          selectedItems,
-          points: selectedPoints
-        }
-      });
+      const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/planning`, {});
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
-      onComplete(sprintGoal, selectedItems);
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
     }
   });
-
-  const toggleItem = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
-  };
-
-  const handleGetTeamFeedback = () => {
-    if (isOverCapacity) {
-      setTeamFeedback("Sarah: That's a lot for one sprint. I'd recommend dropping one of the 5-point items to keep things realistic. Remember, it's better to under-promise and over-deliver!");
-    } else if (selectedPoints < 8) {
-      setTeamFeedback("Marcus: We could probably take on a bit more. The team has good velocity right now. Consider adding another small item if you feel comfortable.");
-    } else {
-      setTeamFeedback("Priya: This looks like a solid sprint plan! Good mix of bugs and features. The team should be able to deliver this confidently.");
+  
+  const sendMessage = useMutation({
+    mutationFn: async (message: string) => {
+      const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/planning/message`, { message });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+      setInputMessage('');
+    }
+  });
+  
+  const selectItems = useMutation({
+    mutationFn: async ({ selectedItems, capacityUsed }: { selectedItems: string[]; capacityUsed: number }) => {
+      const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/planning/select-items`, { 
+        selectedItems, 
+        capacityUsed 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+    }
+  });
+  
+  const setGoal = useMutation({
+    mutationFn: async (goalStatement: string) => {
+      const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/planning/goal`, { goalStatement });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+    }
+  });
+  
+  const advancePhase = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/planning/advance`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'planning'] });
+      if (data.completed) {
+        onComplete(sessionState?.session.goalStatement || '', sessionState?.session.selectedItems || []);
+      }
+    }
+  });
+  
+  useEffect(() => {
+    if (!sessionState && !isLoading) {
+      initSession.mutate();
+    }
+  }, [sessionState, isLoading]);
+  
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [sessionState?.messages]);
+  
+  const handleSendMessage = () => {
+    if (inputMessage.trim()) {
+      sendMessage.mutate(inputMessage.trim());
     }
   };
-
-  const renderBacklogReview = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Sprint Planning</h2>
-          <p className="text-gray-500 dark:text-gray-400">Review and select items for the upcoming sprint</p>
+  
+  const handleToggleItem = (itemId: string) => {
+    if (!sessionState) return;
+    
+    const currentSelected = sessionState.session.selectedItems || [];
+    const newSelected = currentSelected.includes(itemId)
+      ? currentSelected.filter(id => id !== itemId)
+      : [...currentSelected, itemId];
+    
+    const capacityUsed = sessionState.backlogItems
+      .filter(item => newSelected.includes(item.id))
+      .reduce((sum, item) => sum + item.points, 0);
+    
+    selectItems.mutate({ selectedItems: newSelected, capacityUsed });
+  };
+  
+  const handleSetGoal = () => {
+    if (sprintGoal.trim()) {
+      setGoal.mutate(sprintGoal.trim());
+    }
+  };
+  
+  const canAdvance = () => {
+    if (!sessionState) return false;
+    const { session, backlogItems } = sessionState;
+    
+    switch (session.currentPhase) {
+      case 'context':
+        return sessionState.messages.length >= 2;
+      case 'discussion':
+        return (session.selectedItems || []).length > 0;
+      case 'commitment':
+        return !!session.goalStatement;
+      default:
+        return false;
+    }
+  };
+  
+  if (isLoading || !sessionState) {
+    return (
+      <div className="h-full p-6" data-testid="planning-module-loading">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-16 w-full" />
+          <div className="grid grid-cols-2 gap-4 h-[500px]">
+            <Skeleton className="h-full" />
+            <Skeleton className="h-full" />
+          </div>
         </div>
-        {onBack && (
-          <Button variant="outline" onClick={onBack} data-testid="button-back-to-dashboard">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        )}
       </div>
-
-      <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border-indigo-200 dark:border-indigo-800">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center">
-              <ListTodo className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-indigo-900 dark:text-indigo-100">Step 1: Review the Backlog</h3>
-              <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                Select items that the team will commit to completing this sprint
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-indigo-600 dark:text-indigo-300">Sprint Capacity</div>
-              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{SPRINT_CAPACITY} points</div>
-            </div>
+    );
+  }
+  
+  const { session, messages, backlogItems, capacity, adapterConfig } = sessionState;
+  const selectedItems = session.selectedItems || [];
+  
+  return (
+    <div className="h-full flex flex-col" data-testid="planning-module">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Sprint Planning Meeting</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{companyName} • {role}</p>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Product Backlog</CardTitle>
-              <CardDescription>Select items based on priority and team capacity</CardDescription>
-            </div>
-            <div className="text-right">
-              <div className={cn(
-                "text-2xl font-bold",
-                isOverCapacity ? "text-red-600" : "text-green-600"
-              )}>
-                {selectedPoints}/{SPRINT_CAPACITY}
-              </div>
-              <div className="text-xs text-muted-foreground">points selected</div>
-            </div>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <Button variant="outline" size="sm" onClick={onBack} data-testid="button-back-to-dashboard">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            )}
           </div>
-          <Progress 
-            value={Math.min(capacityUsed, 100)} 
-            className={cn("h-2 mt-2", isOverCapacity && "bg-red-100")}
-          />
-          {isOverCapacity && (
-            <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
-              <AlertCircle className="h-4 w-4" />
-              Over capacity! Consider removing some items.
+        </div>
+        
+        <PhaseProgress 
+          currentPhase={session.currentPhase} 
+          phaseCompletions={session.phaseCompletions as Record<string, boolean>} 
+        />
+      </div>
+      
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col border-r">
+          {adapterConfig.showLearningObjectives && (
+            <div className="p-4 pb-0">
+              <LearningObjectives 
+                phase={session.currentPhase} 
+                role={adapterConfig.role} 
+                level={adapterConfig.level} 
+              />
             </div>
           )}
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {backlog.map(item => {
-              const Icon = getTypeIcon(item.type);
-              const isSelected = selectedItems.includes(item.id);
-              
-              return (
-                <div 
-                  key={item.id}
-                  className={cn(
-                    "p-4 rounded-lg border transition-all cursor-pointer",
-                    isSelected 
-                      ? "border-indigo-300 bg-indigo-50/50 dark:bg-indigo-900/20" 
-                      : "border-gray-200 hover:border-gray-300"
+          
+          <div className="flex-1 overflow-hidden p-4">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="pb-2 border-b">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Team Discussion
+                </CardTitle>
+                <CardDescription>
+                  {session.currentPhase === 'context' && "Priya is presenting sprint priorities"}
+                  {session.currentPhase === 'discussion' && "Discuss items and estimate as a team"}
+                  {session.currentPhase === 'commitment' && "Finalize the sprint commitment"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <ScrollArea className="h-full p-4">
+                  {messages.length === 0 && session.currentPhase === 'context' && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Send a message to start the planning discussion</p>
+                      <p className="text-sm mt-1">Try: "Hi team, ready to plan the sprint!"</p>
+                    </div>
                   )}
-                  onClick={() => toggleItem(item.id)}
-                  data-testid={`backlog-item-${item.id}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <Checkbox 
-                      checked={isSelected}
-                      onCheckedChange={() => toggleItem(item.id)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-mono text-muted-foreground">{item.id}</span>
-                        <Badge className={getTypeColor(item.type)} variant="secondary">
-                          <Icon className="h-3 w-3 mr-1" />
-                          {item.type}
-                        </Badge>
-                        <Badge className={getPriorityBadge(item.priority)}>
-                          {item.priority}
-                        </Badge>
-                      </div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-indigo-600">{item.points}</div>
-                      <div className="text-xs text-muted-foreground">points</div>
-                    </div>
-                  </div>
+                  {messages.map((msg) => (
+                    <ChatMessage key={msg.id} message={msg} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </ScrollArea>
+              </CardContent>
+              <div className="p-4 border-t">
+                <div className="flex gap-2">
+                  <Input
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    disabled={sendMessage.isPending}
+                    data-testid="input-chat-message"
+                  />
+                  <Button 
+                    onClick={handleSendMessage} 
+                    disabled={!inputMessage.trim() || sendMessage.isPending}
+                    data-testid="button-send-message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {selectedItems.length > 0 && (
-        <div className="flex justify-end">
-          <Button 
-            onClick={() => setCurrentStep('sprint-goal')}
-            disabled={isOverCapacity}
-            data-testid="button-next-sprint-goal"
-          >
-            Set Sprint Goal
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderSprintGoal = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Define Sprint Goal</h2>
-          <p className="text-gray-500 dark:text-gray-400">What is the team aiming to achieve this sprint?</p>
-        </div>
-        <Button variant="outline" onClick={() => setCurrentStep('backlog-review')} data-testid="button-back-to-backlog">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-      </div>
-
-      <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200 dark:border-purple-800">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center">
-              <Target className="h-6 w-6 text-purple-600 dark:text-purple-300" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-purple-900 dark:text-purple-100">Step 2: Sprint Goal</h3>
-              <p className="text-sm text-purple-700 dark:text-purple-300">
-                A clear, concise statement of what the team will deliver
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Sprint Goal
-          </CardTitle>
-          <CardDescription>
-            Write a single sentence that describes the value delivered this sprint
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="sprint-goal">Goal Statement</Label>
-            <Input
-              id="sprint-goal"
-              value={sprintGoal}
-              onChange={(e) => setSprintGoal(e.target.value)}
-              placeholder="e.g., Fix critical timezone issues so merchants can trust their transaction data"
-              className="text-lg"
-              data-testid="input-sprint-goal"
-            />
+              </div>
+            </Card>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="goal-notes">Additional Context (Optional)</Label>
-            <Textarea
-              id="goal-notes"
-              value={goalNotes}
-              onChange={(e) => setGoalNotes(e.target.value)}
-              placeholder="Any notes about dependencies, risks, or success criteria..."
-              rows={3}
-              data-testid="input-goal-notes"
-            />
-          </div>
-
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Lightbulb className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Tips for a good sprint goal:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Focus on user value, not just tasks</li>
-                  <li>Be specific but achievable</li>
-                  <li>Something the whole team can rally behind</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Selected Items Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {backlog.filter(item => selectedItems.includes(item.id)).map(item => (
-              <Badge key={item.id} variant="outline" className="py-1.5">
-                {item.id}: {item.title.slice(0, 30)}...
-              </Badge>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground mt-3">
-            {selectedItems.length} items • {selectedPoints} points
-          </p>
-        </CardContent>
-      </Card>
-
-      {sprintGoal.trim() && (
-        <div className="flex justify-end">
-          <Button 
-            onClick={() => setCurrentStep('commitment')}
-            data-testid="button-next-commitment"
-          >
-            Review & Commit
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderCommitment = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Team Commitment</h2>
-          <p className="text-gray-500 dark:text-gray-400">Review and confirm your sprint plan with the team</p>
-        </div>
-        <Button variant="outline" onClick={() => setCurrentStep('sprint-goal')} data-testid="button-back-to-goal">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-      </div>
-
-      <Card className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border-green-200 dark:border-green-800">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-300" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-green-900 dark:text-green-100">Step 3: Team Commitment</h3>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                Get team feedback and make the final commitment to the sprint
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Sprint Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="h-5 w-5 text-indigo-600" />
-              <span className="font-medium text-indigo-900 dark:text-indigo-100">Sprint Goal</span>
-            </div>
-            <p className="text-indigo-800 dark:text-indigo-200">{sprintGoal}</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold">{selectedItems.length}</div>
-              <div className="text-xs text-muted-foreground">Items</div>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-600">{selectedPoints}</div>
-              <div className="text-xs text-muted-foreground">Points</div>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold">10</div>
-              <div className="text-xs text-muted-foreground">Days</div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Committed Items
-            </h4>
-            <div className="space-y-2">
-              {backlog.filter(item => selectedItems.includes(item.id)).map(item => (
-                <div key={item.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm text-muted-foreground">{item.id}</span>
-                    <span>{item.title}</span>
+          {session.currentPhase === 'commitment' && (
+            <div className="p-4 pt-0">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Sprint Goal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2">
+                    <Input
+                      value={sprintGoal}
+                      onChange={(e) => setSprintGoal(e.target.value)}
+                      placeholder="e.g., Fix critical bugs to improve user trust"
+                      data-testid="input-sprint-goal"
+                    />
+                    <Button 
+                      onClick={handleSetGoal} 
+                      disabled={!sprintGoal.trim() || setGoal.isPending}
+                      variant="secondary"
+                    >
+                      Set Goal
+                    </Button>
                   </div>
-                  <Badge variant="outline">{item.points} pts</Badge>
-                </div>
-              ))}
+                  {session.goalStatement && (
+                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="font-medium text-sm">{session.goalStatement}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Team Feedback
-          </CardTitle>
-          <CardDescription>Get input from your teammates before committing</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {teamFeedback ? (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200">
-              <p className="text-blue-800 dark:text-blue-200">{teamFeedback}</p>
-            </div>
-          ) : (
-            <Button 
-              variant="outline" 
-              onClick={handleGetTeamFeedback}
-              data-testid="button-get-feedback"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Get Team Feedback
-            </Button>
           )}
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-green-600" />
+          
+          <div className="p-4 pt-0">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                {session.currentPhase === 'context' && messages.length < 2 && "Have a brief discussion first"}
+                {session.currentPhase === 'discussion' && selectedItems.length === 0 && "Select at least one backlog item"}
+                {session.currentPhase === 'commitment' && !session.goalStatement && "Set a sprint goal to continue"}
               </div>
-              <div>
-                <h3 className="font-semibold text-green-900 dark:text-green-100">Ready to Start Sprint!</h3>
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  Commit to the sprint and begin execution
-                </p>
-              </div>
+              <Button 
+                onClick={() => advancePhase.mutate()}
+                disabled={!canAdvance() || advancePhase.isPending}
+                className={session.currentPhase === 'commitment' ? "bg-green-600 hover:bg-green-700" : ""}
+                data-testid="button-advance-phase"
+              >
+                {advancePhase.isPending ? (
+                  "Processing..."
+                ) : session.currentPhase === 'commitment' ? (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Start Sprint
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
             </div>
-            <Button 
-              onClick={() => completePhase.mutate()}
-              disabled={completePhase.isPending}
-              className="bg-green-600 hover:bg-green-700"
-              data-testid="button-start-sprint"
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Start Sprint
-            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  return (
-    <div className="h-full" data-testid="planning-module">
-      {currentStep === 'backlog-review' && renderBacklogReview()}
-      {currentStep === 'sprint-goal' && renderSprintGoal()}
-      {currentStep === 'commitment' && renderCommitment()}
+        </div>
+        
+        <div className="w-80 p-4">
+          <BacklogPanel
+            items={backlogItems}
+            selectedItems={selectedItems}
+            capacity={capacity}
+            onToggleItem={handleToggleItem}
+            disabled={session.currentPhase === 'context'}
+          />
+        </div>
+      </div>
     </div>
   );
 }

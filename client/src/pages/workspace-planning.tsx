@@ -66,7 +66,7 @@ export default function WorkspacePlanning() {
       workspaceId={workspaceId}
       onNavigate={navigate}
     >
-      <div className="container max-w-4xl mx-auto p-6" data-testid="workspace-planning">
+      <div className="h-[calc(100vh-80px)]" data-testid="workspace-planning">
         <PlanningModule
           workspaceId={workspaceId}
           userId={workspace.userId}
