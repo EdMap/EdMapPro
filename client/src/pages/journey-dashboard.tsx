@@ -19,8 +19,15 @@ import {
   BarChart3,
   Rocket,
   Zap,
+  Building2,
+  Briefcase,
 } from "lucide-react";
-import { useJourneyDashboard, type MasteryBand } from "@/hooks/use-sprint-workflow";
+import { 
+  useJourneyDashboard, 
+  useJourneyWorkspace,
+  type MasteryBand,
+  type WorkspacePhase,
+} from "@/hooks/use-sprint-workflow";
 
 function getBandColor(band: MasteryBand): string {
   switch (band) {
@@ -47,11 +54,45 @@ function formatDate(date: Date | string): string {
   });
 }
 
+function getPhaseLabel(phase: WorkspacePhase): string {
+  switch (phase) {
+    case 'onboarding': return 'Onboarding';
+    case 'planning': return 'Sprint Planning';
+    case 'execution': return 'Sprint Execution';
+    case 'review': return 'Sprint Review';
+    case 'retro': return 'Sprint Retrospective';
+    default: return phase;
+  }
+}
+
+function getPhaseColor(phase: WorkspacePhase): string {
+  switch (phase) {
+    case 'onboarding': return 'bg-teal-500';
+    case 'planning': return 'bg-indigo-500';
+    case 'execution': return 'bg-blue-500';
+    case 'review': return 'bg-amber-500';
+    case 'retro': return 'bg-violet-500';
+    default: return 'bg-gray-500';
+  }
+}
+
+function getPhaseBadgeVariant(phase: WorkspacePhase): string {
+  switch (phase) {
+    case 'onboarding': return 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200';
+    case 'planning': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
+    case 'execution': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+    case 'review': return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+    case 'retro': return 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+}
+
 export default function JourneyDashboard() {
   const params = useParams<{ journeyId: string }>();
   const journeyId = params.journeyId ? parseInt(params.journeyId) : null;
   
   const { data: dashboard, isLoading, error } = useJourneyDashboard(journeyId);
+  const { data: workspace, isLoading: workspaceLoading } = useJourneyWorkspace(journeyId);
 
   if (isLoading) {
     return (
@@ -111,6 +152,65 @@ export default function JourneyDashboard() {
           </Link>
         )}
       </div>
+
+      {workspace && (
+        <Card 
+          className={`border-l-4 ${getPhaseColor(workspace.currentPhase).replace('bg-', 'border-')}`}
+          data-testid="card-workspace-hero"
+        >
+          <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg ${getPhaseColor(workspace.currentPhase)}`}>
+                  <Building2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="flex items-center gap-2" data-testid="text-workspace-company">
+                    {workspace.companyName} Workspace
+                  </CardTitle>
+                  <CardDescription className="flex items-center gap-2 mt-1">
+                    <Briefcase className="h-4 w-4" />
+                    <span data-testid="text-workspace-role">{workspace.role}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <Badge 
+                      className={getPhaseBadgeVariant(workspace.currentPhase)}
+                      data-testid="badge-workspace-phase"
+                    >
+                      {getPhaseLabel(workspace.currentPhase)}
+                    </Badge>
+                  </CardDescription>
+                </div>
+              </div>
+              <Link href={`/workspace/${workspace.id}`}>
+                <Button className="gap-2" size="lg" data-testid="button-open-workspace">
+                  <Play className="h-4 w-4" />
+                  Open Workspace
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Current Phase:</span>
+              <div className="flex items-center gap-1">
+                {['onboarding', 'planning', 'execution', 'review', 'retro'].map((phase, index) => (
+                  <div key={phase} className="flex items-center">
+                    {index > 0 && <div className="w-4 h-0.5 bg-muted" />}
+                    <div 
+                      className={`w-2 h-2 rounded-full ${
+                        phase === workspace.currentPhase 
+                          ? getPhaseColor(phase as WorkspacePhase)
+                          : 'bg-muted'
+                      }`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card data-testid="card-readiness">

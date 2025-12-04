@@ -438,3 +438,126 @@ export function useTodayCeremonies(sprintId: number | null, currentDay: number) 
     completedCeremonies,
   };
 }
+
+export type WorkspacePhase = 'onboarding' | 'planning' | 'execution' | 'review' | 'retro';
+
+export interface WorkspaceInstance {
+  id: number;
+  userId: number;
+  journeyId: number;
+  jobApplicationId: number | null;
+  projectTemplateId: number | null;
+  companyName: string;
+  role: string;
+  status: string;
+  currentPhase: WorkspacePhase;
+  currentSprintId: number | null;
+  onboardingCompletedAt: string | null;
+  workspaceMetadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkspacePhaseEvent {
+  id: number;
+  workspaceId: number;
+  phase: WorkspacePhase;
+  sprintId: number | null;
+  status: 'started' | 'completed';
+  payload: Record<string, unknown>;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface PhaseChecklist {
+  item: string;
+  completed: boolean;
+  required: boolean;
+}
+
+export interface NextAction {
+  action: string;
+  route: string;
+  priority: 'primary' | 'secondary';
+}
+
+export interface WorkspaceState {
+  workspace: WorkspaceInstance;
+  currentPhase: WorkspacePhase;
+  currentSprint: Sprint | null;
+  phaseChecklist: PhaseChecklist[];
+  nextActions: NextAction[];
+  phaseHistory: WorkspacePhaseEvent[];
+}
+
+export function useJourneyWorkspace(journeyId: number | null) {
+  return useQuery<WorkspaceInstance | null>({
+    queryKey: ['/api/journeys', journeyId, 'workspace'],
+    enabled: !!journeyId,
+    queryFn: async () => {
+      try {
+        const response = await fetch(`/api/journeys/${journeyId}/workspace`);
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Failed to fetch workspace');
+        return response.json();
+      } catch {
+        return null;
+      }
+    },
+  });
+}
+
+export function useWorkspaceState(workspaceId: number | null) {
+  return useQuery<WorkspaceState>({
+    queryKey: ['/api/workspaces', workspaceId, 'state'],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const response = await fetch(`/api/workspaces/${workspaceId}/state`);
+      if (!response.ok) throw new Error('Failed to fetch workspace state');
+      return response.json();
+    },
+    refetchInterval: 30000,
+  });
+}
+
+export function useCreateWorkspace() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: {
+      journeyId: number;
+      jobApplicationId?: number;
+      companyName?: string;
+      role?: string;
+      projectTemplateId?: number;
+    }) => {
+      return apiRequest('POST', '/api/workspaces', data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/journeys', variables.journeyId, 'workspace'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['/api/workspaces'],
+      });
+    },
+  });
+}
+
+export function useAdvanceWorkspacePhase() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ workspaceId, payload }: { workspaceId: number; payload?: Record<string, unknown> }) => {
+      return apiRequest('POST', `/api/workspaces/${workspaceId}/advance`, { payload });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/workspaces', variables.workspaceId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['/api/workspaces', variables.workspaceId, 'state'],
+      });
+    },
+  });
+}

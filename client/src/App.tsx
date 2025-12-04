@@ -15,6 +15,7 @@ import JobBoard from "@/pages/job-board";
 import Journey from "@/pages/journey";
 import JourneyDashboard from "@/pages/journey-dashboard";
 import SprintHub from "@/pages/sprint-hub";
+import WorkspaceDashboard from "@/pages/workspace-dashboard";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import NotFound from "@/pages/not-found";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/journey" component={Journey} />
       <Route path="/journey/:journeyId" component={JourneyDashboard} />
       <Route path="/journey/:journeyId/sprint/:sprintId" component={SprintHub} />
+      <Route path="/workspace/:workspaceId" component={WorkspaceDashboard} />
       <Route path="/interview" component={InterviewSimulator} />
       <Route path="/interview/history" component={InterviewHistory} />
       <Route path="/negotiation" component={NegotiationSimulator} />

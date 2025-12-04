@@ -597,16 +597,34 @@ function ApplicationDetail({
   const completedStages = application.stages.filter(s => s.status === 'completed' || s.status === 'passed').length;
   const progressPercent = (completedStages / application.stages.length) * 100;
 
+  const [workspaceId, setWorkspaceId] = useState<number | null>(null);
+  
   // Mutation to update application status
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
       const response = await apiRequest('PATCH', `/api/applications/${application.id}`, { status });
       return response.json();
     },
-    onSuccess: () => {
-      // Invalidate the applications query to refetch
+    onSuccess: async (_, status) => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/applications`] });
+      }
+      
+      if (status === 'accepted') {
+        try {
+          const journeyResponse = await fetch(`/api/users/${userId}/journey`);
+          if (journeyResponse.ok) {
+            const journey = await journeyResponse.json();
+            const workspaceResponse = await fetch(`/api/journeys/${journey.id}/workspace`);
+            if (workspaceResponse.ok) {
+              const workspace = await workspaceResponse.json();
+              setWorkspaceId(workspace.id);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch workspace after offer acceptance:', error);
+        }
+        setCelebrationModal(true);
       }
     }
   });
@@ -622,12 +640,7 @@ function ApplicationDetail({
   };
 
   const handleAcceptOffer = () => {
-    // Update status to accepted and show celebration
-    updateStatusMutation.mutate('accepted', {
-      onSuccess: () => {
-        setCelebrationModal(true);
-      }
-    });
+    updateStatusMutation.mutate('accepted');
   };
 
   const handleDeclineOffer = () => {
@@ -638,14 +651,10 @@ function ApplicationDetail({
 
   const handleStartOnboarding = () => {
     setCelebrationModal(false);
-    // Navigate to workspace with the company context
-    // For NovaPay intern, go to the intern onboarding journey
-    const companyName = application.job.company.name.toLowerCase();
-    if (companyName.includes('novapay')) {
-      navigate('/workspace/journey');
+    if (workspaceId) {
+      navigate(`/workspace/${workspaceId}`);
     } else {
-      // For other companies, pass context via query params
-      navigate(`/workspace?companyId=${application.job.company.id}&role=${application.job.role}`);
+      navigate('/journey-dashboard');
     }
   };
   

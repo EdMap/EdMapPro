@@ -1207,8 +1207,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
       
+      if (updates.status === 'accepted') {
+        const posting = await storage.getJobPostingWithCompany(application.jobPostingId);
+        
+        let journeyId: number | null = null;
+        const existingJourney = await storage.getUserActiveJourney(application.userId);
+        
+        if (existingJourney) {
+          journeyId = existingJourney.id;
+          if (!existingJourney.jobApplicationId) {
+            await storage.updateJourney(existingJourney.id, { jobApplicationId: id });
+          }
+        } else {
+          const progressionPaths = await storage.getProgressionPaths({ role: 'developer', entryLevel: 'intern' });
+          const progressionPath = progressionPaths[0];
+          
+          if (progressionPath) {
+            const projectTemplates = await storage.getProjectTemplates({});
+            const projectTemplate = projectTemplates[0];
+            
+            if (projectTemplate) {
+              const newJourney = await storage.createJourney({
+                userId: application.userId,
+                progressionPathId: progressionPath.id,
+                projectTemplateId: projectTemplate.id,
+                jobApplicationId: id,
+                status: 'active',
+                currentSprintNumber: 0,
+                completedSprints: 0,
+              });
+              journeyId = newJourney.id;
+            }
+          }
+        }
+        
+        if (journeyId) {
+          const existingWorkspace = await storage.getWorkspaceInstanceByJourney(journeyId);
+          if (!existingWorkspace) {
+            await storage.createWorkspaceInstance({
+              userId: application.userId,
+              journeyId,
+              jobApplicationId: id,
+              companyName: posting?.company?.name || 'TechCorp',
+              role: posting?.role || 'Developer',
+              currentPhase: 'onboarding',
+            });
+          }
+        }
+      }
+      
       res.json(application);
     } catch (error) {
+      console.error("Failed to update application:", error);
       res.status(500).json({ message: "Failed to update application" });
     }
   });
