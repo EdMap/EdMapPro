@@ -612,7 +612,7 @@ function ApplicationDetail({
       
       if (status === 'accepted') {
         try {
-          const journeyResponse = await fetch(`/api/users/${userId}/journey`);
+          const journeyResponse = await fetch(`/api/user/${userId}/journey`);
           if (journeyResponse.ok) {
             const journey = await journeyResponse.json();
             const workspaceResponse = await fetch(`/api/journeys/${journey.id}/workspace`);
