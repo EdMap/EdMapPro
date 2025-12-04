@@ -181,10 +181,8 @@ export function PhaseStepper({
             )}
           >
             {interactive && route ? (
-              <Link href={route}>
-                <a className="hover:opacity-80 transition-opacity">
-                  {stepContent}
-                </a>
+              <Link href={route} className="hover:opacity-80 transition-opacity">
+                {stepContent}
               </Link>
             ) : (
               stepContent
