@@ -18,6 +18,9 @@ import SprintHub from "@/pages/sprint-hub";
 import WorkspaceDashboard from "@/pages/workspace-dashboard";
 import WorkspaceOnboarding from "@/pages/workspace-onboarding";
 import WorkspacePlanning from "@/pages/workspace-planning";
+import WorkspaceExecution from "@/pages/workspace-execution";
+import WorkspaceReview from "@/pages/workspace-review";
+import WorkspaceRetro from "@/pages/workspace-retro";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import NotFound from "@/pages/not-found";
@@ -45,6 +48,9 @@ function Router() {
       <Route path="/workspace/:workspaceId" component={WorkspaceDashboard} />
       <Route path="/workspace/:workspaceId/onboarding" component={WorkspaceOnboarding} />
       <Route path="/workspace/:workspaceId/planning" component={WorkspacePlanning} />
+      <Route path="/workspace/:workspaceId/execution" component={WorkspaceExecution} />
+      <Route path="/workspace/:workspaceId/review" component={WorkspaceReview} />
+      <Route path="/workspace/:workspaceId/retro" component={WorkspaceRetro} />
       <Route path="/interview" component={InterviewSimulator} />
       <Route path="/interview/history" component={InterviewHistory} />
       <Route path="/negotiation" component={NegotiationSimulator} />

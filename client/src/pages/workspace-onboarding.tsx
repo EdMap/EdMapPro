@@ -1,5 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { OnboardingModule } from "@/components/workspace/onboarding-module";
+import { PhaseGuard } from "@/components/workspace/phase-guard";
 import { useWorkspaceState } from "@/hooks/use-sprint-workflow";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,15 +60,22 @@ export default function WorkspaceOnboarding() {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto p-6" data-testid="workspace-onboarding">
-      <OnboardingModule
-        workspaceId={workspaceId}
-        userId={workspace.userId}
-        companyName={workspace.companyName}
-        role={workspace.role}
-        onComplete={handleComplete}
-        onBack={handleBack}
-      />
-    </div>
+    <PhaseGuard
+      currentPhase={workspace.currentPhase}
+      requiredPhase="onboarding"
+      workspaceId={workspaceId}
+      onNavigate={navigate}
+    >
+      <div className="container max-w-4xl mx-auto p-6" data-testid="workspace-onboarding">
+        <OnboardingModule
+          workspaceId={workspaceId}
+          userId={workspace.userId}
+          companyName={workspace.companyName}
+          role={workspace.role}
+          onComplete={handleComplete}
+          onBack={handleBack}
+        />
+      </div>
+    </PhaseGuard>
   );
 }

@@ -21,6 +21,19 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
 - **Job Journey System**: Manages the job application lifecycle, including a searchable Job Board, AI-feedback-enabled Application Flow, and a Journey Timeline, integrating with the Interview Simulator.
 - **Interview Simulator**: An AI-powered tool offering dual-mode interview experiences with multi-persona AI teams, level calibration, and a two-phase AI agent architecture (Preparation and Conversation). It includes a question backlog, real-time evaluation, smart follow-ups, and comprehensive final reports.
 - **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work in dual-mode. It features multi-character AI teams, role-based practice, various project scenarios, persistent progress saving, dynamic collaboration via multi-channel communication, interactive project artifacts, and specialized session components (e.g., `InternOnboardingSession`).
+- **Workspace Phase System (Phase 5)**: A complete Scrum sprint cycle simulation integrated with the Job Journey system. Features include:
+  - Five distinct phases: Onboarding → Planning → Execution → Review → Retro
+  - Phase-specific modules with multi-step workflows:
+    - **OnboardingModule**: Team introductions, documentation review, comprehension check with Sarah
+    - **PlanningModule**: Backlog review, sprint goal setting, team commitment with capacity validation
+    - **ExecutionModule**: Kanban board with drag-and-drop, git workflow simulation, team chat
+    - **ReviewModule**: Demo presenter, stakeholder feedback collection, summary
+    - **RetroModule**: Reflection cards (went well/to improve), voting, action items with owners
+  - PhaseGuard component for enforcing linear phase progression
+  - Phase-specific color themes: onboarding (teal), planning (indigo), execution (blue), review (amber), retro (violet)
+  - Automatic workspace creation on job offer acceptance
+  - Routes: `/workspace/:id`, `/workspace/:id/onboarding`, `/workspace/:id/planning`, `/workspace/:id/execution`, `/workspace/:id/review`, `/workspace/:id/retro`
+  - WorkspaceDashboard with PhaseStepper visualization, phase checklist, and CTA buttons
 - **Narrative Progression System (Phase 3)**: A dynamic journey system with configurable progression paths (Intern→Junior, Junior→Mid, Mid→Senior), story arcs (Onboarding, Sprints, Graduation), and competency tracking. Features include:
   - Level-agnostic sprint generation engine (same code, different content packs per level)
   - Delta calculator for competency changes with mastery bands (Explorer → Contributor → Junior Ready)
