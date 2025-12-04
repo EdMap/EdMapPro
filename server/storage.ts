@@ -7,6 +7,7 @@ import {
   competencies, simulationCatalogue, roleAdapters, competencyLedger, portfolioArtifacts,
   progressionPaths, projectTemplates, userJourneys, journeyArcs, sprints, sprintActivities, competencySnapshots,
   sprintTickets, ceremonyInstances, gitSessions, gitEvents,
+  workspaceInstances, workspacePhaseEvents,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -45,6 +46,9 @@ import {
   type GitEvent, type InsertGitEvent,
   type SprintOverview, type JourneyDashboard,
   type MasteryBand,
+  type WorkspaceInstance, type InsertWorkspaceInstance,
+  type WorkspacePhaseEvent, type InsertWorkspacePhaseEvent,
+  type WorkspaceState, type WorkspacePhase,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -258,6 +262,22 @@ export interface IStorage {
   // Phase 5: Dashboard data operations
   getSprintOverview(sprintId: number): Promise<SprintOverview | null>;
   getJourneyDashboard(journeyId: number): Promise<JourneyDashboard | null>;
+  
+  // Phase 5: Workspace Instance operations
+  getWorkspaceInstance(id: number): Promise<WorkspaceInstance | undefined>;
+  getWorkspaceInstanceByJourney(journeyId: number): Promise<WorkspaceInstance | undefined>;
+  getUserWorkspaceInstances(userId: number): Promise<WorkspaceInstance[]>;
+  createWorkspaceInstance(workspace: InsertWorkspaceInstance): Promise<WorkspaceInstance>;
+  updateWorkspaceInstance(id: number, updates: Partial<WorkspaceInstance>): Promise<WorkspaceInstance | undefined>;
+  
+  // Phase 5: Workspace Phase Event operations
+  getWorkspacePhaseEvents(workspaceId: number): Promise<WorkspacePhaseEvent[]>;
+  createWorkspacePhaseEvent(event: InsertWorkspacePhaseEvent): Promise<WorkspacePhaseEvent>;
+  updateWorkspacePhaseEvent(id: number, updates: Partial<WorkspacePhaseEvent>): Promise<WorkspacePhaseEvent | undefined>;
+  
+  // Phase 5: Workspace State operations
+  getWorkspaceState(workspaceId: number): Promise<WorkspaceState | null>;
+  advanceWorkspacePhase(workspaceId: number, payload?: Record<string, unknown>): Promise<WorkspaceInstance | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -3434,6 +3454,197 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       canGraduate,
       estimatedSprintsRemaining,
     };
+  }
+
+  async getWorkspaceInstance(id: number): Promise<WorkspaceInstance | undefined> {
+    const result = await db.select().from(workspaceInstances).where(eq(workspaceInstances.id, id));
+    return result[0];
+  }
+
+  async getWorkspaceInstanceByJourney(journeyId: number): Promise<WorkspaceInstance | undefined> {
+    const result = await db.select().from(workspaceInstances).where(eq(workspaceInstances.journeyId, journeyId));
+    return result[0];
+  }
+
+  async getUserWorkspaceInstances(userId: number): Promise<WorkspaceInstance[]> {
+    return db.select().from(workspaceInstances)
+      .where(eq(workspaceInstances.userId, userId))
+      .orderBy(desc(workspaceInstances.createdAt));
+  }
+
+  async createWorkspaceInstance(workspace: InsertWorkspaceInstance): Promise<WorkspaceInstance> {
+    const result = await db.insert(workspaceInstances).values(workspace).returning();
+    
+    await this.createWorkspacePhaseEvent({
+      workspaceId: result[0].id,
+      phase: 'onboarding',
+      status: 'started',
+      payload: {},
+    });
+    
+    return result[0];
+  }
+
+  async updateWorkspaceInstance(id: number, updates: Partial<WorkspaceInstance>): Promise<WorkspaceInstance | undefined> {
+    const result = await db.update(workspaceInstances)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(workspaceInstances.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getWorkspacePhaseEvents(workspaceId: number): Promise<WorkspacePhaseEvent[]> {
+    return db.select().from(workspacePhaseEvents)
+      .where(eq(workspacePhaseEvents.workspaceId, workspaceId))
+      .orderBy(desc(workspacePhaseEvents.createdAt));
+  }
+
+  async createWorkspacePhaseEvent(event: InsertWorkspacePhaseEvent): Promise<WorkspacePhaseEvent> {
+    const result = await db.insert(workspacePhaseEvents).values(event).returning();
+    return result[0];
+  }
+
+  async updateWorkspacePhaseEvent(id: number, updates: Partial<WorkspacePhaseEvent>): Promise<WorkspacePhaseEvent | undefined> {
+    const result = await db.update(workspacePhaseEvents)
+      .set(updates)
+      .where(eq(workspacePhaseEvents.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getWorkspaceState(workspaceId: number): Promise<WorkspaceState | null> {
+    const workspace = await this.getWorkspaceInstance(workspaceId);
+    if (!workspace) return null;
+
+    const phaseHistory = await this.getWorkspacePhaseEvents(workspaceId);
+    
+    let currentSprint: Sprint | null = null;
+    if (workspace.currentSprintId) {
+      currentSprint = await this.getSprint(workspace.currentSprintId) || null;
+    }
+
+    const currentPhase = workspace.currentPhase as WorkspacePhase;
+    const phaseChecklist = this.getPhaseChecklist(currentPhase, workspace, currentSprint);
+    const nextActions = this.getPhaseNextActions(currentPhase, workspaceId, workspace.currentSprintId);
+
+    return {
+      workspace,
+      currentPhase,
+      currentSprint,
+      phaseChecklist,
+      nextActions,
+      phaseHistory,
+    };
+  }
+
+  private getPhaseChecklist(
+    phase: WorkspacePhase, 
+    workspace: WorkspaceInstance,
+    currentSprint: Sprint | null
+  ): { item: string; completed: boolean; required: boolean }[] {
+    switch (phase) {
+      case 'onboarding':
+        return [
+          { item: 'Meet the team', completed: false, required: true },
+          { item: 'Read company documentation', completed: false, required: true },
+          { item: 'Complete comprehension check', completed: false, required: true },
+        ];
+      case 'planning':
+        return [
+          { item: 'Review product backlog', completed: false, required: true },
+          { item: 'Select priority items', completed: false, required: true },
+          { item: 'Set sprint goal', completed: !!currentSprint?.goal, required: true },
+          { item: 'Commit to sprint scope', completed: false, required: true },
+        ];
+      case 'execution':
+        return [
+          { item: 'Attend daily standup', completed: false, required: true },
+          { item: 'Complete assigned tickets', completed: false, required: true },
+          { item: 'Submit code for review', completed: false, required: false },
+        ];
+      case 'review':
+        return [
+          { item: 'Prepare demo', completed: false, required: true },
+          { item: 'Present completed work', completed: false, required: true },
+          { item: 'Receive stakeholder feedback', completed: false, required: true },
+        ];
+      case 'retro':
+        return [
+          { item: 'Share what went well', completed: false, required: true },
+          { item: 'Identify improvements', completed: false, required: true },
+          { item: 'Commit to action items', completed: false, required: true },
+        ];
+      default:
+        return [];
+    }
+  }
+
+  private getPhaseNextActions(
+    phase: WorkspacePhase,
+    workspaceId: number,
+    currentSprintId: number | null
+  ): { action: string; route: string; priority: 'primary' | 'secondary' }[] {
+    switch (phase) {
+      case 'onboarding':
+        return [
+          { action: 'Start Onboarding', route: `/workspace/${workspaceId}/onboarding`, priority: 'primary' },
+        ];
+      case 'planning':
+        return [
+          { action: 'Open Sprint Planning', route: `/workspace/${workspaceId}/planning`, priority: 'primary' },
+        ];
+      case 'execution':
+        return [
+          { action: 'Open Sprint Hub', route: `/sprint/${currentSprintId}`, priority: 'primary' },
+          { action: 'View Ceremonies', route: `/workspace/${workspaceId}/ceremonies`, priority: 'secondary' },
+        ];
+      case 'review':
+        return [
+          { action: 'Start Sprint Review', route: `/workspace/${workspaceId}/review`, priority: 'primary' },
+        ];
+      case 'retro':
+        return [
+          { action: 'Start Retrospective', route: `/workspace/${workspaceId}/retro`, priority: 'primary' },
+        ];
+      default:
+        return [];
+    }
+  }
+
+  async advanceWorkspacePhase(workspaceId: number, payload?: Record<string, unknown>): Promise<WorkspaceInstance | undefined> {
+    const workspace = await this.getWorkspaceInstance(workspaceId);
+    if (!workspace) return undefined;
+
+    const phaseOrder: WorkspacePhase[] = ['onboarding', 'planning', 'execution', 'review', 'retro'];
+    const currentIndex = phaseOrder.indexOf(workspace.currentPhase as WorkspacePhase);
+    
+    if (currentIndex === -1) return undefined;
+
+    await this.updateWorkspacePhaseEvent(
+      (await this.getWorkspacePhaseEvents(workspaceId))[0]?.id || 0,
+      { status: 'completed', completedAt: new Date(), payload: payload || {} }
+    );
+
+    let nextPhase: WorkspacePhase;
+    
+    if (workspace.currentPhase === 'onboarding') {
+      nextPhase = 'planning';
+      await this.updateWorkspaceInstance(workspaceId, { onboardingCompletedAt: new Date() });
+    } else if (workspace.currentPhase === 'retro') {
+      nextPhase = 'planning';
+    } else {
+      nextPhase = phaseOrder[currentIndex + 1];
+    }
+
+    await this.createWorkspacePhaseEvent({
+      workspaceId,
+      phase: nextPhase,
+      sprintId: workspace.currentSprintId,
+      status: 'started',
+      payload: {},
+    });
+
+    return this.updateWorkspaceInstance(workspaceId, { currentPhase: nextPhase });
   }
 }
 
