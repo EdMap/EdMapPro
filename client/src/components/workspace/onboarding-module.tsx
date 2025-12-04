@@ -687,6 +687,48 @@ export function OnboardingModule({
             </Card>
           ))}
         </div>
+
+        {/* Progress indicator and Continue button */}
+        <Card className={cn(
+          "mt-4 transition-all",
+          allTeamIntrosComplete 
+            ? "bg-gradient-to-r from-green-50 to-indigo-50 dark:from-green-900/20 dark:to-indigo-900/20 border-green-200" 
+            : "bg-gray-50 dark:bg-gray-800/50"
+        )}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {allTeamIntrosComplete ? (
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-gray-500" />
+                  </div>
+                )}
+                <div>
+                  <p className={cn("font-medium", allTeamIntrosComplete ? "text-green-800 dark:text-green-200" : "text-gray-600")}>
+                    {allTeamIntrosComplete ? "You've met everyone!" : "Keep chatting..."}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {Object.values(progress.teamIntrosComplete).filter(Boolean).length} of {DEFAULT_TEAM.length} team members
+                  </p>
+                </div>
+              </div>
+              {allTeamIntrosComplete && (
+                <Button 
+                  onClick={() => setCurrentStep('comprehension')}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  data-testid="button-continue-to-sarah"
+                >
+                  Check in with Sarah
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   };
@@ -839,6 +881,48 @@ export function OnboardingModule({
           ))}
         </TabsContent>
       </Tabs>
+
+      {/* Progress indicator and Continue button */}
+      <Card className={cn(
+        "mt-6 transition-all",
+        allDocsRead 
+          ? "bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border-green-200" 
+          : "bg-gray-50 dark:bg-gray-800/50"
+      )}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {allDocsRead ? (
+                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                </div>
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-gray-500" />
+                </div>
+              )}
+              <div>
+                <p className={cn("font-medium", allDocsRead ? "text-green-800 dark:text-green-200" : "text-gray-600")}>
+                  {allDocsRead ? "All documentation reviewed!" : "Keep reading..."}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {Object.values(progress.docsRead).filter(Boolean).length} of {DOCUMENTATION_SECTIONS.length} sections complete
+                </p>
+              </div>
+            </div>
+            {allDocsRead && (
+              <Button 
+                onClick={() => setCurrentStep('team-intro')}
+                className="bg-teal-600 hover:bg-teal-700"
+                data-testid="button-continue-to-team"
+              >
+                Meet Your Team
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
