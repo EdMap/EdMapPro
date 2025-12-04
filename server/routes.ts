@@ -2756,6 +2756,206 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // Phase 5: Workspace Instance APIs
+  // ============================================
+
+  // GET /api/workspaces - Get all workspaces for current user
+  app.get("/api/workspaces", async (req, res) => {
+    try {
+      const userId = 1;
+      const workspaces = await storage.getUserWorkspaceInstances(userId);
+      res.json(workspaces);
+    } catch (error) {
+      console.error("Failed to get workspaces:", error);
+      res.status(500).json({ message: "Failed to get workspaces" });
+    }
+  });
+
+  // GET /api/workspaces/:workspaceId - Get single workspace
+  app.get("/api/workspaces/:workspaceId", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      res.json(workspace);
+    } catch (error) {
+      console.error("Failed to get workspace:", error);
+      res.status(500).json({ message: "Failed to get workspace" });
+    }
+  });
+
+  // GET /api/workspaces/:workspaceId/state - Get workspace state with phase info
+  app.get("/api/workspaces/:workspaceId/state", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const state = await storage.getWorkspaceState(workspaceId);
+      
+      if (!state) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      res.json(state);
+    } catch (error) {
+      console.error("Failed to get workspace state:", error);
+      res.status(500).json({ message: "Failed to get workspace state" });
+    }
+  });
+
+  // GET /api/journeys/:journeyId/workspace - Get workspace for a journey
+  app.get("/api/journeys/:journeyId/workspace", async (req, res) => {
+    try {
+      const journeyId = parseInt(req.params.journeyId);
+      const workspace = await storage.getWorkspaceInstanceByJourney(journeyId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "No workspace found for this journey" });
+      }
+      
+      res.json(workspace);
+    } catch (error) {
+      console.error("Failed to get journey workspace:", error);
+      res.status(500).json({ message: "Failed to get journey workspace" });
+    }
+  });
+
+  // POST /api/workspaces - Create workspace instance (on offer acceptance)
+  app.post("/api/workspaces", async (req, res) => {
+    try {
+      const { journeyId, jobApplicationId, companyName, role, projectTemplateId } = req.body;
+      
+      if (!journeyId) {
+        return res.status(400).json({ message: "journeyId is required" });
+      }
+      
+      const existingWorkspace = await storage.getWorkspaceInstanceByJourney(journeyId);
+      if (existingWorkspace) {
+        return res.status(400).json({ message: "Workspace already exists for this journey" });
+      }
+      
+      const journey = await storage.getJourney(journeyId);
+      if (!journey) {
+        return res.status(404).json({ message: "Journey not found" });
+      }
+      
+      let workspaceCompanyName = companyName;
+      let workspaceRole = role;
+      
+      if (jobApplicationId) {
+        const application = await storage.getJobApplication(jobApplicationId);
+        if (application) {
+          const posting = await storage.getJobPostingWithCompany(application.jobPostingId);
+          if (posting) {
+            workspaceCompanyName = workspaceCompanyName || posting.company?.name || 'TechCorp';
+            workspaceRole = workspaceRole || posting.role || 'Developer';
+          }
+        }
+      }
+      
+      if (!workspaceCompanyName || !workspaceRole) {
+        return res.status(400).json({ message: "companyName and role are required if no job application" });
+      }
+      
+      const workspace = await storage.createWorkspaceInstance({
+        userId: journey.userId,
+        journeyId,
+        jobApplicationId: jobApplicationId || null,
+        projectTemplateId: projectTemplateId || null,
+        companyName: workspaceCompanyName,
+        role: workspaceRole,
+        currentPhase: 'onboarding',
+      });
+      
+      res.status(201).json(workspace);
+    } catch (error) {
+      console.error("Failed to create workspace:", error);
+      res.status(500).json({ message: "Failed to create workspace" });
+    }
+  });
+
+  // PATCH /api/workspaces/:workspaceId - Update workspace
+  app.patch("/api/workspaces/:workspaceId", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const updates = req.body;
+      
+      const workspace = await storage.updateWorkspaceInstance(workspaceId, updates);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      res.json(workspace);
+    } catch (error) {
+      console.error("Failed to update workspace:", error);
+      res.status(500).json({ message: "Failed to update workspace" });
+    }
+  });
+
+  // POST /api/workspaces/:workspaceId/advance - Advance to next phase
+  app.post("/api/workspaces/:workspaceId/advance", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const payload = req.body.payload || {};
+      
+      const workspace = await storage.advanceWorkspacePhase(workspaceId, payload);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found or cannot advance" });
+      }
+      
+      const state = await storage.getWorkspaceState(workspaceId);
+      res.json(state);
+    } catch (error) {
+      console.error("Failed to advance workspace phase:", error);
+      res.status(500).json({ message: "Failed to advance workspace phase" });
+    }
+  });
+
+  // GET /api/workspaces/:workspaceId/events - Get phase events history
+  app.get("/api/workspaces/:workspaceId/events", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const events = await storage.getWorkspacePhaseEvents(workspaceId);
+      res.json(events);
+    } catch (error) {
+      console.error("Failed to get phase events:", error);
+      res.status(500).json({ message: "Failed to get phase events" });
+    }
+  });
+
+  // POST /api/workspaces/:workspaceId/start-sprint - Start a new sprint
+  app.post("/api/workspaces/:workspaceId/start-sprint", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const { sprintId } = req.body;
+      
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      if (workspace.currentPhase !== 'planning') {
+        return res.status(400).json({ message: "Must be in planning phase to start sprint" });
+      }
+      
+      const updated = await storage.updateWorkspaceInstance(workspaceId, {
+        currentSprintId: sprintId,
+      });
+      
+      const advanced = await storage.advanceWorkspacePhase(workspaceId, { sprintId });
+      
+      res.json(advanced);
+    } catch (error) {
+      console.error("Failed to start sprint:", error);
+      res.status(500).json({ message: "Failed to start sprint" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
