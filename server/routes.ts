@@ -3271,6 +3271,216 @@ DO NOT say goodbye until you've offered to answer questions about the company/ro
     }
   });
 
+  // POST /api/workspaces/:workspaceId/comprehension-chat - Chat with Sarah for documentation comprehension check
+  app.post("/api/workspaces/:workspaceId/comprehension-chat", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const { userMessage, conversationHistory } = req.body;
+      
+      if (!userMessage) {
+        return res.status(400).json({ message: "userMessage is required" });
+      }
+
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+
+      // Use Groq to generate response
+      const Groq = require('groq-sdk');
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+      // Build full conversation text for analysis
+      const fullConversation = conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0
+        ? conversationHistory.map((m: any) => `${m.sender}: ${m.message}`).join('\n')
+        : `You: ${userMessage}`;
+
+      // Step 1: Analyze comprehension topics covered
+      let topicsCovered = {
+        userShowedUnderstanding: false,  // User demonstrated understanding of docs
+        userAskedQuestions: false,       // User asked questions about codebase/team
+        sarahAnsweredQuestions: false,   // Sarah provided answers/guidance
+        sarahOfferedNextSteps: false     // Sarah offered to move to next steps
+      };
+
+      try {
+        const analysisResponse = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: `Analyze this conversation between a new intern ("You") and Sarah (Tech Lead) during a documentation comprehension check.
+
+Determine which topics have been covered:
+
+USER UNDERSTANDING EXAMPLES (mark userShowedUnderstanding true if ANY of these):
+- Explains what the product does: "The dashboard helps merchants manage payments"
+- Describes a feature: "It handles timezone conversions for merchants"
+- Shows they read the docs: "I saw in the docs that it uses React"
+- Summarizes concepts: "So basically it's an analytics platform"
+
+USER QUESTIONS EXAMPLES (mark userAskedQuestions true if ANY of these):
+- Asks about codebase: "How is the frontend structured?", "What database do you use?"
+- Asks about team: "How does the team work together?", "Who handles what?"
+- Asks about processes: "How do code reviews work?", "What's the deploy process?"
+- Asks for clarification: "Can you explain more about X?"
+
+SARAH ANSWERED EXAMPLES (mark sarahAnsweredQuestions true if):
+- Sarah provides specific answers to questions
+- Sarah explains how something works
+- Sarah gives helpful context or guidance
+
+SARAH NEXT STEPS EXAMPLES (mark sarahOfferedNextSteps true if):
+- Sarah mentions moving on: "ready to move on", "get you set up", "start working"
+- Sarah talks about next steps: "tomorrow we'll", "your first ticket", "dev environment"
+- Sarah offers to wrap up: "I think you're all set", "ready to start"
+
+Return JSON with these fields:
+- userShowedUnderstanding: true if intern demonstrated understanding of the docs/product
+- userAskedQuestions: true if intern asked questions about the codebase or team
+- sarahAnsweredQuestions: true if Sarah provided answers or guidance
+- sarahOfferedNextSteps: true if Sarah mentioned moving forward or next steps
+
+IMPORTANT: 
+- Simple greetings don't count
+- Be accurate about what was actually discussed
+
+Respond ONLY with valid JSON, no other text.`
+            },
+            { role: "user", content: fullConversation }
+          ],
+          temperature: 0.1,
+          max_tokens: 100
+        });
+
+        const analysisText = analysisResponse.choices[0]?.message?.content || '{}';
+        try {
+          const parsed = JSON.parse(analysisText.replace(/```json\n?|\n?```/g, '').trim());
+          topicsCovered = {
+            userShowedUnderstanding: !!parsed.userShowedUnderstanding,
+            userAskedQuestions: !!parsed.userAskedQuestions,
+            sarahAnsweredQuestions: !!parsed.sarahAnsweredQuestions,
+            sarahOfferedNextSteps: !!parsed.sarahOfferedNextSteps
+          };
+        } catch (e) {
+          console.log('Could not parse comprehension analysis, using defaults');
+        }
+      } catch (e) {
+        console.log('Comprehension analysis failed, continuing with defaults');
+      }
+
+      // Determine conversation state
+      const userComplete = topicsCovered.userShowedUnderstanding;
+      const questionsHandled = !topicsCovered.userAskedQuestions || topicsCovered.sarahAnsweredQuestions;
+      const isReadyToClose = userComplete && topicsCovered.sarahOfferedNextSteps;
+      
+      // Determine conversation turn
+      const turnCount = conversationHistory ? conversationHistory.length : 0;
+      const isFirstResponse = turnCount <= 1;
+
+      const systemPrompt = `You are Sarah, the Tech Lead at ${workspace.companyName}. 
+Personality: Supportive, encouraging, and technically knowledgeable.
+Your role: Checking in with a new intern about what they learned from the documentation.
+
+CONTEXT: The documentation they read covers the ${workspace.companyName} Merchant Dashboard - a platform for managing payments, analytics, and merchant operations.
+
+CRITICAL RESPONSE RULES:
+- Keep responses SHORT: 2-3 sentences MAX
+- Be warm and encouraging - this is NOT a test, just a casual check-in
+- ALWAYS acknowledge what they said before asking follow-up questions
+- Vary your responses - don't repeat the same phrases
+
+${isReadyToClose ? 
+`CONVERSATION IS COMPLETE - They've shown understanding and you're ready to wrap up!
+END THE CONVERSATION NOW with an encouraging close:
+- Reference something specific they mentioned
+- Express confidence in them
+- Mention next steps (dev environment, first ticket, reaching out)
+Example: "Perfect! I can tell you've really absorbed the material. Tomorrow we'll get your dev environment set up and you'll start on your first ticket. Exciting times ahead - don't hesitate to ping me if you need anything!"
+Do NOT ask any more questions.` 
+:
+isFirstResponse ?
+`THIS IS YOUR FIRST REPLY to their explanation of what they understood:
+1. Warmly acknowledge what they shared (be specific!)
+2. Show genuine appreciation for their understanding
+3. Ask if they have any questions about the codebase or how the team works
+Example: "That's a great understanding! You clearly picked up on [specific thing]. Do you have any questions about how we work or the codebase?"`
+:
+userComplete && !topicsCovered.sarahOfferedNextSteps ?
+`They've shown good understanding. ${topicsCovered.userAskedQuestions && !topicsCovered.sarahAnsweredQuestions ? 
+  'Answer their question briefly, then offer to move forward.' :
+  'Wrap up the conversation:'}
+- Acknowledge their understanding
+- Mention you'll get them set up with their dev environment
+- Tell them their first ticket awaits
+- Offer your availability if they need help
+Example: "Great questions! [Brief answer if they asked]. I think you're ready to move on - tomorrow we'll set up your dev environment and get you started on your first ticket. Exciting stuff!"`
+:
+`Continue the casual check-in:
+${!topicsCovered.userShowedUnderstanding ? 
+  "Encourage them to share more about what they understood from the docs. What did they find interesting?" :
+  topicsCovered.userAskedQuestions && !topicsCovered.sarahAnsweredQuestions ?
+    "Answer their question helpfully and concisely." :
+    "Acknowledge what they shared and ask if they have any questions about the codebase or team."}`}`;
+
+      const messages: any[] = [
+        { role: "system", content: systemPrompt }
+      ];
+
+      // Add conversation history
+      if (conversationHistory && Array.isArray(conversationHistory)) {
+        for (const msg of conversationHistory) {
+          messages.push({
+            role: msg.sender === 'You' ? 'user' : 'assistant',
+            content: msg.message
+          });
+        }
+      }
+
+      // Add current message
+      messages.push({ role: 'user', content: userMessage });
+
+      try {
+        const response = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages,
+          temperature: 0.8,
+          max_tokens: 200
+        });
+
+        const aiResponse = response.choices[0]?.message?.content || "That's great! It sounds like you've got a good grasp of things. Any questions?";
+        
+        // Determine completion state
+        const completionState = isReadyToClose ? 'closed' : 
+          userComplete ? 'almostReady' : 'discussing';
+        
+        res.json({ 
+          response: aiResponse, 
+          sender: 'Sarah',
+          isClosing: isReadyToClose,
+          completionState,
+          topicsCovered
+        });
+      } catch (groqError) {
+        console.error('Groq API error:', groqError);
+        // Fallback responses
+        const fallbacks = [
+          "That's great! You've clearly been paying attention to the docs. Any questions about how we work or the codebase?",
+          "Good understanding! The timezone handling is definitely one of the key features. What questions do you have?",
+          "Nice! I can tell you've absorbed the material well. Feel free to ask anything about the team or codebase."
+        ];
+        res.json({ 
+          response: fallbacks[Math.floor(Math.random() * fallbacks.length)], 
+          sender: 'Sarah',
+          completionState: 'discussing'
+        });
+      }
+    } catch (error) {
+      console.error("Failed to process comprehension chat:", error);
+      res.status(500).json({ message: "Failed to process chat message" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
