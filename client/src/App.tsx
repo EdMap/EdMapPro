@@ -45,17 +45,17 @@ function Router() {
       <Route path="/journey" component={Journey} />
       <Route path="/journey/:journeyId" component={JourneyDashboard} />
       <Route path="/journey/:journeyId/sprint/:sprintId" component={SprintHub} />
-      <Route path="/workspace/:workspaceId" component={WorkspaceDashboard} />
-      <Route path="/workspace/:workspaceId/onboarding" component={WorkspaceOnboarding} />
-      <Route path="/workspace/:workspaceId/planning" component={WorkspacePlanning} />
-      <Route path="/workspace/:workspaceId/execution" component={WorkspaceExecution} />
-      <Route path="/workspace/:workspaceId/review" component={WorkspaceReview} />
-      <Route path="/workspace/:workspaceId/retro" component={WorkspaceRetro} />
       <Route path="/interview" component={InterviewSimulator} />
       <Route path="/interview/history" component={InterviewHistory} />
       <Route path="/negotiation" component={NegotiationSimulator} />
       <Route path="/workspace/journey" component={WorkspaceJourney} />
       <Route path="/workspace/practice" component={WorkspacePractice} />
+      <Route path="/workspace/:workspaceId/onboarding" component={WorkspaceOnboarding} />
+      <Route path="/workspace/:workspaceId/planning" component={WorkspacePlanning} />
+      <Route path="/workspace/:workspaceId/execution" component={WorkspaceExecution} />
+      <Route path="/workspace/:workspaceId/review" component={WorkspaceReview} />
+      <Route path="/workspace/:workspaceId/retro" component={WorkspaceRetro} />
+      <Route path="/workspace/:workspaceId" component={WorkspaceDashboard} />
       <Route path="/progress" component={Progress} />
       <Route component={NotFound} />
     </Switch>
