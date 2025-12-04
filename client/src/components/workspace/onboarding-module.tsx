@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -243,6 +243,18 @@ export function OnboardingModule({
     return "Perfect! I think you're ready to move on. Tomorrow we'll get you set up with your development environment and you'll start working on your first ticket. Exciting times ahead! Feel free to reach out if you need anything.";
   };
 
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [teamChatMessages, isAIResponding]);
+
   const handleTeamChatSend = async () => {
     if (!teamChatInput.trim() || !selectedMember || isAIResponding) return;
     
@@ -265,6 +277,9 @@ export function OnboardingModule({
         conversationHistory: [...currentMessages, newUserMessage]
       });
       const data = await res.json();
+      
+      // Add a realistic typing delay (1-2 seconds) before showing response
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
       
       const aiResponse = { sender: memberName, message: data.response };
       setTeamChatMessages(prev => ({
@@ -533,7 +548,7 @@ export function OnboardingModule({
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <ScrollArea className="h-[200px] pr-4 mb-4">
+              <div ref={chatScrollRef} className="h-[200px] overflow-y-auto pr-4 mb-4">
                 <div className="space-y-3">
                   {memberMessages.length === 0 && (
                     <div className="text-center py-6 text-gray-400 text-sm">
@@ -587,13 +602,15 @@ export function OnboardingModule({
                           {getInitials(selectedMember.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 text-sm">
-                        <span className="animate-pulse">typing...</span>
+                      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 text-sm flex items-center gap-1">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                       </div>
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
               
               <div className="flex gap-2">
                 <Textarea
