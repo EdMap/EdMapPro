@@ -3110,7 +3110,17 @@ Respond ONLY with valid JSON, no other text.`
       // Determine conversation state
       const userComplete = topicsCovered.userProfessional && topicsCovered.userPersonal;
       const teammateComplete = topicsCovered.teammateProfessional && topicsCovered.teammatePersonal;
-      const isReadyToClose = userComplete && teammateComplete;
+      const allTopicsCovered = userComplete && teammateComplete;
+      
+      // Check if we've offered to answer questions (look for question offer in history)
+      const hasOfferedQuestions = conversationHistory && Array.isArray(conversationHistory) &&
+        conversationHistory.some((m: any) => 
+          m.sender !== 'You' && 
+          (m.message.toLowerCase().includes('question') && 
+           (m.message.toLowerCase().includes('company') || m.message.toLowerCase().includes('role') || m.message.toLowerCase().includes('team')))
+        );
+      
+      const isReadyToClose = allTopicsCovered && hasOfferedQuestions;
       
       // Determine what's missing to guide the conversation
       const missingTopics: string[] = [];
@@ -3136,11 +3146,11 @@ CRITICAL RESPONSE RULES:
 - DO NOT discuss work tasks beyond brief intro
 
 ${isReadyToClose ? 
-`CONVERSATION IS COMPLETE - You've BOTH shared professional AND personal info!
-END THE CONVERSATION NOW with a friendly goodbye. Examples:
-- "Great chatting with you! I should get back to work. Welcome to the team!"
-- "Anyway, I better jump back into this PR. Really nice meeting you!"
-- "That's awesome! Well, I'll let you get back to onboarding. See you around!"
+`CONVERSATION IS COMPLETE - You've covered backgrounds, hobbies, and offered to answer questions!
+END THE CONVERSATION NOW - say you need to run to a meeting but they can reach out anytime. Examples:
+- "Anyway, I've got a standup to run to, but feel free to ping me anytime if you have questions. Great meeting you!"
+- "I should head to my next meeting, but my door's always open - don't hesitate to reach out. Welcome aboard!"
+- "Got to jump into a call, but seriously, any questions come up, just message me. Nice chatting with you!"
 Do NOT ask any more questions.` 
 :
 isFirstResponse ?
@@ -3150,23 +3160,32 @@ isFirstResponse ?
 3. Ask about THEIR background/studies/what brought them here (professional question first!)
 Example: "Hey, welcome aboard! I'm one of the senior devs here - been around about 2 years now. What's your background - are you studying CS or coming from somewhere else?"`
 :
+allTopicsCovered && !hasOfferedQuestions ?
+`You've learned about each other! Now offer to answer questions:
+Ask if they have any questions about the company, the team, or the role.
+Example: "By the way, do you have any questions about the team or how things work around here?"
+Keep it brief - just offer to help with questions.`
+:
 `GUIDE THE CONVERSATION - Topics still needed: ${missingTopics.join(', ')}
 
-PRIORITY ORDER (follow this strictly):
-1. First, ensure PROFESSIONAL topics are covered (work, studies, career)
-2. Only THEN move to PERSONAL topics (hobbies, interests)
+CONVERSATION FLOW (follow this order):
+1. First, share YOUR professional background if you haven't
+2. Then, learn about THEIR professional background
+3. Share YOUR hobbies/interests
+4. ASK about THEIR hobbies/interests (don't skip this!)
+5. Finally, offer to answer questions about the company/role
 
 ${!topicsCovered.teammateProfessional ? 
   "You haven't shared your work background yet - briefly mention your role/experience." :
   !topicsCovered.userProfessional ? 
     "You don't know their professional background yet - ask about their studies, experience, or what got them into this field." :
   !topicsCovered.teammatePersonal ?
-    "Now share something personal - mention a hobby or interest of yours." :
+    "Share something personal - mention a hobby or interest of yours, then ask about theirs." :
   !topicsCovered.userPersonal ? 
-    "Ask what they do for fun outside of work/studies." :
+    "ASK what they do for fun outside of work/studies - you shared yours, now learn about theirs!" :
     "Continue naturally."}
 
-DO NOT say goodbye until ALL topics are covered!`}`;
+DO NOT say goodbye until you've offered to answer questions about the company/role!`}`;
 
       const messages: any[] = [
         { role: "system", content: systemPrompt }
