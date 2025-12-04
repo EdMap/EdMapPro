@@ -3085,25 +3085,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!session) {
         isNewSession = true;
+        
+        // Determine session level (can be enhanced to use workspace level or user preference)
+        const sessionLevel = 'intern'; // Default to intern for now
+        
+        // Get adapter to check auto-start settings for the correct level
+        const adapter = getSprintPlanningAdapter(workspace.role, sessionLevel);
+        const willAutoStart = adapter.engagement?.autoStartConversation ?? false;
+        
         // Create new session with workspace role/level
+        // Set autoStartInitialized: true upfront if we will auto-start (prevents race condition)
         session = await storage.createPlanningSession({
           workspaceId,
           role: workspace.role,
-          level: 'intern', // Default to intern for now - can be enhanced later
+          level: sessionLevel,
           currentPhase: 'context',
           phaseCompletions: { context: false, discussion: false, commitment: false },
           selectedItems: [],
           capacityUsed: 0,
           status: 'active',
           knowledgeCheckPassed: false,
-          autoStartInitialized: false,
+          autoStartInitialized: willAutoStart, // Set true immediately to prevent concurrent duplicates
         });
         
-        // Get adapter to auto-start conversation with sequence
-        const adapter = getSprintPlanningAdapter(session.role, session.level);
-        
-        if (adapter.engagement?.autoStartConversation) {
-          const sequence = adapter.engagement.autoStartSequence;
+        // Now insert auto-start messages (flag already set, so GET won't duplicate)
+        if (willAutoStart) {
+          const sequence = adapter.engagement?.autoStartSequence;
           
           if (sequence && sequence.length > 0) {
             // Insert all messages from the sequence until we hit one that requires user response
@@ -3122,7 +3129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 break;
               }
             }
-          } else if (adapter.engagement.autoStartMessage) {
+          } else if (adapter.engagement?.autoStartMessage) {
             // Fallback to single message if no sequence defined
             await storage.createPlanningMessage({
               sessionId: session.id,
@@ -3133,9 +3140,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isUser: false,
             });
           }
-          
-          // Mark auto-start as initialized to prevent duplicates
-          await storage.updatePlanningSession(session.id, { autoStartInitialized: true });
         }
       }
       

@@ -53,6 +53,13 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
     - Team talk ratio: Controls AI vs user speaking balance (85% AI for intern, 30% for senior)
     - Prompt suggestions: Optional scaffolding chips for interns/juniors
     - UI badges show current engagement mode (Observing, Guided, Active, Facilitating)
+  - **AutoStartSequence System**: Multi-message conversation kickoffs that simulate realistic team discussions:
+    - `AutoStartStep` interface with `personaId`, `personaName`, `personaRole`, `message`, `phase`, `requiresUserResponse`
+    - Intern (shadow mode): 6-message sequence - team discusses priorities before asking intern for questions
+    - Junior (guided mode): 3-message sequence - asks for input sooner with less team discussion
+    - Mid/Senior: Single welcome message or no auto-start (user drives discussion)
+    - Idempotency protection via `autoStartInitialized` flag prevents duplicate messages on page refresh
+    - Sequence stops at first message with `requiresUserResponse: true`
   - **Composable Adapter Architecture**:
     - Role adapters in `shared/adapters/planning/roles/` (base behavior per role)
     - Level overlays in `shared/adapters/planning/levels/` (difficulty modifiers + engagement)
