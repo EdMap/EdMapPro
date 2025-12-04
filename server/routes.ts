@@ -3050,8 +3050,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const Groq = require('groq-sdk');
       const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-      const messageCount = conversationHistory ? conversationHistory.length : 0;
-      const isNearEnd = messageCount >= 4;
+      // Build full conversation text for analysis (conversationHistory already includes current message)
+      const fullConversation = conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0
+        ? conversationHistory.map((m: any) => `${m.sender}: ${m.message}`).join('\n')
+        : `You: ${userMessage}`;
+
+      // Step 1: Analyze what topics have been covered using LLM
+      let topicsCovered = {
+        userProfessional: false,  // User shared their work/career background
+        userPersonal: false,      // User shared hobbies/interests
+        teammateProfessional: false, // Teammate shared work info
+        teammatePersonal: false   // Teammate shared hobbies/interests
+      };
+
+      try {
+        const analysisResponse = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: `Analyze this conversation between a new intern ("You") and ${teamMemberName} (a ${persona.role}).
+              
+Determine which topics have been genuinely discussed (not just asked about, but actually shared):
+
+Return a JSON object with these boolean fields:
+- userProfessional: Has the intern shared info about their work background, experience, studies, or career interests?
+- userPersonal: Has the intern shared personal interests, hobbies, or non-work activities?
+- teammateProfessional: Has ${teamMemberName} shared info about their work, role, or experience?
+- teammatePersonal: Has ${teamMemberName} shared hobbies, interests, or personal activities?
+
+Respond ONLY with valid JSON, no other text.`
+            },
+            { role: "user", content: fullConversation }
+          ],
+          temperature: 0.1,
+          max_tokens: 100
+        });
+
+        const analysisText = analysisResponse.choices[0]?.message?.content || '{}';
+        try {
+          const parsed = JSON.parse(analysisText.replace(/```json\n?|\n?```/g, '').trim());
+          topicsCovered = {
+            userProfessional: !!parsed.userProfessional,
+            userPersonal: !!parsed.userPersonal,
+            teammateProfessional: !!parsed.teammateProfessional,
+            teammatePersonal: !!parsed.teammatePersonal
+          };
+        } catch (e) {
+          console.log('Could not parse topic analysis, using defaults');
+        }
+      } catch (e) {
+        console.log('Topic analysis failed, continuing with defaults');
+      }
+
+      // Determine conversation state
+      const userComplete = topicsCovered.userProfessional && topicsCovered.userPersonal;
+      const teammateComplete = topicsCovered.teammateProfessional && topicsCovered.teammatePersonal;
+      const isReadyToClose = userComplete && teammateComplete;
+      
+      // Determine what's missing to guide the conversation
+      const missingTopics: string[] = [];
+      if (!topicsCovered.userProfessional) missingTopics.push("the intern's professional background");
+      if (!topicsCovered.userPersonal) missingTopics.push("the intern's hobbies or interests");
+      if (!topicsCovered.teammateProfessional) missingTopics.push("your work experience");
+      if (!topicsCovered.teammatePersonal) missingTopics.push("your personal interests");
       
       const systemPrompt = `You are ${teamMemberName}, a ${persona.role} at ${workspace.companyName}. 
 Personality: ${persona.personality}
@@ -3062,15 +3124,29 @@ This is a quick getting-to-know-you chat with a new intern on their first day.
 CRITICAL RESPONSE RULES:
 - Keep responses SHORT: 1-2 sentences MAX
 - Be warm but concise - you're busy but friendly
-- ${isNearEnd ? "This conversation should wrap up soon. Give a brief, warm closing like 'Great chatting! Let me know if you need anything.' or 'Good luck on your first day! Catch you later.'" : "You can ask ONE brief question back, or just respond warmly"}
 - DO NOT write paragraphs or long explanations
 - DO NOT discuss work tasks - this is purely social
-- Reference your background briefly when relevant
 
-Examples of good short responses:
-- "Hey! Yeah I've been here about 2 years. Really enjoy the team. What got you interested in this role?"
-- "Ha, yeah the standup schedule took me a while to get used to too. You'll settle in quick!"
-- "Nice to meet you too! Feel free to ping me if you need anything. Good luck today!"`;
+${isReadyToClose ? 
+`CONVERSATION IS COMPLETE - You've both shared professional and personal info!
+END THE CONVERSATION NOW with a friendly goodbye. Examples:
+- "Great chatting with you! I should get back to work. Welcome to the team!"
+- "Anyway, I better jump back into this PR. Really nice meeting you!"
+- "That's awesome! Well, I'll let you get back to onboarding. See you around!"
+Do NOT ask any more questions.` 
+:
+`GUIDE THE CONVERSATION - Still missing: ${missingTopics.join(', ')}
+${!topicsCovered.teammatePersonal && !topicsCovered.teammateProfessional ? 
+  "Share a bit about yourself (work or hobbies) and ask the intern something." :
+  !topicsCovered.userProfessional ? 
+    "Ask about their background, studies, or what got them interested in this role." :
+  !topicsCovered.userPersonal ? 
+    "Ask what they do for fun or their hobbies outside work." :
+  !topicsCovered.teammateProfessional ?
+    "Briefly mention your role or experience here." :
+    "Share one of your hobbies or interests."
+}
+Ask ONE brief question if you haven't learned about them yet.`}`;
 
       const messages: any[] = [
         { role: "system", content: systemPrompt }
@@ -3094,11 +3170,23 @@ Examples of good short responses:
           model: "llama-3.3-70b-versatile",
           messages,
           temperature: 0.8,
-          max_tokens: 300
+          max_tokens: 150
         });
 
         const aiResponse = response.choices[0]?.message?.content || "Thanks for reaching out! Let me know if you have any questions.";
-        res.json({ response: aiResponse, sender: teamMemberName });
+        
+        // Determine completion state for frontend
+        const completionState = isReadyToClose ? 'closed' : 
+          (userComplete || teammateComplete) ? 'almostReady' : 'collecting';
+        
+        res.json({ 
+          response: aiResponse, 
+          sender: teamMemberName,
+          isClosing: isReadyToClose,
+          completionState,
+          topicsCovered,
+          missingTopics
+        });
       } catch (groqError) {
         console.error('Groq API error:', groqError);
         // Fallback responses
@@ -3109,7 +3197,8 @@ Examples of good short responses:
         ];
         res.json({ 
           response: fallbacks[Math.floor(Math.random() * fallbacks.length)], 
-          sender: teamMemberName 
+          sender: teamMemberName,
+          completionState: 'collecting'
         });
       }
     } catch (error) {

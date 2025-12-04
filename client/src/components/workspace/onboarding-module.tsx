@@ -134,6 +134,13 @@ export function OnboardingModule({
   const [teamChatMessages, setTeamChatMessages] = useState<Record<string, Array<{ sender: string; message: string }>>>({});
   const [teamChatInput, setTeamChatInput] = useState('');
   const [isAIResponding, setIsAIResponding] = useState(false);
+  const [conversationsClosed, setConversationsClosed] = useState<Record<string, boolean>>({});
+  const [topicsCovered, setTopicsCovered] = useState<Record<string, {
+    userProfessional: boolean;
+    userPersonal: boolean;
+    teammateProfessional: boolean;
+    teammatePersonal: boolean;
+  }>>({});
   
   const [progress, setProgress] = useState<OnboardingProgress>({
     teamIntrosComplete: {},
@@ -286,6 +293,14 @@ export function OnboardingModule({
         ...prev,
         [memberName]: [...(prev[memberName] || []), aiResponse]
       }));
+      
+      // Track topics covered and closing state
+      if (data.topicsCovered) {
+        setTopicsCovered(prev => ({ ...prev, [memberName]: data.topicsCovered }));
+      }
+      if (data.isClosing) {
+        setConversationsClosed(prev => ({ ...prev, [memberName]: true }));
+      }
     } catch (error) {
       console.error('Failed to get chat response:', error);
       const fallbackResponse = { sender: memberName, message: "Sorry, I got distracted for a moment. What were you saying?" };
@@ -537,6 +552,47 @@ export function OnboardingModule({
             </CardContent>
           </Card>
 
+          {/* Topic progress indicator */}
+          {memberMessages.length > 0 && topicsCovered[selectedMember.name] && (
+            <div className="flex items-center gap-3 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+              <span className="font-medium">Getting to know each other:</span>
+              <div className="flex gap-2 flex-wrap">
+                <span className={cn(
+                  "px-2 py-0.5 rounded",
+                  topicsCovered[selectedMember.name].userProfessional 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-gray-100 text-gray-400"
+                )}>
+                  Your background {topicsCovered[selectedMember.name].userProfessional && "✓"}
+                </span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded",
+                  topicsCovered[selectedMember.name].userPersonal 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-gray-100 text-gray-400"
+                )}>
+                  Your hobbies {topicsCovered[selectedMember.name].userPersonal && "✓"}
+                </span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded",
+                  topicsCovered[selectedMember.name].teammateProfessional 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-gray-100 text-gray-400"
+                )}>
+                  Their work {topicsCovered[selectedMember.name].teammateProfessional && "✓"}
+                </span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded",
+                  topicsCovered[selectedMember.name].teammatePersonal 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-gray-100 text-gray-400"
+                )}>
+                  Their hobbies {topicsCovered[selectedMember.name].teammatePersonal && "✓"}
+                </span>
+              </div>
+            </div>
+          )}
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
@@ -612,42 +668,60 @@ export function OnboardingModule({
                 </div>
               </div>
               
-              <div className="flex gap-2">
-                <Textarea
-                  value={teamChatInput}
-                  onChange={(e) => setTeamChatInput(e.target.value)}
-                  placeholder={`Say hi to ${selectedMember.name}...`}
-                  className="min-h-[60px] resize-none"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleTeamChatSend();
-                    }
-                  }}
-                  data-testid="input-team-chat"
-                />
-                <Button 
-                  onClick={handleTeamChatSend} 
-                  disabled={!teamChatInput.trim() || isAIResponding}
-                  size="icon"
-                  className="shrink-0 h-[60px] w-[60px]"
-                  data-testid="button-send-team-chat"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+              {conversationsClosed[selectedMember.name] ? (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg p-3 text-center">
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    Great chat! You've gotten to know {selectedMember.name}.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Textarea
+                    value={teamChatInput}
+                    onChange={(e) => setTeamChatInput(e.target.value)}
+                    placeholder={`Say hi to ${selectedMember.name}...`}
+                    className="min-h-[60px] resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleTeamChatSend();
+                      }
+                    }}
+                    data-testid="input-team-chat"
+                  />
+                  <Button 
+                    onClick={handleTeamChatSend} 
+                    disabled={!teamChatInput.trim() || isAIResponding}
+                    size="icon"
+                    className="shrink-0 h-[60px] w-[60px]"
+                    data-testid="button-send-team-chat"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Button 
-            className="w-full" 
-            onClick={() => handleTeamIntroComplete(selectedMember.name)}
-            disabled={!hasEnoughMessages}
-            data-testid="button-complete-intro"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            {hasEnoughMessages ? "Mark as Introduced" : "Have a conversation first"}
-          </Button>
+          {conversationsClosed[selectedMember.name] || hasEnoughMessages ? (
+            <Button 
+              className={cn(
+                "w-full",
+                conversationsClosed[selectedMember.name] 
+                  ? "bg-green-600 hover:bg-green-700 animate-pulse" 
+                  : ""
+              )}
+              onClick={() => handleTeamIntroComplete(selectedMember.name)}
+              data-testid="button-complete-intro"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {conversationsClosed[selectedMember.name] ? "Complete Introduction" : "Mark as Introduced"}
+            </Button>
+          ) : (
+            <div className="text-center text-sm text-gray-500 py-2">
+              Have a quick chat to get to know {selectedMember.name}
+            </div>
+          )}
         </div>
       );
     }
