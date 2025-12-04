@@ -287,7 +287,7 @@ export default function WorkspaceJourney() {
             </h1>
           </div>
           <p className="text-gray-600 mt-2">
-            Experience the complete 5-day onboarding journey. One company, start to finish.
+            Experience the complete work experience. One company, start to finish.
           </p>
         </div>
 
@@ -406,167 +406,59 @@ export default function WorkspaceJourney() {
           </div>
         )}
 
-        {/* Only show "Start a New Journey" section if no active journeys - Journey mode is one company at a time */}
-        {inProgressJourneys.length === 0 && (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Choose Your Journey
-            </h2>
-          
-            {projectsLoading || applicationsLoading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading journeys...</p>
-            </div>
-          ) : acceptedApplications.length === 0 ? (
-            // No accepted offers - show locked state with guidance
-            <Card className="border-gray-200 bg-gray-50">
-              <CardContent className="p-8">
-                <div className="text-center">
-                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <Lock className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Complete Your Job Journey First
-                  </h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    The Workspace Journey unlocks after you've successfully completed the interview process and accepted a job offer.
-                  </p>
-                  
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-xs font-medium text-blue-600">1</span>
-                      </div>
-                      <span>Apply for jobs</span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-xs font-medium text-blue-600">2</span>
-                      </div>
-                      <span>Pass interviews</span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-xs font-medium text-blue-600">3</span>
-                      </div>
-                      <span>Accept offer</span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
-                    <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
-                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      </div>
-                      <span>Start onboarding</span>
-                    </div>
-                  </div>
-                  
-                  <Button onClick={() => navigate('/jobs')} data-testid="button-go-to-jobs">
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    Browse Job Openings
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+        {/* Show guidance when no active workspaces */}
+        {activeWorkspacesList.length === 0 && (
+          <Card className="border-gray-200 bg-gray-50">
+            <CardContent className="p-8">
+              <div className="text-center">
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Briefcase className="h-8 w-8 text-gray-400" />
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6">
-              {journeyProjects.map((project: any) => {
-                const hasActiveJourney = inProgressJourneys.some((p: any) => p.projectId === project.id);
-                // Check if user has an accepted offer that matches this project's company
-                // For NovaPay projects, check if any accepted application is for NovaPay
-                const projectCompanyName = project.name.toLowerCase();
-                const hasMatchingOffer = acceptedApplications.some((app: any) => 
-                  app.job?.company?.name?.toLowerCase().includes('novapay') && projectCompanyName.includes('novapay')
-                );
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No Active Workspaces
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Your workspace journey begins after you land a job. Complete the interview process and accept an offer to unlock your workspace.
+                </p>
                 
-                if (!hasMatchingOffer) return null;
-                
-                return (
-                  <Card 
-                    key={project.id} 
-                    className={`transition-all ${hasActiveJourney ? 'opacity-60' : 'hover:shadow-lg cursor-pointer'}`}
-                    data-testid={`card-journey-${project.id}`}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-6">
-                        <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl">
-                          <Users className="h-8 w-8 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="text-xl font-semibold text-gray-900 mb-1">{project.name}</h3>
-                              <p className="text-gray-600 mb-4">{project.description}</p>
-                            </div>
-                            <Badge className="bg-blue-100 text-blue-800">
-                              {project.difficulty}
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              <span>5 Days</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4" />
-                              <span>~{project.estimatedDuration} min total</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              <span>{project.teamStructure?.length || 0} team members</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 mb-4">
-                            <span className="text-sm font-medium text-gray-700">Role:</span>
-                            <Badge variant="outline">Developer</Badge>
-                          </div>
-
-                          {!hasActiveJourney && (
-                            <Button 
-                              onClick={() => handleStartJourney(project)}
-                              disabled={createSessionMutation.isPending}
-                              data-testid={`button-start-journey-${project.id}`}
-                            >
-                              {createSessionMutation.isPending ? (
-                                'Starting...'
-                              ) : (
-                                <>
-                                  Start Journey
-                                  <ChevronRight className="h-4 w-4 ml-2" />
-                                </>
-                              )}
-                            </Button>
-                          )}
-                          
-                          {hasActiveJourney && (
-                            <p className="text-sm text-amber-600 font-medium">
-                              You have an active journey for this project. Continue or restart above.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              {journeyProjects.length === 0 && !projectsLoading && (
-                <Card className="p-12 text-center">
-                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <Rocket className="h-8 w-8 text-gray-400" />
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-600">1</span>
+                    </div>
+                    <span>Apply for jobs</span>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Journeys Available</h3>
-                  <p className="text-gray-600">Check back soon for new workspace journeys.</p>
-                </Card>
-              )}
-            </div>
-          )}
-          </div>
+                  <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-600">2</span>
+                    </div>
+                    <span>Pass interviews</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-600">3</span>
+                    </div>
+                    <span>Accept offer</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-300 hidden sm:block" />
+                  <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    </div>
+                    <span>Start workspace</span>
+                  </div>
+                </div>
+                
+                <Button onClick={() => navigate('/jobs')} data-testid="button-go-to-jobs">
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Browse Job Openings
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
