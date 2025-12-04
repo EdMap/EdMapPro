@@ -25,7 +25,7 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
   - Five distinct phases: Onboarding → Planning → Execution → Review → Retro
   - Phase-specific modules with multi-step workflows:
     - **OnboardingModule**: Team introductions, documentation review, comprehension check with Sarah
-    - **PlanningModule**: Backlog review, sprint goal setting, team commitment with capacity validation
+    - **PlanningModule**: Collaborative sprint planning with role-aware adapter system (see Phase 6 below)
     - **ExecutionModule**: Kanban board with drag-and-drop, git workflow simulation, team chat
     - **ReviewModule**: Demo presenter, stakeholder feedback collection, summary
     - **RetroModule**: Reflection cards (went well/to improve), voting, action items with owners
@@ -34,6 +34,29 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
   - Automatic workspace creation on job offer acceptance
   - Routes: `/workspace/:id`, `/workspace/:id/onboarding`, `/workspace/:id/planning`, `/workspace/:id/execution`, `/workspace/:id/review`, `/workspace/:id/retro`
   - WorkspaceDashboard with PhaseStepper visualization, phase checklist, and CTA buttons
+- **Collaborative Sprint Planning (Phase 6)**: A role-aware, adapter-driven sprint planning experience that simulates real Scrum planning meetings. Features include:
+  - **Single Meeting Flow**: Planning presented as one continuous session with three sections:
+    - Context (5 min): Facilitator presents priorities and business context
+    - Discussion (15 min): Team discusses items, estimates, and concerns
+    - Commitment (10 min): Team agrees on scope and sprint goal
+  - **Role-Aware Adapters**: Experience adapts based on workspace.role:
+    - Developer/QA/DevOps/Data Science: Participates in planning led by AI PM (Priya)
+    - PM: Leads/facilitates planning, AI dev team responds with concerns
+  - **Level Overlays**: Difficulty and scaffolding adjust based on level:
+    - Intern: Heavy guidance, knowledge checks, AI nudges, no skipping
+    - Junior: Moderate guidance, some autonomy, optional checks
+    - Senior: Minimal guidance, complex scenarios, AI pushback
+  - **Composable Adapter Architecture**:
+    - Role adapters in `shared/adapters/planning/roles/` (base behavior per role)
+    - Level overlays in `shared/adapters/planning/levels/` (difficulty modifiers)
+    - Factory merges role + level: `getSprintPlanningAdapter(role, level)`
+  - **SprintPlanningAdapter Interface**:
+    - `prompts`: Role-specific system prompts and AI persona configuration
+    - `uiControls`: Panel visibility, skip permissions, learning objectives
+    - `difficulty`: Ticket complexity, ambiguity, conflict scenarios
+    - `evaluation`: Rubric weights and passing thresholds
+  - **Hybrid UI**: Chat-based team discussion with phase progress indicator
+  - **Data Model**: `planningSessions` table tracking phase progress, selected items, goal, commitment; `planningMessages` for conversation history
 - **Narrative Progression System (Phase 3)**: A dynamic journey system with configurable progression paths (Intern→Junior, Junior→Mid, Mid→Senior), story arcs (Onboarding, Sprints, Graduation), and competency tracking. Features include:
   - Level-agnostic sprint generation engine (same code, different content packs per level)
   - Delta calculator for competency changes with mastery bands (Explorer → Contributor → Junior Ready)
