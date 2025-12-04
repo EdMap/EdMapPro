@@ -3007,6 +3007,270 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Phase 6: Sprint Planning Session Routes ============
+
+  // GET /api/workspaces/:workspaceId/planning - Get planning session state
+  app.get("/api/workspaces/:workspaceId/planning", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const state = await storage.getPlanningSessionState(workspaceId);
+      res.json(state);
+    } catch (error) {
+      console.error("Failed to get planning session state:", error);
+      res.status(500).json({ message: "Failed to get planning session state" });
+    }
+  });
+
+  // POST /api/workspaces/:workspaceId/planning - Create or resume planning session
+  app.post("/api/workspaces/:workspaceId/planning", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      // Check if active session exists
+      let session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      
+      if (!session) {
+        // Create new session with workspace role/level
+        session = await storage.createPlanningSession({
+          workspaceId,
+          role: workspace.role,
+          level: 'intern', // Default to intern for now - can be enhanced later
+          currentPhase: 'context',
+          phaseCompletions: { context: false, discussion: false, commitment: false },
+          selectedItems: [],
+          capacityUsed: 0,
+          status: 'active',
+          knowledgeCheckPassed: false,
+        });
+      }
+      
+      const state = await storage.getPlanningSessionState(workspaceId);
+      res.json(state);
+    } catch (error) {
+      console.error("Failed to create/resume planning session:", error);
+      res.status(500).json({ message: "Failed to create/resume planning session" });
+    }
+  });
+
+  // PUT /api/workspaces/:workspaceId/planning - Update planning session
+  app.put("/api/workspaces/:workspaceId/planning", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const updates = req.body;
+      
+      const session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      if (!session) {
+        return res.status(404).json({ message: "No active planning session found" });
+      }
+      
+      const updated = await storage.updatePlanningSession(session.id, updates);
+      const state = await storage.getPlanningSessionState(workspaceId);
+      res.json(state);
+    } catch (error) {
+      console.error("Failed to update planning session:", error);
+      res.status(500).json({ message: "Failed to update planning session" });
+    }
+  });
+
+  // POST /api/workspaces/:workspaceId/planning/message - Send message in planning session
+  app.post("/api/workspaces/:workspaceId/planning/message", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const { message } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      const session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      if (!session) {
+        return res.status(404).json({ message: "No active planning session found" });
+      }
+      
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      // Save user message
+      const userMessage = await storage.createPlanningMessage({
+        sessionId: session.id,
+        sender: 'You',
+        senderRole: 'user',
+        message,
+        phase: session.currentPhase,
+        isUser: true,
+      });
+      
+      // Get planning adapter for AI response
+      const { getSprintPlanningAdapter } = require('@shared/adapters/planning');
+      const adapter = getSprintPlanningAdapter(session.role, session.level);
+      
+      // Get appropriate phase prompt
+      let phasePrompt = adapter.prompts.contextPhasePrompt;
+      if (session.currentPhase === 'discussion') {
+        phasePrompt = adapter.prompts.discussionPhasePrompt;
+      } else if (session.currentPhase === 'commitment') {
+        phasePrompt = adapter.prompts.commitmentPhasePrompt;
+      }
+      
+      // Get existing messages for context
+      const existingMessages = await storage.getPlanningMessages(session.id);
+      const conversationHistory = existingMessages.map(m => ({
+        role: m.isUser ? 'user' : 'assistant',
+        content: `${m.sender} (${m.senderRole}): ${m.message}`
+      }));
+      
+      // Pick a persona to respond
+      const personas = adapter.prompts.personas;
+      const respondingPersona = personas[Math.floor(Math.random() * personas.length)];
+      
+      // Generate AI response using Groq
+      const Groq = require('groq-sdk');
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+      
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: adapter.prompts.systemPrompt },
+          { role: 'system', content: `Current phase: ${session.currentPhase}. ${phasePrompt}` },
+          { role: 'system', content: `You are responding as ${respondingPersona.name} (${respondingPersona.role}). ${respondingPersona.personality}. Company: ${workspace.companyName}` },
+          ...conversationHistory,
+          { role: 'user', content: message }
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.7,
+        max_tokens: 300,
+      });
+      
+      const aiResponseText = chatCompletion.choices[0]?.message?.content || "I'm thinking about that...";
+      
+      // Save AI response
+      const aiMessage = await storage.createPlanningMessage({
+        sessionId: session.id,
+        sender: respondingPersona.name,
+        senderRole: respondingPersona.role,
+        message: aiResponseText,
+        phase: session.currentPhase,
+        isUser: false,
+      });
+      
+      const state = await storage.getPlanningSessionState(workspaceId);
+      res.json({ 
+        userMessage, 
+        aiMessage,
+        state 
+      });
+    } catch (error) {
+      console.error("Failed to send planning message:", error);
+      res.status(500).json({ message: "Failed to send planning message" });
+    }
+  });
+
+  // POST /api/workspaces/:workspaceId/planning/advance - Advance to next planning phase
+  app.post("/api/workspaces/:workspaceId/planning/advance", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      
+      const session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      if (!session) {
+        return res.status(404).json({ message: "No active planning session found" });
+      }
+      
+      const phaseOrder = ['context', 'discussion', 'commitment'];
+      const currentIndex = phaseOrder.indexOf(session.currentPhase);
+      
+      if (currentIndex === phaseOrder.length - 1) {
+        // Complete the planning session
+        await storage.updatePlanningSession(session.id, {
+          status: 'completed',
+          completedAt: new Date(),
+          phaseCompletions: { context: true, discussion: true, commitment: true },
+        });
+        
+        // Advance workspace to execution phase
+        await storage.advanceWorkspacePhase(workspaceId, {
+          goalStatement: session.goalStatement,
+          selectedItems: session.selectedItems,
+        });
+        
+        const state = await storage.getPlanningSessionState(workspaceId);
+        res.json({ completed: true, state });
+      } else {
+        // Move to next phase
+        const nextPhase = phaseOrder[currentIndex + 1];
+        const phaseCompletions = session.phaseCompletions as Record<string, boolean>;
+        phaseCompletions[session.currentPhase] = true;
+        
+        await storage.updatePlanningSession(session.id, {
+          currentPhase: nextPhase,
+          phaseCompletions,
+        });
+        
+        const state = await storage.getPlanningSessionState(workspaceId);
+        res.json({ completed: false, state });
+      }
+    } catch (error) {
+      console.error("Failed to advance planning phase:", error);
+      res.status(500).json({ message: "Failed to advance planning phase" });
+    }
+  });
+
+  // POST /api/workspaces/:workspaceId/planning/select-items - Select backlog items
+  app.post("/api/workspaces/:workspaceId/planning/select-items", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const { selectedItems, capacityUsed } = req.body;
+      
+      const session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      if (!session) {
+        return res.status(404).json({ message: "No active planning session found" });
+      }
+      
+      await storage.updatePlanningSession(session.id, {
+        selectedItems,
+        capacityUsed: capacityUsed || 0,
+      });
+      
+      const state = await storage.getPlanningSessionState(workspaceId);
+      res.json(state);
+    } catch (error) {
+      console.error("Failed to select planning items:", error);
+      res.status(500).json({ message: "Failed to select planning items" });
+    }
+  });
+
+  // POST /api/workspaces/:workspaceId/planning/goal - Set sprint goal
+  app.post("/api/workspaces/:workspaceId/planning/goal", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const { goalStatement } = req.body;
+      
+      if (!goalStatement) {
+        return res.status(400).json({ message: "Goal statement is required" });
+      }
+      
+      const session = await storage.getPlanningSessionByWorkspace(workspaceId);
+      if (!session) {
+        return res.status(404).json({ message: "No active planning session found" });
+      }
+      
+      await storage.updatePlanningSession(session.id, { goalStatement });
+      
+      const state = await storage.getPlanningSessionState(workspaceId);
+      res.json(state);
+    } catch (error) {
+      console.error("Failed to set sprint goal:", error);
+      res.status(500).json({ message: "Failed to set sprint goal" });
+    }
+  });
+
+  // ============ End Phase 6: Sprint Planning Session Routes ============
+
   // POST /api/workspaces/:workspaceId/onboarding-chat - Chat with team members during onboarding
   app.post("/api/workspaces/:workspaceId/onboarding-chat", async (req, res) => {
     try {
