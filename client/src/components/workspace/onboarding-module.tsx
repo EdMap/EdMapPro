@@ -10,11 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Users, 
   FileText, 
   MessageSquare, 
+  MessageCircle,
   CheckCircle2, 
   Clock,
   BookOpen,
@@ -141,6 +143,14 @@ export function OnboardingModule({
     teammateProfessional: boolean;
     teammatePersonal: boolean;
   }>>({});
+  const [isSarahResponding, setIsSarahResponding] = useState(false);
+  const [sarahConversationClosed, setSarahConversationClosed] = useState(false);
+  const [sarahTopicsCovered, setSarahTopicsCovered] = useState({
+    userShowedUnderstanding: false,
+    userAskedQuestions: false,
+    sarahAnsweredQuestions: false,
+    sarahOfferedNextSteps: false
+  });
   
   const [progress, setProgress] = useState<OnboardingProgress>({
     teamIntrosComplete: {},
@@ -228,26 +238,47 @@ export function OnboardingModule({
     updateProgress(newProgress);
   };
 
-  const handleSendMessage = () => {
-    if (!chatMessage.trim()) return;
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || isSarahResponding) return;
     
-    setChatHistory(prev => [
-      ...prev,
-      { sender: 'You', message: chatMessage },
-      { sender: 'Sarah', message: getSarahResponse(chatMessage, chatHistory.length) }
-    ]);
+    const userMessageText = chatMessage;
+    const currentHistory = chatHistory;
+    
+    const newUserMessage = { sender: 'You', message: userMessageText };
+    setChatHistory(prev => [...prev, newUserMessage]);
     setChatMessage('');
+    setIsSarahResponding(true);
     
-    if (chatHistory.length >= 2) {
-      handleComprehensionComplete();
+    try {
+      const res = await apiRequest('POST', `/api/workspaces/${workspaceId}/comprehension-chat`, {
+        userMessage: userMessageText,
+        conversationHistory: [...currentHistory, newUserMessage]
+      });
+      const data = await res.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 800));
+      
+      const sarahResponse = { sender: 'Sarah', message: data.response };
+      setChatHistory(prev => [...prev, sarahResponse]);
+      
+      if (data.topicsCovered) {
+        setSarahTopicsCovered(data.topicsCovered);
+      }
+      
+      if (data.isClosing || data.completionState === 'closed') {
+        setSarahConversationClosed(true);
+        handleComprehensionComplete();
+      }
+    } catch (error) {
+      console.error('Failed to get Sarah response:', error);
+      const fallbackResponse = { 
+        sender: 'Sarah', 
+        message: "That's great! You've got a good understanding. Let me know if you have any questions!" 
+      };
+      setChatHistory(prev => [...prev, fallbackResponse]);
+    } finally {
+      setIsSarahResponding(false);
     }
-  };
-
-  const getSarahResponse = (userMessage: string, messageCount: number): string => {
-    if (messageCount === 0) {
-      return "That's a great understanding! You've clearly been paying attention to the docs. The timezone handling is definitely critical for our merchants who operate across different regions. Any other questions about the codebase or the team?";
-    }
-    return "Perfect! I think you're ready to move on. Tomorrow we'll get you set up with your development environment and you'll start working on your first ticket. Exciting times ahead! Feel free to reach out if you need anything.";
   };
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -260,7 +291,7 @@ export function OnboardingModule({
 
   useEffect(() => {
     scrollToBottom();
-  }, [teamChatMessages, isAIResponding]);
+  }, [teamChatMessages, isAIResponding, chatHistory, isSarahResponding]);
 
   const handleTeamChatSend = async () => {
     if (!teamChatInput.trim() || !selectedMember || isAIResponding) return;
@@ -1017,7 +1048,7 @@ export function OnboardingModule({
 
   const renderComprehension = () => (
     <div className="space-y-4 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h3 className="text-lg font-semibold">Check in with Sarah</h3>
           <p className="text-sm text-gray-500">Share what you've learned from the documentation</p>
@@ -1028,95 +1059,156 @@ export function OnboardingModule({
         </Button>
       </div>
 
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 mb-4">
-        <CardContent className="p-4">
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="pb-2 border-b">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-10 w-10 ring-2 ring-indigo-100">
               <AvatarImage src={getAvatarUrl('Sarah')} alt="Sarah" />
-              <AvatarFallback className="bg-blue-500 text-white">S</AvatarFallback>
+              <AvatarFallback className="bg-indigo-500 text-white">S</AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-semibold">Sarah - Tech Lead</p>
-              <p className="text-sm text-gray-500">This is a casual chat, not a test!</p>
+              <CardTitle className="text-base">Sarah</CardTitle>
+              <CardDescription className="text-xs">Tech Lead</CardDescription>
+            </div>
+            <div className="ml-auto flex gap-1">
+              <Badge variant="outline" className="text-xs">Documentation</Badge>
+              <Badge variant="outline" className="text-xs">Mentorship</Badge>
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MessageCircle className="h-4 w-4 text-indigo-600" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Chat with Sarah</span>
+          </div>
+          <CardDescription className="text-xs mb-3">
+            Share what you understood from the docs - this is a casual chat, not a test!
+          </CardDescription>
+
+          <div ref={chatScrollRef} className="min-h-[320px] max-h-[480px] overflow-y-auto pr-4 mb-4">
+            <div className="space-y-3">
+              {chatHistory.length === 0 && (
+                <div className="text-center py-6 text-gray-400 text-sm">
+                  <p>Start a conversation! Try sharing:</p>
+                  <div className="flex flex-wrap gap-2 justify-center mt-2">
+                    <Badge variant="outline" className="text-xs cursor-pointer hover:bg-gray-100">What the dashboard does</Badge>
+                    <Badge variant="outline" className="text-xs cursor-pointer hover:bg-gray-100">Key features</Badge>
+                    <Badge variant="outline" className="text-xs cursor-pointer hover:bg-gray-100">Questions</Badge>
+                  </div>
+                </div>
+              )}
+
+              {chatHistory.map((msg, idx) => (
+                <div 
+                  key={idx} 
+                  className={cn("flex", msg.sender === 'You' ? "justify-end" : "items-start gap-2")}
+                >
+                  {msg.sender !== 'You' && (
+                    <Avatar className="h-7 w-7 flex-shrink-0">
+                      <AvatarImage src={getAvatarUrl('Sarah')} alt="Sarah" />
+                      <AvatarFallback className="bg-indigo-500 text-white text-xs">S</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className={cn(
+                    "px-3 py-2 rounded-2xl max-w-[85%]",
+                    msg.sender === 'You' 
+                      ? "bg-indigo-600 text-white rounded-br-sm" 
+                      : "bg-gray-100 dark:bg-gray-800 rounded-tl-sm"
+                  )}>
+                    <p className="text-sm">{msg.message}</p>
+                  </div>
+                </div>
+              ))}
+
+              {isSarahResponding && (
+                <div className="flex items-start gap-2">
+                  <Avatar className="h-7 w-7 flex-shrink-0">
+                    <AvatarImage src={getAvatarUrl('Sarah')} alt="Sarah" />
+                    <AvatarFallback className="bg-indigo-500 text-white text-xs">S</AvatarFallback>
+                  </Avatar>
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {chatHistory.length > 0 && (
+            <div className="flex items-center gap-3 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 mb-3">
+              <span className="font-medium">Check-in progress:</span>
+              <div className="flex gap-2 flex-wrap">
+                <span className={cn(
+                  "px-2 py-0.5 rounded",
+                  sarahTopicsCovered.userShowedUnderstanding 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-gray-100 text-gray-400"
+                )}>
+                  Understanding {sarahTopicsCovered.userShowedUnderstanding && "✓"}
+                </span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded",
+                  sarahTopicsCovered.userAskedQuestions 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-gray-100 text-gray-400"
+                )}>
+                  Questions {sarahTopicsCovered.userAskedQuestions && "✓"}
+                </span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded",
+                  sarahTopicsCovered.sarahOfferedNextSteps 
+                    ? "bg-green-100 text-green-700" 
+                    : "bg-gray-100 text-gray-400"
+                )}>
+                  Next steps {sarahTopicsCovered.sarahOfferedNextSteps && "✓"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {sarahConversationClosed ? (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg p-3 mt-auto">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-800 dark:text-green-200 text-sm">Great chat!</p>
+                  <p className="text-xs text-green-600 dark:text-green-300">You're ready to move on</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2 mt-auto">
+              <Input
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Say hi to Sarah..."
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                disabled={isSarahResponding}
+                data-testid="input-comprehension-message"
+              />
+              <Button 
+                size="icon"
+                onClick={handleSendMessage}
+                disabled={!chatMessage.trim() || isSarahResponding}
+                className="bg-indigo-600 hover:bg-indigo-700"
+                data-testid="button-send-message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <ScrollArea className="flex-1 pr-2">
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={getAvatarUrl('Sarah')} alt="Sarah" />
-              <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
-            </Avatar>
-            <div className="bg-white dark:bg-gray-800 border rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
-              <p className="text-sm">
-                Hey! I see you've been reading through the docs. What's your understanding of what our Merchant Dashboard does?
-              </p>
-            </div>
-          </div>
-
-          {chatHistory.map((msg, idx) => (
-            <div 
-              key={idx} 
-              className={cn("flex", msg.sender === 'You' ? "justify-end" : "items-start gap-3")}
-            >
-              {msg.sender !== 'You' && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={getAvatarUrl('Sarah')} alt="Sarah" />
-                  <AvatarFallback className="bg-blue-500 text-white text-xs">S</AvatarFallback>
-                </Avatar>
-              )}
-              <div className={cn(
-                "px-4 py-3 rounded-2xl max-w-[80%]",
-                msg.sender === 'You' 
-                  ? "bg-blue-600 text-white rounded-br-sm" 
-                  : "bg-white dark:bg-gray-800 border rounded-tl-sm"
-              )}>
-                <p className="text-sm">{msg.message}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-
-      {progress.comprehensionComplete ? (
-        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
-              <div>
-                <p className="font-semibold text-green-800 dark:text-green-200">Great chat!</p>
-                <p className="text-sm text-green-600 dark:text-green-300">You're ready to move on</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex gap-2 pt-4 border-t">
-          <Textarea
-            value={chatMessage}
-            onChange={(e) => setChatMessage(e.target.value)}
-            placeholder="Type your response to Sarah..."
-            className="min-h-[60px] resize-none"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            data-testid="input-comprehension-message"
-          />
-          <Button 
-            onClick={handleSendMessage}
-            disabled={!chatMessage.trim()}
-            data-testid="button-send-message"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 
