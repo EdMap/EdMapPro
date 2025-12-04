@@ -3070,15 +3070,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               role: "system",
               content: `Analyze this conversation between a new intern ("You") and ${teamMemberName} (a ${persona.role}).
-              
-Determine which topics have been genuinely discussed (not just asked about, but actually shared):
 
-Return a JSON object with these boolean fields:
-- userProfessional: Has the intern shared info about their work background, experience, studies, or career interests?
-- userPersonal: Has the intern shared personal interests, hobbies, or non-work activities?
-- teammateProfessional: Has ${teamMemberName} shared info about their work, role, or experience?
-- teammatePersonal: Has ${teamMemberName} shared hobbies, interests, or personal activities?
+STRICTLY determine which topics have been ACTUALLY SHARED (not just asked about):
 
+PROFESSIONAL means: job role, years of experience, previous companies, what they studied, career path, technical skills, why they chose this field
+PERSONAL means: hobbies, activities outside work, sports, games, cooking, music, movies, travel, family, pets
+
+Return a JSON object with these boolean fields (be STRICT - only true if clearly discussed):
+- userProfessional: Has the intern SHARED their education, studies, work experience, or career interests? (NOT just "I'm doing well" or greetings)
+- userPersonal: Has the intern SHARED specific hobbies, activities, or interests? (e.g., "I play tennis", "I like gaming")
+- teammateProfessional: Has ${teamMemberName} SHARED their role, experience, or work background? (e.g., "I've been here 2 years", "I'm the senior dev")
+- teammatePersonal: Has ${teamMemberName} SHARED specific hobbies or interests? (e.g., "I play chess", "I cook biryani")
+
+Be conservative - if unsure, mark as false. Simple greetings don't count.
 Respond ONLY with valid JSON, no other text.`
             },
             { role: "user", content: fullConversation }
@@ -3115,6 +3119,10 @@ Respond ONLY with valid JSON, no other text.`
       if (!topicsCovered.teammateProfessional) missingTopics.push("your work experience");
       if (!topicsCovered.teammatePersonal) missingTopics.push("your personal interests");
       
+      // Determine conversation turn for scripted flow
+      const turnCount = conversationHistory ? conversationHistory.length : 0;
+      const isFirstResponse = turnCount <= 1; // First user message
+      
       const systemPrompt = `You are ${teamMemberName}, a ${persona.role} at ${workspace.companyName}. 
 Personality: ${persona.personality}
 Your background: ${persona.background}
@@ -3125,28 +3133,40 @@ CRITICAL RESPONSE RULES:
 - Keep responses SHORT: 1-2 sentences MAX
 - Be warm but concise - you're busy but friendly
 - DO NOT write paragraphs or long explanations
-- DO NOT discuss work tasks - this is purely social
+- DO NOT discuss work tasks beyond brief intro
 
 ${isReadyToClose ? 
-`CONVERSATION IS COMPLETE - You've both shared professional and personal info!
+`CONVERSATION IS COMPLETE - You've BOTH shared professional AND personal info!
 END THE CONVERSATION NOW with a friendly goodbye. Examples:
 - "Great chatting with you! I should get back to work. Welcome to the team!"
 - "Anyway, I better jump back into this PR. Really nice meeting you!"
 - "That's awesome! Well, I'll let you get back to onboarding. See you around!"
 Do NOT ask any more questions.` 
 :
-`GUIDE THE CONVERSATION - Still missing: ${missingTopics.join(', ')}
-${!topicsCovered.teammatePersonal && !topicsCovered.teammateProfessional ? 
-  "Share a bit about yourself (work or hobbies) and ask the intern something." :
+isFirstResponse ?
+`THIS IS YOUR FIRST REPLY - Introduce yourself properly:
+1. Greet them warmly
+2. Share YOUR role briefly (e.g., "I'm a ${persona.role} here, been with the company about X years")
+3. Ask about THEIR background/studies/what brought them here (professional question first!)
+Example: "Hey, welcome aboard! I'm one of the senior devs here - been around about 2 years now. What's your background - are you studying CS or coming from somewhere else?"`
+:
+`GUIDE THE CONVERSATION - Topics still needed: ${missingTopics.join(', ')}
+
+PRIORITY ORDER (follow this strictly):
+1. First, ensure PROFESSIONAL topics are covered (work, studies, career)
+2. Only THEN move to PERSONAL topics (hobbies, interests)
+
+${!topicsCovered.teammateProfessional ? 
+  "You haven't shared your work background yet - briefly mention your role/experience." :
   !topicsCovered.userProfessional ? 
-    "Ask about their background, studies, or what got them interested in this role." :
+    "You don't know their professional background yet - ask about their studies, experience, or what got them into this field." :
+  !topicsCovered.teammatePersonal ?
+    "Now share something personal - mention a hobby or interest of yours." :
   !topicsCovered.userPersonal ? 
-    "Ask what they do for fun or their hobbies outside work." :
-  !topicsCovered.teammateProfessional ?
-    "Briefly mention your role or experience here." :
-    "Share one of your hobbies or interests."
-}
-Ask ONE brief question if you haven't learned about them yet.`}`;
+    "Ask what they do for fun outside of work/studies." :
+    "Continue naturally."}
+
+DO NOT say goodbye until ALL topics are covered!`}`;
 
       const messages: any[] = [
         { role: "system", content: systemPrompt }

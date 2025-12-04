@@ -518,8 +518,6 @@ export function OnboardingModule({
   const renderTeamIntro = () => {
     if (selectedMember) {
       const memberMessages = teamChatMessages[selectedMember.name] || [];
-      const userMessageCount = memberMessages.filter(m => m.sender === 'You').length;
-      const hasEnoughMessages = userMessageCount >= 2;
       
       return (
         <div className="space-y-4">
@@ -703,23 +701,22 @@ export function OnboardingModule({
             </CardContent>
           </Card>
 
-          {conversationsClosed[selectedMember.name] || hasEnoughMessages ? (
+          {conversationsClosed[selectedMember.name] ? (
             <Button 
-              className={cn(
-                "w-full",
-                conversationsClosed[selectedMember.name] 
-                  ? "bg-green-600 hover:bg-green-700 animate-pulse" 
-                  : ""
-              )}
+              className="w-full bg-green-600 hover:bg-green-700"
               onClick={() => handleTeamIntroComplete(selectedMember.name)}
               data-testid="button-complete-intro"
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
-              {conversationsClosed[selectedMember.name] ? "Complete Introduction" : "Mark as Introduced"}
+              Complete Introduction
             </Button>
+          ) : memberMessages.length > 0 ? (
+            <div className="text-center text-sm text-gray-500 py-2">
+              Keep chatting to learn about each other's background and interests
+            </div>
           ) : (
             <div className="text-center text-sm text-gray-500 py-2">
-              Have a quick chat to get to know {selectedMember.name}
+              Start a conversation to get to know {selectedMember.name}
             </div>
           )}
         </div>
