@@ -602,7 +602,7 @@ export function OnboardingModule({
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div ref={chatScrollRef} className="h-[200px] overflow-y-auto pr-4 mb-4">
+              <div ref={chatScrollRef} className="min-h-[320px] max-h-[480px] overflow-y-auto pr-4 mb-4">
                 <div className="space-y-3">
                   {memberMessages.length === 0 && (
                     <div className="text-center py-6 text-gray-400 text-sm">
