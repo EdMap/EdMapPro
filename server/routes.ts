@@ -3071,18 +3071,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               role: "system",
               content: `Analyze this conversation between a new intern ("You") and ${teamMemberName} (a ${persona.role}).
 
-STRICTLY determine which topics have been ACTUALLY SHARED (not just asked about):
+Determine which topics have been ACTUALLY SHARED (not just asked about, but answered/revealed):
 
-PROFESSIONAL means: job role, years of experience, previous companies, what they studied, career path, technical skills, why they chose this field
-PERSONAL means: hobbies, activities outside work, sports, games, cooking, music, movies, travel, family, pets
+PROFESSIONAL EXAMPLES (mark true if ANY of these are shared):
+- Education: "I'm in a bootcamp", "I studied CS", "I'm a student at..."
+- Work history: "I used to be a data scientist", "I worked at...", "I have X years experience"
+- Career goals: "I want to become a developer", "I'm interested in backend"
+- Current role: "I'm a senior dev", "I've been here 2 years", "I work on the payments team"
 
-Return a JSON object with these boolean fields (be STRICT - only true if clearly discussed):
-- userProfessional: Has the intern SHARED their education, studies, work experience, or career interests? (NOT just "I'm doing well" or greetings)
-- userPersonal: Has the intern SHARED specific hobbies, activities, or interests? (e.g., "I play tennis", "I like gaming")
-- teammateProfessional: Has ${teamMemberName} SHARED their role, experience, or work background? (e.g., "I've been here 2 years", "I'm the senior dev")
-- teammatePersonal: Has ${teamMemberName} SHARED specific hobbies or interests? (e.g., "I play chess", "I cook biryani")
+PERSONAL EXAMPLES (mark true if ANY of these are shared):
+- Sports: "I play tennis", "I run", "I go to the gym"
+- Games: "I play chess", "I'm into video games", "I play online"
+- Creative: "I cook", "I make music", "I paint"
+- Entertainment: "I watch movies", "I read", "I hike"
+- Family: "I used to play chess with my dad", "I have a dog"
 
-Be conservative - if unsure, mark as false. Simple greetings don't count.
+Return JSON with these fields:
+- userProfessional: true if intern shared education, work history, career info, or skills
+- userPersonal: true if intern shared hobbies, sports, games, or personal interests
+- teammateProfessional: true if ${teamMemberName} shared their role, experience, or work background
+- teammatePersonal: true if ${teamMemberName} shared hobbies, interests, or personal activities
+
+IMPORTANT: 
+- Greetings like "Hi", "How are you", "Nice to meet you" do NOT count as sharing
+- Questions don't count - only answers/statements about oneself
+- Be accurate, not conservative - if they clearly shared something, mark it true
+
 Respond ONLY with valid JSON, no other text.`
             },
             { role: "user", content: fullConversation }
@@ -3133,6 +3147,9 @@ Respond ONLY with valid JSON, no other text.`
       const turnCount = conversationHistory ? conversationHistory.length : 0;
       const isFirstResponse = turnCount <= 1; // First user message
       
+      // Get the last user message for context-aware acknowledgment
+      const lastUserMessage = userMessage.toLowerCase();
+      
       const systemPrompt = `You are ${teamMemberName}, a ${persona.role} at ${workspace.companyName}. 
 Personality: ${persona.personality}
 Your background: ${persona.background}
@@ -3144,46 +3161,54 @@ CRITICAL RESPONSE RULES:
 - Be warm but concise - you're busy but friendly
 - DO NOT write paragraphs or long explanations
 - DO NOT discuss work tasks beyond brief intro
+- ALWAYS acknowledge what they just said before transitioning to a new topic
+- Vary your language - don't use the same phrases repeatedly
+
+ACKNOWLEDGMENT EXAMPLES (use these patterns, vary the wording):
+- "That's cool!" / "Nice!" / "Oh interesting!" / "That's awesome!"
+- "Bootcamp, nice - those can be intense!" / "Data science background, that's solid!"
+- "Chess with your dad, love that!" / "Tennis, nice - great way to stay active!"
 
 ${isReadyToClose ? 
 `CONVERSATION IS COMPLETE - You've covered backgrounds, hobbies, and offered to answer questions!
-END THE CONVERSATION NOW - say you need to run to a meeting but they can reach out anytime. Examples:
-- "Anyway, I've got a standup to run to, but feel free to ping me anytime if you have questions. Great meeting you!"
-- "I should head to my next meeting, but my door's always open - don't hesitate to reach out. Welcome aboard!"
-- "Got to jump into a call, but seriously, any questions come up, just message me. Nice chatting with you!"
-Do NOT ask any more questions.` 
+END THE CONVERSATION NOW - Reference something specific from the chat, then say you need to run:
+- If they mentioned a hobby: "Good luck with the [hobby] and the new role! I've got to run to standup, but ping me anytime."
+- If they had questions: "Hope that helps! Anyway, I've got a meeting - but seriously, reach out anytime."
+- General: "Really enjoyed chatting! Got to jump into a call, but my door's always open. Welcome to the team!"
+Make the goodbye feel personal, not generic. Do NOT ask any more questions.` 
 :
 isFirstResponse ?
 `THIS IS YOUR FIRST REPLY - Introduce yourself properly:
-1. Greet them warmly
+1. Greet them warmly (vary your greeting - "Hey!", "Hi there!", "Welcome!")
 2. Share YOUR role briefly (e.g., "I'm a ${persona.role} here, been with the company about X years")
 3. Ask about THEIR background/studies/what brought them here (professional question first!)
 Example: "Hey, welcome aboard! I'm one of the senior devs here - been around about 2 years now. What's your background - are you studying CS or coming from somewhere else?"`
 :
 allTopicsCovered && !hasOfferedQuestions ?
 `You've learned about each other! Now offer to answer questions:
-Ask if they have any questions about the company, the team, or the role.
-Example: "By the way, do you have any questions about the team or how things work around here?"
-Keep it brief - just offer to help with questions.`
+First, briefly acknowledge their last message, then ask if they have questions.
+Example: "That's great! By the way, do you have any questions about the team or how things work around here?"
+Keep it brief - acknowledge + question offer.`
 :
 `GUIDE THE CONVERSATION - Topics still needed: ${missingTopics.join(', ')}
+
+IMPORTANT: Always start by acknowledging what they just shared before moving on!
 
 CONVERSATION FLOW (follow this order):
 1. First, share YOUR professional background if you haven't
 2. Then, learn about THEIR professional background
-3. Share YOUR hobbies/interests
-4. ASK about THEIR hobbies/interests (don't skip this!)
-5. Finally, offer to answer questions about the company/role
+3. Share YOUR hobbies/interests AND ask about theirs in the same message
+4. Finally, offer to answer questions about the company/role
 
 ${!topicsCovered.teammateProfessional ? 
   "You haven't shared your work background yet - briefly mention your role/experience." :
   !topicsCovered.userProfessional ? 
-    "You don't know their professional background yet - ask about their studies, experience, or what got them into this field." :
+    "Acknowledge their greeting, then ask about their background, studies, or what got them into this field." :
   !topicsCovered.teammatePersonal ?
-    "Share something personal - mention a hobby or interest of yours, then ask about theirs." :
+    "Acknowledge what they shared about their background (be specific!), then share your hobby AND ask about theirs." :
   !topicsCovered.userPersonal ? 
-    "ASK what they do for fun outside of work/studies - you shared yours, now learn about theirs!" :
-    "Continue naturally."}
+    "Acknowledge their response, then ASK what they do for fun outside of work/studies!" :
+    "Acknowledge their response naturally."}
 
 DO NOT say goodbye until you've offered to answer questions about the company/role!`}`;
 
