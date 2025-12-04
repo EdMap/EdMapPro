@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -599,6 +599,31 @@ function ApplicationDetail({
   const progressPercent = (completedStages / application.stages.length) * 100;
 
   const [workspaceId, setWorkspaceId] = useState<number | null>(null);
+
+  // Fetch workspace ID for already-accepted applications
+  useEffect(() => {
+    const fetchWorkspaceId = async () => {
+      if (application.status === 'accepted' && userId && !workspaceId) {
+        try {
+          const journeyResponse = await fetch(`/api/user/${userId}/journey`);
+          if (journeyResponse.ok) {
+            const journeyData = await journeyResponse.json();
+            const journey = journeyData.journey;
+            if (journey?.id) {
+              const workspaceResponse = await fetch(`/api/journeys/${journey.id}/workspace`);
+              if (workspaceResponse.ok) {
+                const workspace = await workspaceResponse.json();
+                setWorkspaceId(workspace.id);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch workspace:', error);
+        }
+      }
+    };
+    fetchWorkspaceId();
+  }, [application.status, userId, workspaceId]);
   
   // Mutation to update application status
   const updateStatusMutation = useMutation({
@@ -770,6 +795,20 @@ function ApplicationDetail({
               onViewFeedback={handleViewFeedback}
             />
           </div>
+
+          {/* Subtle workspace link for accepted applications */}
+          {application.status === 'accepted' && workspaceId && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={handleGoToWorkspace}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+                data-testid="link-view-workspace"
+              >
+                View your workspace at {application.job.company.name}
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
