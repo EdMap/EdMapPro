@@ -56,7 +56,54 @@ Celebrate when they do ask questions or share observations.`
 
 Don't worry about jumping in right away - feel free to observe how we run these meetings first. I'll check in with you as we go, and please raise your hand anytime if you have questions.
 
+Alright team, let me walk through our priorities for this sprint...`,
+    autoStartSequence: [
+      {
+        personaId: 'priya',
+        phase: 'context',
+        message: `Good morning everyone! Thanks for joining our sprint planning. I see we have a new team member with us today - welcome!
+
+Don't worry about jumping in right away - feel free to observe how we run these meetings first. I'll check in with you as we go, and please raise your hand anytime if you have questions.
+
 Alright team, let me walk through our priorities for this sprint...`
+      },
+      {
+        personaId: 'priya',
+        phase: 'context',
+        message: `So for this sprint, we have a few high-priority items from stakeholders. First up is a timezone display bug that's affecting users in different regions - they're seeing incorrect timestamps. This one's been escalated by support.
+
+We also need to implement the user notifications feature. Product has been asking for this for a while - it's key for user engagement.`
+      },
+      {
+        personaId: 'marcus',
+        phase: 'context',
+        message: `The timezone bug sounds like it could be in the date formatting utilities. I've seen similar issues before - usually it's a matter of storing everything in UTC and converting on display.
+
+For the notifications feature, are we talking push notifications or just in-app? That'll affect the scope significantly.`
+      },
+      {
+        personaId: 'priya',
+        phase: 'context',
+        message: `Good question, Marcus. For now, we're scoping it to in-app notifications only. Push notifications are on the roadmap for next quarter.
+
+We also have a couple of bugs in the backlog - a null check issue in the payment flow that's causing occasional failures, and users are asking for pagination on the user list since it's getting slow.`
+      },
+      {
+        personaId: 'alex',
+        phase: 'context',
+        message: `I can take a look at that payment flow bug - I was working in that area last sprint. The null check is probably in the order processing logic.
+
+The pagination should be straightforward. We have the pattern established from the product list already.`
+      },
+      {
+        personaId: 'priya',
+        phase: 'context',
+        message: `Great overview, team. Before we move to estimation, let me check in with our new team member.
+
+Do you have any questions about what we've discussed so far? Don't be shy - there's no such thing as a dumb question in planning!`,
+        requiresUserResponse: true
+      }
+    ]
   },
   
   uiOverrides: {

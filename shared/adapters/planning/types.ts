@@ -97,6 +97,13 @@ export interface RolePlanningAdapter {
 export type EngagementMode = 'shadow' | 'guided' | 'active' | 'facilitator';
 export type PhaseEngagement = 'observe' | 'respond' | 'lead';
 
+export interface AutoStartStep {
+  personaId: 'priya' | 'marcus' | 'alex';
+  message: string;
+  phase: PlanningPhase;
+  requiresUserResponse?: boolean;
+}
+
 export interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -112,6 +119,7 @@ export interface LevelEngagement {
     commitment: string[];
   };
   autoStartMessage: string;
+  autoStartSequence?: AutoStartStep[];
 }
 
 export interface LevelPlanningOverlay {

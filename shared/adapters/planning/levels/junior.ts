@@ -55,7 +55,27 @@ Create opportunities for them to practice contributing in a safe environment.`
 
 We've got some interesting work lined up, and I'm excited to hear everyone's thoughts - especially as we think through estimates and priorities together.
 
-Let me share what's on our plate for this sprint...`
+Let me share what's on our plate for this sprint...`,
+    autoStartSequence: [
+      {
+        personaId: 'priya',
+        phase: 'context',
+        message: `Morning team! Let's dive into our sprint planning. We've got some interesting work lined up, and I'm excited to hear everyone's thoughts.
+
+Here's what's on our plate: we have a timezone bug that's been escalated, the user notifications feature that product has been waiting for, and a couple of smaller items in the backlog.`
+      },
+      {
+        personaId: 'marcus',
+        phase: 'context',
+        message: `The timezone bug shouldn't be too complex - probably a UTC conversion issue. The notifications feature is the bigger piece.`
+      },
+      {
+        personaId: 'priya',
+        phase: 'context',
+        message: `Agreed. Before we dive into estimates, I'd love to hear your initial thoughts. Any questions about the priorities or anything that stands out to you?`,
+        requiresUserResponse: true
+      }
+    ]
   },
   
   uiOverrides: {

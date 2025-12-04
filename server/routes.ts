@@ -3010,19 +3010,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ Phase 6: Sprint Planning Session Routes ============
 
+  // Helper to map personaId to full persona details
+  const PERSONA_MAP: Record<string, { name: string; role: string }> = {
+    priya: { name: 'Priya', role: 'Product Manager' },
+    marcus: { name: 'Marcus', role: 'Senior Developer' },
+    alex: { name: 'Alex', role: 'QA Engineer' },
+  };
+
   // GET /api/workspaces/:workspaceId/planning - Get planning session state
   app.get("/api/workspaces/:workspaceId/planning", async (req, res) => {
     try {
       const workspaceId = parseInt(req.params.workspaceId);
       
-      // Check if session exists and has no messages - insert welcome message if needed
+      // Check if session exists and needs auto-start messages
       const session = await storage.getPlanningSessionByWorkspace(workspaceId);
       if (session) {
         const messages = await storage.getPlanningMessages(session.id);
-        if (messages.length === 0) {
-          // Session exists but has no messages - insert auto-start message
-          const adapter = getSprintPlanningAdapter(session.role, session.level);
-          if (adapter.engagement?.autoStartConversation && adapter.engagement?.autoStartMessage) {
+        const adapter = getSprintPlanningAdapter(session.role, session.level);
+        
+        // Check if we need to insert auto-start sequence
+        if (messages.length === 0 && adapter.engagement?.autoStartConversation) {
+          const sequence = adapter.engagement.autoStartSequence;
+          
+          if (sequence && sequence.length > 0) {
+            // Insert all messages from the sequence until we hit one that requires user response
+            for (const step of sequence) {
+              const persona = PERSONA_MAP[step.personaId] || { name: 'Team', role: 'Team Member' };
+              await storage.createPlanningMessage({
+                sessionId: session.id,
+                sender: persona.name,
+                senderRole: persona.role,
+                message: step.message,
+                phase: step.phase,
+                isUser: false,
+              });
+              
+              // Stop after inserting a message that requires user response
+              if (step.requiresUserResponse) {
+                break;
+              }
+            }
+          } else if (adapter.engagement.autoStartMessage) {
+            // Fallback to single message if no sequence defined
             await storage.createPlanningMessage({
               sessionId: session.id,
               sender: 'Priya',
@@ -3075,19 +3104,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           knowledgeCheckPassed: false,
         });
         
-        // Get adapter to auto-start conversation with welcome message
+        // Get adapter to auto-start conversation with sequence
         const adapter = getSprintPlanningAdapter(session.role, session.level);
         
-        if (adapter.engagement?.autoStartConversation && adapter.engagement?.autoStartMessage) {
-          // Auto-insert Priya's welcome message
-          await storage.createPlanningMessage({
-            sessionId: session.id,
-            sender: 'Priya',
-            senderRole: 'Product Manager',
-            message: adapter.engagement.autoStartMessage,
-            phase: 'context',
-            isUser: false,
-          });
+        if (adapter.engagement?.autoStartConversation) {
+          const sequence = adapter.engagement.autoStartSequence;
+          
+          if (sequence && sequence.length > 0) {
+            // Insert all messages from the sequence until we hit one that requires user response
+            for (const step of sequence) {
+              const persona = PERSONA_MAP[step.personaId] || { name: 'Team', role: 'Team Member' };
+              await storage.createPlanningMessage({
+                sessionId: session.id,
+                sender: persona.name,
+                senderRole: persona.role,
+                message: step.message,
+                phase: step.phase,
+                isUser: false,
+              });
+              
+              // Stop after inserting a message that requires user response
+              if (step.requiresUserResponse) {
+                break;
+              }
+            }
+          } else if (adapter.engagement.autoStartMessage) {
+            // Fallback to single message if no sequence defined
+            await storage.createPlanningMessage({
+              sessionId: session.id,
+              sender: 'Priya',
+              senderRole: 'Product Manager',
+              message: adapter.engagement.autoStartMessage,
+              phase: 'context',
+              isUser: false,
+            });
+          }
         }
       }
       
