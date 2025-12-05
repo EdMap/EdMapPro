@@ -91,16 +91,19 @@ Help students go from **Intern → Junior Ready** by exposing them to real-world
 │   ║                              │                                        ║   │
 │   ║                              ▼                                        ║   │
 │   ║   ┌─────────────────────────────────────────────────────────────┐    ║   │
-│   ║   │              SPRINT REVIEW (planned)                         │    ║   │
+│   ║   │              SPRINT REVIEW ✅                                │    ║   │
 │   ║   │  • Demo completed work to stakeholders                       │    ║   │
-│   ║   │  • Get feedback on deliverables                              │    ║   │
+│   ║   │  • Get AI-generated feedback on deliverables                 │    ║   │
+│   ║   │  • Role-aware stakeholders (Eng Manager, Tech Lead, etc.)    │    ║   │
+│   ║   │  • Level-adjusted demo format (guided → freeform)            │    ║   │
 │   ║   └─────────────────────────────────────────────────────────────┘    ║   │
 │   ║                              │                                        ║   │
 │   ║                              ▼                                        ║   │
 │   ║   ┌─────────────────────────────────────────────────────────────┐    ║   │
-│   ║   │              SPRINT RETROSPECTIVE (planned)                  │    ║   │
-│   ║   │  • What went well?                                           │    ║   │
-│   ║   │  • What could improve?                                       │    ║   │
+│   ║   │              SPRINT RETROSPECTIVE ✅                         │    ║   │
+│   ║   │  • Sprint context recap with metrics                         │    ║   │
+│   ║   │  • What went well? / What could improve?                     │    ║   │
+│   ║   │  • Level-adjusted facilitation (guided → self-directed)      │    ║   │
 │   ║   │  • Action items for next sprint                              │    ║   │
 │   ║   └─────────────────────────────────────────────────────────────┘    ║   │
 │   ║                              │                                        ║   │
@@ -132,14 +135,15 @@ Help students go from **Intern → Junior Ready** by exposing them to real-world
 | **Role Adapters** | Developer, PM, QA, DevOps, Data Science | `shared/adapters/execution/roles/` |
 | **Level Overlays** | Intern, Junior, Mid, Senior | `shared/adapters/execution/levels/` |
 | **Layout Config System** | Adapter-driven responsive layouts | `shared/adapters/execution/types.ts` |
+| **Sprint Review** | Role-aware demo with AI stakeholder feedback | `shared/adapters/review/`, `client/src/components/workspace/review-module.tsx` |
+| **Sprint Retrospective** | Level-adjusted facilitation with sprint context | `shared/adapters/retro/`, `client/src/components/workspace/retro-module.tsx` |
 
 ### 🔄 Partially Implemented
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **Sprint Review** | UI exists, ceremony not fully wired | Phase transition works, demo presentation pending |
-| **Sprint Retro** | UI exists, ceremony not fully wired | Phase transition works, reflection flow pending |
 | **PR Review Flow** | Schema exists, UI pending | `PRReviewConfig` in adapters ready |
+| **Sprint Cycling** | Phase transitions work | Next sprint creation pending |
 
 ### ⏳ Planned (Not Started)
 
@@ -170,6 +174,38 @@ shared/adapters/execution/
     ├── junior.ts      # Moderate hints, on-error hints
     ├── mid.ts         # Light hints, no shortcuts
     └── senior.ts      # No hints, strict validation
+```
+
+### Sprint Review Adapters
+
+```
+shared/adapters/review/
+├── index.ts           # Factory: getSprintReviewAdapter(role, level)
+├── types.ts           # StakeholderPersona, DemoConfig, FeedbackConfig
+├── roles/
+│   ├── developer.ts   # Tech-focused stakeholders (Eng Manager, Tech Lead)
+│   └── pm.ts          # Product-focused stakeholders (VP Product, Customer Success)
+└── levels/
+    ├── intern.ts      # Guided demo, 70% positive feedback
+    ├── junior.ts      # Prompted demo, constructive feedback
+    ├── mid.ts         # Minimal prompts, direct feedback
+    └── senior.ts      # Freeform demo, challenging feedback
+```
+
+### Sprint Retrospective Adapters
+
+```
+shared/adapters/retro/
+├── index.ts           # Factory: getRetroAdapter(role, level)
+├── types.ts           # FacilitatorPersona, RetroCard, SprintContextData
+├── roles/
+│   ├── developer.ts   # Focus: Code Quality, PR Process, Technical Debt
+│   └── pm.ts          # Focus: Requirements, Stakeholders, Prioritization
+└── levels/
+    ├── intern.ts      # Guided facilitation, 3 starter cards
+    ├── junior.ts      # Prompted facilitation, 2 starter cards
+    ├── mid.ts         # Collaborative, 1 starter card
+    └── senior.ts      # Self-directed, no starter cards
 ```
 
 ### Layout Configuration System
@@ -290,12 +326,12 @@ Branch → Code Work → npm test → Stage → Commit → Push → PR → Revie
 
 ## Next Steps (Priority Order)
 
-### P0: Complete Sprint Cycle
-1. Wire up Sprint Review ceremony (demo presentation flow)
-2. Wire up Sprint Retro ceremony (reflection and action items)
-3. Enable sprint cycling (complete retro → start next sprint)
+### ✅ P0: Complete Sprint Cycle (DONE)
+1. ~~Wire up Sprint Review ceremony (demo presentation flow)~~ ✅
+2. ~~Wire up Sprint Retro ceremony (reflection and action items)~~ ✅
+3. Enable sprint cycling (complete retro → start next sprint) - *partial*
 
-### P1: Real Code Editor & LLM Execution (NEW)
+### P1: Real Code Editor & LLM Execution
 1. Embed Monaco editor in TicketWorkspace
 2. Create code analysis API endpoint with LLM simulation
 3. Extend backlog catalogue with code challenges
@@ -306,6 +342,7 @@ Branch → Code Work → npm test → Stage → Commit → Push → PR → Revie
 1. PR review flow in TicketWorkspace (partially complete)
 2. Mid-sprint interruptions (AI team asks questions)
 3. Burndown chart visualization
+4. Sprint cycling (auto-create next sprint after retro)
 
 ### P3: Portfolio & Graduation
 1. Artifact collection during sprints
