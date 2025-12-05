@@ -99,6 +99,63 @@ shared/adapters/planning/
 - `autoSet`: AI PM (Priya) defines the sprint goal (developer roles)
 - `userDefined`: User defines the sprint goal (PM role at all levels)
 
+### Sprint Execution Adapters
+Located in `shared/adapters/execution/`, the adapter system provides role-aware and level-adjusted execution experiences.
+
+**Structure:**
+```
+shared/adapters/execution/
+├── index.ts           # Factory: getSprintExecutionAdapter(role, level)
+├── types.ts           # TypeScript interfaces (GitCommand, StandupConfig, etc.)
+├── roles/
+│   ├── developer.ts   # Full git workflow, PR reviews, code work
+│   └── pm.ts          # No git terminal, stakeholder management focus
+└── levels/
+    ├── intern.ts      # Heavy hints, shortcut buttons, lenient validation
+    ├── junior.ts      # Moderate hints, on-error hints
+    ├── mid.ts         # Light hints, no shortcuts
+    └── senior.ts      # No hints, strict validation
+```
+
+**Key Interfaces:**
+- `RoleExecutionAdapter`: Git workflow, standup config, AI personas, PR review settings
+- `LevelExecutionOverlay`: Scaffolding level, UI overrides, difficulty settings
+- `SprintExecutionAdapter`: Final merged adapter with all execution behaviors
+
+**Git Workflow Commands:**
+| Command | Description | Prerequisite |
+|---------|-------------|--------------|
+| branch | Create feature branch | None |
+| add | Stage changes | Branch created |
+| commit | Commit with message | Changes staged |
+| push | Push to remote | Commit made |
+| pr | Create pull request | Branch pushed |
+
+**Level-Based Git Guidance:**
+| Level | Strictness | Hints | Shortcuts |
+|-------|-----------|-------|-----------|
+| Intern | Lenient | Always shown | Enabled |
+| Junior | Moderate | On error | Enabled |
+| Mid | Moderate | On request | Disabled |
+| Senior | Strict | Never | Disabled |
+
+### Execution Phase Components
+- **ExecutionModule**: Kanban board view with sprint progress, drag-drop tickets
+- **DailyStandup**: Yesterday/Today/Blockers form with AI team feedback
+- **TicketWorkspace**: Full-screen work environment with:
+  - Ticket details sidebar (collapsible)
+  - Git terminal with command validation
+  - Team chat panel
+  - Quick action buttons (level-dependent)
+  - Git workflow progress tracker
+
+**Navigation Flow:**
+```
+Standup → Board → Ticket Workspace → Board (loop)
+                        ↓
+                  PR Review → Done
+```
+
 ### Backlog Catalogue
 Located in `shared/adapters/planning/backlog-catalogue.ts`, the unified backlog catalogue serves as the single source of truth for sprint items across planning and execution phases.
 

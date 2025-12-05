@@ -50,6 +50,7 @@ interface ExecutionModuleProps {
   onComplete: () => void;
   onBack?: () => void;
   onStartTicketWork?: (ticketId: number) => void;
+  onShowStandup?: () => void;
 }
 
 function getTypeIcon(type: TicketType) {
@@ -474,6 +475,7 @@ export function ExecutionModule({
   onComplete,
   onBack,
   onStartTicketWork,
+  onShowStandup,
 }: ExecutionModuleProps) {
   const { toast } = useToast();
   const [selectedTicket, setSelectedTicket] = useState<SprintTicket | null>(null);
@@ -617,12 +619,20 @@ export function ExecutionModule({
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Sprint Execution</h2>
           <p className="text-gray-500 dark:text-gray-400">{sprintGoal}</p>
         </div>
-        {onBack && (
-          <Button variant="outline" onClick={onBack} data-testid="button-back-to-dashboard">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {onShowStandup && (
+            <Button variant="default" onClick={onShowStandup} data-testid="button-daily-standup">
+              <Users className="h-4 w-4 mr-2" />
+              Daily Standup
+            </Button>
+          )}
+          {onBack && (
+            <Button variant="outline" onClick={onBack} data-testid="button-back-to-dashboard">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
