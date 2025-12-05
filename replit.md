@@ -50,6 +50,21 @@ The platform utilizes extensive adapter systems (`shared/adapters/planning/` and
 | Mid | two-column | right | narrow | main-bottom |
 | Senior | focus-terminal | left | narrow | floating |
 
+**Review Phase Layout**: The `ReviewPhaseLayout` interface in `ExecutionUIControls` provides phase-specific overrides during PR Review:
+- `showGitTerminal`: boolean - whether to show terminal during review
+- `showTeamChat`: boolean - whether to show team chat during review
+- `showQuickActions`: boolean - whether to show quick action buttons during review
+- `panelWidth`: 'full' | 'wide' | 'standard' - PR Review panel width
+- `terminalCollapsible`: boolean - whether terminal can be collapsed
+
+**Level-Specific Review Phase Layout**:
+| Level | Terminal | Team Chat | Quick Actions | Panel Width |
+|-------|----------|-----------|---------------|-------------|
+| Intern | Hidden | Hidden | Hidden | Full |
+| Junior | Hidden | Hidden | Hidden | Full |
+| Mid | Visible | Hidden | Visible | Wide |
+| Senior | Visible | Visible | Visible | Standard |
+
 **Backlog Catalogue**: A unified `BACKLOG_CATALOGUE` in `shared/adapters/planning/backlog-catalogue.ts` serves as the single source of truth for all sprint items, integrated from planning to execution.
 
 ### PR Review System
