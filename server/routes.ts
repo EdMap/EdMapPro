@@ -3288,7 +3288,12 @@ CRITICAL RULES:
         max_tokens: 300,
       });
       
-      const aiResponseText = chatCompletion.choices[0]?.message?.content || "I'm thinking about that...";
+      let aiResponseText = chatCompletion.choices[0]?.message?.content || "I'm thinking about that...";
+      
+      // Strip any persona prefix the AI might have included (e.g., "Priya (Product Manager): ...")
+      const personaPrefixPattern = /^[A-Za-z]+\s*\([^)]+\):\s*/;
+      const nameOnlyPrefixPattern = /^[A-Za-z]+:\s*/;
+      aiResponseText = aiResponseText.replace(personaPrefixPattern, '').replace(nameOnlyPrefixPattern, '').trim();
       
       // Save AI response
       const aiMessage = await storage.createPlanningMessage({
