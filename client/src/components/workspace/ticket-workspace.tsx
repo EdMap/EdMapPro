@@ -173,6 +173,14 @@ export function TicketWorkspace({
   const shouldShowQuickActions = isInReviewPhase 
     ? reviewPhaseLayout.showQuickActions 
     : adapter.uiControls.allowShortcutButtons;
+  
+  const reviewPanelWidthClass = isInReviewPhase 
+    ? reviewPhaseLayout.panelWidth === 'full' 
+      ? 'max-w-none' 
+      : reviewPhaseLayout.panelWidth === 'wide' 
+        ? 'max-w-4xl' 
+        : 'max-w-3xl'
+    : '';
 
   const backlogItem = useMemo(() => {
     if (!ticket?.ticketKey) return undefined;
@@ -900,7 +908,8 @@ Time:        0.842s`;
             <div className={cn(
               "p-4 bg-purple-50/30 dark:bg-purple-950/10",
               !shouldShowTerminal && !shouldShowTeamChat && "flex-1 overflow-auto",
-              (shouldShowTerminal || shouldShowTeamChat) && "border-b"
+              (shouldShowTerminal || shouldShowTeamChat) && "border-b",
+              reviewPanelWidthClass
             )}>
               <PRReviewPanel
                 prReviewConfig={adapter.prReviewConfig}
