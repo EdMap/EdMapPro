@@ -14,8 +14,8 @@ const developerGitCommands: GitCommand[] = [
     instruction: 'Create a feature branch for this ticket',
     hint: 'Use git checkout -b with a descriptive branch name',
     validPatterns: [
-      /^git\s+checkout\s+-b\s+(feature|fix|bugfix|hotfix)\/[a-z0-9-]+$/i,
-      /^git\s+switch\s+-c\s+(feature|fix|bugfix|hotfix)\/[a-z0-9-]+$/i,
+      /^git\s+checkout\s+-b\s+\S+$/i,
+      /^git\s+switch\s+-c\s+\S+$/i,
     ],
     successOutput: (ticketId: string) => `Switched to a new branch 'feature/${ticketId.toLowerCase()}-fix'`,
     failureHint: 'Try: git checkout -b feature/TICK-001-description',
