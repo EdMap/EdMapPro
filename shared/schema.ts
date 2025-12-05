@@ -1557,6 +1557,11 @@ export interface LevelEngagement {
   autoStartMessage: string;
 }
 
+export interface CommitmentGuidance {
+  mode: 'autoSet' | 'userDefined';
+  suggestedGoal?: string;
+}
+
 // Planning session state for API responses
 export interface PlanningSessionState {
   session: PlanningSession;
@@ -1579,6 +1584,7 @@ export interface PlanningSessionState {
     showKnowledgeCheck: boolean;
     canSkipPhases: boolean;
     engagement?: LevelEngagement;
+    commitmentGuidance?: CommitmentGuidance;
   };
 }
 

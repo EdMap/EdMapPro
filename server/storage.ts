@@ -3844,6 +3844,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         showKnowledgeCheck: session.level === 'intern',
         canSkipPhases: session.level === 'mid' || session.level === 'senior',
         engagement: adapter.engagement,
+        commitmentGuidance: adapter.commitmentGuidance,
       }
     };
   }

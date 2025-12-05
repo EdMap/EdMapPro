@@ -86,6 +86,11 @@ interface SelectionGuidance {
   nextStepHint?: string;
 }
 
+interface CommitmentGuidance {
+  mode: 'autoSet' | 'userDefined';
+  suggestedGoal?: string;
+}
+
 interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -118,6 +123,7 @@ interface PlanningSessionState {
     showKnowledgeCheck: boolean;
     canSkipPhases: boolean;
     engagement: LevelEngagement;
+    commitmentGuidance?: CommitmentGuidance;
   };
 }
 
@@ -1007,23 +1013,28 @@ export function PlanningModule({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-2">
-                    <Input
-                      value={sprintGoal}
-                      onChange={(e) => setSprintGoal(e.target.value)}
-                      placeholder="e.g., Fix critical bugs to improve user trust"
-                      data-testid="input-sprint-goal"
-                    />
-                    <Button 
-                      onClick={handleSetGoal} 
-                      disabled={!sprintGoal.trim() || setGoal.isPending}
-                      variant="secondary"
-                    >
-                      Set Goal
-                    </Button>
-                  </div>
+                  {adapterConfig.commitmentGuidance?.mode !== 'autoSet' && (
+                    <div className="flex gap-2">
+                      <Input
+                        value={sprintGoal}
+                        onChange={(e) => setSprintGoal(e.target.value)}
+                        placeholder="e.g., Fix critical bugs to improve user trust"
+                        data-testid="input-sprint-goal"
+                      />
+                      <Button 
+                        onClick={handleSetGoal} 
+                        disabled={!sprintGoal.trim() || setGoal.isPending}
+                        variant="secondary"
+                      >
+                        Set Goal
+                      </Button>
+                    </div>
+                  )}
                   {session.goalStatement && (
-                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200">
+                    <div className={cn(
+                      "p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200",
+                      adapterConfig.commitmentGuidance?.mode !== 'autoSet' && "mt-3"
+                    )}>
                       <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
                         <CheckCircle2 className="h-4 w-4" />
                         <span className="font-medium text-sm">{session.goalStatement}</span>
@@ -1047,7 +1058,8 @@ export function PlanningModule({
               <div className="text-sm text-muted-foreground">
                 {session.currentPhase === 'context' && messages.length < 2 && !showPhaseTransitionHint && "Have a brief discussion first"}
                 {session.currentPhase === 'discussion' && selectedItems.length === 0 && "Select at least one backlog item"}
-                {session.currentPhase === 'commitment' && !session.goalStatement && "Set a sprint goal to continue"}
+                {session.currentPhase === 'commitment' && !session.goalStatement && adapterConfig.commitmentGuidance?.mode !== 'autoSet' && "Set a sprint goal to continue"}
+                {session.currentPhase === 'commitment' && session.goalStatement && "Review the sprint goal and start the sprint"}
               </div>
               <Button 
                 onClick={() => advancePhase.mutate()}
