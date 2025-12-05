@@ -355,20 +355,58 @@ export function PRReviewPanel({
     }, 2000);
   }, [threads, onRequestReReview]);
   
-  const renderConversationFirstLayout = () => (
+  const getGuidanceMessage = () => {
+    switch (levelModifiers.feedbackTone) {
+      case 'educational':
+        return {
+          title: 'Getting Started with Code Review',
+          message: "Your teammates have reviewed your code and left feedback. Read through each comment, make any necessary changes, and reply to let them know you've addressed their feedback.",
+        };
+      case 'collaborative':
+        return {
+          title: 'Team Feedback',
+          message: 'Your team has some suggestions to discuss. Review their comments and collaborate on the best approach.',
+        };
+      case 'direct':
+        return {
+          title: 'Review Comments',
+          message: 'Address the following review comments before merging.',
+        };
+      case 'peer':
+        return {
+          title: 'Peer Review',
+          message: 'Your peers have shared their perspectives. Review and respond as needed.',
+        };
+      default:
+        return {
+          title: 'Code Review',
+          message: 'Review and address the comments below.',
+        };
+    }
+  };
+  
+  const renderConversationFirstLayout = () => {
+    const guidance = getGuidanceMessage();
+    
+    return (
     <div className="space-y-4">
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <Lightbulb className="h-5 w-5 text-blue-500 mt-0.5" />
-          <div>
-            <p className="font-medium text-blue-700 dark:text-blue-300">Getting Started with Code Review</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Your teammates have reviewed your code and left feedback. Read through each comment, 
-              make any necessary changes, and reply to let them know you've addressed their feedback.
-            </p>
+      {levelModifiers.feedbackTone === 'educational' && (
+        <div 
+          className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+          role="region"
+          aria-label="Getting started guidance"
+        >
+          <div className="flex items-start gap-3">
+            <Lightbulb className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-medium text-blue-700 dark:text-blue-300">{guidance.title}</p>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                {guidance.message}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
       <ScrollArea className="h-[500px]">
         <div className="space-y-4 pr-4">
@@ -390,7 +428,8 @@ export function PRReviewPanel({
         </div>
       </ScrollArea>
     </div>
-  );
+    );
+  };
   
   const renderSplitDiffLayout = () => (
     <div className="flex gap-4 h-[600px]">
@@ -476,12 +515,49 @@ export function PRReviewPanel({
     </ScrollArea>
   );
   
+  const resolvedCount = threads.length - unresolvedCount;
+  const progressPercent = threads.length > 0 ? Math.round((resolvedCount / threads.length) * 100) : 0;
+  
+  const renderReviewChecklist = () => {
+    if (!uiConfig.showReviewChecklist) return null;
+    
+    const checklistItems = [
+      { id: 'read', label: 'Read all review comments', done: true },
+      { id: 'address', label: 'Address blocking issues', done: blockingCount === 0 },
+      { id: 'respond', label: 'Respond to feedback', done: threads.every(t => t.status === 'resolved' || t.comments.some(c => c.isUser)) },
+      { id: 'resolve', label: 'Resolve all threads', done: unresolvedCount === 0 },
+    ];
+    
+    return (
+      <div className="bg-muted/30 rounded-lg p-4 mb-4" role="region" aria-label="Review progress checklist">
+        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+          Review Checklist
+        </h4>
+        <div className="space-y-2">
+          {checklistItems.map(item => (
+            <div key={item.id} className="flex items-center gap-2 text-sm">
+              {item.done ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" aria-hidden="true" />
+              ) : (
+                <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" aria-hidden="true" />
+              )}
+              <span className={cn(item.done && "text-muted-foreground line-through")}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  
   return (
-    <Card className="border-purple-200 dark:border-purple-800" data-testid="pr-review-panel">
+    <Card className="border-green-200 dark:border-green-800" data-testid="pr-review-panel">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <GitPullRequest className="h-5 w-5 text-purple-500" />
+            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+              <GitPullRequest className="h-5 w-5 text-green-600 dark:text-green-400" aria-hidden="true" />
+            </div>
             <div>
               <CardTitle className="text-lg">Pull Request Review</CardTitle>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -490,51 +566,68 @@ export function PRReviewPanel({
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-sm font-medium" aria-live="polite">
+                {resolvedCount} of {threads.length} resolved
+              </div>
+              <div className="w-24 h-1.5 bg-muted rounded-full mt-1 overflow-hidden">
+                <div 
+                  className="h-full bg-green-500 rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                  role="progressbar"
+                  aria-valuenow={progressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${progressPercent}% of threads resolved`}
+                />
+              </div>
+            </div>
+            
             {reviewPhase === 'in_review' && (
               <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                <Clock className="h-3 w-3 mr-1" />
+                <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
                 In Review
               </Badge>
             )}
             {reviewPhase === 'changes_requested' && (
               <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
-                <RefreshCw className="h-3 w-3 mr-1" />
+                <RefreshCw className="h-3 w-3 mr-1" aria-hidden="true" />
                 Changes Requested
               </Badge>
             )}
             {reviewPhase === 'approved' && (
               <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                <Check className="h-3 w-3 mr-1" />
+                <Check className="h-3 w-3 mr-1" aria-hidden="true" />
                 Approved
               </Badge>
             )}
           </div>
         </div>
         
-        <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" />
-            {threads.length} comments
+        <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <MessageSquare className="h-4 w-4" aria-hidden="true" />
+            {threads.length} comment{threads.length !== 1 ? 's' : ''}
           </span>
           {unresolvedCount > 0 && (
             <span className={cn(
-              "flex items-center gap-1",
+              "flex items-center gap-1.5",
               uiConfig.highlightUnresolved && "text-amber-600 dark:text-amber-400 font-medium"
             )}>
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
               {unresolvedCount} unresolved
             </span>
           )}
           {blockingCount > 0 && (
-            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
-              <AlertCircle className="h-4 w-4" />
+            <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-medium">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               {blockingCount} blocking
             </span>
           )}
-          <span className="flex items-center gap-1 ml-auto">
-            <Eye className="h-4 w-4" />
-            {reviewers.map(r => r.name).join(', ')}
+          <span className="flex items-center gap-1.5 ml-auto">
+            <Eye className="h-4 w-4" aria-hidden="true" />
+            Reviewers: {reviewers.map(r => r.name).join(', ')}
           </span>
         </div>
       </CardHeader>
@@ -542,48 +635,76 @@ export function PRReviewPanel({
       <Separator />
       
       <CardContent className="pt-4">
+        {renderReviewChecklist()}
+        
         {uiConfig.layoutMode === 'conversation-first' && renderConversationFirstLayout()}
         {uiConfig.layoutMode === 'split-diff' && renderSplitDiffLayout()}
         {uiConfig.layoutMode === 'unified' && renderUnifiedLayout()}
         
-        <div className="flex items-center justify-between mt-4 pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            {unresolvedCount === 0 ? (
-              <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4" />
-                All feedback addressed
-              </span>
-            ) : (
-              <span>
-                {levelModifiers.requireExplicitApprovalRequest 
-                  ? "Resolve all comments and request re-review when ready"
-                  : "Address feedback to proceed with merge"}
-              </span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {reviewPhase !== 'approved' && unresolvedCount === 0 && (
-              <Button 
-                variant="outline" 
-                onClick={handleRequestReReview}
-                disabled={reviewPhase === 'in_review'}
-                data-testid="button-request-re-review"
-              >
-                <RefreshCw className={cn("h-4 w-4 mr-2", reviewPhase === 'in_review' && "animate-spin")} />
-                Request Re-review
-              </Button>
-            )}
+        <div 
+          className="mt-6 pt-4 border-t bg-muted/20 -mx-6 -mb-6 px-6 py-4 rounded-b-lg"
+          role="region"
+          aria-label="Review actions"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              {blockingCount > 0 ? (
+                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                  <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                  <span className="font-medium">{blockingCount} blocking issue{blockingCount !== 1 ? 's' : ''} must be resolved before merge</span>
+                </div>
+              ) : unresolvedCount > 0 ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MessageSquare className="h-4 w-4" aria-hidden="true" />
+                  <span>
+                    {levelModifiers.requireExplicitApprovalRequest 
+                      ? `Resolve ${unresolvedCount} remaining comment${unresolvedCount !== 1 ? 's' : ''} and request re-review`
+                      : `Address ${unresolvedCount} remaining comment${unresolvedCount !== 1 ? 's' : ''} to proceed`}
+                  </span>
+                </div>
+              ) : reviewPhase === 'approved' ? (
+                <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  <span className="font-medium">All checks passed - ready to merge!</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  <span>All feedback addressed - request re-review to proceed</span>
+                </div>
+              )}
+            </div>
             
-            <Button 
-              onClick={onMerge}
-              disabled={!canMerge}
-              className="bg-green-600 hover:bg-green-700"
-              data-testid="button-merge-pr"
-            >
-              <GitMerge className="h-4 w-4 mr-2" />
-              Merge PR
-            </Button>
+            <div className="flex items-center gap-3">
+              {reviewPhase !== 'approved' && unresolvedCount === 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleRequestReReview}
+                  disabled={reviewPhase === 'in_review'}
+                  aria-label="Request reviewers to re-review your changes"
+                  data-testid="button-request-re-review"
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", reviewPhase === 'in_review' && "animate-spin")} aria-hidden="true" />
+                  {reviewPhase === 'in_review' ? 'Reviewing...' : 'Request Re-review'}
+                </Button>
+              )}
+              
+              <Button 
+                onClick={onMerge}
+                disabled={!canMerge}
+                className={cn(
+                  "min-w-[120px] transition-colors",
+                  canMerge 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "bg-muted text-muted-foreground"
+                )}
+                aria-label={canMerge ? "Merge pull request into main branch" : "Cannot merge - resolve all issues first"}
+                data-testid="button-merge-pr"
+              >
+                <GitMerge className="h-4 w-4 mr-2" aria-hidden="true" />
+                Merge PR
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -725,12 +846,16 @@ function ThreadCard({
                     </div>
                     
                     {showExampleResponse && comment.exampleResponse && !comment.isUser && idx === 0 && thread.status === 'open' && (
-                      <div className="mt-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 mb-1">
-                          <Lightbulb className="h-3 w-3" />
-                          Example response
+                      <div 
+                        className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                        role="note"
+                        aria-label="Suggested response example"
+                      >
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 mb-1.5">
+                          <Lightbulb className="h-3.5 w-3.5" />
+                          Suggested response
                         </div>
-                        <p className="text-xs text-muted-foreground italic">"{comment.exampleResponse}"</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-400 leading-relaxed">"{comment.exampleResponse}"</p>
                       </div>
                     )}
                   </div>
@@ -744,39 +869,41 @@ function ThreadCard({
               ))}
               
               {!isResolved && (
-                <div className="flex gap-2 mt-3">
+                <div className="space-y-3 mt-4 pt-4 border-t border-dashed">
                   <Textarea
                     value={replyValue}
                     onChange={(e) => onReplyChange(e.target.value)}
-                    placeholder="Write a reply..."
-                    className="min-h-[60px] text-sm"
+                    placeholder="Write your response to this feedback..."
+                    className="min-h-[80px] text-sm resize-none"
+                    aria-label="Reply to review comment"
                     data-testid={`input-reply-${thread.id}`}
                   />
-                </div>
-              )}
-              
-              {!isResolved && (
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onResolve(thread.id)}
-                    className="text-muted-foreground"
-                    data-testid={`button-resolve-${thread.id}`}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Mark Resolved
-                  </Button>
                   
-                  <Button
-                    size="sm"
-                    onClick={() => onReply(thread.id)}
-                    disabled={!replyValue.trim()}
-                    data-testid={`button-reply-${thread.id}`}
-                  >
-                    <Send className="h-4 w-4 mr-1" />
-                    Reply
-                  </Button>
+                  <div className="flex items-center justify-between gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onResolve(thread.id)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Mark this thread as resolved without replying"
+                      data-testid={`button-resolve-${thread.id}`}
+                    >
+                      <Check className="h-4 w-4 mr-1.5" />
+                      Mark Resolved
+                    </Button>
+                    
+                    <Button
+                      size="sm"
+                      onClick={() => onReply(thread.id)}
+                      disabled={!replyValue.trim()}
+                      className="min-w-[100px]"
+                      aria-label="Submit reply to reviewer"
+                      data-testid={`button-reply-${thread.id}`}
+                    >
+                      <Send className="h-4 w-4 mr-1.5" />
+                      Reply
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
