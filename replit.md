@@ -99,6 +99,25 @@ shared/adapters/planning/
 - `autoSet`: AI PM (Priya) defines the sprint goal (developer roles)
 - `userDefined`: User defines the sprint goal (PM role at all levels)
 
+### Backlog Catalogue
+Located in `shared/adapters/planning/backlog-catalogue.ts`, the unified backlog catalogue serves as the single source of truth for sprint items across planning and execution phases.
+
+**Key Features:**
+- Centralized `BACKLOG_CATALOGUE` array with all available sprint items
+- Each item has `id`, `title`, `description`, `storyPoints`, `priority`, `type`, and `acceptanceCriteria`
+- `getBacklogItems()` and `getBacklogItemById()` helper functions
+- Items selected during planning (stored as IDs) are resolved to full ticket data during execution
+
+### Planning-to-Execution Integration
+When transitioning from planning to execution phase:
+1. `advanceWorkspacePhase` calls `createSprintTicketsFromPlanning(workspaceId, sprintId)`
+2. Function queries the most recent planning session (completed or active)
+3. Deletes any existing sprint_tickets not in the selected items
+4. Creates new sprint_tickets from the backlog catalogue for each selected item
+5. Sync endpoint `/api/workspaces/:workspaceId/sync-tickets` available for retroactive fixes
+
+**Route Pattern:** Sprint execution requires both journeyId and sprintId: `/journey/:journeyId/sprint/:sprintId`
+
 ## Data Model
 
 ### Planning Tables
@@ -107,7 +126,7 @@ shared/adapters/planning/
 
 ### Key Fields
 - `goalStatement`: Sprint goal (auto-set for developers, user-defined for PMs)
-- `selectedItems`: Array of selected backlog item IDs
+- `selectedItems`: Array of selected backlog item IDs (references BACKLOG_CATALOGUE)
 - `capacityUsed`: Story points committed
 - `autoStartInitialized`: Prevents duplicate auto-start messages on refresh
 
