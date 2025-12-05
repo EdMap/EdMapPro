@@ -1,16 +1,13 @@
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { TicketWorkspace } from "@/components/workspace/ticket-workspace";
+import { PhaseGuard } from "@/components/workspace/phase-guard";
+import { useWorkspaceState } from "@/hooks/use-sprint-workflow";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, AlertTriangle } from "lucide-react";
-import { useLocation } from "wouter";
 import type { WorkspaceInstance } from "@shared/schema";
-
-interface WorkspaceState {
-  workspace: WorkspaceInstance;
-}
 
 export default function TicketWorkspacePage() {
   const params = useParams<{ journeyId: string; sprintId: string; ticketId: string }>();
@@ -25,11 +22,9 @@ export default function TicketWorkspacePage() {
   });
 
   const workspace = workspaces?.find(w => w.journeyId === journeyId);
+  const workspaceId = workspace?.id ?? null;
 
-  const { data: state, isLoading: stateLoading, error } = useQuery<WorkspaceState>({
-    queryKey: ['/api/workspaces', workspace?.id, 'state'],
-    enabled: !!workspace?.id,
-  });
+  const { data: state, isLoading: stateLoading, error } = useWorkspaceState(workspaceId);
 
   const handleBack = () => {
     if (journeyId && sprintId) {
@@ -54,7 +49,7 @@ export default function TicketWorkspacePage() {
     );
   }
 
-  if (!workspace || !journeyId || !sprintId || !ticketId) {
+  if (error || !state || !workspaceId || !journeyId || !sprintId || !ticketId) {
     return (
       <div className="container max-w-7xl mx-auto p-6 flex items-center justify-center min-h-[60vh]" data-testid="ticket-workspace-error">
         <Card className="max-w-md">
@@ -82,17 +77,26 @@ export default function TicketWorkspacePage() {
     );
   }
 
+  const { workspace: workspaceData } = state;
+  
   const userLevel = 'intern';
 
   return (
-    <TicketWorkspace
-      ticketId={ticketId}
-      workspaceId={workspace.id}
-      sprintId={sprintId}
-      role={workspace.role}
-      level={userLevel}
-      companyName={workspace.companyName}
-      onBack={handleBack}
-    />
+    <PhaseGuard
+      currentPhase={workspaceData.currentPhase}
+      requiredPhase="execution"
+      workspaceId={workspaceId}
+      onNavigate={navigate}
+    >
+      <TicketWorkspace
+        ticketId={ticketId}
+        workspaceId={workspaceId}
+        sprintId={sprintId}
+        role={workspaceData.role}
+        level={userLevel}
+        companyName={workspaceData.companyName}
+        onBack={handleBack}
+      />
+    </PhaseGuard>
   );
 }
