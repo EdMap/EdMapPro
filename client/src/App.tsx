@@ -21,6 +21,7 @@ import WorkspacePlanning from "@/pages/workspace-planning";
 import WorkspaceExecution from "@/pages/workspace-execution";
 import WorkspaceReview from "@/pages/workspace-review";
 import WorkspaceRetro from "@/pages/workspace-retro";
+import TicketWorkspacePage from "@/pages/ticket-workspace-page";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import NotFound from "@/pages/not-found";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/journey" component={Journey} />
       <Route path="/journey/:journeyId" component={JourneyDashboard} />
       <Route path="/journey/:journeyId/sprint/:sprintId" component={SprintHub} />
+      <Route path="/journey/:journeyId/sprint/:sprintId/ticket/:ticketId" component={TicketWorkspacePage} />
       <Route path="/interview" component={InterviewSimulator} />
       <Route path="/interview/history" component={InterviewHistory} />
       <Route path="/negotiation" component={NegotiationSimulator} />
