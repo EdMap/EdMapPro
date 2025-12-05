@@ -477,6 +477,10 @@ export function PlanningModule({
   const sendMessage = useMutation({
     mutationFn: async (message: string) => {
       const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/planning/message`, { message });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send message');
+      }
       return response.json();
     },
     onSuccess: (data) => {
@@ -488,6 +492,13 @@ export function PlanningModule({
         setShowPhaseTransitionHint(true);
         // Auto-hide after 10 seconds
         setTimeout(() => setShowPhaseTransitionHint(false), 10000);
+      }
+    },
+    onError: async (error) => {
+      console.error('Send message failed:', error);
+      // If session not found, try to recreate it
+      if (error.message?.includes('No active planning session')) {
+        await initSession.mutateAsync();
       }
     }
   });
