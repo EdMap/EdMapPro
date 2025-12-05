@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   Circle,
   Code,
-  Play,
-  Eye,
   FileCode,
   CheckCheck,
   ArrowRight,
@@ -49,23 +47,21 @@ export function CodeWorkPanel({
 }: CodeWorkPanelProps) {
   const [activeTab, setActiveTab] = useState<'buggy' | 'fixed' | 'diff'>('buggy');
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
-    codeWorkConfig.steps.map(step => ({ id: step.id, completed: false }))
+    codeWorkConfig.steps.filter(s => s.id !== 'test').map(step => ({ id: step.id, completed: false }))
   );
-  const [testsRun, setTestsRun] = useState(false);
-  const [testsPassing, setTestsPassing] = useState(false);
-  const [isRunningTests, setIsRunningTests] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
 
   const files = codeWorkTemplate?.files || [];
   const currentFile = files[activeFileIndex];
   
+  const filteredSteps = codeWorkConfig.steps.filter(s => s.id !== 'test');
   const completedSteps = stepStatuses.filter(s => s.completed).length;
   const totalSteps = stepStatuses.length;
   const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
 
-  const allStepsComplete = stepStatuses.every(s => s.completed) || codeWorkConfig.steps.length === 0;
-  const canComplete = allStepsComplete && (!codeWorkConfig.showRunTests || testsPassing);
+  const allStepsComplete = stepStatuses.every(s => s.completed) || filteredSteps.length === 0;
+  const canComplete = allStepsComplete;
 
   const markStepComplete = useCallback((stepId: string) => {
     setStepStatuses(prev => 
@@ -73,30 +69,11 @@ export function CodeWorkPanel({
     );
   }, []);
 
-  const runTests = useCallback(async () => {
-    if (!codeWorkTemplate?.testOutput) return;
-    
-    setIsRunningTests(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const passing = activeTab === 'fixed';
-    setTestsPassing(passing);
-    setTestsRun(true);
-    setIsRunningTests(false);
-  }, [activeTab, codeWorkTemplate]);
-
   useEffect(() => {
     if (activeTab === 'fixed' && !stepStatuses.find(s => s.id === 'implement')?.completed) {
       markStepComplete('implement');
     }
   }, [activeTab, stepStatuses, markStepComplete]);
-
-  useEffect(() => {
-    if (testsPassing && !stepStatuses.find(s => s.id === 'test')?.completed) {
-      markStepComplete('test');
-    }
-  }, [testsPassing, stepStatuses, markStepComplete]);
 
   if (!codeWorkConfig.enabled || codeWorkConfig.mode === 'skip' || !codeWorkTemplate || files.length === 0) {
     return null;
@@ -203,9 +180,9 @@ export function CodeWorkPanel({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {codeWorkConfig.steps.length > 0 && (
+        {filteredSteps.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {codeWorkConfig.steps.map((step, idx) => {
+            {filteredSteps.map((step, idx) => {
               const status = stepStatuses.find(s => s.id === step.id);
               const isStepComplete = status?.completed || false;
               
@@ -224,8 +201,6 @@ export function CodeWorkPanel({
                       markStepComplete('understand');
                     } else if (step.id === 'implement') {
                       setActiveTab('fixed');
-                    } else if (step.id === 'test') {
-                      runTests();
                     }
                   }}
                   data-testid={`step-${step.id}`}
@@ -304,48 +279,12 @@ export function CodeWorkPanel({
           </>
         )}
 
-        {codeWorkConfig.showRunTests && codeWorkTemplate?.testOutput && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Run Tests</span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={runTests}
-                disabled={isRunningTests}
-                className="gap-1.5"
-                data-testid="run-tests-btn"
-              >
-                {isRunningTests ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    Running...
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5" />
-                    {codeWorkTemplate.testCommand || 'npm test'}
-                  </>
-                )}
-              </Button>
+        {codeWorkConfig.showRunTests && (
+          <div className="bg-muted/50 border rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Terminal className="w-4 h-4" />
+              <span>After completing code work, run <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">npm test</code> in the terminal below to verify your fix.</span>
             </div>
-            
-            {testsRun && (
-              <div className={cn(
-                "font-mono text-xs p-3 rounded-lg border",
-                testsPassing 
-                  ? "bg-green-950 text-green-300 border-green-700" 
-                  : "bg-red-950 text-red-300 border-red-700"
-              )}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Terminal className="w-4 h-4" />
-                  <span className="font-medium">Test Results</span>
-                </div>
-                <pre className="whitespace-pre-wrap">
-                  {testsPassing ? codeWorkTemplate.testOutput.passing : codeWorkTemplate.testOutput.failing}
-                </pre>
-              </div>
-            )}
           </div>
         )}
 

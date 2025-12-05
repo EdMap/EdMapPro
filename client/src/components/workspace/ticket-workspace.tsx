@@ -217,8 +217,9 @@ export function TicketWorkspace({
     const cmd = command.trim().toLowerCase();
     
     if (cmd === 'help' || cmd === 'git help') {
-      addTerminalLine('output', `Available git commands:
+      addTerminalLine('output', `Available commands:
   git checkout -b <branch>   Create and switch to new branch
+  npm test                   Run tests to verify your fix
   git add .                  Stage all changes
   git commit -m "<msg>"      Commit staged changes
   git push -u origin <branch> Push branch to remote
@@ -231,6 +232,41 @@ export function TicketWorkspace({
     
     if (cmd === 'clear') {
       setTerminalLines([]);
+      return;
+    }
+
+    if (cmd === 'npm test' || cmd === 'npm run test' || cmd === 'yarn test') {
+      if (!gitState.branchName) {
+        addTerminalLine('error', "You need to create a feature branch first before running tests.");
+        return;
+      }
+      
+      addTerminalLine('output', '\n> Running tests...\n');
+      
+      setTimeout(() => {
+        if (!codeWorkComplete) {
+          const defaultFailingOutput = `FAIL  src/utils/dateUtils.test.ts
+  ✕ formatTransactionDate should use user timezone (12ms)
+  ✕ formatTimestamp should respect locale settings (8ms)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 0 passed, 2 total`;
+          const failingOutput = codeWorkTemplate?.testOutput?.failing || defaultFailingOutput;
+          addTerminalLine('error', failingOutput);
+          addTerminalLine('hint', 'The tests are failing because the bug hasn\'t been fixed yet. Review and apply the fix in the Code Work panel above, then run npm test again.');
+        } else {
+          const defaultTestOutput = `PASS  src/utils/dateUtils.test.ts
+  ✓ formatTransactionDate should use user timezone (5ms)
+  ✓ formatTimestamp should respect locale settings (3ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Time:        0.842s`;
+          const testOutput = codeWorkTemplate?.testOutput?.passing || defaultTestOutput;
+          addTerminalLine('success', testOutput);
+          addTerminalLine('hint', 'All tests passing! Now stage your changes with: git add .');
+        }
+      }, 1500);
       return;
     }
     
@@ -768,6 +804,49 @@ export function TicketWorkspace({
         </aside>
 
         <main className="flex-1 flex flex-col">
+          {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && !codeWorkComplete && (
+            <div className="p-4 border-b bg-amber-50/30 dark:bg-amber-950/10">
+              <CodeWorkPanel
+                codeWorkConfig={adapter.codeWorkConfig}
+                codeWorkTemplate={codeWorkTemplate}
+                ticketTitle={ticket?.title || ''}
+                ticketType={ticket?.type || 'bug'}
+                onComplete={async () => {
+                  setOptimisticCodeWorkComplete(true);
+                  setIsCodeWorkSaving(true);
+                  
+                  try {
+                    const newGitState: GitTicketState = {
+                      ...gitState,
+                      codeWorkComplete: true,
+                    };
+                    await apiRequest('PATCH', `/api/tickets/${ticketId}`, { gitState: newGitState });
+                    queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
+                    
+                    addTerminalLine('success', 'Code work completed! Run "npm test" to verify your fix, then stage with: git add .');
+                    toast({
+                      title: "Code work complete",
+                      description: "Run npm test to verify, then stage and commit your changes.",
+                    });
+                  } catch (err) {
+                    setOptimisticCodeWorkComplete(null);
+                    addTerminalLine('error', 'Failed to save code work progress. Please try again.');
+                    toast({
+                      title: "Error",
+                      description: "Failed to save code work progress.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsCodeWorkSaving(false);
+                  }
+                }}
+                isComplete={codeWorkComplete}
+                isSaving={isCodeWorkSaving}
+              />
+            </div>
+          )}
+
           <div className="flex-1 flex flex-col border-b">
             <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-900 text-white">
               <div className="flex items-center gap-2">
@@ -785,7 +864,7 @@ export function TicketWorkspace({
             </div>
             <div 
               ref={terminalRef}
-              className="flex-1 bg-gray-900 p-4 font-mono text-sm overflow-y-auto"
+              className="flex-1 bg-gray-900 p-4 font-mono text-sm overflow-y-auto min-h-[200px]"
               onClick={() => terminalInputRef.current?.focus()}
             >
               {terminalLines.map((line) => (
@@ -812,56 +891,13 @@ export function TicketWorkspace({
                   onChange={(e) => setCurrentCommand(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="flex-1 bg-transparent text-white outline-none"
-                  placeholder="Type a git command..."
+                  placeholder="Type a command..."
                   autoFocus
                   data-testid="input-terminal"
                 />
               </form>
             </div>
           </div>
-
-          {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && !codeWorkComplete && (
-            <div className="p-4 border-b bg-amber-50/30 dark:bg-amber-950/10">
-              <CodeWorkPanel
-                codeWorkConfig={adapter.codeWorkConfig}
-                codeWorkTemplate={codeWorkTemplate}
-                ticketTitle={ticket?.title || ''}
-                ticketType={ticket?.type || 'bug'}
-                onComplete={async () => {
-                  setOptimisticCodeWorkComplete(true);
-                  setIsCodeWorkSaving(true);
-                  
-                  try {
-                    const newGitState: GitTicketState = {
-                      ...gitState,
-                      codeWorkComplete: true,
-                    };
-                    await apiRequest('PATCH', `/api/tickets/${ticketId}`, { gitState: newGitState });
-                    queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
-                    queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
-                    
-                    addTerminalLine('success', 'Code work completed! You can now stage your changes with: git add .');
-                    toast({
-                      title: "Code work complete",
-                      description: "Your changes are ready to be staged and committed.",
-                    });
-                  } catch (err) {
-                    setOptimisticCodeWorkComplete(null);
-                    addTerminalLine('error', 'Failed to save code work progress. Please try again.');
-                    toast({
-                      title: "Error",
-                      description: "Failed to save code work progress.",
-                      variant: "destructive",
-                    });
-                  } finally {
-                    setIsCodeWorkSaving(false);
-                  }
-                }}
-                isComplete={codeWorkComplete}
-                isSaving={isCodeWorkSaving}
-              />
-            </div>
-          )}
 
           {adapter.uiControls.showTeamChat && (
             <div className="h-64 flex flex-col">
