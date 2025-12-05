@@ -1,0 +1,841 @@
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  ArrowLeft,
+  GitBranch,
+  GitCommit,
+  GitPullRequest,
+  CheckCircle2,
+  Terminal,
+  MessageSquare,
+  Send,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Target,
+  AlertTriangle,
+  ArrowUp,
+  Copy,
+  Lightbulb,
+  Code,
+  Bug,
+  Star,
+  Wrench,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { getSprintExecutionAdapter } from "@shared/adapters";
+import type { Role, Level, GitCommand } from "@shared/adapters";
+import type { SprintTicket, GitTicketState } from "@shared/schema";
+
+interface TicketWorkspaceProps {
+  ticketId: number;
+  workspaceId: number;
+  sprintId: number;
+  role: string;
+  level?: string;
+  companyName: string;
+  onBack: () => void;
+}
+
+interface TerminalLine {
+  id: string;
+  type: 'command' | 'output' | 'error' | 'hint' | 'success';
+  content: string;
+  timestamp: Date;
+}
+
+interface ChatMessage {
+  id: string;
+  from: string;
+  role: string;
+  content: string;
+  color: string;
+  timestamp: Date;
+  isUser?: boolean;
+}
+
+function parseGitState(gitState: unknown): GitTicketState {
+  const defaultState: GitTicketState = {
+    branchName: null,
+    branchCreatedAt: null,
+    commits: [],
+    isPushed: false,
+    prCreated: false,
+    prApproved: false,
+    isMerged: false,
+  };
+  
+  if (!gitState || typeof gitState !== 'object') return defaultState;
+  return { ...defaultState, ...gitState as Partial<GitTicketState> };
+}
+
+function getTypeIcon(type: string) {
+  switch (type) {
+    case 'bug': return Bug;
+    case 'feature': return Star;
+    case 'improvement': return Wrench;
+    default: return Code;
+  }
+}
+
+function getTypeColor(type: string) {
+  switch (type) {
+    case 'bug': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+    case 'feature': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+    case 'improvement': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+    default: return 'bg-gray-100 text-gray-700';
+  }
+}
+
+const TEAM_PERSONAS = {
+  marcus: { name: 'Marcus', role: 'Senior Developer', initials: 'MC', color: 'bg-amber-500' },
+  priya: { name: 'Priya', role: 'Product Manager', initials: 'PK', color: 'bg-indigo-500' },
+  alex: { name: 'Alex', role: 'QA Engineer', initials: 'AW', color: 'bg-teal-500' },
+  sarah: { name: 'Sarah', role: 'Tech Lead', initials: 'ST', color: 'bg-purple-500' },
+};
+
+export function TicketWorkspace({
+  ticketId,
+  workspaceId,
+  sprintId,
+  role,
+  level = 'intern',
+  companyName,
+  onBack,
+}: TicketWorkspaceProps) {
+  const { toast } = useToast();
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const terminalInputRef = useRef<HTMLInputElement>(null);
+  const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([]);
+  const [currentCommand, setCurrentCommand] = useState('');
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      from: 'Marcus',
+      role: 'Senior Developer',
+      content: "Hey! I see you're working on this ticket. Let me know if you need any help with the implementation.",
+      color: 'bg-amber-500',
+      timestamp: new Date(),
+    }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+  const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(true);
+
+  const adapter = useMemo(() => {
+    return getSprintExecutionAdapter(role as Role, level as Level);
+  }, [role, level]);
+
+  const { data: ticket, isLoading, error } = useQuery<SprintTicket>({
+    queryKey: ['/api/tickets', ticketId],
+    enabled: !!ticketId,
+  });
+
+  const gitState = useMemo(() => parseGitState(ticket?.gitState), [ticket?.gitState]);
+
+  const updateTicket = useMutation({
+    mutationFn: async (updates: Partial<SprintTicket>) => {
+      return apiRequest('PATCH', `/api/tickets/${ticketId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tickets', ticketId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
+    },
+  });
+
+  const moveTicket = useMutation({
+    mutationFn: async (newStatus: string) => {
+      return apiRequest('PATCH', `/api/tickets/${ticketId}/move`, { newStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tickets', ticketId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
+    },
+    onError: (error: any) => {
+      const gate = error?.gate;
+      
+      if (gate === 'branch_required') {
+        addTerminalLine('error', "Error: Create a branch first before starting work");
+      } else if (gate === 'pr_required') {
+        addTerminalLine('error', "Error: Submit a pull request before moving to review");
+      } else {
+        addTerminalLine('error', `Error: ${error?.message || 'Failed to update ticket status'}`);
+      }
+    }
+  });
+
+  const addTerminalLine = useCallback((type: TerminalLine['type'], content: string) => {
+    setTerminalLines(prev => [...prev, {
+      id: Date.now().toString(),
+      type,
+      content,
+      timestamp: new Date(),
+    }]);
+  }, []);
+
+  const getNextGitStep = useCallback((): GitCommand | null => {
+    if (!adapter.gitWorkflow.commands.length) return null;
+    
+    for (const cmd of adapter.gitWorkflow.commands) {
+      if (cmd.id === 'branch' && !gitState.branchName) return cmd;
+      if (cmd.id === 'add' && gitState.branchName && gitState.commits.length === 0) return cmd;
+      if (cmd.id === 'commit' && gitState.branchName && gitState.commits.length === 0) return cmd;
+      if (cmd.id === 'push' && gitState.commits.length > 0 && !gitState.isPushed) return cmd;
+      if (cmd.id === 'pr' && gitState.isPushed && !gitState.prCreated) return cmd;
+    }
+    return null;
+  }, [adapter.gitWorkflow.commands, gitState]);
+
+  const processGitCommand = useCallback((command: string) => {
+    const cmd = command.trim().toLowerCase();
+    
+    if (cmd === 'help' || cmd === 'git help') {
+      addTerminalLine('output', `Available git commands:
+  git checkout -b <branch>   Create and switch to new branch
+  git add .                  Stage all changes
+  git commit -m "<msg>"      Commit staged changes
+  git push -u origin <branch> Push branch to remote
+  gh pr create               Create a pull request
+  
+  clear                      Clear terminal
+  status                     Show current git state`);
+      return;
+    }
+    
+    if (cmd === 'clear') {
+      setTerminalLines([]);
+      return;
+    }
+    
+    if (cmd === 'status' || cmd === 'git status') {
+      const branchInfo = gitState.branchName 
+        ? `On branch ${gitState.branchName}`
+        : 'On branch main';
+      const changesInfo = gitState.commits.length > 0
+        ? `${gitState.commits.length} commit(s) ready to push`
+        : 'No changes staged';
+      const pushInfo = gitState.isPushed
+        ? 'Branch is up to date with remote'
+        : 'Branch has not been pushed';
+      
+      addTerminalLine('output', `${branchInfo}\n${changesInfo}\n${pushInfo}`);
+      return;
+    }
+
+    const branchCommands = adapter.gitWorkflow.commands.find(c => c.id === 'branch');
+    if (branchCommands && branchCommands.validPatterns.some(p => p.test(cmd))) {
+      if (gitState.branchName) {
+        addTerminalLine('error', `fatal: A branch named already exists.`);
+        return;
+      }
+      
+      const branchMatch = cmd.match(/git\s+checkout\s+-b\s+(\S+)/i) || cmd.match(/git\s+switch\s+-c\s+(\S+)/i);
+      const branchName = branchMatch ? branchMatch[1] : `feature/${ticket?.ticketKey?.toLowerCase()}-fix`;
+      
+      const output = typeof branchCommands.successOutput === 'function'
+        ? branchCommands.successOutput(ticket?.ticketKey || 'TICK-001')
+        : branchCommands.successOutput;
+      
+      addTerminalLine('success', output.replace(/\$\{ticketId\.toLowerCase\(\)\}/g, (ticket?.ticketKey || 'tick-001').toLowerCase()));
+      
+      const newGitState: GitTicketState = {
+        ...gitState,
+        branchName,
+        branchCreatedAt: new Date().toISOString(),
+      };
+      
+      updateTicket.mutate({ 
+        gitState: newGitState,
+        status: 'in_progress',
+      });
+      
+      setTimeout(() => {
+        addTerminalLine('hint', `Branch created. Next step: Make your code changes, then run 'git add .' to stage them.`);
+      }, 500);
+      return;
+    }
+
+    const addCommands = adapter.gitWorkflow.commands.find(c => c.id === 'add');
+    if (addCommands && addCommands.validPatterns.some(p => p.test(cmd))) {
+      if (!gitState.branchName) {
+        addTerminalLine('error', "You need to create a feature branch first. Try: git checkout -b feature/tick-001-fix");
+        return;
+      }
+      
+      addTerminalLine('success', "Changes staged for commit.");
+      
+      setTimeout(() => {
+        addTerminalLine('hint', `Files staged. Now commit your changes with: git commit -m "fix: description of changes"`);
+      }, 300);
+      return;
+    }
+
+    const commitCommands = adapter.gitWorkflow.commands.find(c => c.id === 'commit');
+    if (commitCommands && commitCommands.validPatterns.some(p => p.test(cmd))) {
+      if (!gitState.branchName) {
+        addTerminalLine('error', "You need to create a feature branch first. Try: git checkout -b feature/tick-001-fix");
+        return;
+      }
+      
+      const msgMatch = cmd.match(/git\s+commit\s+-m\s+["']([^"']+)["']/i);
+      const commitMsg = msgMatch ? msgMatch[1] : "Fix ticket implementation";
+      
+      const output = typeof commitCommands.successOutput === 'function'
+        ? commitCommands.successOutput(ticket?.ticketKey || 'TICK-001')
+        : commitCommands.successOutput;
+      
+      addTerminalLine('success', output);
+      
+      const newGitState: GitTicketState = {
+        ...gitState,
+        commits: [
+          ...gitState.commits,
+          {
+            hash: Math.random().toString(36).substring(2, 9),
+            message: commitMsg,
+            timestamp: new Date().toISOString(),
+          }
+        ],
+      };
+      
+      updateTicket.mutate({ gitState: newGitState });
+      
+      setTimeout(() => {
+        addTerminalLine('hint', `Commit saved. Push your branch with: git push -u origin ${gitState.branchName}`);
+      }, 500);
+      return;
+    }
+
+    const pushCommands = adapter.gitWorkflow.commands.find(c => c.id === 'push');
+    if (pushCommands && pushCommands.validPatterns.some(p => p.test(cmd))) {
+      if (!gitState.branchName) {
+        addTerminalLine('error', "You need to create a feature branch first.");
+        return;
+      }
+      if (gitState.commits.length === 0) {
+        addTerminalLine('error', "Nothing to push. Stage and commit your changes first.");
+        return;
+      }
+      
+      const output = typeof pushCommands.successOutput === 'function'
+        ? pushCommands.successOutput(ticket?.ticketKey || 'TICK-001')
+        : pushCommands.successOutput;
+      
+      addTerminalLine('success', output.replace(/\$\{ticketId\.toLowerCase\(\)\}/g, (ticket?.ticketKey || 'tick-001').toLowerCase()));
+      
+      const newGitState: GitTicketState = {
+        ...gitState,
+        isPushed: true,
+      };
+      
+      updateTicket.mutate({ gitState: newGitState });
+      
+      setTimeout(() => {
+        addTerminalLine('hint', `Branch pushed. Create a pull request with: gh pr create --title "Title" --body "Description"`);
+      }, 500);
+      return;
+    }
+
+    const prCommands = adapter.gitWorkflow.commands.find(c => c.id === 'pr');
+    if (prCommands && prCommands.validPatterns.some(p => p.test(cmd))) {
+      if (!gitState.isPushed) {
+        addTerminalLine('error', "Push your branch first before creating a PR.");
+        return;
+      }
+      if (gitState.prCreated) {
+        addTerminalLine('output', "Pull request already exists.");
+        return;
+      }
+      
+      const output = typeof prCommands.successOutput === 'function'
+        ? prCommands.successOutput(ticket?.ticketKey || 'TICK-001')
+        : prCommands.successOutput;
+      
+      addTerminalLine('success', output);
+      
+      const newGitState: GitTicketState = {
+        ...gitState,
+        prCreated: true,
+      };
+      
+      updateTicket.mutate({ 
+        gitState: newGitState,
+        status: 'in_review',
+      });
+      
+      setTimeout(() => {
+        setChatMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          from: 'Alex',
+          role: 'QA Engineer',
+          content: "I'll take a look at your PR now. Give me a few minutes to review the changes.",
+          color: 'bg-teal-500',
+          timestamp: new Date(),
+        }]);
+      }, 1000);
+      return;
+    }
+
+    addTerminalLine('error', `Command not recognized: ${command}\nType 'help' for available commands.`);
+  }, [adapter.gitWorkflow.commands, gitState, ticket?.ticketKey, addTerminalLine, updateTicket]);
+
+  const handleTerminalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCommand.trim()) return;
+    
+    addTerminalLine('command', `$ ${currentCommand}`);
+    setCommandHistory(prev => [...prev, currentCommand]);
+    setHistoryIndex(-1);
+    
+    processGitCommand(currentCommand);
+    setCurrentCommand('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (commandHistory.length > 0) {
+        const newIndex = historyIndex < commandHistory.length - 1 ? historyIndex + 1 : historyIndex;
+        setHistoryIndex(newIndex);
+        setCurrentCommand(commandHistory[commandHistory.length - 1 - newIndex] || '');
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setCurrentCommand(commandHistory[commandHistory.length - 1 - newIndex] || '');
+      } else {
+        setHistoryIndex(-1);
+        setCurrentCommand('');
+      }
+    }
+  };
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    
+    setChatMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      from: 'You',
+      role: 'Developer',
+      content: chatInput,
+      color: 'bg-blue-500',
+      timestamp: new Date(),
+      isUser: true,
+    }]);
+    
+    setChatInput('');
+
+    setTimeout(() => {
+      const responses = [
+        { from: 'Marcus', role: 'Senior Developer', content: "Good question! Let me think about that...", color: 'bg-amber-500' },
+        { from: 'Sarah', role: 'Tech Lead', content: "I can help with that. Check the utils folder for similar patterns.", color: 'bg-purple-500' },
+        { from: 'Priya', role: 'Product Manager', content: "Just checking in - how's progress on the ticket?", color: 'bg-indigo-500' },
+      ];
+      const response = responses[Math.floor(Math.random() * responses.length)];
+      
+      setChatMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        ...response,
+        timestamp: new Date(),
+      }]);
+    }, 1500);
+  };
+
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [terminalLines]);
+
+  useEffect(() => {
+    if (ticket && terminalLines.length === 0) {
+      addTerminalLine('output', `Welcome to ${companyName} Development Environment`);
+      addTerminalLine('output', `Working on: ${ticket.ticketKey} - ${ticket.title}`);
+      addTerminalLine('hint', `Type 'help' for available commands, or 'status' to see current state.`);
+      
+      const nextStep = getNextGitStep();
+      if (nextStep) {
+        setTimeout(() => {
+          addTerminalLine('hint', `Next step: ${nextStep.instruction}`);
+          if (adapter.uiControls.showMentorHints && nextStep.hint) {
+            addTerminalLine('hint', `Hint: ${nextStep.hint}`);
+          }
+        }, 500);
+      }
+    }
+  }, [ticket, terminalLines.length, companyName, addTerminalLine, getNextGitStep, adapter.uiControls.showMentorHints]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading ticket...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !ticket) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="font-semibold mb-2">Failed to load ticket</h3>
+          <Button onClick={onBack}>Go Back</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const Icon = getTypeIcon(ticket.type);
+  const acceptanceCriteria = Array.isArray(ticket.acceptanceCriteria) ? ticket.acceptanceCriteria : [];
+  const nextStep = getNextGitStep();
+
+  return (
+    <div className="h-screen flex flex-col bg-background" data-testid="ticket-workspace">
+      <header className="border-b px-4 py-3 flex items-center justify-between bg-background/95 backdrop-blur">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-board">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Board
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="font-mono">{ticket.ticketKey}</Badge>
+            <Badge className={getTypeColor(ticket.type)} variant="secondary">
+              <Icon className="h-3 w-3 mr-1" />
+              {ticket.type}
+            </Badge>
+            <Badge variant="secondary" className="capitalize">{ticket.status?.replace('_', ' ')}</Badge>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{ticket.storyPoints} pts</Badge>
+          <Badge variant="outline" className="capitalize">{ticket.priority} priority</Badge>
+        </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden">
+        <aside className="w-80 border-r overflow-y-auto bg-muted/20">
+          <div className="p-4 space-y-4">
+            <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-lg">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Details
+                </h3>
+                {isDetailsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <h4 className="font-medium mb-2">{ticket.title}</h4>
+                  <p className="text-sm text-muted-foreground">{ticket.description}</p>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {acceptanceCriteria.length > 0 && (
+              <Collapsible open={isAcceptanceOpen} onOpenChange={setIsAcceptanceOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-sm flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Acceptance Criteria
+                  </h3>
+                  {isAcceptanceOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <ul className="space-y-2 p-3 bg-muted/30 rounded-lg">
+                    {acceptanceCriteria.map((criterion, i) => (
+                      <li key={i} className="text-sm flex items-start gap-2">
+                        <div className="h-4 w-4 rounded border border-muted-foreground/30 mt-0.5 flex-shrink-0" />
+                        {String(criterion)}
+                      </li>
+                    ))}
+                  </ul>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            <div>
+              <h3 className="font-semibold text-sm flex items-center gap-2 p-2">
+                <GitBranch className="h-4 w-4" />
+                Git Progress
+              </h3>
+              <div className="space-y-1 p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  {gitState.branchName ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={gitState.branchName ? '' : 'text-muted-foreground'}>Create branch</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  {gitState.commits.length > 0 ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={gitState.commits.length > 0 ? '' : 'text-muted-foreground'}>Commit changes</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  {gitState.isPushed ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={gitState.isPushed ? '' : 'text-muted-foreground'}>Push to remote</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  {gitState.prCreated ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={gitState.prCreated ? '' : 'text-muted-foreground'}>Open PR</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  {gitState.isMerged ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={gitState.isMerged ? '' : 'text-muted-foreground'}>Merged</span>
+                </div>
+              </div>
+            </div>
+
+            {adapter.uiControls.showMentorHints && nextStep && (
+              <Card className="bg-purple-50/50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800">
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-2">
+                    <Lightbulb className="h-4 w-4 text-purple-500 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Next Step</p>
+                      <p className="text-sm text-muted-foreground">{nextStep.instruction}</p>
+                      {nextStep.hint && (
+                        <code className="text-xs bg-muted px-2 py-1 rounded mt-1 block">{nextStep.hint}</code>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {adapter.uiControls.allowShortcutButtons && (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm p-2">Quick Actions</h3>
+                {!gitState.branchName && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const cmd = `git checkout -b feature/${ticket.ticketKey.toLowerCase()}-fix`;
+                      addTerminalLine('command', `$ ${cmd}`);
+                      processGitCommand(cmd);
+                    }}
+                    data-testid="button-quick-branch"
+                  >
+                    <GitBranch className="h-4 w-4 mr-2" />
+                    Create Branch
+                  </Button>
+                )}
+                {gitState.branchName && gitState.commits.length === 0 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        const cmd = `git add .`;
+                        addTerminalLine('command', `$ ${cmd}`);
+                        processGitCommand(cmd);
+                      }}
+                      data-testid="button-quick-add"
+                    >
+                      <ArrowUp className="h-4 w-4 mr-2" />
+                      Stage Changes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        const cmd = `git commit -m "fix: ${ticket.title}"`;
+                        addTerminalLine('command', `$ ${cmd}`);
+                        processGitCommand(cmd);
+                      }}
+                      data-testid="button-quick-commit"
+                    >
+                      <GitCommit className="h-4 w-4 mr-2" />
+                      Commit Changes
+                    </Button>
+                  </>
+                )}
+                {gitState.commits.length > 0 && !gitState.isPushed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const cmd = `git push -u origin ${gitState.branchName}`;
+                      addTerminalLine('command', `$ ${cmd}`);
+                      processGitCommand(cmd);
+                    }}
+                    data-testid="button-quick-push"
+                  >
+                    <ArrowUp className="h-4 w-4 mr-2" />
+                    Push to Remote
+                  </Button>
+                )}
+                {gitState.isPushed && !gitState.prCreated && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const cmd = `gh pr create --title "Fix: ${ticket.title}" --body "Resolves ${ticket.ticketKey}"`;
+                      addTerminalLine('command', `$ ${cmd}`);
+                      processGitCommand(cmd);
+                    }}
+                    data-testid="button-quick-pr"
+                  >
+                    <GitPullRequest className="h-4 w-4 mr-2" />
+                    Create Pull Request
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        <main className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col border-b">
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-900 text-white">
+              <div className="flex items-center gap-2">
+                <Terminal className="h-4 w-4" />
+                <span className="text-sm font-medium">Terminal</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:text-white hover:bg-gray-800"
+                onClick={() => setTerminalLines([])}
+              >
+                Clear
+              </Button>
+            </div>
+            <div 
+              ref={terminalRef}
+              className="flex-1 bg-gray-900 p-4 font-mono text-sm overflow-y-auto"
+              onClick={() => terminalInputRef.current?.focus()}
+            >
+              {terminalLines.map((line) => (
+                <div
+                  key={line.id}
+                  className={cn(
+                    "whitespace-pre-wrap mb-1",
+                    line.type === 'command' && "text-green-400",
+                    line.type === 'output' && "text-gray-300",
+                    line.type === 'error' && "text-red-400",
+                    line.type === 'hint' && "text-yellow-400",
+                    line.type === 'success' && "text-green-300"
+                  )}
+                >
+                  {line.content}
+                </div>
+              ))}
+              <form onSubmit={handleTerminalSubmit} className="flex items-center mt-2">
+                <span className="text-green-400 mr-2">$</span>
+                <input
+                  ref={terminalInputRef}
+                  type="text"
+                  value={currentCommand}
+                  onChange={(e) => setCurrentCommand(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1 bg-transparent text-white outline-none"
+                  placeholder="Type a git command..."
+                  autoFocus
+                  data-testid="input-terminal"
+                />
+              </form>
+            </div>
+          </div>
+
+          {adapter.uiControls.showTeamChat && (
+            <div className="h-64 flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="text-sm font-medium">Team Chat</span>
+                </div>
+              </div>
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
+                  {chatMessages.map((msg) => (
+                    <div key={msg.id} className={cn("flex gap-2", msg.isUser && "justify-end")}>
+                      {!msg.isUser && (
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className={cn("text-white text-xs", msg.color)}>
+                            {msg.from[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className={cn(
+                        "p-2 rounded-lg max-w-[80%]",
+                        msg.isUser ? "bg-blue-500 text-white" : "bg-muted"
+                      )}>
+                        {!msg.isUser && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium">{msg.from}</span>
+                            <Badge variant="outline" className="text-xs">{msg.role}</Badge>
+                          </div>
+                        )}
+                        <p className="text-sm">{msg.content}</p>
+                      </div>
+                      {msg.isUser && (
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-500 text-white text-xs">Y</AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <form onSubmit={handleChatSubmit} className="flex gap-2 p-2 border-t">
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask your team for help..."
+                  className="flex-1"
+                  data-testid="input-chat"
+                />
+                <Button type="submit" size="sm" data-testid="button-send-chat">
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
