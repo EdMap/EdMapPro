@@ -130,6 +130,23 @@ If the summary lacks detail, ask for specifics. Acknowledge good facilitation br
     maxCommentsPerPR: 0,
     requireAllResolved: false,
     autoApproveThreshold: 100,
+    maxRevisionCycles: 0,
+    baseReviewers: [],
+    baseUIConfig: {
+      layoutMode: 'conversation-first',
+      showDiffViewer: false,
+      showFileTree: false,
+      showTimeline: true,
+      inlineComments: false,
+      expandThreadsByDefault: true,
+    },
+    basePrompts: {
+      baseSystemPrompt: '',
+      initialReviewPrompt: '',
+      followUpPrompt: '',
+      approvalCriteria: [],
+      commonIssuesHint: [],
+    },
   },
   
   uiControls: {

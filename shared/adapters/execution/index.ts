@@ -13,7 +13,12 @@ import type {
   ExecutionUIControls,
   ExecutionDifficulty,
   ExecutionEvaluation,
-  PRReviewComment,
+  PRReviewConfig,
+  PRReviewUIConfig,
+  PRReviewPrompts,
+  ReviewerPersona,
+  RolePRReviewConfig,
+  PRReviewModifiers,
   CodeWorkConfig,
   CodeWorkMode,
 } from './types';
@@ -156,6 +161,66 @@ function mergeCodeWorkConfig(
   };
 }
 
+function mergePRReviewConfig(
+  roleConfig: RolePRReviewConfig,
+  levelComments: LevelExecutionOverlay['prReviewComments'],
+  levelModifiers: PRReviewModifiers
+): PRReviewConfig {
+  const defaultUIConfig: PRReviewUIConfig = {
+    layoutMode: 'split-diff',
+    showDiffViewer: true,
+    showFileTree: true,
+    showTimeline: true,
+    showReviewChecklist: false,
+    inlineComments: true,
+    expandThreadsByDefault: true,
+    highlightUnresolved: true,
+    showRevisionHistory: false,
+  };
+
+  const mergedUIConfig: PRReviewUIConfig = {
+    ...defaultUIConfig,
+    ...roleConfig.baseUIConfig,
+    ...levelModifiers.uiOverrides,
+  };
+
+  const systemPrompt = `${roleConfig.basePrompts.baseSystemPrompt}
+Feedback tone: ${levelModifiers.feedbackTone}
+${levelModifiers.showExampleResponses ? 'Include example responses to help the developer understand how to address feedback.' : ''}`;
+
+  const mergedPrompts: PRReviewPrompts = {
+    systemPrompt,
+    initialReviewPrompt: roleConfig.basePrompts.initialReviewPrompt,
+    followUpPrompt: roleConfig.basePrompts.followUpPrompt,
+    approvalCriteria: roleConfig.basePrompts.approvalCriteria,
+    commonIssuesHint: roleConfig.basePrompts.commonIssuesHint,
+  };
+
+  const reviewers: ReviewerPersona[] = roleConfig.baseReviewers.map(baseReviewer => ({
+    ...baseReviewer,
+    typicalCommentCount: Math.max(1, Math.round(
+      (roleConfig.minCommentsPerPR + roleConfig.maxCommentsPerPR) / 2 * levelModifiers.commentCountMultiplier
+    )),
+  }));
+
+  const minComments = Math.max(1, Math.round(roleConfig.minCommentsPerPR * levelModifiers.commentCountMultiplier));
+  const maxComments = Math.max(minComments, Math.round(roleConfig.maxCommentsPerPR * levelModifiers.commentCountMultiplier));
+
+  return {
+    enabled: roleConfig.enabled,
+    minCommentsPerPR: minComments,
+    maxCommentsPerPR: maxComments,
+    commentTypes: levelComments,
+    requireAllResolved: roleConfig.requireAllResolved,
+    autoApproveThreshold: roleConfig.autoApproveThreshold,
+    maxRevisionCycles: roleConfig.maxRevisionCycles,
+    reviewers,
+    uiConfig: mergedUIConfig,
+    prompts: mergedPrompts,
+    levelModifiers,
+  };
+}
+
 export function getSprintExecutionAdapter(role: Role, level: Level): SprintExecutionAdapter {
   const roleAdapter = roleAdapters[role] || roleAdapters.developer;
   const levelOverlay = levelOverlays[level] || levelOverlays.intern;
@@ -194,10 +259,11 @@ ${levelOverlay.standupModifiers.showExamples ? 'Include brief examples when help
           : 'realistic',
     },
     
-    prReviewConfig: {
-      ...roleAdapter.prReviewConfig,
-      commentTypes: levelOverlay.prReviewComments,
-    },
+    prReviewConfig: mergePRReviewConfig(
+      roleAdapter.prReviewConfig,
+      levelOverlay.prReviewComments,
+      levelOverlay.prReviewModifiers
+    ),
     
     uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),
     difficulty: mergeDifficulty(roleAdapter.difficulty, levelOverlay.difficultyOverrides),

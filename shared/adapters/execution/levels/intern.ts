@@ -41,6 +41,30 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
     },
   ],
   
+  prReviewModifiers: {
+    commentCountMultiplier: 0.5,
+    severityDistribution: {
+      minor: 0.7,
+      major: 0.25,
+      blocking: 0.05,
+    },
+    feedbackTone: 'educational',
+    showExampleResponses: true,
+    autoResolveMinorOnResponse: true,
+    requireExplicitApprovalRequest: false,
+    uiOverrides: {
+      layoutMode: 'conversation-first',
+      showDiffViewer: true,
+      showFileTree: false,
+      showTimeline: true,
+      showReviewChecklist: true,
+      inlineComments: false,
+      expandThreadsByDefault: true,
+      highlightUnresolved: true,
+      showRevisionHistory: false,
+    },
+  },
+  
   uiOverrides: {
     showGitTerminal: true,
     showTeamChat: true,

@@ -110,6 +110,71 @@ export interface PRReviewComment {
   requiresResponse: boolean;
 }
 
+export type ReviewPhase = 'awaiting_review' | 'in_review' | 'changes_requested' | 'approved' | 'merged';
+
+export interface ReviewerPersona extends AIPersona {
+  expertise: string[];
+  reviewStyle: 'thorough' | 'balanced' | 'quick';
+  focusAreas: string[];
+  typicalCommentCount: number;
+}
+
+export interface ReviewThreadComment {
+  id: string;
+  reviewerId: string;
+  content: string;
+  type: PRReviewComment['type'];
+  severity: PRReviewComment['severity'];
+  createdAt: string;
+  isResolved: boolean;
+  requiresResponse: boolean;
+  userResponse?: string;
+  userRespondedAt?: string;
+}
+
+export interface ReviewThread {
+  id: string;
+  prId: string;
+  filename?: string;
+  lineNumber?: number;
+  codeSnippet?: string;
+  comments: ReviewThreadComment[];
+  status: 'open' | 'resolved' | 'dismissed';
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface RevisionCycle {
+  cycleNumber: number;
+  requestedAt: string;
+  completedAt?: string;
+  changesRequested: string[];
+  changesAddressed: string[];
+  newCommitHash?: string;
+}
+
+export type PRReviewLayoutMode = 'split-diff' | 'unified' | 'conversation-first';
+
+export interface PRReviewUIConfig {
+  layoutMode: PRReviewLayoutMode;
+  showDiffViewer: boolean;
+  showFileTree: boolean;
+  showTimeline: boolean;
+  showReviewChecklist: boolean;
+  inlineComments: boolean;
+  expandThreadsByDefault: boolean;
+  highlightUnresolved: boolean;
+  showRevisionHistory: boolean;
+}
+
+export interface PRReviewPrompts {
+  systemPrompt: string;
+  initialReviewPrompt: string;
+  followUpPrompt: string;
+  approvalCriteria: string[];
+  commonIssuesHint: string[];
+}
+
 export interface PRReviewConfig {
   enabled: boolean;
   minCommentsPerPR: number;
@@ -117,6 +182,39 @@ export interface PRReviewConfig {
   commentTypes: PRReviewComment[];
   requireAllResolved: boolean;
   autoApproveThreshold: number;
+  maxRevisionCycles: number;
+  reviewers: ReviewerPersona[];
+  uiConfig: PRReviewUIConfig;
+  prompts: PRReviewPrompts;
+  levelModifiers: PRReviewModifiers;
+}
+
+export interface RolePRReviewConfig {
+  enabled: boolean;
+  minCommentsPerPR: number;
+  maxCommentsPerPR: number;
+  requireAllResolved: boolean;
+  autoApproveThreshold: number;
+  maxRevisionCycles: number;
+  baseReviewers: Omit<ReviewerPersona, 'typicalCommentCount'>[];
+  baseUIConfig: Partial<PRReviewUIConfig>;
+  basePrompts: Omit<PRReviewPrompts, 'systemPrompt'> & {
+    baseSystemPrompt: string;
+  };
+}
+
+export interface PRReviewModifiers {
+  commentCountMultiplier: number;
+  severityDistribution: {
+    minor: number;
+    major: number;
+    blocking: number;
+  };
+  feedbackTone: 'educational' | 'collaborative' | 'direct' | 'peer';
+  showExampleResponses: boolean;
+  autoResolveMinorOnResponse: boolean;
+  requireExplicitApprovalRequest: boolean;
+  uiOverrides: Partial<PRReviewUIConfig>;
 }
 
 export type LayoutMode = 'two-column' | 'stacked' | 'focus-code' | 'focus-terminal';
@@ -224,7 +322,7 @@ export interface RoleExecutionAdapter {
     baseMode: CodeWorkMode;
   };
   aiInteractions: Omit<AIInteractionConfig, 'responsePersonality'>;
-  prReviewConfig: Omit<PRReviewConfig, 'commentTypes'>;
+  prReviewConfig: RolePRReviewConfig;
   
   uiControls: Partial<ExecutionUIControls>;
   difficulty: Partial<ExecutionDifficulty>;
@@ -239,6 +337,7 @@ export interface LevelExecutionOverlay {
   
   engagement: LevelEngagement;
   prReviewComments: PRReviewComment[];
+  prReviewModifiers: PRReviewModifiers;
   
   uiOverrides: Partial<ExecutionUIControls>;
   difficultyOverrides: Partial<ExecutionDifficulty>;

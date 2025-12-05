@@ -47,6 +47,30 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
     },
   ],
   
+  prReviewModifiers: {
+    commentCountMultiplier: 0.75,
+    severityDistribution: {
+      minor: 0.5,
+      major: 0.4,
+      blocking: 0.1,
+    },
+    feedbackTone: 'collaborative',
+    showExampleResponses: true,
+    autoResolveMinorOnResponse: false,
+    requireExplicitApprovalRequest: false,
+    uiOverrides: {
+      layoutMode: 'split-diff',
+      showDiffViewer: true,
+      showFileTree: true,
+      showTimeline: true,
+      showReviewChecklist: true,
+      inlineComments: true,
+      expandThreadsByDefault: true,
+      highlightUnresolved: true,
+      showRevisionHistory: true,
+    },
+  },
+  
   uiOverrides: {
     showGitTerminal: true,
     showTeamChat: true,

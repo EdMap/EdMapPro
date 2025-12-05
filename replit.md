@@ -52,6 +52,33 @@ The platform utilizes extensive adapter systems (`shared/adapters/planning/` and
 
 **Backlog Catalogue**: A unified `BACKLOG_CATALOGUE` in `shared/adapters/planning/backlog-catalogue.ts` serves as the single source of truth for all sprint items, integrated from planning to execution.
 
+### PR Review System
+The PR Review system follows the same adapter architecture pattern, providing level-aware code review experiences:
+
+**PR Review Adapter Types** (`shared/adapters/execution/types.ts`):
+- `PRReviewConfig`: Merged config with enabled, comment counts, reviewers, uiConfig, prompts, and levelModifiers
+- `RolePRReviewConfig`: Base config per role with baseReviewers, baseUIConfig, basePrompts
+- `PRReviewModifiers`: Level-specific adjustments (severityDistribution, feedbackTone, autoResolveMinorOnResponse)
+- `ReviewerPersona`: Extends AIPersona with expertise, reviewStyle, focusAreas, typicalCommentCount
+- `PRReviewUIConfig`: Layout options (split-diff, unified, conversation-first), showDiffViewer, inlineComments, etc.
+
+**Merge Precedence**: `mergePRReviewConfig(roleConfig, levelComments, levelModifiers)` follows defaults → role → level.
+
+**Level-Specific PR Review Experience**:
+| Level | Layout Mode | Feedback Tone | Severity Mix | Auto-Resolve Minor |
+|-------|-------------|---------------|--------------|-------------------|
+| Intern | conversation-first | educational | 70% minor | Yes |
+| Junior | split-diff | collaborative | 50% minor, 40% major | No |
+| Mid | split-diff | direct | 30% minor, 50% major, 20% blocking | No |
+| Senior | unified | peer | 20% minor, 50% major, 30% blocking | No |
+
+**Database Schema** (`shared/schema.ts`):
+- `pull_requests`: PR metadata, status, reviewers, revision cycles
+- `review_threads`: Comment threads per file/line with status
+- `review_comments`: Individual comments with author, type, severity
+- `revision_cycles`: Tracks change request iterations
+- `pr_review_events`: Audit log for review activities
+
 ## External Dependencies
 
 ### AI Services

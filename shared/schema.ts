@@ -1694,6 +1694,160 @@ export interface WorkspaceState {
   phaseHistory: WorkspacePhaseEvent[];
 }
 
+// ============================================================================
+// PR REVIEW SYSTEM TABLES
+// ============================================================================
+
+// PR Review Status
+export const prReviewStatusEnum = ['awaiting_review', 'in_review', 'changes_requested', 'approved', 'merged'] as const;
+export type PRReviewStatus = typeof prReviewStatusEnum[number];
+
+// Pull Requests - tracks PRs created during execution
+export const pullRequests = pgTable("pull_requests", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaceInstances.id).notNull(),
+  ticketId: integer("ticket_id").references(() => sprintTickets.id).notNull(),
+  gitSessionId: integer("git_session_id").references(() => gitSessions.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  sourceBranch: text("source_branch").notNull(),
+  targetBranch: text("target_branch").notNull().default('main'),
+  status: text("status").notNull().default('awaiting_review'), // prReviewStatusEnum
+  prNumber: integer("pr_number").notNull(), // Simulated PR number
+  checksStatus: text("checks_status").notNull().default('pending'), // 'pending', 'passing', 'failing'
+  reviewersAssigned: jsonb("reviewers_assigned").notNull().default('[]'), // Array of reviewer persona IDs
+  currentRevisionCycle: integer("current_revision_cycle").notNull().default(0),
+  maxRevisionCycles: integer("max_revision_cycles").notNull().default(3),
+  filesChanged: jsonb("files_changed").notNull().default('[]'), // Array of {filename, additions, deletions}
+  linesAdded: integer("lines_added").notNull().default(0),
+  linesRemoved: integer("lines_removed").notNull().default(0),
+  prMetadata: jsonb("pr_metadata").notNull().default('{}'), // Additional PR data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  approvedAt: timestamp("approved_at"),
+  mergedAt: timestamp("merged_at"),
+});
+
+// Review Threads - comment threads on a PR
+export const reviewThreads = pgTable("review_threads", {
+  id: serial("id").primaryKey(),
+  prId: integer("pr_id").references(() => pullRequests.id).notNull(),
+  filename: text("filename"), // null for general comments
+  lineNumber: integer("line_number"), // null for file-level or general comments
+  codeSnippet: text("code_snippet"), // The code being commented on
+  status: text("status").notNull().default('open'), // 'open', 'resolved', 'dismissed'
+  threadType: text("thread_type").notNull().default('comment'), // 'comment', 'suggestion', 'question', 'request_changes'
+  severity: text("severity").notNull().default('minor'), // 'minor', 'major', 'blocking'
+  isBlocking: boolean("is_blocking").notNull().default(false),
+  resolvedBy: text("resolved_by"), // 'user' or reviewer persona ID
+  threadMetadata: jsonb("thread_metadata").notNull().default('{}'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+// Review Comments - individual comments within threads
+export const reviewComments = pgTable("review_comments", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").references(() => reviewThreads.id).notNull(),
+  authorType: text("author_type").notNull(), // 'reviewer' or 'user'
+  authorId: text("author_id").notNull(), // Persona ID or 'user'
+  authorName: text("author_name").notNull(),
+  authorRole: text("author_role"),
+  content: text("content").notNull(),
+  commentType: text("comment_type").notNull().default('comment'), // 'comment', 'suggestion', 'question', 'approval', 'request_changes'
+  isEdited: boolean("is_edited").notNull().default(false),
+  exampleResponse: text("example_response"), // For educational comments, show example response
+  commentMetadata: jsonb("comment_metadata").notNull().default('{}'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  editedAt: timestamp("edited_at"),
+});
+
+// Revision Cycles - tracks revision iterations
+export const revisionCycles = pgTable("revision_cycles", {
+  id: serial("id").primaryKey(),
+  prId: integer("pr_id").references(() => pullRequests.id).notNull(),
+  cycleNumber: integer("cycle_number").notNull(),
+  status: text("status").notNull().default('in_progress'), // 'in_progress', 'completed', 'abandoned'
+  changesRequested: jsonb("changes_requested").notNull().default('[]'), // Array of requested changes
+  changesAddressed: jsonb("changes_addressed").notNull().default('[]'), // Array of addressed changes
+  newCommitHash: text("new_commit_hash"),
+  reviewerFeedback: jsonb("reviewer_feedback"), // Summary of reviewer feedback
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+// PR Review Events - audit log of review activities
+export const prReviewEvents = pgTable("pr_review_events", {
+  id: serial("id").primaryKey(),
+  prId: integer("pr_id").references(() => pullRequests.id).notNull(),
+  eventType: text("event_type").notNull(), // 'created', 'reviewer_assigned', 'comment_added', 'changes_requested', 'approved', 'merged', 'revision_started', 'revision_completed'
+  actorType: text("actor_type").notNull(), // 'user', 'reviewer', 'system'
+  actorId: text("actor_id").notNull(),
+  eventData: jsonb("event_data").notNull().default('{}'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for PR Review tables
+export const insertPullRequestSchema = createInsertSchema(pullRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReviewThreadSchema = createInsertSchema(reviewThreads).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReviewCommentSchema = createInsertSchema(reviewComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRevisionCycleSchema = createInsertSchema(revisionCycles).omit({
+  id: true,
+  requestedAt: true,
+});
+
+export const insertPRReviewEventSchema = createInsertSchema(prReviewEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for PR Review tables
+export type InsertPullRequest = z.infer<typeof insertPullRequestSchema>;
+export type PullRequest = typeof pullRequests.$inferSelect;
+
+export type InsertReviewThread = z.infer<typeof insertReviewThreadSchema>;
+export type ReviewThread = typeof reviewThreads.$inferSelect;
+
+export type InsertReviewComment = z.infer<typeof insertReviewCommentSchema>;
+export type ReviewComment = typeof reviewComments.$inferSelect;
+
+export type InsertRevisionCycle = z.infer<typeof insertRevisionCycleSchema>;
+export type RevisionCycle = typeof revisionCycles.$inferSelect;
+
+export type InsertPRReviewEvent = z.infer<typeof insertPRReviewEventSchema>;
+export type PRReviewEvent = typeof prReviewEvents.$inferSelect;
+
+// PR Review state for frontend consumption
+export interface PRReviewState {
+  pullRequest: PullRequest;
+  threads: (ReviewThread & { comments: ReviewComment[] })[];
+  revisionCycles: RevisionCycle[];
+  currentReviewers: {
+    id: string;
+    name: string;
+    role: string;
+    hasApproved: boolean;
+    lastCommentAt: string | null;
+  }[];
+  unresolvedThreadCount: number;
+  blockingThreadCount: number;
+  canMerge: boolean;
+  nextAction: 'respond_to_feedback' | 'request_re_review' | 'wait_for_review' | 'merge';
+}
+
 // Insert schemas for Phase 5 tables
 export const insertSprintTicketSchema = createInsertSchema(sprintTickets).omit({
   id: true,

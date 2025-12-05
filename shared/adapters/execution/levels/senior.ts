@@ -47,6 +47,30 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
     },
   ],
   
+  prReviewModifiers: {
+    commentCountMultiplier: 1.5,
+    severityDistribution: {
+      minor: 0.2,
+      major: 0.5,
+      blocking: 0.3,
+    },
+    feedbackTone: 'peer',
+    showExampleResponses: false,
+    autoResolveMinorOnResponse: false,
+    requireExplicitApprovalRequest: true,
+    uiOverrides: {
+      layoutMode: 'unified',
+      showDiffViewer: true,
+      showFileTree: true,
+      showTimeline: false,
+      showReviewChecklist: false,
+      inlineComments: true,
+      expandThreadsByDefault: false,
+      highlightUnresolved: false,
+      showRevisionHistory: true,
+    },
+  },
+  
   uiOverrides: {
     showGitTerminal: true,
     showTeamChat: true,
