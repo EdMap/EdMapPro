@@ -11,6 +11,13 @@ Preferred communication style: Simple, everyday language.
 ### UI/UX Decisions
 The platform features a fixed sidebar navigation, responsive header, and distinct interfaces for each simulator. Interactive chat interfaces with message persistence are central. Journey Mode uses a blue accent theme, while Practice Mode uses a teal accent theme. Team interview messages incorporate persona-specific styling with distinct colors and display persona names and roles.
 
+**Sprint Planning UI Enhancements**:
+- Collapsible Learning Objectives panel with localStorage persistence for user preference
+- Improved chat message styling with rounded corners, better spacing, and visual hierarchy
+- Enhanced backlog panel with card-style items, improved badges, and better whitespace
+- Responsive mobile tabs for switching between Discussion and Backlog panels on smaller screens
+- Typing indicator with animated indigo-colored dots during message staggering
+
 ### Technical Implementations
 edmap is built as a monorepo, utilizing a React 18 frontend (TypeScript, Vite, shadcn/ui, Tailwind CSS, TanStack Query, Wouter, React Hook Form with Zod) and a Node.js Express.js backend (TypeScript, Drizzle ORM, PostgreSQL). AI integration is powered by Groq via LangChain.js, and session management uses Express sessions with a PostgreSQL store.
 

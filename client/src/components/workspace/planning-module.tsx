@@ -25,7 +25,11 @@ import {
   Send,
   MessageCircle,
   GraduationCap,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Users,
+  ClipboardList
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -215,22 +219,33 @@ function ChatMessage({ message }: { message: PlanningMessage }) {
       "flex gap-3 mb-4",
       message.isUser && "flex-row-reverse"
     )}>
-      <Avatar className={cn("h-8 w-8", message.isUser ? "bg-indigo-100" : colorClass.split(' ')[0])}>
-        <AvatarFallback className={cn("text-xs", message.isUser ? "text-indigo-700" : "")}>{avatar}</AvatarFallback>
+      <Avatar className={cn(
+        "h-9 w-9 flex-shrink-0 border-2",
+        message.isUser 
+          ? "bg-indigo-100 border-indigo-200" 
+          : cn(colorClass.split(' ')[0], "border-white dark:border-gray-700")
+      )}>
+        <AvatarFallback className={cn(
+          "text-xs font-medium",
+          message.isUser ? "text-indigo-700" : colorClass.split(' ')[1]
+        )}>{avatar}</AvatarFallback>
       </Avatar>
       <div className={cn(
-        "max-w-[80%] rounded-lg p-3",
+        "max-w-[85%] rounded-xl px-4 py-3 shadow-sm",
         message.isUser 
-          ? "bg-indigo-500 text-white" 
-          : "bg-white dark:bg-gray-800 border"
+          ? "bg-indigo-500 text-white rounded-br-md" 
+          : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-bl-md"
       )}>
         {!message.isUser && (
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm">{message.sender}</span>
-            <Badge variant="outline" className="text-xs py-0">{message.senderRole}</Badge>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className={cn("font-semibold text-sm", colorClass.split(' ')[1])}>{message.sender}</span>
+            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 font-normal text-muted-foreground">{message.senderRole}</Badge>
           </div>
         )}
-        <p className={cn("text-sm", message.isUser ? "text-white" : "text-foreground")}>{message.message}</p>
+        <p className={cn(
+          "text-sm leading-relaxed whitespace-pre-wrap",
+          message.isUser ? "text-white" : "text-gray-700 dark:text-gray-200"
+        )}>{message.message}</p>
       </div>
     </div>
   );
@@ -257,74 +272,82 @@ function BacklogPanel({
   const isOverCapacity = selectedPoints > capacity;
   
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-full flex flex-col border-0 shadow-sm bg-gray-50/50 dark:bg-gray-900/50">
+      <CardHeader className="pb-3 sticky top-0 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-sm z-10 border-b">
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-base">Sprint Backlog</CardTitle>
-            <CardDescription>Select items for this sprint</CardDescription>
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <CardTitle className="text-sm font-semibold">Sprint Backlog</CardTitle>
+              <CardDescription className="text-xs">Select items for this sprint</CardDescription>
+            </div>
           </div>
           <div className="text-right">
             <div className={cn(
-              "text-lg font-bold",
-              isOverCapacity ? "text-red-600" : "text-green-600"
+              "text-xl font-bold tabular-nums",
+              isOverCapacity ? "text-red-600" : selectedPoints > 0 ? "text-green-600" : "text-muted-foreground"
             )}>
               {selectedPoints}/{capacity}
             </div>
-            <div className="text-xs text-muted-foreground">points</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">points</div>
           </div>
         </div>
         <Progress 
           value={Math.min(capacityUsed, 100)} 
-          className={cn("h-2 mt-2", isOverCapacity && "bg-red-100")}
+          className={cn("h-1.5 mt-3", isOverCapacity && "bg-red-100")}
         />
         {isOverCapacity && (
-          <div className="flex items-center gap-2 mt-2 text-red-600 text-xs">
+          <div className="flex items-center gap-1.5 mt-2 text-red-600 text-xs font-medium">
             <AlertCircle className="h-3 w-3" />
-            Over capacity
+            Over capacity - remove some items
           </div>
         )}
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full pr-3">
-          <div className="space-y-2">
+      <CardContent className="flex-1 overflow-hidden p-0">
+        <ScrollArea className="h-full">
+          <div className="p-4 space-y-3">
             {items.map(item => {
               const Icon = getTypeIcon(item.type);
               const isSelected = selectedItems.includes(item.id);
+              
+              const handleItemClick = () => {
+                if (disabled) return;
+                onToggleItem(item.id);
+              };
               
               return (
                 <div 
                   key={item.id}
                   className={cn(
-                    "p-3 rounded-lg border transition-all",
-                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                    "p-4 rounded-xl border-2 transition-all bg-white dark:bg-gray-800",
+                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:shadow-md",
                     isSelected 
-                      ? "border-indigo-300 bg-indigo-50/50 dark:bg-indigo-900/20" 
-                      : "border-gray-200 hover:border-gray-300"
+                      ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 shadow-sm" 
+                      : "border-transparent hover:border-gray-200 dark:hover:border-gray-600"
                   )}
-                  onClick={() => !disabled && onToggleItem(item.id)}
+                  onClick={handleItemClick}
                   data-testid={`backlog-item-${item.id}`}
                 >
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-3">
                     <Checkbox 
                       checked={isSelected}
-                      onCheckedChange={() => !disabled && onToggleItem(item.id)}
-                      className="mt-1"
+                      onCheckedChange={handleItemClick}
+                      className="mt-0.5"
                       disabled={disabled}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                        <span className="text-xs font-mono text-muted-foreground">{item.id}</span>
-                        <Badge className={cn("text-xs py-0", getTypeColor(item.type))} variant="secondary">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="text-[10px] font-mono text-muted-foreground bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{item.id}</span>
+                        <Badge className={cn("text-[10px] py-0 px-1.5", getTypeColor(item.type))} variant="secondary">
                           <Icon className="h-2.5 w-2.5 mr-0.5" />
                           {item.type}
                         </Badge>
-                        <Badge className={cn("text-xs py-0", getPriorityBadge(item.priority))}>
+                        <Badge className={cn("text-[10px] py-0 px-1.5", getPriorityBadge(item.priority))}>
                           {item.priority}
                         </Badge>
-                        <span className="text-xs font-medium text-indigo-600">{item.points}pts</span>
                       </div>
-                      <h4 className="font-medium text-sm text-gray-900 dark:text-white">{item.title}</h4>
+                      <h4 className="font-medium text-sm text-gray-900 dark:text-white leading-snug">{item.title}</h4>
+                      <div className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400">{item.points} points</div>
                     </div>
                   </div>
                 </div>
@@ -338,6 +361,14 @@ function BacklogPanel({
 }
 
 function LearningObjectives({ phase, role, level }: { phase: string; role: string; level: string }) {
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('planning-learning-objectives-expanded');
+      return stored === null ? true : stored === 'true';
+    }
+    return true;
+  });
+  
   const objectives: Record<string, string[]> = {
     context: [
       "Understand sprint goals come from business priorities",
@@ -356,25 +387,49 @@ function LearningObjectives({ phase, role, level }: { phase: string; role: strin
     ]
   };
   
+  const toggleExpanded = () => {
+    const newValue = !isExpanded;
+    setIsExpanded(newValue);
+    localStorage.setItem('planning-learning-objectives-expanded', String(newValue));
+  };
+  
   return (
-    <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-200 mb-4">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <GraduationCap className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-medium text-amber-900 dark:text-amber-100 text-sm mb-2">Learning Objectives</h4>
-            <ul className="space-y-1">
-              {objectives[phase]?.map((obj, i) => (
-                <li key={i} className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
-                  <span className="text-amber-500">•</span>
-                  {obj}
-                </li>
-              ))}
-            </ul>
-          </div>
+    <div 
+      className={cn(
+        "rounded-lg border transition-all cursor-pointer",
+        isExpanded 
+          ? "bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-200" 
+          : "bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 hover:border-amber-200"
+      )}
+      onClick={toggleExpanded}
+    >
+      <div className={cn("flex items-center justify-between gap-3 px-4", isExpanded ? "py-3" : "py-2.5")}>
+        <div className="flex items-center gap-2">
+          <GraduationCap className="h-4 w-4 text-amber-600 flex-shrink-0" />
+          <span className="font-medium text-amber-900 dark:text-amber-100 text-sm">Learning Objectives</span>
         </div>
-      </CardContent>
-    </Card>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-6 w-6 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-100"
+          onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}
+        >
+          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </Button>
+      </div>
+      {isExpanded && (
+        <div className="px-4 pb-3 pt-0">
+          <ul className="space-y-1.5 ml-6">
+            {objectives[phase]?.map((obj, i) => (
+              <li key={i} className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                <span className="text-amber-500 mt-0.5">•</span>
+                <span>{obj}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -391,6 +446,7 @@ export function PlanningModule({
   const [sprintGoal, setSprintGoal] = useState('');
   const [visibleMessageCount, setVisibleMessageCount] = useState(0);
   const [isStaggering, setIsStaggering] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<'chat' | 'backlog'>('chat');
   const staggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -638,10 +694,47 @@ export function PlanningModule({
         />
       </div>
       
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden border-b bg-gray-50/50 dark:bg-gray-900/50">
+        <div className="flex">
+          <button
+            onClick={() => setMobilePanel('chat')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors border-b-2",
+              mobilePanel === 'chat' 
+                ? "border-indigo-500 text-indigo-600 bg-white dark:bg-gray-800" 
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Discussion
+          </button>
+          <button
+            onClick={() => setMobilePanel('backlog')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors border-b-2",
+              mobilePanel === 'backlog' 
+                ? "border-indigo-500 text-indigo-600 bg-white dark:bg-gray-800" 
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ClipboardList className="h-4 w-4" />
+            Backlog
+            {selectedItems.length > 0 && (
+              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{selectedItems.length}</Badge>
+            )}
+          </button>
+        </div>
+      </div>
+      
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col border-r">
+        {/* Chat Panel - Hidden on mobile when backlog selected */}
+        <div className={cn(
+          "flex-1 flex flex-col lg:border-r",
+          mobilePanel !== 'chat' && "hidden lg:flex"
+        )}>
           {adapterConfig.showLearningObjectives && (
-            <div className="p-4 pb-0">
+            <div className="p-4 pb-2">
               <LearningObjectives 
                 phase={session.currentPhase} 
                 role={adapterConfig.role} 
@@ -650,36 +743,36 @@ export function PlanningModule({
             </div>
           )}
           
-          <div className="flex-1 overflow-hidden p-4">
-            <Card className="h-full flex flex-col">
-              <CardHeader className="pb-2 border-b">
-                <CardTitle className="text-base flex items-center justify-between">
+          <div className="flex-1 overflow-hidden p-4 pt-2">
+            <Card className="h-full flex flex-col shadow-sm">
+              <CardHeader className="pb-2 border-b bg-white dark:bg-gray-900">
+                <CardTitle className="text-sm font-semibold flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
                     Team Discussion
                   </div>
                   {engagement.mode === 'shadow' && (
-                    <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                    <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                       Observing
                     </Badge>
                   )}
                   {engagement.mode === 'guided' && (
-                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                    <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
                       Guided
                     </Badge>
                   )}
                   {engagement.mode === 'active' && (
-                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                    <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                       Active
                     </Badge>
                   )}
                   {engagement.mode === 'facilitator' && (
-                    <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                    <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
                       Facilitating
                     </Badge>
                   )}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs">
                   {session.currentPhase === 'context' && currentPhaseEngagement === 'observe' && "Watch how Priya presents priorities - you'll be asked for questions later"}
                   {session.currentPhase === 'context' && currentPhaseEngagement !== 'observe' && "Priya is presenting sprint priorities"}
                   {session.currentPhase === 'discussion' && currentPhaseEngagement === 'observe' && "Observe how the team discusses and estimates together"}
@@ -687,8 +780,8 @@ export function PlanningModule({
                   {session.currentPhase === 'commitment' && "Finalize the sprint commitment"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 overflow-hidden p-0 min-h-[200px]">
-                <ScrollArea className="h-full min-h-[180px] p-4">
+              <CardContent className="flex-1 overflow-hidden p-0 min-h-[300px] bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-gray-800">
+                <ScrollArea className="h-full p-4">
                   {messages.length === 0 && session.currentPhase === 'context' && (
                     <div className="text-center py-8 text-muted-foreground">
                       <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -709,15 +802,15 @@ export function PlanningModule({
                     <ChatMessage key={msg.id} message={msg} />
                   ))}
                   {isStaggering && visibleMessageCount < messages.length && (
-                    <div className="flex gap-3 mb-4">
-                      <Avatar className="h-8 w-8 bg-gray-100">
-                        <AvatarFallback className="text-xs">...</AvatarFallback>
+                    <div className="flex gap-3 mb-5">
+                      <Avatar className="h-9 w-9 bg-gray-100 border-2 border-gray-200 flex-shrink-0">
+                        <AvatarFallback className="text-xs text-gray-400">...</AvatarFallback>
                       </Avatar>
-                      <div className="max-w-[80%] rounded-lg p-3 bg-white dark:bg-gray-800 border">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="rounded-xl px-4 py-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div className="flex items-center gap-1.5 h-4">
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                       </div>
                     </div>
@@ -833,7 +926,11 @@ export function PlanningModule({
           </div>
         </div>
         
-        <div className="w-80 p-4">
+        {/* Backlog Panel - Hidden on mobile when chat selected */}
+        <div className={cn(
+          "w-full lg:w-80 p-4",
+          mobilePanel !== 'backlog' && "hidden lg:block"
+        )}>
           <BacklogPanel
             items={backlogItems}
             selectedItems={selectedItems}
