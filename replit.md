@@ -12,12 +12,18 @@ Preferred communication style: Simple, everyday language.
 The platform features a fixed sidebar navigation, responsive header, and distinct interfaces for each simulator. Interactive chat interfaces with message persistence are central. Journey Mode uses a blue accent theme, while Practice Mode uses a teal accent theme. Team interview messages incorporate persona-specific styling with distinct colors and display persona names and roles.
 
 **Sprint Planning UI Enhancements**:
-- Collapsible Learning Objectives panel with localStorage persistence for user preference
-- Improved chat message styling with rounded corners, better spacing, and visual hierarchy
-- Enhanced backlog panel with card-style items, improved badges, and better whitespace
+- Collapsible Learning Objectives panel with localStorage persistence (collapsed by default after first view)
+- Improved chat message styling with larger avatars (h-10), rounded-2xl corners, better spacing (mb-5), and visual hierarchy
+- Enhanced chat area with increased min-height (400px/450px on desktop) for better conversation visibility
+- Visual separation between AI and user message groups via gradient divider lines
+- Enhanced backlog panel with card-style items, subtle hover effects, ring highlighting for selected items
 - Responsive mobile tabs for switching between Discussion and Backlog panels on smaller screens
 - Typing indicator with animated indigo-colored dots during message staggering
 - Phase transition visual cues: After user responds in Context phase, AI gives natural bridging message and Continue button pulses with an inline hint ("Ready to discuss the backlog items") to guide users without explicit "click continue" instructions
+- **Level-based selection guidance** (via adapter architecture):
+  - Intern (autoAssign mode): Team auto-selects recommended items with visual badge ("Items selected by team"), Priya sends confirmation message
+  - Junior (prompted mode): Team suggests items, user prompted to make selections with hints
+  - Mid/Senior (selfManaged mode): User manages selection independently
 
 ### Technical Implementations
 edmap is built as a monorepo, utilizing a React 18 frontend (TypeScript, Vite, shadcn/ui, Tailwind CSS, TanStack Query, Wouter, React Hook Form with Zod) and a Node.js Express.js backend (TypeScript, Drizzle ORM, PostgreSQL). AI integration is powered by Groq via LangChain.js, and session management uses Express sessions with a PostgreSQL store.
