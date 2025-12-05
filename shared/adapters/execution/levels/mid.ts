@@ -85,4 +85,12 @@ export const midExecutionOverlay: LevelExecutionOverlay = {
     showNextStepPrompt: false,
     allowButtonShortcuts: false,
   },
+  
+  codeWorkModifiers: {
+    modeOverride: 'checklist',
+    showDiffView: false,
+    showRunTests: true,
+    autoCompleteSteps: false,
+    mentorGuidance: 'light',
+  },
 };

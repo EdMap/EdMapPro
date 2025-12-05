@@ -85,4 +85,12 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
     showNextStepPrompt: false,
     allowButtonShortcuts: false,
   },
+  
+  codeWorkModifiers: {
+    modeOverride: 'freeform',
+    showDiffView: false,
+    showRunTests: false,
+    autoCompleteSteps: true,
+    mentorGuidance: 'none',
+  },
 };

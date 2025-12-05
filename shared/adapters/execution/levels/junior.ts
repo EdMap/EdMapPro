@@ -85,4 +85,12 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
     showNextStepPrompt: true,
     allowButtonShortcuts: true,
   },
+  
+  codeWorkModifiers: {
+    modeOverride: 'guided-diff',
+    showDiffView: true,
+    showRunTests: true,
+    autoCompleteSteps: false,
+    mentorGuidance: 'moderate',
+  },
 };
