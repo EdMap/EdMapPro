@@ -52,7 +52,7 @@ export default function WorkspaceRetro() {
     );
   }
 
-  const { workspace, sprint } = state;
+  const { workspace, currentSprint } = state;
 
   const handleComplete = () => {
     navigate(`/workspace/${workspaceId}`);
@@ -76,8 +76,8 @@ export default function WorkspaceRetro() {
           journeyId={workspace.journeyId}
           companyName={workspace.companyName}
           role={workspace.role}
-          level={workspace.level || 'intern'}
-          sprintId={sprint?.id}
+          level="intern"
+          sprintId={currentSprint?.id}
           onComplete={handleComplete}
           onBack={handleBack}
         />
