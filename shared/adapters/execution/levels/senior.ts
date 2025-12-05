@@ -54,6 +54,7 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
     showWorkflowProgress: false,
     showBurndownChart: true,
     showCompetencyBadges: false,
+    showMentorHints: false,
     terminalHintsVisibility: 'never',
     allowShortcutButtons: false,
   },

@@ -54,6 +54,7 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
     showWorkflowProgress: true,
     showBurndownChart: true,
     showCompetencyBadges: true,
+    showMentorHints: true,
     terminalHintsVisibility: 'on-error',
     allowShortcutButtons: true,
   },

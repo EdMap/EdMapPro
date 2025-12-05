@@ -126,6 +126,7 @@ If the summary lacks detail, ask for specifics. Acknowledge good facilitation br
     showTeamChat: true,
     showAcceptanceCriteria: true,
     showWorkflowProgress: true,
+    showMentorHints: true,
     splitPanelLayout: 'terminal-right',
   },
   

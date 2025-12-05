@@ -48,6 +48,7 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
     showWorkflowProgress: true,
     showBurndownChart: true,
     showCompetencyBadges: true,
+    showMentorHints: true,
     terminalHintsVisibility: 'always',
     allowShortcutButtons: true,
   },

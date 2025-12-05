@@ -97,6 +97,7 @@ export interface ExecutionUIControls {
   showWorkflowProgress: boolean;
   showBurndownChart: boolean;
   showCompetencyBadges: boolean;
+  showMentorHints: boolean;
   terminalHintsVisibility: 'always' | 'on-error' | 'on-request' | 'never';
   allowShortcutButtons: boolean;
   splitPanelLayout: 'terminal-right' | 'terminal-bottom' | 'terminal-left';

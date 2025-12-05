@@ -222,6 +222,7 @@ If the update is vague, gently ask for more detail. If it's good, acknowledge br
     showTeamChat: true,
     showAcceptanceCriteria: true,
     showWorkflowProgress: true,
+    showMentorHints: true,
     splitPanelLayout: 'terminal-right',
   },
   
