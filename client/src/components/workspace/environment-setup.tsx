@@ -59,12 +59,15 @@ export function EnvironmentSetup({
   const [stepAttempts, setStepAttempts] = useState<Record<string, number>>({});
   const [showHints, setShowHints] = useState(uiControls.hintVisibility === 'always');
   const [currentDirectory, setCurrentDirectory] = useState('~');
+  const [transitionState, setTransitionState] = useState<'active' | 'booting' | 'summary'>('active');
+  const [bootingProgress, setBootingProgress] = useState(0);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   
   const currentStep = steps[currentStepIndex];
-  const isComplete = completedSteps.length >= steps.length;
+  const allStepsComplete = completedSteps.length >= steps.length;
+  const isComplete = transitionState === 'summary';
   
   useEffect(() => {
     if (terminalRef.current) {
@@ -79,6 +82,41 @@ export function EnvironmentSetup({
   const addTerminalLine = useCallback((type: TerminalLine['type'], content: string) => {
     setTerminalLines(prev => [...prev, { type, content, timestamp: new Date() }]);
   }, []);
+  
+  useEffect(() => {
+    if (transitionState === 'booting') {
+      const timeoutIds: NodeJS.Timeout[] = [];
+      
+      const bootMessages = [
+        { delay: 300, message: '> Compiling application...' },
+        { delay: 800, message: '> Building assets...' },
+        { delay: 1400, message: '> Starting server on port 3000...' },
+        { delay: 2000, message: '✓ Server running at http://localhost:3000' },
+        { delay: 2600, message: '\n🎉 Environment setup complete!' }
+      ];
+      
+      bootMessages.forEach(({ delay, message }) => {
+        const timeoutId = setTimeout(() => {
+          addTerminalLine('output', message);
+          setBootingProgress(Math.min(100, (delay / 2600) * 100));
+        }, delay);
+        timeoutIds.push(timeoutId);
+      });
+      
+      const progressTimeoutId = setTimeout(() => {
+        setBootingProgress(100);
+        const summaryTimeoutId = setTimeout(() => {
+          setTransitionState('summary');
+        }, 800);
+        timeoutIds.push(summaryTimeoutId);
+      }, 3000);
+      timeoutIds.push(progressTimeoutId);
+      
+      return () => {
+        timeoutIds.forEach(id => clearTimeout(id));
+      };
+    }
+  }, [transitionState, addTerminalLine]);
   
   const handleCommand = useCallback((command: string) => {
     if (!command.trim() || !currentStep) return;
@@ -102,7 +140,8 @@ export function EnvironmentSetup({
         setCurrentStepIndex(prev => prev + 1);
         addTerminalLine('output', `\n✓ Step ${currentStepIndex + 1} complete! Moving to next step...\n`);
       } else {
-        addTerminalLine('output', '\n🎉 All environment setup steps complete!\n');
+        addTerminalLine('output', '\n🚀 Starting development server...\n');
+        setTransitionState('booting');
       }
     } else {
       addTerminalLine('error', result.output);
@@ -140,12 +179,75 @@ export function EnvironmentSetup({
     ? getStepHints(currentStep, environmentSetup.terminalHints, difficulty)
     : [];
   
+  if (transitionState === 'booting') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Environment Setup</h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              Starting your development server...
+            </p>
+          </div>
+        </div>
+        
+        <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-200">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center">
+                <Terminal className="h-6 w-6 text-indigo-600 dark:text-indigo-300 animate-pulse" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-indigo-900 dark:text-indigo-100">
+                  Booting Development Server
+                </h3>
+                <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                  Please wait while we start everything up...
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold text-indigo-600">
+                  {Math.round(bootingProgress)}%
+                </div>
+              </div>
+            </div>
+            <Progress value={bootingProgress} className="h-2" />
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gray-900 dark:bg-gray-950 border-gray-800">
+          <CardContent className="p-4">
+            <ScrollArea className="h-64 font-mono text-sm">
+              {terminalLines.map((line, i) => (
+                <div 
+                  key={i} 
+                  className={cn(
+                    "whitespace-pre-wrap",
+                    line.type === 'input' && "text-green-400",
+                    line.type === 'output' && "text-gray-300",
+                    line.type === 'success' && "text-emerald-400",
+                    line.type === 'error' && "text-red-400"
+                  )}
+                >
+                  {line.content}
+                </div>
+              ))}
+              <div className="flex items-center text-indigo-400 mt-1">
+                <span className="animate-pulse">▌</span>
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   if (isComplete) {
     return (
       <div className="space-y-6">
         <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200">
           <CardContent className="p-8 text-center">
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center mx-auto mb-4">
+            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center mx-auto mb-4 animate-bounce">
               <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-300" />
             </div>
             <h3 className="text-xl font-semibold text-green-900 dark:text-green-100 mb-2">
@@ -154,8 +256,21 @@ export function EnvironmentSetup({
             <p className="text-green-700 dark:text-green-300 mb-6">
               {environmentSetup.completionMessage.description}
             </p>
+            
+            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 mb-6 text-left max-w-md mx-auto">
+              <h4 className="font-medium text-green-800 dark:text-green-200 mb-3 text-sm">What you accomplished:</h4>
+              <ul className="space-y-2">
+                {steps.map((step, i) => (
+                  <li key={step.id} className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <span>{step.instruction}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
             <Button onClick={onComplete} className="bg-green-600 hover:bg-green-700" data-testid="button-continue-after-setup">
-              Continue to Next Step
+              Continue to Meet Your Team
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           </CardContent>
