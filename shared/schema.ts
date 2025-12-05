@@ -1591,6 +1591,91 @@ export interface PlanningSessionState {
 export type InsertWorkspacePhaseEvent = z.infer<typeof insertWorkspacePhaseEventSchema>;
 export type WorkspacePhaseEvent = typeof workspacePhaseEvents.$inferSelect;
 
+// Onboarding Sessions - tracks onboarding progress including environment setup
+export type OnboardingStep = 'documents' | 'environment' | 'comprehension';
+
+export const onboardingSessions = pgTable("onboarding_sessions", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaceInstances.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  role: text("role").notNull(), // 'developer' | 'pm' | 'qa' | etc.
+  level: text("level").notNull(), // 'intern' | 'junior' | 'mid' | 'senior'
+  currentStep: text("current_step").notNull().default('documents'), // OnboardingStep
+  documentsCompleted: boolean("documents_completed").notNull().default(false),
+  environmentCompleted: boolean("environment_completed").notNull().default(false),
+  comprehensionCompleted: boolean("comprehension_completed").notNull().default(false),
+  environmentSetupProgress: jsonb("environment_setup_progress").notNull().default('{}'), // EnvironmentSetupProgress
+  status: text("status").notNull().default('active'), // 'active' | 'completed' | 'abandoned'
+  score: integer("score"), // Final onboarding score (0-100)
+  feedback: jsonb("feedback"), // Evaluation feedback
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Insert schema for onboarding sessions
+export const insertOnboardingSessionSchema = createInsertSchema(onboardingSessions).omit({
+  id: true,
+  startedAt: true,
+});
+
+// Types for onboarding sessions
+export type InsertOnboardingSession = z.infer<typeof insertOnboardingSessionSchema>;
+export type OnboardingSession = typeof onboardingSessions.$inferSelect;
+
+// Environment setup progress structure
+export interface EnvironmentSetupProgress {
+  currentStep: number;
+  completedSteps: string[];
+  commandHistory: {
+    command: string;
+    output: string;
+    isSuccess: boolean;
+    stepId: string;
+    timestamp: string;
+  }[];
+  stepAttempts: Record<string, number>;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+// Onboarding session state for API responses
+export interface OnboardingSessionState {
+  session: OnboardingSession;
+  requiresGitTerminal: boolean;
+  environmentSetup: {
+    project: {
+      name: string;
+      org: string;
+      repoUrl: string;
+      description: string;
+    };
+    steps: {
+      id: string;
+      order: number;
+      instruction: string;
+      hint: string;
+      completed: boolean;
+    }[];
+    terminalHints: {
+      command: string;
+      description: string;
+      example?: string;
+    }[];
+    completionMessage: {
+      title: string;
+      description: string;
+    };
+  };
+  progress: EnvironmentSetupProgress;
+  adapterConfig: {
+    role: string;
+    level: string;
+    showHintsPanel: boolean;
+    hintVisibility: 'always' | 'on-error' | 'on-request';
+    showExampleCommands: boolean;
+  };
+}
+
 // Workspace state for API responses
 export interface WorkspaceState {
   workspace: WorkspaceInstance;

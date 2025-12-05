@@ -86,6 +86,7 @@ export interface OnboardingAdapter {
     competencies: string[];
   };
   
+  requiresGitTerminal: boolean;
   environmentSetup: EnvironmentSetupConfig;
   uiControls: OnboardingUIControls;
   difficulty: OnboardingDifficulty;
@@ -98,6 +99,7 @@ export interface RoleOnboardingAdapter {
   displayName: string;
   description: string;
   competencies: string[];
+  requiresGitTerminal: boolean;
   environmentSetup: Omit<EnvironmentSetupConfig, 'steps'> & {
     baseSteps: EnvironmentSetupStep[];
   };

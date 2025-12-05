@@ -137,6 +137,7 @@ export function getOnboardingAdapter(role: Role, level: Level): OnboardingAdapte
       description: roleAdapter.description,
       competencies: roleAdapter.competencies
     },
+    requiresGitTerminal: roleAdapter.requiresGitTerminal,
     environmentSetup: buildEnvironmentSetup(roleAdapter, levelOverlay),
     uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),
     difficulty: mergeDifficulty(roleAdapter.difficulty, levelOverlay.difficultyOverrides),

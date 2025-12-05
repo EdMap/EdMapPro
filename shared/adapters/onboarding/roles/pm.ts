@@ -1,57 +1,24 @@
 /**
  * PM Role Onboarding Adapter
  * 
- * For Product Managers, environment setup is lighter - they don't need full dev setup.
- * Focus is on understanding the repo structure and running the app to see the product.
+ * For Product Managers, there's no git terminal setup. Instead, they focus on
+ * reviewing product documentation: PRDs, roadmaps, user research, and team processes.
  */
 
-import type { RoleOnboardingAdapter, EnvironmentSetupStep } from '../types';
-
-const pmEnvironmentSteps: EnvironmentSetupStep[] = [
-  {
-    id: 'clone',
-    order: 1,
-    instruction: 'Clone the repository to view the codebase',
-    hint: 'Use git clone with the repository URL',
-    validPatterns: [
-      /^git\s+clone\s+(https?:\/\/)?github\.com\/novapay\/merchant-dashboard(\.git)?$/i,
-      /^git\s+clone\s+git@github\.com:novapay\/merchant-dashboard(\.git)?$/i,
-      /^git\s+clone\s+.*novapay\/merchant-dashboard.*$/i
-    ],
-    successOutput: `Cloning into 'merchant-dashboard'...
-remote: Enumerating objects: 1247, done.
-remote: Counting objects: 100% (1247/1247), done.
-remote: Compressing objects: 100% (892/892), done.
-Receiving objects: 100% (1247/1247), 2.34 MiB | 12.5 MiB/s, done.
-Resolving deltas: 100% (623/623), done.`,
-    failureHint: 'Make sure to include the full repository path',
-    competency: 'repository-literacy'
-  },
-  {
-    id: 'cd',
-    order: 2,
-    instruction: 'Navigate into the project directory',
-    hint: 'Use the cd command',
-    validPatterns: [
-      /^cd\s+merchant-dashboard$/i,
-      /^cd\s+\.\/merchant-dashboard$/i
-    ],
-    successOutput: '',
-    failureHint: 'The directory name is merchant-dashboard',
-    competency: 'terminal-navigation'
-  }
-];
+import type { RoleOnboardingAdapter } from '../types';
 
 export const pmOnboardingAdapter: RoleOnboardingAdapter = {
   role: 'pm',
   displayName: 'Product Manager',
-  description: 'Get oriented with the repository and understand the product structure',
+  description: 'Review product documentation and understand team processes',
   competencies: [
-    'repository-literacy',
-    'terminal-navigation',
     'product-understanding',
-    'stakeholder-communication'
+    'stakeholder-communication',
+    'requirements-analysis',
+    'roadmap-literacy',
+    'user-empathy'
   ],
+  requiresGitTerminal: false,
   
   environmentSetup: {
     project: {
@@ -60,21 +27,18 @@ export const pmOnboardingAdapter: RoleOnboardingAdapter = {
       repoUrl: 'github.com/novapay/merchant-dashboard',
       description: 'NovaPay Merchant Dashboard - A React-based dashboard for payment management'
     },
-    baseSteps: pmEnvironmentSteps,
-    terminalHints: [
-      { command: 'git clone', description: 'Download a repository from GitHub' },
-      { command: 'cd', description: 'Change directory' }
-    ],
+    baseSteps: [],
+    terminalHints: [],
     completionMessage: {
-      title: 'Repository Access Ready!',
-      description: 'You can now explore the codebase and understand the product structure.'
+      title: 'Documentation Review Complete!',
+      description: 'You\'re now familiar with the product and ready to participate in planning.'
     }
   },
   
   uiControls: {
-    showHintsPanel: true,
+    showHintsPanel: false,
     showProgressIndicator: true,
-    showCommandHistory: true,
+    showCommandHistory: false,
     terminalHeight: 'compact'
   },
   
@@ -85,10 +49,10 @@ export const pmOnboardingAdapter: RoleOnboardingAdapter = {
   
   evaluation: {
     rubricWeights: {
-      commandAccuracy: 0.50,
-      completionSpeed: 0.10,
-      independentProgress: 0.30,
-      errorRecovery: 0.10
+      commandAccuracy: 0,
+      completionSpeed: 0.20,
+      independentProgress: 0.40,
+      errorRecovery: 0.40
     }
   },
   
@@ -97,6 +61,7 @@ export const pmOnboardingAdapter: RoleOnboardingAdapter = {
       step: 'documents',
       objectives: [
         'Understand the product vision and roadmap',
+        'Review the PRD for current features',
         'Learn team norms and communication expectations',
         'Identify key stakeholders and their needs'
       ],
@@ -109,14 +74,14 @@ export const pmOnboardingAdapter: RoleOnboardingAdapter = {
     {
       step: 'environment',
       objectives: [
-        'Access the repository',
-        'Navigate the project structure',
-        'Understand how code is organized'
+        'Review product documentation structure',
+        'Understand how specs are organized',
+        'Familiarize yourself with the roadmap'
       ],
       tips: [
-        'You don\'t need to understand every file',
-        'Focus on the overall structure',
-        'Know where to find documentation'
+        'You don\'t need technical environment setup',
+        'Focus on understanding product context',
+        'Know where to find key documents'
       ]
     },
     {

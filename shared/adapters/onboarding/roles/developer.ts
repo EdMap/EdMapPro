@@ -88,6 +88,7 @@ export const developerOnboardingAdapter: RoleOnboardingAdapter = {
     'local-runtime-mastery',
     'git-fundamentals'
   ],
+  requiresGitTerminal: true,
   
   environmentSetup: {
     project: {
@@ -184,7 +185,8 @@ export const qaOnboardingAdapter: RoleOnboardingAdapter = {
     'dependency-management',
     'local-runtime-mastery',
     'testing-environment-setup'
-  ]
+  ],
+  requiresGitTerminal: true
 };
 
 export const devopsOnboardingAdapter: RoleOnboardingAdapter = {
@@ -198,7 +200,8 @@ export const devopsOnboardingAdapter: RoleOnboardingAdapter = {
     'dependency-management',
     'local-runtime-mastery',
     'infrastructure-awareness'
-  ]
+  ],
+  requiresGitTerminal: true
 };
 
 export const dataScienceOnboardingAdapter: RoleOnboardingAdapter = {
@@ -212,5 +215,6 @@ export const dataScienceOnboardingAdapter: RoleOnboardingAdapter = {
     'dependency-management',
     'local-runtime-mastery',
     'data-environment-setup'
-  ]
+  ],
+  requiresGitTerminal: true
 };
