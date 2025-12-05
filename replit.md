@@ -19,11 +19,7 @@ The platform features a fixed sidebar navigation, responsive header, and distinc
 - Enhanced backlog panel with card-style items, subtle hover effects, ring highlighting for selected items
 - Responsive mobile tabs for switching between Discussion and Backlog panels on smaller screens
 - Typing indicator with animated indigo-colored dots during message staggering
-- Phase transition visual cues: After user responds in Context phase, AI gives natural bridging message and Continue button pulses with an inline hint ("Ready to discuss the backlog items") to guide users without explicit "click continue" instructions
-- **Level-based selection guidance** (via adapter architecture):
-  - Intern (autoAssign mode): Team auto-selects recommended items with visual badge ("Items selected by team"), Priya sends confirmation message
-  - Junior (prompted mode): Team suggests items, user prompted to make selections with hints
-  - Mid/Senior (selfManaged mode): User manages selection independently
+- Phase transition visual cues with pulsing Continue button and inline hints
 
 ### Technical Implementations
 edmap is built as a monorepo, utilizing a React 18 frontend (TypeScript, Vite, shadcn/ui, Tailwind CSS, TanStack Query, Wouter, React Hook Form with Zod) and a Node.js Express.js backend (TypeScript, Drizzle ORM, PostgreSQL). AI integration is powered by Groq via LangChain.js, and session management uses Express sessions with a PostgreSQL store.
@@ -34,92 +30,95 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
 ### Feature Specifications
 - **Job Journey System**: Manages the job application lifecycle, including a searchable Job Board, AI-feedback-enabled Application Flow, and a Journey Timeline, integrating with the Interview Simulator.
 - **Interview Simulator**: An AI-powered tool offering dual-mode interview experiences with multi-persona AI teams, level calibration, and a two-phase AI agent architecture (Preparation and Conversation). It includes a question backlog, real-time evaluation, smart follow-ups, and comprehensive final reports.
-- **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work in dual-mode. It features multi-character AI teams, role-based practice, various project scenarios, persistent progress saving, dynamic collaboration via multi-channel communication, interactive project artifacts, and specialized session components (e.g., `InternOnboardingSession`).
-- **Workspace Phase System (Phase 5)**: A complete Scrum sprint cycle simulation integrated with the Job Journey system. Features include:
-  - Five distinct phases: Onboarding → Planning → Execution → Review → Retro
-  - Phase-specific modules with multi-step workflows:
-    - **OnboardingModule**: Team introductions, documentation review, comprehension check with Sarah
-    - **PlanningModule**: Collaborative sprint planning with role-aware adapter system (see Phase 6 below)
-    - **ExecutionModule**: Kanban board with drag-and-drop, git workflow simulation, team chat
-    - **ReviewModule**: Demo presenter, stakeholder feedback collection, summary
-    - **RetroModule**: Reflection cards (went well/to improve), voting, action items with owners
+- **Workspace Simulator**: Creates a virtual tech team environment for collaborative project work in dual-mode. It features multi-character AI teams, role-based practice, various project scenarios, persistent progress saving, dynamic collaboration via multi-channel communication, interactive project artifacts, and specialized session components.
+- **Workspace Phase System**: A complete Scrum sprint cycle simulation integrated with the Job Journey system:
+  - Five phases: Onboarding → Planning → Execution → Review → Retro
+  - Phase-specific modules with multi-step workflows
   - PhaseGuard component for enforcing linear phase progression
-  - Phase-specific color themes: onboarding (teal), planning (indigo), execution (blue), review (amber), retro (violet)
-  - Automatic workspace creation on job offer acceptance
-  - Routes: `/workspace/:id`, `/workspace/:id/onboarding`, `/workspace/:id/planning`, `/workspace/:id/execution`, `/workspace/:id/review`, `/workspace/:id/retro`
-  - WorkspaceDashboard with PhaseStepper visualization, phase checklist, and CTA buttons
-- **Collaborative Sprint Planning (Phase 6)**: A role-aware, adapter-driven sprint planning experience that simulates real Scrum planning meetings. Features include:
-  - **Single Meeting Flow**: Planning presented as one continuous session with three sections:
-    - Context (5 min): Facilitator presents priorities and business context
-    - Discussion (15 min): Team discusses items, estimates, and concerns
-    - Commitment (10 min): Team agrees on scope and sprint goal
-  - **Role-Aware Adapters**: Experience adapts based on workspace.role:
-    - Developer/QA/DevOps/Data Science: Participates in planning led by AI PM (Priya)
-    - PM: Leads/facilitates planning, AI dev team responds with concerns
-  - **Level Overlays**: Difficulty and scaffolding adjust based on level:
-    - Intern: Heavy guidance, knowledge checks, AI nudges, no skipping
-    - Junior: Moderate guidance, some autonomy, optional checks
-    - Senior: Minimal guidance, complex scenarios, AI pushback
-  - **Level-Based Engagement System**: Differentiated interaction patterns per level:
-    - Engagement modes: `shadow` (observe), `guided` (prompted), `active` (contribute), `facilitator` (lead)
-    - Phase engagement: `observe`, `respond`, or `lead` per phase
-    - Auto-start conversation: PM (Priya) automatically kicks off planning with level-appropriate welcome
-    - Team talk ratio: Controls AI vs user speaking balance (85% AI for intern, 30% for senior)
-    - Prompt suggestions: Optional scaffolding chips for interns/juniors
-    - UI badges show current engagement mode (Observing, Guided, Active, Facilitating)
-  - **AutoStartSequence System**: Multi-message conversation kickoffs that simulate realistic team discussions:
-    - `AutoStartStep` interface with `personaId`, `personaName`, `personaRole`, `message`, `phase`, `requiresUserResponse`
-    - Intern (shadow mode): 6-message sequence - Priya reviews full backlog, team discusses before asking intern
-    - Junior (guided mode): 3-message sequence - asks for input sooner with less team discussion
-    - Mid/Senior: Single welcome message or no auto-start (user drives discussion)
-    - Personalization via `{{userName}}` and `{{userRole}}` placeholders substituted at message insertion
-    - Idempotency protection via `autoStartInitialized` flag prevents duplicate messages on page refresh
-    - Sequence stops at first message with `requiresUserResponse: true`
-  - **Message Staggering UI**: Progressive message reveal simulating realistic typing:
-    - `MessageStaggerConfig` in adapter types: `enabled`, `baseDelayMs`, `perCharacterDelayMs`, `maxDelayMs`
-    - Intern: 800ms base + 8ms/char (max 3000ms) for longer reading time
-    - Junior: 600ms base + 6ms/char (max 2500ms) for quicker pacing
-    - Typing indicator with animated dots shown while messages are being "typed"
-  - **AI Response Guardrails**: Prompt engineering to ensure clean AI responses:
-    - Single-persona responses only (AI responds as one team member at a time)
-    - No stage directions like "(nods)" or "(thinking)"
-    - No role prefixes in message text (UI already shows sender info)
-    - Conversational tone with 2-4 sentence responses
-  - **Composable Adapter Architecture**:
-    - Role adapters in `shared/adapters/planning/roles/` (base behavior per role)
-    - Level overlays in `shared/adapters/planning/levels/` (difficulty modifiers + engagement)
-    - Factory merges role + level: `getSprintPlanningAdapter(role, level)`
-  - **SprintPlanningAdapter Interface**:
-    - `prompts`: Role-specific system prompts and AI persona configuration
-    - `uiControls`: Panel visibility, skip permissions, learning objectives
-    - `difficulty`: Ticket complexity, ambiguity, conflict scenarios
-    - `evaluation`: Rubric weights and passing thresholds
-    - `engagement`: Level-based interaction patterns and auto-start settings
-  - **Hybrid UI**: Chat-based team discussion with phase progress indicator
-  - **Data Model**: `planningSessions` table tracking phase progress, selected items, goal, commitment; `planningMessages` for conversation history
-- **Narrative Progression System (Phase 3)**: A dynamic journey system with configurable progression paths (Intern→Junior, Junior→Mid, Mid→Senior), story arcs (Onboarding, Sprints, Graduation), and competency tracking. Features include:
-  - Level-agnostic sprint generation engine (same code, different content packs per level)
-  - Delta calculator for competency changes with mastery bands (Explorer → Contributor → Junior Ready)
-  - Readiness scoring with exit triggers (min sprints + user choice OR ≥85% readiness OR max sprints)
-  - Progress dashboard UI showing readiness, sprint progress, and graduation eligibility
-  - React Query hooks for all progression data (use-progression.ts)
-- **Template-Driven Sprint Generation (Phase 4)**: A catalogue-based system for generating varied sprint content. Features include:
-  - Template schema for bugs, features, and soft skills with context variables
-  - 15 initial templates (7 bug, 4 feature, 4 soft skill) organized in shared/catalogue/templates/
-  - SprintGeneratorService with competency-aware selection and theme rotation
-  - Context substitution engine for filling template variables based on company/industry
-  - Integration with progression engine via startNewSprint method
-  - Quality guardrails: validateAndRepairBacklog for crash-proof template handling
-  - Fallback mechanisms for exhausted templates and missing content
+  - Phase-specific color themes and automatic workspace creation on job offer acceptance
+  - WorkspaceDashboard with PhaseStepper visualization and phase checklist
+- **Collaborative Sprint Planning**: A role-aware, adapter-driven sprint planning experience simulating real Scrum planning meetings:
+  - Single meeting flow with Context, Discussion, and Commitment phases
+  - Role-aware adapters adapting experience based on workspace.role
+  - Level overlays adjusting difficulty and scaffolding
+  - AutoStartSequence system for multi-message conversation kickoffs
+  - Message staggering UI for realistic typing simulation
+  - AI response guardrails for clean, single-persona responses
+- **Narrative Progression System**: Dynamic journey system with configurable progression paths and competency tracking
+- **Template-Driven Sprint Generation**: Catalogue-based system for generating varied sprint content
+
+## Adapter Architecture
+
+### Sprint Planning Adapters
+Located in `shared/adapters/planning/`, the adapter system provides role-aware and level-adjusted planning experiences.
+
+**Structure:**
+```
+shared/adapters/planning/
+├── index.ts           # Factory: getSprintPlanningAdapter(role, level)
+├── types.ts           # TypeScript interfaces
+├── roles/
+│   ├── developer.ts   # Developer, QA, DevOps, Data Science adapters
+│   └── pm.ts          # Product Manager adapter
+└── levels/
+    ├── intern.ts      # Heavy guidance, auto-start sequences
+    ├── junior.ts      # Moderate guidance
+    ├── mid.ts         # Light guidance
+    └── senior.ts      # Minimal guidance, complex scenarios
+```
+
+**Key Interfaces:**
+- `RolePlanningAdapter`: Base behavior per role (prompts, personas, facilitator, commitmentGuidance)
+- `LevelPlanningOverlay`: Difficulty modifiers, engagement patterns, UI overrides
+- `SprintPlanningAdapter`: Final merged adapter returned by factory
+
+**Role-Based Guidance:**
+
+| Feature | Developer Roles | PM Role |
+|---------|-----------------|---------|
+| Facilitator | AI (Priya) | User (intern/junior: mentored by senior PM) |
+| Selection Guidance | Level-defined (autoAssign for intern) | Level-defined |
+| Commitment Guidance | `autoSet` - AI PM defines sprint goal | `userDefined` - User defines goal |
+| Personas | Priya (PM), Marcus (Sr Dev), Alex (QA) | Marcus (Sr Dev), Sarah (Tech Lead), Alex (QA) |
+
+**Level-Based Engagement:**
+
+| Level | Mode | Selection | Auto-Start | Team Talk Ratio |
+|-------|------|-----------|------------|-----------------|
+| Intern | Shadow | autoAssign | 6-message sequence | 85% AI |
+| Junior | Guided | prompted | 3-message sequence | 70% AI |
+| Mid | Active | selfManaged | Single welcome | 50% AI |
+| Senior | Facilitator | selfManaged | None | 30% AI |
+
+**Selection Guidance Modes:**
+- `autoAssign`: Team auto-selects recommended items, user reviews (intern)
+- `prompted`: Team suggests, user makes final selection (junior)
+- `selfManaged`: User manages selection independently (mid/senior)
+
+**Commitment Guidance Modes:**
+- `autoSet`: AI PM (Priya) defines the sprint goal (developer roles)
+- `userDefined`: User defines the sprint goal (PM role at all levels)
+
+## Data Model
+
+### Planning Tables
+- `planningSessions`: Tracks phase progress, selected items, goal, commitment
+- `planningMessages`: Conversation history with sender, role, phase
+
+### Key Fields
+- `goalStatement`: Sprint goal (auto-set for developers, user-defined for PMs)
+- `selectedItems`: Array of selected backlog item IDs
+- `capacityUsed`: Story points committed
+- `autoStartInitialized`: Prevents duplicate auto-start messages on refresh
 
 ## External Dependencies
 
 ### AI Services
-- **Groq API**: Powers AI features using `llama-3.3-70b-versatile` for the Interview Simulator, Workspace Simulator AI team responses, and Whisper AI for voice transcription.
+- **Groq API**: Powers AI features using `llama-3.3-70b-versatile` for AI team responses and Whisper AI for voice transcription.
 
 ### Database
-- **Neon Database**: Serverless PostgreSQL database used for production environments.
-- **@neondatabase/serverless**: Library for optimized database connections.
+- **Neon Database**: Serverless PostgreSQL for production environments.
+- **@neondatabase/serverless**: Optimized database connections.
 
 ### Authentication
-- Session-based authentication is implemented.
+- Session-based authentication with PostgreSQL session store.
