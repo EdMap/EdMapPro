@@ -351,3 +351,6 @@ export function normalizeLevel(levelName: string): Level {
   const normalized = levelName.toLowerCase().trim();
   return levelMap[normalized] || 'intern';
 }
+
+export { getSprintExecutionAdapter } from './execution';
+export type * from './execution/types';

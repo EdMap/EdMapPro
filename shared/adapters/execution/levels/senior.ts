@@ -1,0 +1,87 @@
+/**
+ * Senior Level Execution Overlay
+ * 
+ * Minimal guidance, full autonomy, challenging scenarios.
+ * User leads work with team as peers.
+ */
+
+import type { LevelExecutionOverlay } from '../types';
+
+export const seniorExecutionOverlay: LevelExecutionOverlay = {
+  level: 'senior',
+  displayName: 'Senior',
+  scaffoldingLevel: 'none',
+  
+  engagement: {
+    mode: 'autonomous',
+    teamTalkRatio: 0.30,
+    standupGuidance: 'freeform',
+    gitGuidance: 'independent',
+    prReviewGuidance: 'independent',
+  },
+  
+  prReviewComments: [
+    {
+      type: 'request_changes',
+      severity: 'blocking',
+      message: 'This approach won\'t scale for our international users. We need to support IANA timezone identifiers, not just UTC offsets. See RFC 5545 for the standard approach.',
+      requiresResponse: true,
+    },
+    {
+      type: 'question',
+      severity: 'major',
+      message: 'How does this interact with our caching layer? Cached timestamps would still be in UTC. Have you considered cache invalidation?',
+      requiresResponse: true,
+    },
+    {
+      type: 'request_changes',
+      severity: 'major',
+      message: 'The performance impact of calling toLocaleString on every render could be significant. Consider memoization or computing once on data fetch.',
+      requiresResponse: true,
+    },
+    {
+      type: 'suggestion',
+      severity: 'minor',
+      message: 'This would benefit from a design doc. Want to pair on documenting the timezone strategy for the team?',
+      requiresResponse: false,
+    },
+  ],
+  
+  uiOverrides: {
+    showGitTerminal: true,
+    showTeamChat: true,
+    showAcceptanceCriteria: true,
+    showWorkflowProgress: false,
+    showBurndownChart: true,
+    showCompetencyBadges: false,
+    terminalHintsVisibility: 'never',
+    allowShortcutButtons: false,
+  },
+  
+  difficultyOverrides: {
+    gitCommandStrictness: 'strict',
+    hintDetailLevel: 'none',
+    prReviewIntensity: 'thorough',
+    interruptionComplexity: 'complex',
+    stretchTasksEnabled: true,
+    timeBoxedDays: true,
+  },
+  
+  evaluationOverrides: {
+    passingThreshold: 80,
+    requiredTicketsComplete: 4,
+    requiredPRsReviewed: 3,
+  },
+  
+  standupModifiers: {
+    showExamples: false,
+    provideFeedback: false,
+    feedbackTone: 'direct',
+  },
+  
+  gitModifiers: {
+    showCommandHints: false,
+    showNextStepPrompt: false,
+    allowButtonShortcuts: false,
+  },
+};
