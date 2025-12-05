@@ -1138,7 +1138,7 @@ export function OnboardingModule({
                 className="bg-teal-600 hover:bg-teal-700"
                 data-testid="button-continue-after-docs"
               >
-                {requiresGitTerminal && !environmentComplete ? 'Set Up Environment' : 'Meet Your Team'}
+                {requiresGitTerminal && !environmentComplete ? 'Set Up Dev Environment' : 'Meet Your Team'}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             )}

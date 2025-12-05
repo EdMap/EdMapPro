@@ -9,6 +9,7 @@ import {
   sprintTickets, ceremonyInstances, gitSessions, gitEvents,
   workspaceInstances, workspacePhaseEvents,
   planningSessions, planningMessages,
+  onboardingSessions,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -58,6 +59,7 @@ import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
 import { getSprintPlanningAdapter } from "@shared/adapters/planning";
 import { getBacklogItems, getSelectedBacklogItems, getBacklogItemById } from "@shared/adapters/planning/backlog-catalogue";
+import { getOnboardingAdapter } from "@shared/adapters/onboarding";
 
 export interface IStorage {
   // User operations
@@ -3620,16 +3622,36 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         const onboardingProgress = (workspace.workspaceMetadata as any)?.onboardingProgress;
         const teamIntrosComplete = onboardingProgress?.teamIntrosComplete || {};
         const docsRead = onboardingProgress?.docsRead || {};
+        const environmentComplete = onboardingProgress?.environmentComplete || false;
         const comprehensionComplete = onboardingProgress?.comprehensionComplete || false;
         
         const allTeamIntrosComplete = Object.values(teamIntrosComplete).filter(Boolean).length >= 3;
         const allDocsRead = Object.values(docsRead).filter(Boolean).length >= 4;
         
-        return [
-          { item: 'Meet the team', completed: allTeamIntrosComplete, required: true },
+        const workspaceRole = workspace.role || 'developer';
+        const workspaceLevel = (workspace as any).level || 'intern';
+        let requiresGitTerminal = true;
+        try {
+          const onboardingAdapter = getOnboardingAdapter(workspaceRole as any, workspaceLevel as any);
+          requiresGitTerminal = onboardingAdapter.requiresGitTerminal;
+        } catch {
+          requiresGitTerminal = workspaceRole !== 'pm';
+        }
+        
+        const checklist = [
           { item: 'Read company documentation', completed: allDocsRead, required: true },
-          { item: 'Complete comprehension check', completed: comprehensionComplete, required: true },
         ];
+        
+        if (requiresGitTerminal) {
+          checklist.push({ item: 'Set up dev environment', completed: environmentComplete, required: true });
+        }
+        
+        checklist.push(
+          { item: 'Meet the team', completed: allTeamIntrosComplete, required: true },
+          { item: 'Complete comprehension check', completed: comprehensionComplete, required: true }
+        );
+        
+        return checklist;
       }
       case 'planning': {
         const planningSession = await this.getPlanningSessionByWorkspace(workspaceId);

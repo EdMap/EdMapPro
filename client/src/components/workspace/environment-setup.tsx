@@ -63,16 +63,14 @@ export function EnvironmentSetup({
   const [bootingProgress, setBootingProgress] = useState(0);
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const terminalRef = useRef<HTMLDivElement>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
   
   const currentStep = steps[currentStepIndex];
   const allStepsComplete = completedSteps.length >= steps.length;
   const isComplete = transitionState === 'summary';
   
   useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
-    }
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [terminalLines]);
   
   useEffect(() => {
@@ -362,7 +360,6 @@ export function EnvironmentSetup({
             </CardHeader>
             <CardContent className="p-0">
               <ScrollArea 
-                ref={terminalRef}
                 className={cn(
                   "font-mono text-sm p-4",
                   uiControls.terminalHeight === 'compact' && "h-[200px]",
@@ -405,6 +402,7 @@ export function EnvironmentSetup({
                   />
                   <span className="animate-pulse">▌</span>
                 </div>
+                <div ref={terminalEndRef} />
               </ScrollArea>
             </CardContent>
           </Card>
