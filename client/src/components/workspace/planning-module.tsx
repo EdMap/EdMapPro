@@ -450,6 +450,8 @@ export function PlanningModule({
   const [showPhaseTransitionHint, setShowPhaseTransitionHint] = useState(false);
   const staggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialLoadRef = useRef(true);
+  const previousMessageCountRef = useRef(0);
   
   const { data: sessionState, isLoading, refetch } = useQuery<PlanningSessionState>({
     queryKey: [`/api/workspaces/${workspaceId}/planning`],
@@ -534,18 +536,31 @@ export function PlanningModule({
   }, [sessionState, isLoading]);
   
   // Message staggering effect - reveals messages one at a time with typing simulation
+  // Only staggers NEW messages, not on page reload
   useEffect(() => {
-    if (!sessionState?.messages || !sessionState?.adapterConfig?.engagement?.messageStagger?.enabled) {
-      // No staggering - show all messages immediately
-      setVisibleMessageCount(sessionState?.messages?.length || 0);
+    if (!sessionState?.messages) {
       return;
     }
     
     const messages = sessionState.messages;
-    const staggerConfig = sessionState.adapterConfig.engagement.messageStagger;
+    const staggerConfig = sessionState?.adapterConfig?.engagement?.messageStagger;
+    const staggerEnabled = staggerConfig?.enabled;
     
-    // If we already have all messages visible, nothing to do
-    if (visibleMessageCount >= messages.length) {
+    // On initial load, show all existing messages immediately (no staggering)
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      previousMessageCountRef.current = messages.length;
+      setVisibleMessageCount(messages.length);
+      return;
+    }
+    
+    // Check if new messages were added
+    const newMessageCount = messages.length - previousMessageCountRef.current;
+    previousMessageCountRef.current = messages.length;
+    
+    // If no new messages or staggering disabled, show all immediately
+    if (newMessageCount <= 0 || !staggerEnabled) {
+      setVisibleMessageCount(messages.length);
       return;
     }
     
@@ -553,9 +568,8 @@ export function PlanningModule({
     staggerTimeoutsRef.current.forEach(clearTimeout);
     staggerTimeoutsRef.current = [];
     
-    // If this is a fresh load (visibleMessageCount is 0), stagger from the beginning
-    // Otherwise, new messages were added - reveal them with stagger
-    const startIndex = visibleMessageCount === 0 ? 0 : visibleMessageCount;
+    // Stagger only the NEW messages
+    const startIndex = messages.length - newMessageCount;
     
     if (startIndex < messages.length) {
       setIsStaggering(true);
