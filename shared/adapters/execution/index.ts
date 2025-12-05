@@ -14,6 +14,8 @@ import type {
   ExecutionDifficulty,
   ExecutionEvaluation,
   PRReviewComment,
+  CodeWorkConfig,
+  CodeWorkMode,
 } from './types';
 
 import { 
@@ -55,6 +57,7 @@ function mergeUIControls(
     showWorkflowProgress: true,
     showBurndownChart: false,
     showCompetencyBadges: false,
+    showMentorHints: true,
     terminalHintsVisibility: 'on-error',
     allowShortcutButtons: false,
     splitPanelLayout: 'terminal-right',
@@ -115,6 +118,24 @@ function mergeEvaluation(
   };
 }
 
+function mergeCodeWorkConfig(
+  roleConfig: RoleExecutionAdapter['codeWorkConfig'],
+  levelModifiers: LevelExecutionOverlay['codeWorkModifiers']
+): CodeWorkConfig {
+  const mode: CodeWorkMode = levelModifiers.modeOverride ?? roleConfig.baseMode;
+  
+  return {
+    enabled: roleConfig.enabled,
+    mode,
+    requireCompletionBeforeStage: roleConfig.requireCompletionBeforeStage,
+    showDiffView: levelModifiers.showDiffView,
+    showRunTests: levelModifiers.showRunTests,
+    steps: roleConfig.steps,
+    mentorHints: levelModifiers.mentorGuidance === 'none' ? [] : roleConfig.mentorHints,
+    completionMessage: roleConfig.completionMessage,
+  };
+}
+
 export function getSprintExecutionAdapter(role: Role, level: Level): SprintExecutionAdapter {
   const roleAdapter = roleAdapters[role] || roleAdapters.developer;
   const levelOverlay = levelOverlays[level] || levelOverlays.intern;
@@ -141,6 +162,8 @@ ${levelOverlay.standupModifiers.showExamples ? 'Include brief examples when help
     },
     
     ticketWorkConfig: roleAdapter.ticketWorkConfig,
+    
+    codeWorkConfig: mergeCodeWorkConfig(roleAdapter.codeWorkConfig, levelOverlay.codeWorkModifiers),
     
     aiInteractions: {
       ...roleAdapter.aiInteractions,
