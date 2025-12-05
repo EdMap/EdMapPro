@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getSprintExecutionAdapter } from "@shared/adapters";
 import { getBacklogItemById } from "@shared/adapters/planning/backlog-catalogue";
 import { CodeWorkPanel } from "./code-work-panel";
+import { PRReviewPanel } from "./pr-review-panel";
 import type { Role, Level, GitCommand } from "@shared/adapters";
 import type { SprintTicket, GitTicketState } from "@shared/schema";
 
@@ -699,6 +700,21 @@ Time:        0.842s`;
                   <span className={gitState.prCreated ? '' : 'text-muted-foreground'}>Open PR</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
+                  {gitState.prApproved ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : gitState.prCreated && !gitState.isMerged ? (
+                    <div className="h-4 w-4 rounded-full border-2 border-purple-500 animate-pulse" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={cn(
+                    gitState.prApproved ? '' : 'text-muted-foreground',
+                    gitState.prCreated && !gitState.prApproved && !gitState.isMerged && 'text-purple-600 dark:text-purple-400 font-medium'
+                  )}>
+                    {gitState.prCreated && !gitState.prApproved && !gitState.isMerged ? 'Review in progress' : 'PR Approved'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
                   {gitState.isMerged ? (
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   ) : (
@@ -854,6 +870,70 @@ Time:        0.842s`;
                 }}
                 isComplete={codeWorkComplete}
                 isSaving={isCodeWorkSaving}
+              />
+            </div>
+          )}
+
+          {adapter.prReviewConfig.enabled && gitState.prCreated && !gitState.isMerged && (
+            <div className="p-4 border-b bg-purple-50/30 dark:bg-purple-950/10">
+              <PRReviewPanel
+                prReviewConfig={adapter.prReviewConfig}
+                ticketKey={ticket.ticketKey}
+                ticketTitle={ticket.title}
+                branchName={gitState.branchName || ''}
+                commits={gitState.commits}
+                onThreadResolve={(threadId) => {
+                  addTerminalLine('output', `Thread ${threadId} marked as resolved`);
+                }}
+                onCommentSubmit={(threadId, content) => {
+                  addTerminalLine('output', `Replied to review thread`);
+                }}
+                onRequestReReview={() => {
+                  addTerminalLine('output', 'Re-review requested from reviewers...');
+                  setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    from: 'Alex',
+                    role: 'QA Engineer',
+                    content: "I'll take another look at your changes. Give me a moment.",
+                    color: 'bg-teal-500',
+                    timestamp: new Date(),
+                  }]);
+                }}
+                onMerge={() => {
+                  addTerminalLine('success', `
+✓ Pull request merged successfully!
+  Branch ${gitState.branchName} merged into main.
+  
+  Cleaning up...
+  ✓ Deleted branch ${gitState.branchName}
+  ✓ Updated local main branch
+                  `);
+                  
+                  const newGitState: GitTicketState = {
+                    ...gitState,
+                    prApproved: true,
+                    isMerged: true,
+                  };
+                  
+                  updateTicket.mutate({ 
+                    gitState: newGitState,
+                    status: 'done',
+                  });
+                  
+                  toast({
+                    title: "PR Merged!",
+                    description: "Your changes have been merged into main. Great work!",
+                  });
+                  
+                  setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    from: 'Sarah',
+                    role: 'Tech Lead',
+                    content: "Nice work! Your PR has been merged. This ticket is now complete. 🎉",
+                    color: 'bg-purple-500',
+                    timestamp: new Date(),
+                  }]);
+                }}
               />
             </div>
           )}
