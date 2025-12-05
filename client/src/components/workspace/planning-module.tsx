@@ -661,15 +661,23 @@ export function PlanningModule({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [visibleMessageCount]);
   
-  // Show pending phase transition hint after staggering completes
+  // Show pending phase transition hint after ALL messages are visible (staggering complete)
   useEffect(() => {
-    if (!isStaggering && pendingPhaseTransitionHint) {
-      setShowPhaseTransitionHint(true);
-      setPendingPhaseTransitionHint(false);
-      // Auto-hide after 10 seconds
-      setTimeout(() => setShowPhaseTransitionHint(false), 10000);
+    if (!sessionState?.messages) return;
+    
+    const allMessagesVisible = visibleMessageCount >= sessionState.messages.length;
+    
+    if (allMessagesVisible && pendingPhaseTransitionHint && !isStaggering) {
+      // Small delay to ensure the last message is rendered
+      const timer = setTimeout(() => {
+        setShowPhaseTransitionHint(true);
+        setPendingPhaseTransitionHint(false);
+        // Auto-hide after 10 seconds
+        setTimeout(() => setShowPhaseTransitionHint(false), 10000);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [isStaggering, pendingPhaseTransitionHint]);
+  }, [visibleMessageCount, sessionState?.messages?.length, pendingPhaseTransitionHint, isStaggering]);
   
   const handleSendMessage = () => {
     if (inputMessage.trim()) {
