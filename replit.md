@@ -55,11 +55,22 @@ The system employs a monorepo structure (`client/`, `server/`, `shared/`, `migra
     - UI badges show current engagement mode (Observing, Guided, Active, Facilitating)
   - **AutoStartSequence System**: Multi-message conversation kickoffs that simulate realistic team discussions:
     - `AutoStartStep` interface with `personaId`, `personaName`, `personaRole`, `message`, `phase`, `requiresUserResponse`
-    - Intern (shadow mode): 6-message sequence - team discusses priorities before asking intern for questions
+    - Intern (shadow mode): 6-message sequence - Priya reviews full backlog, team discusses before asking intern
     - Junior (guided mode): 3-message sequence - asks for input sooner with less team discussion
     - Mid/Senior: Single welcome message or no auto-start (user drives discussion)
+    - Personalization via `{{userName}}` and `{{userRole}}` placeholders substituted at message insertion
     - Idempotency protection via `autoStartInitialized` flag prevents duplicate messages on page refresh
     - Sequence stops at first message with `requiresUserResponse: true`
+  - **Message Staggering UI**: Progressive message reveal simulating realistic typing:
+    - `MessageStaggerConfig` in adapter types: `enabled`, `baseDelayMs`, `perCharacterDelayMs`, `maxDelayMs`
+    - Intern: 800ms base + 8ms/char (max 3000ms) for longer reading time
+    - Junior: 600ms base + 6ms/char (max 2500ms) for quicker pacing
+    - Typing indicator with animated dots shown while messages are being "typed"
+  - **AI Response Guardrails**: Prompt engineering to ensure clean AI responses:
+    - Single-persona responses only (AI responds as one team member at a time)
+    - No stage directions like "(nods)" or "(thinking)"
+    - No role prefixes in message text (UI already shows sender info)
+    - Conversational tone with 2-4 sentence responses
   - **Composable Adapter Architecture**:
     - Role adapters in `shared/adapters/planning/roles/` (base behavior per role)
     - Level overlays in `shared/adapters/planning/levels/` (difficulty modifiers + engagement)
