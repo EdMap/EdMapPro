@@ -66,6 +66,13 @@ interface PlanningSession {
 type EngagementMode = 'shadow' | 'guided' | 'active' | 'facilitator';
 type PhaseEngagement = 'observe' | 'respond' | 'lead';
 
+interface MessageStaggerConfig {
+  enabled: boolean;
+  baseDelayMs: number;
+  perCharacterDelayMs: number;
+  maxDelayMs: number;
+}
+
 interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -81,6 +88,7 @@ interface LevelEngagement {
     commitment: string[];
   };
   autoStartMessage: string;
+  messageStagger?: MessageStaggerConfig;
 }
 
 interface PlanningSessionState {
@@ -381,6 +389,9 @@ export function PlanningModule({
 }: PlanningModuleProps) {
   const [inputMessage, setInputMessage] = useState('');
   const [sprintGoal, setSprintGoal] = useState('');
+  const [visibleMessageCount, setVisibleMessageCount] = useState(0);
+  const [isStaggering, setIsStaggering] = useState(false);
+  const staggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { data: sessionState, isLoading, refetch } = useQuery<PlanningSessionState>({
@@ -457,9 +468,65 @@ export function PlanningModule({
     }
   }, [sessionState, isLoading]);
   
+  // Message staggering effect - reveals messages one at a time with typing simulation
+  useEffect(() => {
+    if (!sessionState?.messages || !sessionState?.adapterConfig?.engagement?.messageStagger?.enabled) {
+      // No staggering - show all messages immediately
+      setVisibleMessageCount(sessionState?.messages?.length || 0);
+      return;
+    }
+    
+    const messages = sessionState.messages;
+    const staggerConfig = sessionState.adapterConfig.engagement.messageStagger;
+    
+    // If we already have all messages visible, nothing to do
+    if (visibleMessageCount >= messages.length) {
+      return;
+    }
+    
+    // Clear any existing timeouts
+    staggerTimeoutsRef.current.forEach(clearTimeout);
+    staggerTimeoutsRef.current = [];
+    
+    // If this is a fresh load (visibleMessageCount is 0), stagger from the beginning
+    // Otherwise, new messages were added - reveal them with stagger
+    const startIndex = visibleMessageCount === 0 ? 0 : visibleMessageCount;
+    
+    if (startIndex < messages.length) {
+      setIsStaggering(true);
+      
+      let cumulativeDelay = 0;
+      
+      for (let i = startIndex; i < messages.length; i++) {
+        const msg = messages[i];
+        // Calculate delay based on message length
+        const charDelay = Math.min(
+          msg.message.length * staggerConfig.perCharacterDelayMs,
+          staggerConfig.maxDelayMs
+        );
+        const delay = staggerConfig.baseDelayMs + charDelay;
+        cumulativeDelay += delay;
+        
+        const timeout = setTimeout(() => {
+          setVisibleMessageCount(i + 1);
+          if (i === messages.length - 1) {
+            setIsStaggering(false);
+          }
+        }, cumulativeDelay);
+        
+        staggerTimeoutsRef.current.push(timeout);
+      }
+    }
+    
+    return () => {
+      staggerTimeoutsRef.current.forEach(clearTimeout);
+      staggerTimeoutsRef.current = [];
+    };
+  }, [sessionState?.messages?.length, sessionState?.adapterConfig?.engagement?.messageStagger?.enabled]);
+  
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [sessionState?.messages]);
+  }, [visibleMessageCount]);
   
   const handleSendMessage = () => {
     if (inputMessage.trim()) {
@@ -638,9 +705,23 @@ export function PlanningModule({
                       )}
                     </div>
                   )}
-                  {messages.map((msg) => (
+                  {messages.slice(0, visibleMessageCount).map((msg) => (
                     <ChatMessage key={msg.id} message={msg} />
                   ))}
+                  {isStaggering && visibleMessageCount < messages.length && (
+                    <div className="flex gap-3 mb-4">
+                      <Avatar className="h-8 w-8 bg-gray-100">
+                        <AvatarFallback className="text-xs">...</AvatarFallback>
+                      </Avatar>
+                      <div className="max-w-[80%] rounded-lg p-3 bg-white dark:bg-gray-800 border">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </ScrollArea>
               </CardContent>

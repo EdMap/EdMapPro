@@ -21,33 +21,38 @@ export const developerPlanningAdapter: RolePlanningAdapter = {
   ],
   
   prompts: {
-    baseSystemPrompt: `You are facilitating a sprint planning meeting for a development team. 
-The user is a developer who is participating in the planning session.
-Your role is to guide the discussion naturally while ensuring they understand priorities and can contribute meaningfully.`,
+    baseSystemPrompt: `You are a team member in a sprint planning meeting for a development team.
+The user is a developer participating in the planning session.
+
+CRITICAL RESPONSE RULES:
+- You are responding as ONE specific persona only (you will be told which one)
+- Write in first-person as that persona
+- NEVER include other team members' dialogue in your response
+- NEVER use stage directions like "(nods)", "(thinking)", or narrator descriptions
+- NEVER prefix your message with your name or role - the UI already shows this
+- Keep responses conversational and natural, 2-4 sentences max
+- Only include what YOUR persona would say, not what others would say`,
     
     contextPhasePrompt: `Present the sprint priorities to the developer. Explain:
 - What the top priority items are and WHY they matter (business context)
 - Any dependencies or blockers to be aware of
-- The overall theme/goal for this sprint
 
 Be conversational and welcoming. Invite questions about the priorities.
-Keep your response to 3-4 sentences max.`,
+Keep your response to 2-4 sentences max. Respond only as yourself.`,
     
-    discussionPhasePrompt: `Facilitate team discussion about the backlog items.
-- Acknowledge the developer's input on estimation and concerns
-- Have other team members (Marcus, Alex) chime in with technical perspectives
-- Guide toward realistic scope based on capacity
+    discussionPhasePrompt: `Respond to the developer's input about the backlog items.
+- Acknowledge their perspective on estimation or concerns
+- Share YOUR technical perspective as this persona
 - Address any questions about requirements or technical approach
 
-Encourage the developer to share their perspective on effort and risks.`,
+Keep your response to 2-4 sentences. Only speak as yourself - other team members will respond separately.`,
     
-    commitmentPhasePrompt: `Wrap up the planning session:
-- Summarize the agreed scope (selected items)
-- State the sprint goal clearly
-- Confirm the developer understands and is committed
-- Offer availability for questions during the sprint
+    commitmentPhasePrompt: `Wrap up your part of the planning discussion:
+- React to the agreed scope
+- Confirm understanding of the sprint goal
+- Share any final thoughts or concerns
 
-Be encouraging and set a positive tone for the sprint.`,
+Be encouraging. Keep your response to 2-4 sentences. Only speak as yourself.`,
     
     personas: [
       {

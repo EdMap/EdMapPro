@@ -3110,6 +3110,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Now insert auto-start messages (flag already set, so GET won't duplicate)
         if (willAutoStart) {
+          // Get user info for personalization
+          const user = await storage.getUser(workspace.userId);
+          const userName = user?.username || 'team member';
+          const userRole = workspace.role === 'developer' ? 'Developer' 
+            : workspace.role === 'qa' ? 'QA Engineer'
+            : workspace.role === 'devops' ? 'DevOps Engineer'
+            : workspace.role === 'data_science' ? 'Data Scientist'
+            : workspace.role === 'pm' ? 'Product Manager'
+            : 'team member';
+          
+          // Helper to substitute personalization placeholders
+          const personalize = (text: string): string => {
+            return text
+              .replace(/\{\{userName\}\}/g, userName)
+              .replace(/\{\{userRole\}\}/g, userRole);
+          };
+          
           const sequence = adapter.engagement?.autoStartSequence;
           
           if (sequence && sequence.length > 0) {
@@ -3119,7 +3136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 sessionId: session.id,
                 sender: step.personaName,
                 senderRole: step.personaRole,
-                message: step.message,
+                message: personalize(step.message),
                 phase: step.phase,
                 isUser: false,
               });
@@ -3135,7 +3152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sessionId: session.id,
               sender: 'Priya',
               senderRole: 'Product Manager',
-              message: adapter.engagement.autoStartMessage,
+              message: personalize(adapter.engagement.autoStartMessage),
               phase: 'context',
               isUser: false,
             });

@@ -51,37 +51,41 @@ Create opportunities for them to practice contributing in a safe environment.`
         "Can I take ownership of one of these?"
       ]
     },
-    autoStartMessage: `Morning team! Let's dive into our sprint planning. 
+    autoStartMessage: `Morning team! Let's dive into our sprint planning. Good to have you here, {{userName}}.
 
-We've got some interesting work lined up, and I'm excited to hear everyone's thoughts - especially as we think through estimates and priorities together.
-
-Let me share what's on our plate for this sprint...`,
+We've got some interesting work lined up. Let me walk through the backlog and then get everyone's thoughts on priorities.`,
     autoStartSequence: [
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `Morning team! Let's dive into our sprint planning. We've got some interesting work lined up, and I'm excited to hear everyone's thoughts.
+        message: `Morning team! Let's dive into our sprint planning. Good to have you here, {{userName}}.
 
-Here's what's on our plate: we have a timezone bug that's been escalated, the user notifications feature that product has been waiting for, and a couple of smaller items in the backlog.`
+Looking at our backlog, we've got a timezone display bug that's been escalated, the user notifications feature product has been waiting for, a null check issue in payments, and a pagination request. I'm thinking timezone and notifications should be our focus this sprint.`
       },
       {
         personaId: 'marcus',
         personaName: 'Marcus',
         personaRole: 'Senior Developer',
         phase: 'context',
-        message: `The timezone bug shouldn't be too complex - probably a UTC conversion issue. The notifications feature is the bigger piece.`
+        message: `Makes sense. The timezone bug should be straightforward - probably a UTC conversion issue. Notifications is the bigger piece but we've done similar work before.`
       },
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `Agreed. Before we dive into estimates, I'd love to hear your initial thoughts. Any questions about the priorities or anything that stands out to you?`,
+        message: `{{userName}}, before we dive into estimates, I'd love to hear your initial thoughts. Any questions about the priorities or concerns that stand out to you?`,
         requiresUserResponse: true
       }
-    ]
+    ],
+    messageStagger: {
+      enabled: true,
+      baseDelayMs: 600,
+      perCharacterDelayMs: 6,
+      maxDelayMs: 2500
+    }
   },
   
   uiOverrides: {

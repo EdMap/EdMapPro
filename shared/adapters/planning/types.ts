@@ -106,6 +106,13 @@ export interface AutoStartStep {
   requiresUserResponse?: boolean;
 }
 
+export interface MessageStaggerConfig {
+  enabled: boolean;
+  baseDelayMs: number;
+  perCharacterDelayMs: number;
+  maxDelayMs: number;
+}
+
 export interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -122,6 +129,7 @@ export interface LevelEngagement {
   };
   autoStartMessage: string;
   autoStartSequence?: AutoStartStep[];
+  messageStagger?: MessageStaggerConfig;
 }
 
 export interface LevelPlanningOverlay {

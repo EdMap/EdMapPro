@@ -52,70 +52,78 @@ Celebrate when they do ask questions or share observations.`
         "This is helpful to see how planning works"
       ]
     },
-    autoStartMessage: `Good morning everyone! Thanks for joining our sprint planning. I see we have a new team member with us today - welcome! 
+    autoStartMessage: `Good morning everyone! Thanks for joining our sprint planning. Before we dive in, I want to welcome {{userName}} who's joining us as our new {{userRole}}. Great to have you on the team!
 
-Don't worry about jumping in right away - feel free to observe how we run these meetings first. I'll check in with you as we go, and please raise your hand anytime if you have questions.
-
-Alright team, let me walk through our priorities for this sprint...`,
+Feel free to observe how we run these meetings - I'll check in with you as we go. Let's get started by reviewing what's in our backlog.`,
     autoStartSequence: [
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `Good morning everyone! Thanks for joining our sprint planning. I see we have a new team member with us today - welcome!
+        message: `Good morning everyone! Thanks for joining our sprint planning. Before we dive in, I want to welcome {{userName}} who's joining us as our new {{userRole}}. Great to have you on the team!
 
-Don't worry about jumping in right away - feel free to observe how we run these meetings first. I'll check in with you as we go, and please raise your hand anytime if you have questions.
-
-Alright team, let me walk through our priorities for this sprint...`
+Feel free to observe how we run these meetings - I'll check in with you as we go. Let's get started by reviewing what's in our backlog.`
       },
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `So for this sprint, we have a few high-priority items from stakeholders. First up is a timezone display bug that's affecting users in different regions - they're seeing incorrect timestamps. This one's been escalated by support.
+        message: `Alright, let me walk through everything we have in the backlog right now. Looking at our board, we've got:
 
-We also need to implement the user notifications feature. Product has been asking for this for a while - it's key for user engagement.`
+- A timezone display bug affecting users in different regions
+- The user notifications feature that's been requested
+- A null check issue in the payment flow
+- A request to add pagination to the user list
+- Some technical debt items around test coverage
+
+Based on stakeholder feedback and support tickets, I'd recommend we prioritize the timezone bug first - it's been escalated. The notifications feature is also high priority for user engagement.`
       },
       {
         personaId: 'marcus',
         personaName: 'Marcus',
         personaRole: 'Senior Developer',
         phase: 'context',
-        message: `The timezone bug sounds like it could be in the date formatting utilities. I've seen similar issues before - usually it's a matter of storing everything in UTC and converting on display.
+        message: `Makes sense on the timezone bug - I've seen similar issues before. Usually comes down to storing everything in UTC and converting on display. Should be a targeted fix.
 
-For the notifications feature, are we talking push notifications or just in-app? That'll affect the scope significantly.`
+Quick question on notifications - are we talking push notifications or just in-app? That would significantly change the scope.`
       },
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `Good question, Marcus. For now, we're scoping it to in-app notifications only. Push notifications are on the roadmap for next quarter.
+        message: `Good question. For now, we're scoping it to in-app notifications only. Push notifications are on the roadmap for next quarter.
 
-We also have a couple of bugs in the backlog - a null check issue in the payment flow that's causing occasional failures, and users are asking for pagination on the user list since it's getting slow.`
+Given our velocity, I think we can realistically fit the timezone fix, the notifications feature, and maybe the payment bug. The pagination might need to wait unless we have extra capacity.`
       },
       {
         personaId: 'alex',
         personaName: 'Alex',
         personaRole: 'QA Engineer',
         phase: 'context',
-        message: `I can take a look at that payment flow bug - I was working in that area last sprint. The null check is probably in the order processing logic.
+        message: `I'd prioritize the payment bug over pagination if we have room. Failed payments directly impact revenue, and I was working in that area last sprint so the context is fresh.
 
-The pagination should be straightforward. We have the pattern established from the product list already.`
+The pagination can wait - it's more of a performance nice-to-have at this point.`
       },
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `Great overview, team. Before we move to estimation, let me check in with our new team member.
+        message: `Good point, Alex. Let's tentatively plan for timezone, notifications, and payment bug as our core scope.
 
-Do you have any questions about what we've discussed so far? Don't be shy - there's no such thing as a dumb question in planning!`,
+{{userName}}, you've been listening to how we prioritize - any questions so far about the backlog or how we're deciding what to work on?`,
         requiresUserResponse: true
       }
-    ]
+    ],
+    messageStagger: {
+      enabled: true,
+      baseDelayMs: 800,
+      perCharacterDelayMs: 8,
+      maxDelayMs: 3000
+    }
   },
   
   uiOverrides: {
