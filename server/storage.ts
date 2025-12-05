@@ -57,6 +57,7 @@ import {
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
 import { getSprintPlanningAdapter } from "@shared/adapters/planning";
+import { getBacklogItems, getSelectedBacklogItems, getBacklogItemById } from "@shared/adapters/planning/backlog-catalogue";
 
 export interface IStorage {
   // User operations
@@ -284,6 +285,7 @@ export interface IStorage {
   // Phase 5: Workspace State operations
   getWorkspaceState(workspaceId: number): Promise<WorkspaceState | null>;
   advanceWorkspacePhase(workspaceId: number, payload?: Record<string, unknown>): Promise<WorkspaceInstance | undefined>;
+  createSprintTicketsFromPlanning(workspaceId: number, sprintId: number): Promise<void>;
   
   // Phase 6: Planning Session operations
   getPlanningSession(id: number): Promise<PlanningSession | undefined>;
@@ -3725,6 +3727,10 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       nextPhase = phaseOrder[currentIndex + 1];
     }
 
+    if (workspace.currentPhase === 'planning' && nextPhase === 'execution' && workspace.currentSprintId) {
+      await this.createSprintTicketsFromPlanning(workspaceId, workspace.currentSprintId);
+    }
+
     await this.createWorkspacePhaseEvent({
       workspaceId,
       phase: nextPhase,
@@ -3791,55 +3797,18 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
 
     const selectedItemIds = (session.selectedItems as string[]) || [];
 
-    const backlogItems = [
-      {
-        id: 'TICK-001',
-        title: 'Fix timezone display bug in user settings',
-        description: 'Users in different timezones see incorrect timestamps',
-        type: 'bug' as const,
-        priority: 'high' as const,
-        points: 3,
-        selected: selectedItemIds.includes('TICK-001')
-      },
-      {
-        id: 'TICK-002',
-        title: 'Implement user notifications',
-        description: 'Add in-app notification system for activity updates',
-        type: 'feature' as const,
-        priority: 'high' as const,
-        points: 5,
-        selected: selectedItemIds.includes('TICK-002')
-      },
-      {
-        id: 'TICK-003',
-        title: 'Improve loading state feedback',
-        description: 'Add skeleton loaders for better UX during data fetches',
-        type: 'improvement' as const,
-        priority: 'medium' as const,
-        points: 2,
-        selected: selectedItemIds.includes('TICK-003')
-      },
-      {
-        id: 'TICK-004',
-        title: 'Fix null check in payment flow',
-        description: 'Payment occasionally fails due to missing null checks',
-        type: 'bug' as const,
-        priority: 'high' as const,
-        points: 2,
-        selected: selectedItemIds.includes('TICK-004')
-      },
-      {
-        id: 'TICK-005',
-        title: 'Add pagination to user list',
-        description: 'User list becomes slow with many users, needs pagination',
-        type: 'feature' as const,
-        priority: 'medium' as const,
-        points: 3,
-        selected: selectedItemIds.includes('TICK-005')
-      }
-    ];
+    const catalogueItems = getBacklogItems();
+    const backlogItems = catalogueItems.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      type: item.type,
+      priority: item.priority,
+      points: item.points,
+      selected: selectedItemIds.includes(item.id)
+    }));
 
-    const adapter = getSprintPlanningAdapter(session.role, session.level);
+    const adapter = getSprintPlanningAdapter(session.role as import('@shared/adapters').Role, session.level as import('@shared/adapters').Level);
 
     return {
       session,
@@ -3857,6 +3826,51 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         commitmentGuidance: adapter.commitmentGuidance,
       }
     };
+  }
+
+  async createSprintTicketsFromPlanning(workspaceId: number, sprintId: number): Promise<void> {
+    const [planningSession] = await db.select()
+      .from(planningSessions)
+      .where(eq(planningSessions.workspaceId, workspaceId))
+      .orderBy(desc(planningSessions.startedAt))
+      .limit(1);
+    if (!planningSession) return;
+
+    const selectedItemIds = (planningSession.selectedItems as string[]) || [];
+    if (selectedItemIds.length === 0) return;
+
+    const existingTickets = await this.getSprintTickets(sprintId);
+    
+    for (const ticket of existingTickets) {
+      if (!selectedItemIds.includes(ticket.ticketKey)) {
+        await db.delete(sprintTickets).where(eq(sprintTickets.id, ticket.id));
+      }
+    }
+
+    const remainingTickets = await this.getSprintTickets(sprintId);
+    const existingTicketKeys = remainingTickets.map(t => t.ticketKey);
+
+    for (const itemId of selectedItemIds) {
+      const catalogueItem = getBacklogItemById(itemId);
+      if (!catalogueItem) continue;
+
+      if (existingTicketKeys.includes(itemId)) continue;
+
+      await this.createSprintTicket({
+        sprintId,
+        ticketKey: catalogueItem.id,
+        title: catalogueItem.title,
+        description: catalogueItem.description,
+        type: catalogueItem.type,
+        priority: catalogueItem.priority,
+        storyPoints: catalogueItem.points,
+        status: 'todo',
+        dayAssigned: 1,
+        acceptanceCriteria: catalogueItem.acceptanceCriteria || [],
+        gitState: {},
+        reviewComments: []
+      });
+    }
   }
 }
 

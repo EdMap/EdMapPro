@@ -2968,6 +2968,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/workspaces/:workspaceId/sync-tickets - Sync sprint tickets from planning selections
+  app.post("/api/workspaces/:workspaceId/sync-tickets", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      if (!workspace.currentSprintId) {
+        return res.status(400).json({ message: "No active sprint" });
+      }
+      
+      await storage.createSprintTicketsFromPlanning(workspaceId, workspace.currentSprintId);
+      
+      const tickets = await storage.getSprintTickets(workspace.currentSprintId);
+      res.json({ synced: true, ticketCount: tickets.length, tickets });
+    } catch (error) {
+      console.error("Failed to sync tickets:", error);
+      res.status(500).json({ message: "Failed to sync tickets" });
+    }
+  });
+
   // GET /api/workspaces/:workspaceId/events - Get phase events history
   app.get("/api/workspaces/:workspaceId/events", async (req, res) => {
     try {
