@@ -123,7 +123,70 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
       baseDelayMs: 800,
       perCharacterDelayMs: 8,
       maxDelayMs: 3000
-    }
+    },
+    phaseTransitionSequences: [
+      {
+        phase: 'discussion',
+        steps: [
+          {
+            personaId: 'priya',
+            personaName: 'Priya',
+            personaRole: 'Product Manager',
+            phase: 'discussion',
+            message: `Alright team, let's dive into the backlog! Take a look at the items on the right panel.`
+          },
+          {
+            personaId: 'marcus',
+            personaName: 'Marcus',
+            personaRole: 'Senior Developer',
+            phase: 'discussion',
+            message: `I see that timezone bug at the top - TICK-001. That's been causing customer complaints. Should probably prioritize that.`
+          },
+          {
+            personaId: 'alex',
+            personaName: 'Alex',
+            personaRole: 'QA Engineer',
+            phase: 'discussion',
+            message: `Agreed on the timezone fix. And I'd suggest we look at TICK-004 too - that null check in the payment flow is a risk. Both are quick wins at 2-3 points each.`
+          },
+          {
+            personaId: 'priya',
+            personaName: 'Priya',
+            personaRole: 'Product Manager',
+            phase: 'discussion',
+            message: `Good thinking. {{userName}}, looking at the backlog, is there anything that stands out to you or any questions about the items?`,
+            requiresUserResponse: true
+          }
+        ]
+      },
+      {
+        phase: 'commitment',
+        steps: [
+          {
+            personaId: 'priya',
+            personaName: 'Priya',
+            personaRole: 'Product Manager',
+            phase: 'commitment',
+            message: `Great discussion everyone! Now let's finalize our sprint commitment.`
+          },
+          {
+            personaId: 'marcus',
+            personaName: 'Marcus',
+            personaRole: 'Senior Developer',
+            phase: 'commitment',
+            message: `Based on what we've selected, I think we need a clear sprint goal. Something that ties these items together.`
+          },
+          {
+            personaId: 'priya',
+            personaName: 'Priya',
+            personaRole: 'Product Manager',
+            phase: 'commitment',
+            message: `Exactly. {{userName}}, what do you think should be our sprint goal? Try to capture the main theme of what we're trying to achieve.`,
+            requiresUserResponse: true
+          }
+        ]
+      }
+    ]
   },
   
   uiOverrides: {

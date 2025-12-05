@@ -113,6 +113,11 @@ export interface MessageStaggerConfig {
   maxDelayMs: number;
 }
 
+export interface PhaseTransitionSequence {
+  phase: PlanningPhase;
+  steps: AutoStartStep[];
+}
+
 export interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -129,6 +134,7 @@ export interface LevelEngagement {
   };
   autoStartMessage: string;
   autoStartSequence?: AutoStartStep[];
+  phaseTransitionSequences?: PhaseTransitionSequence[];
   messageStagger?: MessageStaggerConfig;
 }
 

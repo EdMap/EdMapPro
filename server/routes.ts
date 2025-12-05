@@ -3342,26 +3342,61 @@ Do NOT say "click continue" or reference any UI buttons. Just naturally transiti
           phaseCompletions,
         });
         
-        // Add phase transition message from Priya
+        // Add phase transition messages from adapter
         const adapter = getSprintPlanningAdapter(session.role, session.level);
         const workspace = await storage.getWorkspaceInstance(workspaceId);
+        const user = await storage.getUser(workspace?.userId || 0);
         
-        let transitionMessage = '';
-        if (nextPhase === 'discussion') {
-          transitionMessage = `Alright team, let's dive into the backlog! I've got ${workspace?.companyName || 'our'} priorities here. Take a look at the items on the right panel - we have some bugs to fix and features to build. What catches your eye? Which items should we tackle this sprint?`;
-        } else if (nextPhase === 'commitment') {
-          transitionMessage = `Great discussion everyone! Now let's finalize our sprint commitment. Based on what we've selected, can someone help me craft a sprint goal that captures what we're trying to achieve?`;
-        }
+        // Get the transition sequence for this phase from the adapter
+        const transitionSequence = adapter.engagement?.phaseTransitionSequences?.find(
+          seq => seq.phase === nextPhase
+        );
         
-        if (transitionMessage) {
-          await storage.createPlanningMessage({
-            sessionId: session.id,
-            sender: 'Priya',
-            senderRole: 'Product Manager',
-            message: transitionMessage,
-            phase: nextPhase,
-            isUser: false,
-          });
+        if (transitionSequence && transitionSequence.steps.length > 0) {
+          // Helper to personalize messages
+          const personalize = (text: string) => {
+            const userName = user?.username || 'team member';
+            const userRole = workspace?.role || 'Developer';
+            return text
+              .replace(/\{\{userName\}\}/g, userName)
+              .replace(/\{\{userRole\}\}/g, userRole);
+          };
+          
+          // Insert all messages from the sequence
+          for (const step of transitionSequence.steps) {
+            await storage.createPlanningMessage({
+              sessionId: session.id,
+              sender: step.personaName,
+              senderRole: step.personaRole,
+              message: personalize(step.message),
+              phase: nextPhase,
+              isUser: false,
+            });
+            
+            // Stop after a message that requires user response
+            if (step.requiresUserResponse) {
+              break;
+            }
+          }
+        } else {
+          // Fallback: simple transition message from Priya
+          let fallbackMessage = '';
+          if (nextPhase === 'discussion') {
+            fallbackMessage = `Alright team, let's dive into the backlog! Take a look at the items and let's discuss what we should tackle this sprint.`;
+          } else if (nextPhase === 'commitment') {
+            fallbackMessage = `Great discussion! Now let's finalize our sprint commitment. What should be our sprint goal?`;
+          }
+          
+          if (fallbackMessage) {
+            await storage.createPlanningMessage({
+              sessionId: session.id,
+              sender: 'Priya',
+              senderRole: 'Product Manager',
+              message: fallbackMessage,
+              phase: nextPhase,
+              isUser: false,
+            });
+          }
         }
         
         const state = await storage.getPlanningSessionState(workspaceId);
