@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +7,15 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ArrowLeft,
   ArrowRight,
   CheckCircle2, 
   ThumbsUp,
-  ThumbsDown,
   Lightbulb,
   Plus,
   Trash2,
@@ -22,18 +24,28 @@ import {
   Heart,
   Zap,
   Target,
-  RotateCcw
+  RotateCcw,
+  MessageSquare,
+  Bug,
+  Star,
+  AlertTriangle,
+  TrendingUp,
+  PartyPopper,
+  Clock,
+  Users,
+  GitPullRequest
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WorkspacePhase } from "@/hooks/use-sprint-workflow";
 import { useToast } from "@/hooks/use-toast";
-
-interface RetroCard {
-  id: string;
-  type: 'went_well' | 'to_improve' | 'action_item';
-  text: string;
-  votes?: number;
-}
+import { getRetroAdapter } from "@shared/adapters/retro";
+import type { 
+  SprintRetroConfig, 
+  RetroCard as AdapterRetroCard,
+  SprintContextData,
+  CardCategory
+} from "@shared/adapters/retro";
+import { normalizeRole, normalizeLevel, type Role, type Level } from "@shared/adapters";
 
 interface RetroModuleProps {
   workspaceId: number;
@@ -41,18 +53,24 @@ interface RetroModuleProps {
   journeyId?: number;
   companyName: string;
   role: string;
+  level?: string;
+  sprintId?: number;
   onComplete: () => void;
   onBack?: () => void;
 }
 
-const INITIAL_CARDS: RetroCard[] = [
-  { id: "1", type: "went_well", text: "Team collaboration was excellent - everyone helped when blocked", votes: 3 },
-  { id: "2", type: "went_well", text: "Good estimation on tickets, delivered close to planned points", votes: 2 },
-  { id: "3", type: "to_improve", text: "Daily standups ran too long, should be more focused", votes: 2 },
-  { id: "4", type: "to_improve", text: "PR reviews took longer than expected", votes: 1 },
-];
+type RetroStep = 'context' | 'reflection' | 'action_items' | 'summary';
 
-type RetroStep = 'reflection' | 'action_items' | 'summary';
+interface ActionItem {
+  id: string;
+  text: string;
+  owner: string;
+  category?: string;
+}
+
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase();
+}
 
 export function RetroModule({ 
   workspaceId, 
@@ -60,19 +78,89 @@ export function RetroModule({
   journeyId,
   companyName, 
   role,
+  level = 'intern',
+  sprintId,
   onComplete,
   onBack 
 }: RetroModuleProps) {
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState<RetroStep>('reflection');
-  const [cards, setCards] = useState<RetroCard[]>(INITIAL_CARDS);
-  const [actionItems, setActionItems] = useState<{id: string; text: string; owner: string}[]>([
-    { id: "ai1", text: "Timebox standups to 15 minutes with parking lot for longer discussions", owner: "Team" },
-  ]);
+  
+  const normalizedRole = normalizeRole(role) as Role;
+  const normalizedLevel = normalizeLevel(level) as Level;
+  const adapter = useMemo(() => 
+    getRetroAdapter(normalizedRole, normalizedLevel),
+    [normalizedRole, normalizedLevel]
+  );
+
+  const showContext = adapter.uiConfig.showSprintContext;
+  const [currentStep, setCurrentStep] = useState<RetroStep>(showContext ? 'context' : 'reflection');
+  const [cards, setCards] = useState<AdapterRetroCard[]>(adapter.starterCards);
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [newWentWell, setNewWentWell] = useState('');
   const [newToImprove, setNewToImprove] = useState('');
   const [newActionItem, setNewActionItem] = useState('');
   const [newActionOwner, setNewActionOwner] = useState('');
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  const { data: sprintData, isLoading: isLoadingSprint } = useQuery<{
+    sprint: { id: number; goal: string; status: string };
+  }>({
+    queryKey: ['/api/sprints', sprintId],
+    queryFn: async () => {
+      const response = await fetch(`/api/sprints/${sprintId}`);
+      if (!response.ok) throw new Error('Failed to fetch sprint');
+      return response.json();
+    },
+    enabled: !!sprintId,
+  });
+
+  const { data: ticketsData } = useQuery<{
+    id: number;
+    ticketKey: string;
+    title: string;
+    type: string;
+    storyPoints: number;
+    status: string;
+  }[]>({
+    queryKey: ['/api/sprints', sprintId, 'tickets'],
+    queryFn: async () => {
+      const response = await fetch(`/api/sprints/${sprintId}/tickets`);
+      if (!response.ok) throw new Error('Failed to fetch tickets');
+      return response.json();
+    },
+    enabled: !!sprintId,
+  });
+
+  const sprintContext: SprintContextData | undefined = useMemo(() => {
+    if (!sprintData || !ticketsData) return undefined;
+    
+    const completedTickets = ticketsData
+      .filter(t => t.status === 'done')
+      .map(t => ({
+        id: String(t.id),
+        key: t.ticketKey,
+        title: t.title,
+        type: t.type || 'task',
+        points: t.storyPoints || 0,
+      }));
+
+    const totalPoints = ticketsData.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+    const completedPoints = completedTickets.reduce((sum, t) => sum + t.points, 0);
+
+    return {
+      sprintId: sprintData.sprint.id,
+      sprintGoal: sprintData.sprint.goal,
+      completedTickets,
+      blockers: [],
+      prReviewCycles: [],
+      stakeholderFeedback: [],
+      metrics: {
+        plannedPoints: totalPoints,
+        completedPoints,
+        velocity: completedPoints,
+      },
+    };
+  }, [sprintData, ticketsData]);
 
   const wentWellCards = cards.filter(c => c.type === 'went_well');
   const toImproveCards = cards.filter(c => c.type === 'to_improve');
@@ -80,7 +168,7 @@ export function RetroModule({
   const completePhase = useMutation({
     mutationFn: async () => {
       return apiRequest('PATCH', `/api/workspaces/${workspaceId}/phase`, {
-        newPhase: 'retro' as WorkspacePhase,
+        newPhase: 'onboarding' as WorkspacePhase,
         status: 'completed',
         payload: {
           wentWell: wentWellCards.length,
@@ -93,8 +181,16 @@ export function RetroModule({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
-      onComplete();
+      if (adapter.uiConfig.celebrationAnimation) {
+        setShowCelebration(true);
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+          onComplete();
+        }, 2000);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+        onComplete();
+      }
     },
     onError: () => {
       toast({
@@ -105,13 +201,14 @@ export function RetroModule({
     }
   });
 
-  const addCard = (type: 'went_well' | 'to_improve', text: string) => {
+  const addCard = (type: CardCategory, text: string) => {
     if (!text.trim()) return;
-    const newCard: RetroCard = {
+    const newCard: AdapterRetroCard = {
       id: `card-${Date.now()}`,
       type,
       text: text.trim(),
-      votes: 0
+      votes: 0,
+      isAISuggested: false,
     };
     setCards([...cards, newCard]);
     if (type === 'went_well') setNewWentWell('');
@@ -123,7 +220,12 @@ export function RetroModule({
     });
   };
 
+  const removeCard = (cardId: string) => {
+    setCards(cards.filter(c => c.id !== cardId));
+  };
+
   const voteCard = (cardId: string) => {
+    if (!adapter.facilitationConfig.votingEnabled) return;
     setCards(cards.map(c => 
       c.id === cardId ? { ...c, votes: (c.votes || 0) + 1 } : c
     ));
@@ -149,12 +251,15 @@ export function RetroModule({
     setActionItems(actionItems.filter(ai => ai.id !== id));
   };
 
-  const renderReflection = () => (
+  const { facilitator } = adapter.facilitationConfig;
+  const showFacilitator = adapter.facilitationConfig.showFacilitatorMessages;
+
+  const renderContext = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Sprint Retrospective</h2>
-          <p className="text-gray-500 dark:text-gray-400">Reflect on the sprint and identify improvements</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Sprint Recap</h2>
+          <p className="text-gray-500 dark:text-gray-400">Review what happened this sprint before reflecting</p>
         </div>
         {onBack && (
           <Button variant="outline" onClick={onBack} data-testid="button-back-to-dashboard">
@@ -164,21 +269,160 @@ export function RetroModule({
         )}
       </div>
 
-      <Card className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border-violet-200 dark:border-violet-800">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-violet-100 dark:bg-violet-800 flex items-center justify-center">
-              <RotateCcw className="h-6 w-6 text-violet-600 dark:text-violet-300" />
+      {showFacilitator && (
+        <Card className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border-violet-200 dark:border-violet-800">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback style={{ backgroundColor: facilitator.color + '20', color: facilitator.color }}>
+                  {getInitials(facilitator.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{facilitator.name}</span>
+                  <Badge variant="outline" className="text-xs">{facilitator.role}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {adapter.prompts.contextIntroPrompt}
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-violet-900 dark:text-violet-100">Reflection Time</h3>
-              <p className="text-sm text-violet-700 dark:text-violet-300">
-                Add cards and vote on what went well and what to improve
-              </p>
-            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoadingSprint ? (
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      ) : sprintContext ? (
+        <>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="h-5 w-5 text-violet-600" />
+                Sprint Goal
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">{sprintContext.sprintGoal}</p>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-3xl font-bold text-green-600">{sprintContext.completedTickets.length}</div>
+                <div className="text-sm text-muted-foreground">Tickets Completed</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-3xl font-bold text-blue-600">{sprintContext.metrics.completedPoints}</div>
+                <div className="text-sm text-muted-foreground">Points Delivered</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-3xl font-bold text-amber-600">
+                  {Math.round((sprintContext.metrics.completedPoints / sprintContext.metrics.plannedPoints) * 100) || 0}%
+                </div>
+                <div className="text-sm text-muted-foreground">Completion Rate</div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                Completed Work
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {sprintContext.completedTickets.map(ticket => (
+                  <div key={ticket.id} className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                    <Badge variant="outline" className="font-mono text-xs">{ticket.key}</Badge>
+                    {ticket.type === 'bug' && <Bug className="h-4 w-4 text-red-500" />}
+                    {ticket.type === 'feature' && <Star className="h-4 w-4 text-blue-500" />}
+                    <span className="text-sm flex-1">{ticket.title}</span>
+                    <Badge variant="secondary">{ticket.points} pts</Badge>
+                  </div>
+                ))}
+                {sprintContext.completedTickets.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No tickets completed this sprint</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <AlertTriangle className="h-8 w-8 text-amber-600" />
+              <div>
+                <h3 className="font-semibold">Sprint data unavailable</h3>
+                <p className="text-sm text-muted-foreground">
+                  We couldn't load the sprint details, but you can still continue with the retrospective.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-end">
+        <Button onClick={() => setCurrentStep('reflection')} data-testid="button-start-reflection">
+          Start Reflection
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderReflection = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Sprint Retrospective</h2>
+          <p className="text-gray-500 dark:text-gray-400">{adapter.metadata.description}</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => showContext ? setCurrentStep('context') : onBack?.()} 
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+      </div>
+
+      {showFacilitator && (
+        <Card className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border-violet-200 dark:border-violet-800">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback style={{ backgroundColor: facilitator.color + '20', color: facilitator.color }}>
+                  {getInitials(facilitator.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{facilitator.name}</span>
+                  <Badge variant="outline" className="text-xs">{facilitator.role}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {adapter.prompts.reflectionPrompt}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-6">
         <Card>
@@ -190,22 +434,55 @@ export function RetroModule({
             <CardDescription>Celebrate wins and successes</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {wentWellCards.length === 0 && (
+              <div className="p-4 border-2 border-dashed border-green-200 rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">
+                  {adapter.facilitationConfig.guidedQuestions.find(q => q.category === 'went_well')?.prompt 
+                    || "What made you proud this sprint?"}
+                </p>
+              </div>
+            )}
             {wentWellCards.map(card => (
               <div 
                 key={card.id}
-                className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg"
+                className={cn(
+                  "p-3 border rounded-lg",
+                  card.isAISuggested 
+                    ? "bg-green-50/50 dark:bg-green-900/10 border-green-200 border-dashed" 
+                    : "bg-green-50 dark:bg-green-900/20 border-green-200"
+                )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm">{card.text}</p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => voteCard(card.id)}
-                    className="h-8 px-2"
-                  >
-                    <Heart className="h-4 w-4 mr-1 text-green-600" />
-                    {card.votes || 0}
-                  </Button>
+                  <div className="flex-1">
+                    <p className="text-sm">{card.text}</p>
+                    {card.isAISuggested && (
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Suggested
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {adapter.uiConfig.showVoteCounts && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => voteCard(card.id)}
+                        className="h-8 px-2"
+                      >
+                        <Heart className="h-4 w-4 mr-1 text-green-600" />
+                        {card.votes || 0}
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => removeCard(card.id)}
+                      className="h-8 px-2 text-muted-foreground hover:text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -239,22 +516,55 @@ export function RetroModule({
             <CardDescription>Identify areas for growth</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {toImproveCards.length === 0 && (
+              <div className="p-4 border-2 border-dashed border-amber-200 rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">
+                  {adapter.facilitationConfig.guidedQuestions.find(q => q.category === 'to_improve')?.prompt 
+                    || "What slowed you down or caused frustration?"}
+                </p>
+              </div>
+            )}
             {toImproveCards.map(card => (
               <div 
                 key={card.id}
-                className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg"
+                className={cn(
+                  "p-3 border rounded-lg",
+                  card.isAISuggested 
+                    ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 border-dashed" 
+                    : "bg-amber-50 dark:bg-amber-900/20 border-amber-200"
+                )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm">{card.text}</p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => voteCard(card.id)}
-                    className="h-8 px-2"
-                  >
-                    <Zap className="h-4 w-4 mr-1 text-amber-600" />
-                    {card.votes || 0}
-                  </Button>
+                  <div className="flex-1">
+                    <p className="text-sm">{card.text}</p>
+                    {card.isAISuggested && (
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Suggested
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {adapter.uiConfig.showVoteCounts && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => voteCard(card.id)}
+                        className="h-8 px-2"
+                      >
+                        <Zap className="h-4 w-4 mr-1 text-amber-600" />
+                        {card.votes || 0}
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => removeCard(card.id)}
+                      className="h-8 px-2 text-muted-foreground hover:text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -280,8 +590,26 @@ export function RetroModule({
         </Card>
       </div>
 
+      {adapter.tips.length > 0 && (
+        <Card className="bg-blue-50/50 dark:bg-blue-900/10 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Lightbulb className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800 dark:text-blue-200">
+                <span className="font-medium">Tip: </span>
+                {adapter.tips[Math.floor(Math.random() * adapter.tips.length)]}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex justify-end">
-        <Button onClick={() => setCurrentStep('action_items')} data-testid="button-next-actions">
+        <Button 
+          onClick={() => setCurrentStep('action_items')} 
+          disabled={cards.length === 0}
+          data-testid="button-next-actions"
+        >
           Define Action Items
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
@@ -302,50 +630,74 @@ export function RetroModule({
         </Button>
       </div>
 
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
-              <Target className="h-6 w-6 text-blue-600 dark:text-blue-300" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100">Commit to Actions</h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Turn insights into actionable improvements
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Top Issues from Reflection</CardTitle>
-          <CardDescription>Consider these when creating action items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {toImproveCards
-              .sort((a, b) => (b.votes || 0) - (a.votes || 0))
-              .slice(0, 3)
-              .map(card => (
-                <div key={card.id} className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded">
-                  <Badge variant="outline">{card.votes || 0} votes</Badge>
-                  <span className="text-sm">{card.text}</span>
+      {showFacilitator && (
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback style={{ backgroundColor: facilitator.color + '20', color: facilitator.color }}>
+                  {getInitials(facilitator.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{facilitator.name}</span>
+                  <Badge variant="outline" className="text-xs">{facilitator.role}</Badge>
                 </div>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {adapter.prompts.actionItemsPrompt}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {adapter.actionItemConfig.suggestFromTopVoted && toImproveCards.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-amber-600" />
+              Top Issues from Reflection
+            </CardTitle>
+            <CardDescription>Consider these when creating action items</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {toImproveCards
+                .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                .slice(0, 3)
+                .map(card => (
+                  <div key={card.id} className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded">
+                    <Badge variant="outline">{card.votes || 0} votes</Badge>
+                    <span className="text-sm">{card.text}</span>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-blue-600" />
             Action Items
+            <Badge variant="secondary" className="ml-2">
+              {actionItems.length}/{adapter.actionItemConfig.maxActionItems}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {actionItems.length === 0 && (
+            <div className="p-4 border-2 border-dashed border-blue-200 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">
+                {adapter.facilitationConfig.guidedQuestions.find(q => q.category === 'action_item')?.prompt 
+                  || "What concrete improvement can we commit to for next sprint?"}
+              </p>
+            </div>
+          )}
+          
           {actionItems.map(item => (
             <div 
               key={item.id}
@@ -366,47 +718,55 @@ export function RetroModule({
             </div>
           ))}
           
-          <Separator />
-          
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="action-text">New Action Item</Label>
-              <Textarea
-                id="action-text"
-                value={newActionItem}
-                onChange={(e) => setNewActionItem(e.target.value)}
-                placeholder="Describe the improvement action..."
-                rows={2}
-                data-testid="input-action-item"
-              />
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="action-owner">Owner</Label>
-                <Input
-                  id="action-owner"
-                  value={newActionOwner}
-                  onChange={(e) => setNewActionOwner(e.target.value)}
-                  placeholder="Who will own this?"
-                  data-testid="input-action-owner"
-                />
+          {actionItems.length < adapter.actionItemConfig.maxActionItems && (
+            <>
+              <Separator />
+              
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="action-text">New Action Item</Label>
+                  <Textarea
+                    id="action-text"
+                    value={newActionItem}
+                    onChange={(e) => setNewActionItem(e.target.value)}
+                    placeholder="Describe the improvement action..."
+                    rows={2}
+                    data-testid="input-action-item"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="action-owner">Owner</Label>
+                    <Input
+                      id="action-owner"
+                      value={newActionOwner}
+                      onChange={(e) => setNewActionOwner(e.target.value)}
+                      placeholder={adapter.actionItemConfig.requireOwner ? "Who will own this?" : "Team (optional)"}
+                      data-testid="input-action-owner"
+                    />
+                  </div>
+                  <Button 
+                    className="self-end"
+                    onClick={addActionItem}
+                    disabled={!newActionItem.trim() || (adapter.actionItemConfig.requireOwner && !newActionOwner.trim())}
+                    data-testid="button-add-action"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
               </div>
-              <Button 
-                className="self-end"
-                onClick={addActionItem}
-                disabled={!newActionItem.trim()}
-                data-testid="button-add-action"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
-            </div>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={() => setCurrentStep('summary')} data-testid="button-complete-retro">
+        <Button 
+          onClick={() => setCurrentStep('summary')} 
+          disabled={actionItems.length === 0}
+          data-testid="button-complete-retro"
+        >
           Complete Retrospective
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
@@ -419,7 +779,7 @@ export function RetroModule({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Sprint Complete!</h2>
-          <p className="text-gray-500 dark:text-gray-400">You've completed your first sprint cycle</p>
+          <p className="text-gray-500 dark:text-gray-400">You've completed your sprint cycle</p>
         </div>
         <Button variant="outline" onClick={() => setCurrentStep('action_items')} data-testid="button-back-to-actions">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -436,7 +796,7 @@ export function RetroModule({
             Congratulations!
           </h3>
           <p className="text-green-700 dark:text-green-300 max-w-md mx-auto">
-            You've successfully completed your first full sprint cycle from onboarding through retrospective.
+            You've successfully completed your full sprint cycle from planning through retrospective.
           </p>
         </CardContent>
       </Card>
@@ -462,23 +822,29 @@ export function RetroModule({
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-purple-600">100%</div>
-            <div className="text-sm text-muted-foreground">Sprint Complete</div>
+            <div className="text-3xl font-bold text-purple-600">
+              {sprintContext?.metrics.completedPoints || 0}
+            </div>
+            <div className="text-sm text-muted-foreground">Points Delivered</div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Action Items for Next Sprint</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-5 w-5 text-blue-600" />
+            Action Items for Next Sprint
+          </CardTitle>
+          <CardDescription>These will carry forward to your next sprint</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {actionItems.map((item, i) => (
               <div key={item.id} className="flex items-center gap-3 p-2 bg-muted/30 rounded">
                 <Badge>{i + 1}</Badge>
-                <span className="text-sm">{item.text}</span>
-                <Badge variant="outline" className="ml-auto">{item.owner}</Badge>
+                <span className="text-sm flex-1">{item.text}</span>
+                <Badge variant="outline">{item.owner}</Badge>
               </div>
             ))}
           </div>
@@ -514,8 +880,37 @@ export function RetroModule({
     </div>
   );
 
+  if (showCelebration) {
+    return (
+      <div className="h-full flex items-center justify-center" data-testid="retro-celebration">
+        <div className="text-center space-y-6 animate-in fade-in zoom-in duration-500">
+          <div className="relative">
+            <div className="h-32 w-32 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center mx-auto animate-bounce">
+              <PartyPopper className="h-16 w-16 text-white" />
+            </div>
+            <div className="absolute -top-4 -right-4 animate-ping">
+              <Sparkles className="h-8 w-8 text-yellow-500" />
+            </div>
+            <div className="absolute -bottom-2 -left-4 animate-ping delay-150">
+              <Star className="h-6 w-6 text-amber-500" />
+            </div>
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Sprint Complete!
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Great work! You've finished the full sprint cycle.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full" data-testid="retro-module">
+      {currentStep === 'context' && renderContext()}
       {currentStep === 'reflection' && renderReflection()}
       {currentStep === 'action_items' && renderActionItems()}
       {currentStep === 'summary' && renderSummary()}
