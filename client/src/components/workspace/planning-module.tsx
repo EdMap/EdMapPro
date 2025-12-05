@@ -536,7 +536,7 @@ export function PlanningModule({
   }, [sessionState, isLoading]);
   
   // Message staggering effect - reveals messages one at a time with typing simulation
-  // Only staggers NEW messages, not on page reload
+  // Staggers on fresh sessions (no user messages yet) or when new messages arrive
   useEffect(() => {
     if (!sessionState?.messages) {
       return;
@@ -546,7 +546,52 @@ export function PlanningModule({
     const staggerConfig = sessionState?.adapterConfig?.engagement?.messageStagger;
     const staggerEnabled = staggerConfig?.enabled;
     
-    // On initial load, show all existing messages immediately (no staggering)
+    // Check if this is a fresh session (no user messages yet = autoStart sequence)
+    const hasUserMessages = messages.some(m => m.isUser);
+    const isFreshSession = initialLoadRef.current && !hasUserMessages && messages.length > 0;
+    
+    // On initial load with existing user conversation, show all immediately
+    if (initialLoadRef.current && hasUserMessages) {
+      initialLoadRef.current = false;
+      previousMessageCountRef.current = messages.length;
+      setVisibleMessageCount(messages.length);
+      return;
+    }
+    
+    // For fresh sessions with autoStart, stagger the initial messages
+    if (isFreshSession && staggerEnabled) {
+      initialLoadRef.current = false;
+      previousMessageCountRef.current = messages.length;
+      
+      // Clear any existing timeouts
+      staggerTimeoutsRef.current.forEach(clearTimeout);
+      staggerTimeoutsRef.current = [];
+      
+      setIsStaggering(true);
+      let cumulativeDelay = 0;
+      
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
+        const charDelay = Math.min(
+          msg.message.length * staggerConfig.perCharacterDelayMs,
+          staggerConfig.maxDelayMs
+        );
+        const delay = staggerConfig.baseDelayMs + charDelay;
+        cumulativeDelay += delay;
+        
+        const timeout = setTimeout(() => {
+          setVisibleMessageCount(i + 1);
+          if (i === messages.length - 1) {
+            setIsStaggering(false);
+          }
+        }, cumulativeDelay);
+        
+        staggerTimeoutsRef.current.push(timeout);
+      }
+      return;
+    }
+    
+    // Mark initial load complete if we haven't already
     if (initialLoadRef.current) {
       initialLoadRef.current = false;
       previousMessageCountRef.current = messages.length;
@@ -554,7 +599,7 @@ export function PlanningModule({
       return;
     }
     
-    // Check if new messages were added
+    // Check if new messages were added (after initial load)
     const newMessageCount = messages.length - previousMessageCountRef.current;
     previousMessageCountRef.current = messages.length;
     
@@ -578,7 +623,6 @@ export function PlanningModule({
       
       for (let i = startIndex; i < messages.length; i++) {
         const msg = messages[i];
-        // Calculate delay based on message length
         const charDelay = Math.min(
           msg.message.length * staggerConfig.perCharacterDelayMs,
           staggerConfig.maxDelayMs
