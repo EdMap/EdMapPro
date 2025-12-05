@@ -3595,7 +3595,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
 
     const currentPhase = workspace.currentPhase as WorkspacePhase;
     const phaseChecklist = await this.getPhaseChecklist(currentPhase, workspace, currentSprint, workspaceId);
-    const nextActions = this.getPhaseNextActions(currentPhase, workspaceId, workspace.currentSprintId);
+    const nextActions = this.getPhaseNextActions(currentPhase, workspaceId, workspace.currentSprintId, workspace.journeyId);
 
     return {
       workspace,
@@ -3670,7 +3670,8 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
   private getPhaseNextActions(
     phase: WorkspacePhase,
     workspaceId: number,
-    currentSprintId: number | null
+    currentSprintId: number | null,
+    journeyId: number | null
   ): { action: string; route: string; priority: 'primary' | 'secondary' }[] {
     switch (phase) {
       case 'onboarding':
@@ -3683,7 +3684,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         ];
       case 'execution':
         return [
-          { action: 'Open Sprint Hub', route: `/sprint/${currentSprintId}`, priority: 'primary' },
+          { action: 'Open Sprint Hub', route: `/journey/${journeyId}/sprint/${currentSprintId}`, priority: 'primary' },
           { action: 'View Ceremonies', route: `/workspace/${workspaceId}/ceremonies`, priority: 'secondary' },
         ];
       case 'review':
