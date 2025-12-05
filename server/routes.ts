@@ -3342,6 +3342,28 @@ Do NOT say "click continue" or reference any UI buttons. Just naturally transiti
           phaseCompletions,
         });
         
+        // Add phase transition message from Priya
+        const adapter = getSprintPlanningAdapter(session.role, session.level);
+        const workspace = await storage.getWorkspaceInstance(workspaceId);
+        
+        let transitionMessage = '';
+        if (nextPhase === 'discussion') {
+          transitionMessage = `Alright team, let's dive into the backlog! I've got ${workspace?.companyName || 'our'} priorities here. Take a look at the items on the right panel - we have some bugs to fix and features to build. What catches your eye? Which items should we tackle this sprint?`;
+        } else if (nextPhase === 'commitment') {
+          transitionMessage = `Great discussion everyone! Now let's finalize our sprint commitment. Based on what we've selected, can someone help me craft a sprint goal that captures what we're trying to achieve?`;
+        }
+        
+        if (transitionMessage) {
+          await storage.createPlanningMessage({
+            sessionId: session.id,
+            sender: 'Priya',
+            senderRole: 'Product Manager',
+            message: transitionMessage,
+            phase: nextPhase,
+            isUser: false,
+          });
+        }
+        
         const state = await storage.getPlanningSessionState(workspaceId);
         res.json({ completed: false, state });
       }
