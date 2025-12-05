@@ -3375,8 +3375,15 @@ CRITICAL RULES:
         // Handle selection guidance for discussion phase (auto-assign items for interns)
         const selectionGuidance = adapter.engagement?.selectionGuidance;
         if (nextPhase === 'discussion' && selectionGuidance?.mode === 'autoAssign' && selectionGuidance.suggestedItemIds) {
-          // Get backlog items and validate suggested IDs exist
-          const backlogItems = (session.backlogItems as Array<{ id: string; points: number }>) || [];
+          // Use the same backlog items as defined in getPlanningSessionState
+          const backlogItems = [
+            { id: 'TICK-001', points: 3 },
+            { id: 'TICK-002', points: 5 },
+            { id: 'TICK-003', points: 2 },
+            { id: 'TICK-004', points: 2 },
+            { id: 'TICK-005', points: 3 },
+          ];
+          
           const validSuggestedIds = selectionGuidance.suggestedItemIds.filter(
             suggestedId => backlogItems.some(item => item.id === suggestedId)
           );
