@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ArrowLeft,
@@ -16,7 +17,6 @@ import {
   Clock, 
   Target,
   Users,
-  Play,
   AlertCircle,
   ChevronRight,
   Code,
@@ -25,77 +25,34 @@ import {
   Wrench,
   Send,
   MessageSquare,
-  Trophy
+  Trophy,
+  Play
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WorkspacePhase } from "@/hooks/use-sprint-workflow";
+import type { SprintTicket, GitTicketState } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { getSprintExecutionAdapter } from "@shared/adapters";
+import type { Role, Level } from "@shared/adapters";
 
-interface SprintItem {
-  id: string;
-  title: string;
-  type: 'bug' | 'feature' | 'improvement';
-  priority: 'high' | 'medium' | 'low';
-  points: number;
-  description: string;
-  status: 'todo' | 'in_progress' | 'in_review' | 'done';
-  branchCreated?: boolean;
-  prCreated?: boolean;
-  merged?: boolean;
-}
+type TicketStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
+type TicketType = 'bug' | 'feature' | 'improvement';
 
 interface ExecutionModuleProps {
   workspaceId: number;
+  sprintId: number;
   userId: number;
   journeyId?: number;
   companyName: string;
   role: string;
+  level?: string;
   sprintGoal?: string;
-  selectedItems?: string[];
   onComplete: () => void;
   onBack?: () => void;
+  onStartTicketWork?: (ticketId: number) => void;
 }
 
-const SPRINT_ITEMS: SprintItem[] = [
-  {
-    id: "TICKET-101",
-    title: "Fix timezone display in transaction history",
-    type: "bug",
-    priority: "high",
-    points: 3,
-    description: "Transactions are showing in UTC instead of merchant's local timezone",
-    status: "todo"
-  },
-  {
-    id: "TICKET-102",
-    title: "Add export to CSV functionality",
-    type: "feature",
-    priority: "medium",
-    points: 5,
-    description: "Allow merchants to export their transaction data to CSV format",
-    status: "todo"
-  },
-  {
-    id: "TICKET-103",
-    title: "Improve dashboard load time",
-    type: "improvement",
-    priority: "medium",
-    points: 8,
-    description: "Optimize queries and add caching to reduce dashboard load time",
-    status: "todo"
-  },
-  {
-    id: "TICKET-104",
-    title: "Fix refund calculation rounding error",
-    type: "bug",
-    priority: "high",
-    points: 2,
-    description: "Partial refunds sometimes show incorrect amounts due to floating point errors",
-    status: "todo"
-  }
-];
-
-function getTypeIcon(type: SprintItem['type']) {
+function getTypeIcon(type: TicketType) {
   switch (type) {
     case 'bug': return Bug;
     case 'feature': return Star;
@@ -104,7 +61,7 @@ function getTypeIcon(type: SprintItem['type']) {
   }
 }
 
-function getTypeColor(type: SprintItem['type']) {
+function getTypeColor(type: TicketType) {
   switch (type) {
     case 'bug': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
     case 'feature': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
@@ -113,18 +70,32 @@ function getTypeColor(type: SprintItem['type']) {
   }
 }
 
-type TicketStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
+function parseGitState(gitState: unknown): GitTicketState {
+  const defaultState: GitTicketState = {
+    branchName: null,
+    branchCreatedAt: null,
+    commits: [],
+    isPushed: false,
+    prCreated: false,
+    prApproved: false,
+    isMerged: false,
+  };
+  
+  if (!gitState || typeof gitState !== 'object') return defaultState;
+  return { ...defaultState, ...gitState as Partial<GitTicketState> };
+}
 
 function TicketCard({ 
-  item, 
+  ticket, 
   onSelect,
   onMove
 }: { 
-  item: SprintItem;
-  onSelect: (item: SprintItem) => void;
-  onMove: (itemId: string, newStatus: TicketStatus) => void;
+  ticket: SprintTicket;
+  onSelect: (ticket: SprintTicket) => void;
+  onMove: (ticketId: number, newStatus: TicketStatus) => void;
 }) {
-  const Icon = getTypeIcon(item.type);
+  const Icon = getTypeIcon(ticket.type as TicketType);
+  const gitState = parseGitState(ticket.gitState);
   
   const priorityColors = {
     high: 'bg-red-500',
@@ -133,49 +104,49 @@ function TicketCard({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('itemId', item.id);
+    e.dataTransfer.setData('ticketId', String(ticket.id));
   };
 
   return (
     <Card 
       className="cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => onSelect(item)}
+      onClick={() => onSelect(ticket)}
       draggable
       onDragStart={handleDragStart}
-      data-testid={`card-ticket-${item.id}`}
+      data-testid={`card-ticket-${ticket.ticketKey}`}
     >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <Badge variant="outline" className="text-xs font-mono">
-            {item.id}
+            {ticket.ticketKey}
           </Badge>
           <div 
-            className={`h-2 w-2 rounded-full ${priorityColors[item.priority]}`}
-            title={`Priority: ${item.priority}`}
+            className={`h-2 w-2 rounded-full ${priorityColors[ticket.priority as keyof typeof priorityColors] || priorityColors.medium}`}
+            title={`Priority: ${ticket.priority}`}
           />
         </div>
         
-        <p className="text-sm font-medium line-clamp-2">{item.title}</p>
+        <p className="text-sm font-medium line-clamp-2">{ticket.title}</p>
         
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">
-              {item.points} pts
+              {ticket.storyPoints} pts
             </Badge>
-            <Badge className={cn("text-xs", getTypeColor(item.type))} variant="secondary">
+            <Badge className={cn("text-xs", getTypeColor(ticket.type as TicketType))} variant="secondary">
               <Icon className="h-3 w-3 mr-1" />
-              {item.type}
+              {ticket.type}
             </Badge>
           </div>
           
           <div className="flex items-center gap-1">
-            {item.branchCreated && (
+            {gitState.branchName && (
               <GitBranch className="h-3 w-3 text-blue-500" />
             )}
-            {item.prCreated && (
+            {gitState.prCreated && (
               <GitPullRequest className="h-3 w-3 text-purple-500" />
             )}
-            {item.merged && (
+            {gitState.isMerged && (
               <CheckCircle2 className="h-3 w-3 text-green-500" />
             )}
           </div>
@@ -188,15 +159,15 @@ function TicketCard({
 function KanbanColumn({ 
   title, 
   status, 
-  items,
-  onSelectItem,
-  onDropItem,
+  tickets,
+  onSelectTicket,
+  onDropTicket,
 }: {
   title: string;
   status: TicketStatus;
-  items: SprintItem[];
-  onSelectItem: (item: SprintItem) => void;
-  onDropItem: (itemId: string, newStatus: TicketStatus) => void;
+  tickets: SprintTicket[];
+  onSelectTicket: (ticket: SprintTicket) => void;
+  onDropTicket: (ticketId: number, newStatus: TicketStatus) => void;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -212,9 +183,9 @@ function KanbanColumn({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    const itemId = e.dataTransfer.getData('itemId');
-    if (itemId) {
-      onDropItem(itemId, status);
+    const ticketId = e.dataTransfer.getData('ticketId');
+    if (ticketId) {
+      onDropTicket(parseInt(ticketId), status);
     }
   };
 
@@ -241,22 +212,22 @@ function KanbanColumn({
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm">{title}</h3>
           <Badge variant="secondary" className="text-xs">
-            {items.length}
+            {tickets.length}
           </Badge>
         </div>
       </div>
       
       <div className="flex-1 p-2 space-y-2 min-h-[200px] overflow-y-auto">
-        {items.map(item => (
+        {tickets.map(ticket => (
           <TicketCard
-            key={item.id}
-            item={item}
-            onSelect={onSelectItem}
-            onMove={onDropItem}
+            key={ticket.id}
+            ticket={ticket}
+            onSelect={onSelectTicket}
+            onMove={onDropTicket}
           />
         ))}
         
-        {items.length === 0 && (
+        {tickets.length === 0 && (
           <div className="h-full flex items-center justify-center text-sm text-muted-foreground p-4">
             No tickets
           </div>
@@ -267,19 +238,20 @@ function KanbanColumn({
 }
 
 function TicketDetailDialog({ 
-  item, 
+  ticket, 
   open,
   onClose,
-  onUpdateStatus,
-  onSimulateWork
+  onStartWork,
+  showGitTerminal,
 }: { 
-  item: SprintItem;
+  ticket: SprintTicket;
   open: boolean;
   onClose: () => void;
-  onUpdateStatus: (itemId: string, newStatus: TicketStatus) => void;
-  onSimulateWork: (itemId: string, action: 'branch' | 'pr' | 'merge') => void;
+  onStartWork: (ticket: SprintTicket) => void;
+  showGitTerminal: boolean;
 }) {
-  const Icon = getTypeIcon(item.type);
+  const Icon = getTypeIcon(ticket.type as TicketType);
+  const gitState = parseGitState(ticket.gitState);
   const [teamMessage, setTeamMessage] = useState('');
   const [messages, setMessages] = useState<{from: string; text: string; isUser?: boolean}[]>([
     { from: 'Sarah', text: "Let me know if you need any help with this ticket!" }
@@ -298,103 +270,138 @@ function TicketDetailDialog({
     }, 1000);
   };
 
-  const nextAction = !item.branchCreated ? 'branch' : !item.prCreated ? 'pr' : !item.merged ? 'merge' : null;
-  const nextActionLabel = !item.branchCreated ? 'Create Branch' : !item.prCreated ? 'Open PR' : !item.merged ? 'Merge PR' : null;
-  
+  const acceptanceCriteria = Array.isArray(ticket.acceptanceCriteria) 
+    ? ticket.acceptanceCriteria 
+    : [];
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
-            <Badge variant="outline" className="font-mono">{item.id}</Badge>
-            <Badge className={getTypeColor(item.type)} variant="secondary">
+            <Badge variant="outline" className="font-mono">{ticket.ticketKey}</Badge>
+            <Badge className={getTypeColor(ticket.type as TicketType)} variant="secondary">
               <Icon className="h-3 w-3 mr-1" />
-              {item.type}
+              {ticket.type}
             </Badge>
           </div>
-          <DialogTitle>{item.title}</DialogTitle>
-          <DialogDescription>{item.description}</DialogDescription>
+          <DialogTitle>{ticket.title}</DialogTitle>
+          <DialogDescription>{ticket.description}</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div className="p-3 bg-muted/50 rounded-lg text-center">
-              <div className="text-lg font-bold">{item.points}</div>
+              <div className="text-lg font-bold">{ticket.storyPoints}</div>
               <div className="text-xs text-muted-foreground">Points</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg text-center">
-              <div className="text-lg font-bold capitalize">{item.priority}</div>
+              <div className="text-lg font-bold capitalize">{ticket.priority}</div>
               <div className="text-xs text-muted-foreground">Priority</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg text-center">
-              <div className="text-lg font-bold capitalize">{item.status.replace('_', ' ')}</div>
+              <div className="text-lg font-bold capitalize">{ticket.status?.replace('_', ' ')}</div>
               <div className="text-xs text-muted-foreground">Status</div>
             </div>
           </div>
+
+          {acceptanceCriteria.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Acceptance Criteria
+                </h4>
+                <ul className="space-y-1">
+                  {acceptanceCriteria.map((criterion, i) => (
+                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <div className="h-4 w-4 rounded border border-muted-foreground/30 mt-0.5 flex-shrink-0" />
+                      {String(criterion)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
           
           <Separator />
           
           <div>
             <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
               <GitBranch className="h-4 w-4" />
-              Git Workflow
+              Git Workflow Progress
             </h4>
             <div className="space-y-2">
               <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
                 <div className="flex items-center gap-2">
-                  {item.branchCreated ? (
+                  {gitState.branchName ? (
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   ) : (
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                   )}
-                  <span className={item.branchCreated ? '' : 'text-muted-foreground'}>
+                  <span className={gitState.branchName ? '' : 'text-muted-foreground'}>
                     Create feature branch
                   </span>
                 </div>
-                {!item.branchCreated && (
-                  <Button size="sm" variant="outline" onClick={() => onSimulateWork(item.id, 'branch')}>
-                    <GitBranch className="h-3 w-3 mr-1" />
-                    Create
-                  </Button>
+                {gitState.branchName && (
+                  <code className="text-xs bg-muted px-2 py-1 rounded">{gitState.branchName}</code>
                 )}
               </div>
               
               <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
                 <div className="flex items-center gap-2">
-                  {item.prCreated ? (
+                  {gitState.commits.length > 0 ? (
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   ) : (
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                   )}
-                  <span className={item.prCreated ? '' : 'text-muted-foreground'}>
+                  <span className={gitState.commits.length > 0 ? '' : 'text-muted-foreground'}>
+                    Commit changes
+                  </span>
+                </div>
+                {gitState.commits.length > 0 && (
+                  <span className="text-xs text-muted-foreground">{gitState.commits.length} commit(s)</span>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                <div className="flex items-center gap-2">
+                  {gitState.isPushed ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={gitState.isPushed ? '' : 'text-muted-foreground'}>
+                    Push to remote
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                <div className="flex items-center gap-2">
+                  {gitState.prCreated ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                  <span className={gitState.prCreated ? '' : 'text-muted-foreground'}>
                     Open pull request
                   </span>
                 </div>
-                {item.branchCreated && !item.prCreated && (
-                  <Button size="sm" variant="outline" onClick={() => onSimulateWork(item.id, 'pr')}>
-                    <GitPullRequest className="h-3 w-3 mr-1" />
-                    Open PR
-                  </Button>
-                )}
               </div>
               
               <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
                 <div className="flex items-center gap-2">
-                  {item.merged ? (
+                  {gitState.isMerged ? (
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   ) : (
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                   )}
-                  <span className={item.merged ? '' : 'text-muted-foreground'}>
+                  <span className={gitState.isMerged ? '' : 'text-muted-foreground'}>
                     Merge to main
                   </span>
                 </div>
-                {item.prCreated && !item.merged && (
-                  <Button size="sm" variant="outline" onClick={() => onSimulateWork(item.id, 'merge')}>
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Merge
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -433,30 +440,18 @@ function TicketDetailDialog({
             </div>
           </div>
           
-          <div className="flex justify-between pt-4">
-            <div className="flex gap-2">
-              {item.status !== 'todo' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => onUpdateStatus(item.id, 
-                    item.status === 'in_progress' ? 'todo' : 
-                    item.status === 'in_review' ? 'in_progress' : 'in_review'
-                  )}
-                >
-                  Move Back
-                </Button>
-              )}
-            </div>
-            {item.status !== 'done' && (
-              <Button 
-                onClick={() => onUpdateStatus(item.id,
-                  item.status === 'todo' ? 'in_progress' :
-                  item.status === 'in_progress' ? 'in_review' : 'done'
-                )}
-              >
-                {item.status === 'todo' ? 'Start Working' :
-                 item.status === 'in_progress' ? 'Submit for Review' : 'Mark Done'}
+          <div className="flex justify-end pt-4">
+            {ticket.status === 'todo' && showGitTerminal && (
+              <Button onClick={() => onStartWork(ticket)} data-testid="button-start-working">
+                <Play className="h-4 w-4 mr-2" />
+                Start Working
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            )}
+            {ticket.status === 'in_progress' && showGitTerminal && (
+              <Button onClick={() => onStartWork(ticket)} data-testid="button-continue-working">
+                <Code className="h-4 w-4 mr-2" />
+                Continue Working
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
@@ -469,42 +464,87 @@ function TicketDetailDialog({
 
 export function ExecutionModule({ 
   workspaceId, 
+  sprintId,
   userId, 
   journeyId,
   companyName, 
   role,
-  sprintGoal = "Fix critical timezone issues and add CSV export functionality",
-  selectedItems = ["TICKET-101", "TICKET-102", "TICKET-104"],
+  level = 'intern',
+  sprintGoal = "Complete sprint deliverables",
   onComplete,
-  onBack 
+  onBack,
+  onStartTicketWork,
 }: ExecutionModuleProps) {
   const { toast } = useToast();
-  const [items, setItems] = useState<SprintItem[]>(() => 
-    SPRINT_ITEMS.filter(i => selectedItems.includes(i.id))
-  );
-  const [selectedItem, setSelectedItem] = useState<SprintItem | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SprintTicket | null>(null);
   const [sprintDay, setSprintDay] = useState(1);
 
-  const itemsByStatus = useMemo(() => ({
-    todo: items.filter(i => i.status === 'todo'),
-    in_progress: items.filter(i => i.status === 'in_progress'),
-    in_review: items.filter(i => i.status === 'in_review'),
-    done: items.filter(i => i.status === 'done'),
-  }), [items]);
+  const adapter = useMemo(() => {
+    return getSprintExecutionAdapter(role as Role, level as Level);
+  }, [role, level]);
 
-  const totalPoints = items.reduce((sum, i) => sum + i.points, 0);
-  const completedPoints = itemsByStatus.done.reduce((sum, i) => sum + i.points, 0);
+  const { data: tickets = [], isLoading, error } = useQuery<SprintTicket[]>({
+    queryKey: ['/api/sprints', sprintId, 'tickets'],
+    enabled: !!sprintId,
+  });
+
+  const ticketsByStatus = useMemo(() => ({
+    todo: tickets.filter(t => t.status === 'todo'),
+    in_progress: tickets.filter(t => t.status === 'in_progress'),
+    in_review: tickets.filter(t => t.status === 'in_review'),
+    done: tickets.filter(t => t.status === 'done'),
+  }), [tickets]);
+
+  const totalPoints = tickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+  const completedPoints = ticketsByStatus.done.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
   const progressPercent = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0;
 
-  const allDone = items.every(i => i.status === 'done');
+  const allDone = tickets.length > 0 && tickets.every(t => t.status === 'done');
+
+  const moveTicket = useMutation({
+    mutationFn: async ({ ticketId, newStatus }: { ticketId: number; newStatus: TicketStatus }) => {
+      return apiRequest('PATCH', `/api/tickets/${ticketId}/move`, { newStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Failed to move ticket";
+      const gate = error?.gate;
+      
+      if (gate === 'branch_required') {
+        toast({
+          title: "Branch Required",
+          description: "Create a branch first before starting work on this ticket.",
+          variant: "destructive"
+        });
+      } else if (gate === 'pr_required') {
+        toast({
+          title: "PR Required", 
+          description: "Submit a pull request before moving to review.",
+          variant: "destructive"
+        });
+      } else if (gate === 'merge_required') {
+        toast({
+          title: "Merge Required",
+          description: "Merge your PR before marking as done.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: message,
+          variant: "destructive"
+        });
+      }
+    }
+  });
 
   const completePhase = useMutation({
     mutationFn: async () => {
-      return apiRequest('PATCH', `/api/workspaces/${workspaceId}/phase`, {
-        newPhase: 'review' as WorkspacePhase,
-        status: 'completed',
+      return apiRequest('POST', `/api/workspaces/${workspaceId}/advance`, {
         payload: {
-          completedItems: items.map(i => i.id),
+          completedItems: tickets.map(t => t.ticketKey),
           totalPoints,
           completedPoints
         }
@@ -514,7 +554,7 @@ export function ExecutionModule({
       queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
       onComplete();
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to complete execution phase. Please try again.",
@@ -523,52 +563,52 @@ export function ExecutionModule({
     }
   });
 
-  const handleMoveItem = (itemId: string, newStatus: TicketStatus) => {
-    setItems(prev => prev.map(item => 
-      item.id === itemId ? { ...item, status: newStatus } : item
-    ));
-    if (selectedItem?.id === itemId) {
-      setSelectedItem(prev => prev ? { ...prev, status: newStatus } : null);
-    }
-    
-    if (newStatus === 'done') {
-      toast({
-        title: "Ticket completed!",
-        description: `${itemId} has been moved to Done.`,
-      });
+  const handleMoveTicket = (ticketId: number, newStatus: TicketStatus) => {
+    moveTicket.mutate({ ticketId, newStatus });
+  };
+
+  const handleStartWork = (ticket: SprintTicket) => {
+    setSelectedTicket(null);
+    if (onStartTicketWork) {
+      onStartTicketWork(ticket.id);
     }
   };
 
-  const handleSimulateWork = (itemId: string, action: 'branch' | 'pr' | 'merge') => {
-    setItems(prev => prev.map(item => {
-      if (item.id !== itemId) return item;
-      const updates: Partial<SprintItem> = {};
-      if (action === 'branch') updates.branchCreated = true;
-      if (action === 'pr') updates.prCreated = true;
-      if (action === 'merge') updates.merged = true;
-      return { ...item, ...updates };
-    }));
-    
-    if (selectedItem?.id === itemId) {
-      setSelectedItem(prev => {
-        if (!prev) return null;
-        const updates: Partial<SprintItem> = {};
-        if (action === 'branch') updates.branchCreated = true;
-        if (action === 'pr') updates.prCreated = true;
-        if (action === 'merge') updates.merged = true;
-        return { ...prev, ...updates };
-      });
-    }
-    
-    toast({
-      title: action === 'branch' ? 'Branch Created' : action === 'pr' ? 'PR Opened' : 'PR Merged',
-      description: action === 'branch' 
-        ? `Created feature/${itemId.toLowerCase()}-fix`
-        : action === 'pr'
-        ? 'Pull request is ready for review'
-        : 'Changes have been merged to main',
-    });
-  };
+  if (isLoading) {
+    return (
+      <div className="space-y-6" data-testid="execution-module-loading">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Failed to load tickets</h3>
+        <p className="text-muted-foreground mb-4">There was an error loading the sprint tickets.</p>
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] })}>
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="execution-module">
@@ -617,7 +657,7 @@ export function ExecutionModule({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">In Review</p>
-              <p className="text-xl font-semibold">{itemsByStatus.in_review.length}</p>
+              <p className="text-xl font-semibold">{ticketsByStatus.in_review.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -639,61 +679,47 @@ export function ExecutionModule({
         <KanbanColumn
           title="To Do"
           status="todo"
-          items={itemsByStatus.todo}
-          onSelectItem={setSelectedItem}
-          onDropItem={handleMoveItem}
+          tickets={ticketsByStatus.todo}
+          onSelectTicket={setSelectedTicket}
+          onDropTicket={handleMoveTicket}
         />
         <KanbanColumn
           title="In Progress"
           status="in_progress"
-          items={itemsByStatus.in_progress}
-          onSelectItem={setSelectedItem}
-          onDropItem={handleMoveItem}
+          tickets={ticketsByStatus.in_progress}
+          onSelectTicket={setSelectedTicket}
+          onDropTicket={handleMoveTicket}
         />
         <KanbanColumn
           title="In Review"
           status="in_review"
-          items={itemsByStatus.in_review}
-          onSelectItem={setSelectedItem}
-          onDropItem={handleMoveItem}
+          tickets={ticketsByStatus.in_review}
+          onSelectTicket={setSelectedTicket}
+          onDropTicket={handleMoveTicket}
         />
         <KanbanColumn
           title="Done"
           status="done"
-          items={itemsByStatus.done}
-          onSelectItem={setSelectedItem}
-          onDropItem={handleMoveItem}
+          tickets={ticketsByStatus.done}
+          onSelectTicket={setSelectedTicket}
+          onDropTicket={handleMoveTicket}
         />
-      </div>
-
-      {selectedItem && (
-        <TicketDetailDialog
-          item={selectedItem}
-          open={!!selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onUpdateStatus={handleMoveItem}
-          onSimulateWork={handleSimulateWork}
-        />
-      )}
-
-      <Progress value={progressPercent} className="h-2" />
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>Day {sprintDay} of 10</span>
-        <span>{completedPoints}/{totalPoints} story points completed</span>
       </div>
 
       {allDone && (
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
+        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-green-600" />
+                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
+                  <Trophy className="h-6 w-6 text-green-600 dark:text-green-300" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-green-900 dark:text-green-100">Sprint Complete!</h3>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    All tickets completed. Ready for Sprint Review.
+                  <h3 className="font-semibold text-green-800 dark:text-green-200">
+                    Sprint Complete!
+                  </h3>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    All {tickets.length} tickets have been completed. You delivered {totalPoints} story points.
                   </p>
                 </div>
               </div>
@@ -703,12 +729,22 @@ export function ExecutionModule({
                 className="bg-green-600 hover:bg-green-700"
                 data-testid="button-complete-sprint"
               >
-                <Play className="h-4 w-4 mr-2" />
-                Start Sprint Review
+                {completePhase.isPending ? 'Completing...' : 'Continue to Review'}
+                <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {selectedTicket && (
+        <TicketDetailDialog
+          ticket={selectedTicket}
+          open={!!selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          onStartWork={handleStartWork}
+          showGitTerminal={adapter.uiControls.showGitTerminal}
+        />
       )}
     </div>
   );
