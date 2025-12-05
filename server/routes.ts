@@ -3236,18 +3236,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: `${m.sender} (${m.senderRole}): ${m.message}`
       }));
       
-      // Pick a persona to respond
+      // Determine if this is a phase transition moment (user responded in context phase after auto-start)
+      const userMessagesInContext = existingMessages.filter(m => m.isUser && m.phase === 'context');
+      const isContextTransitionMoment = session.currentPhase === 'context' && userMessagesInContext.length >= 0;
+      
+      // Pick a persona to respond - Priya should respond for transition moments
       const personas = adapter.prompts.personas;
-      const respondingPersona = personas[Math.floor(Math.random() * personas.length)];
+      let respondingPersona = personas[Math.floor(Math.random() * personas.length)];
+      
+      // For context phase transition, Priya (PM) should provide the bridging response
+      if (isContextTransitionMoment) {
+        respondingPersona = personas.find(p => p.name === 'Priya') || personas[0];
+      }
       
       // Generate AI response using Groq
       const Groq = require('groq-sdk');
       const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
       
+      // Add bridging instruction for context phase transition
+      let transitionInstruction = '';
+      if (isContextTransitionMoment) {
+        transitionInstruction = `
+IMPORTANT: This is a natural transition point. After addressing the user's message:
+1. Acknowledge their input warmly
+2. Briefly summarize that we've covered the priorities
+3. Naturally bridge to the next step by saying something like "Alright, let's start looking at specific items" or "Great, now let's dive into the backlog and discuss what we can commit to"
+Do NOT say "click continue" or reference any UI buttons. Just naturally transition the conversation.`;
+      }
+      
       const chatCompletion = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: adapter.prompts.systemPrompt },
-          { role: 'system', content: `Current phase: ${session.currentPhase}. ${phasePrompt}` },
+          { role: 'system', content: `Current phase: ${session.currentPhase}. ${phasePrompt}${transitionInstruction}` },
           { role: 'system', content: `You are responding as ${respondingPersona.name} (${respondingPersona.role}). ${respondingPersona.personality}. Company: ${workspace.companyName}` },
           ...conversationHistory,
           { role: 'user', content: message }
@@ -3273,7 +3293,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         userMessage, 
         aiMessage,
-        state 
+        state,
+        isPhaseTransitionCue: isContextTransitionMoment
       });
     } catch (error) {
       console.error("Failed to send planning message:", error);

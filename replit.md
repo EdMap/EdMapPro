@@ -17,6 +17,7 @@ The platform features a fixed sidebar navigation, responsive header, and distinc
 - Enhanced backlog panel with card-style items, improved badges, and better whitespace
 - Responsive mobile tabs for switching between Discussion and Backlog panels on smaller screens
 - Typing indicator with animated indigo-colored dots during message staggering
+- Phase transition visual cues: After user responds in Context phase, AI gives natural bridging message and Continue button pulses with an inline hint ("Ready to discuss the backlog items") to guide users without explicit "click continue" instructions
 
 ### Technical Implementations
 edmap is built as a monorepo, utilizing a React 18 frontend (TypeScript, Vite, shadcn/ui, Tailwind CSS, TanStack Query, Wouter, React Hook Form with Zod) and a Node.js Express.js backend (TypeScript, Drizzle ORM, PostgreSQL). AI integration is powered by Groq via LangChain.js, and session management uses Express sessions with a PostgreSQL store.

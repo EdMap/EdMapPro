@@ -447,6 +447,7 @@ export function PlanningModule({
   const [visibleMessageCount, setVisibleMessageCount] = useState(0);
   const [isStaggering, setIsStaggering] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'chat' | 'backlog'>('chat');
+  const [showPhaseTransitionHint, setShowPhaseTransitionHint] = useState(false);
   const staggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -476,9 +477,16 @@ export function PlanningModule({
       const response = await apiRequest('POST', `/api/workspaces/${workspaceId}/planning/message`, { message });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
       setInputMessage('');
+      
+      // Show phase transition hint if this is a transition moment
+      if (data.isPhaseTransitionCue) {
+        setShowPhaseTransitionHint(true);
+        // Auto-hide after 10 seconds
+        setTimeout(() => setShowPhaseTransitionHint(false), 10000);
+      }
     }
   });
   
@@ -512,6 +520,7 @@ export function PlanningModule({
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
+      setShowPhaseTransitionHint(false); // Reset hint when advancing
       if (data.completed) {
         onComplete(sessionState?.session.goalStatement || '', (sessionState?.session.selectedItems as string[]) || []);
       }
@@ -896,16 +905,26 @@ export function PlanningModule({
           )}
           
           <div className="p-4 pt-0">
+            {/* Phase transition hint */}
+            {showPhaseTransitionHint && session.currentPhase === 'context' && (
+              <div className="mb-3 flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 rounded-lg border border-indigo-100 dark:border-indigo-800 animate-fade-in">
+                <Lightbulb className="h-4 w-4 flex-shrink-0" />
+                <span>Ready to discuss the backlog items</span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                {session.currentPhase === 'context' && messages.length < 2 && "Have a brief discussion first"}
+                {session.currentPhase === 'context' && messages.length < 2 && !showPhaseTransitionHint && "Have a brief discussion first"}
                 {session.currentPhase === 'discussion' && selectedItems.length === 0 && "Select at least one backlog item"}
                 {session.currentPhase === 'commitment' && !session.goalStatement && "Set a sprint goal to continue"}
               </div>
               <Button 
                 onClick={() => advancePhase.mutate()}
                 disabled={!canAdvance() || advancePhase.isPending}
-                className={session.currentPhase === 'commitment' ? "bg-green-600 hover:bg-green-700" : ""}
+                className={cn(
+                  session.currentPhase === 'commitment' ? "bg-green-600 hover:bg-green-700" : "",
+                  showPhaseTransitionHint && session.currentPhase === 'context' && "animate-pulse ring-2 ring-indigo-400 ring-offset-2"
+                )}
                 data-testid="button-advance-phase"
               >
                 {advancePhase.isPending ? (
