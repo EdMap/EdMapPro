@@ -915,6 +915,8 @@ Time:        0.842s`;
                 prReviewConfig={adapter.prReviewConfig}
                 ticketKey={ticket.ticketKey}
                 ticketTitle={ticket.title}
+                ticketType={ticket.type as 'bug' | 'feature' | 'improvement' | 'task' | undefined}
+                ticketDescription={ticket.description}
                 branchName={gitState.branchName || ''}
                 commits={gitState.commits}
                 onThreadResolve={(threadId) => {

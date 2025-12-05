@@ -42,6 +42,8 @@ interface PRReviewPanelProps {
   prReviewConfig: PRReviewConfig;
   ticketKey: string;
   ticketTitle: string;
+  ticketType?: 'bug' | 'feature' | 'improvement' | 'task';
+  ticketDescription?: string;
   branchName: string;
   commits: { hash: string; message: string; timestamp: string }[];
   onThreadResolve: (threadId: string) => void;
@@ -63,6 +65,7 @@ interface SimulatedThread {
   status: 'open' | 'resolved' | 'dismissed';
   severity: 'minor' | 'major' | 'blocking';
   createdAt: string;
+  issueContext?: string;
 }
 
 interface SimulatedComment {
@@ -100,9 +103,45 @@ function getSeverityBadge(severity: 'minor' | 'major' | 'blocking') {
   }
 }
 
+interface TicketContext {
+  key: string;
+  title: string;
+  type?: 'bug' | 'feature' | 'improvement' | 'task';
+  description?: string;
+}
+
+function extractIssueKeywords(ticket: TicketContext): string[] {
+  const text = `${ticket.title} ${ticket.description || ''}`.toLowerCase();
+  const keywords: string[] = [];
+  
+  if (text.includes('null') || text.includes('undefined') || text.includes('crash')) {
+    keywords.push('null-check');
+  }
+  if (text.includes('timezone') || text.includes('date') || text.includes('time')) {
+    keywords.push('datetime');
+  }
+  if (text.includes('loading') || text.includes('skeleton') || text.includes('spinner')) {
+    keywords.push('loading-state');
+  }
+  if (text.includes('notification') || text.includes('alert') || text.includes('toast')) {
+    keywords.push('notifications');
+  }
+  if (text.includes('payment') || text.includes('stripe') || text.includes('checkout')) {
+    keywords.push('payment');
+  }
+  if (text.includes('validation') || text.includes('input') || text.includes('form')) {
+    keywords.push('validation');
+  }
+  if (text.includes('error') || text.includes('exception') || text.includes('handling')) {
+    keywords.push('error-handling');
+  }
+  
+  return keywords.length > 0 ? keywords : ['general'];
+}
+
 function generateInitialThreads(
   config: PRReviewConfig,
-  ticketKey: string
+  ticket: TicketContext
 ): SimulatedThread[] {
   const threads: SimulatedThread[] = [];
   const { reviewers, minCommentsPerPR, maxCommentsPerPR, levelModifiers } = config;
@@ -112,67 +151,295 @@ function generateInitialThreads(
   );
   
   const severityDist = levelModifiers.severityDistribution;
+  const issueKeywords = extractIssueKeywords(ticket);
+  const primaryIssue = issueKeywords[0];
   
-  const feedbackTemplates = {
-    educational: {
-      minor: [
-        "Consider using a more descriptive variable name here. Good naming helps future maintainers understand the code quickly. For example, instead of `data`, try `userTransactionData`.",
-        "This could be refactored using array destructuring for cleaner syntax. Here's how: `const [first, ...rest] = items;`",
-      ],
-      major: [
-        "I noticed this function has multiple responsibilities. In practice, we follow the Single Responsibility Principle. Would you consider extracting the validation logic into a separate function?",
-        "This approach works, but there's a potential performance issue with re-rendering. Let me explain: when state changes here, the entire component tree re-renders. Consider using useMemo or useCallback.",
-      ],
-      blocking: [
-        "This implementation has a security vulnerability - user input isn't being sanitized before use. This is critical to fix before we can merge. Here's what to do: use the `sanitize` utility from our shared utils.",
-        "The error handling here could cause the app to crash in production. All async operations need try/catch blocks. I can walk you through the pattern we use.",
-      ],
+  const ticketAwareFeedback: Record<string, Record<string, { minor: string[]; major: string[]; blocking: string[]; context: string }>> = {
+    'null-check': {
+      educational: {
+        minor: [
+          `Good fix for the null check! One small thing - consider using optional chaining (\`?.\`) here for cleaner syntax.`,
+          `Nice work handling the edge case. For consistency, we usually add an early return when the value is nullish.`,
+        ],
+        major: [
+          `The null check looks good, but I'd suggest also validating the nested properties. What if \`customer.email\` is null?`,
+          `This addresses the crash, but we should also add proper error messages for users when data is missing.`,
+        ],
+        blocking: [
+          `The null check is incomplete - you're checking \`cart\` but not \`cart.items\`. This will still crash with an empty cart.`,
+          `Critical: The payment flow can still fail if \`customer.stripeId\` is undefined. Let's add that check too.`,
+        ],
+        context: 'null check implementation',
+      },
+      collaborative: {
+        minor: [`Nice null check! What do you think about also logging when we hit this case for debugging?`],
+        major: [`Good fix! Should we also add unit tests for the edge cases we're handling?`],
+        blocking: [`We need to handle the empty array case too - let's sync on this.`],
+        context: 'null check implementation',
+      },
+      direct: {
+        minor: [`Add \`??\` default value here.`],
+        major: [`Also check nested properties for null.`],
+        blocking: [`Incomplete null check - add cart.items validation.`],
+        context: 'null check implementation',
+      },
+      peer: {
+        minor: [`Nit: prefer \`??\` over \`|| ''\` for nullish coalescing.`],
+        major: [`Should this throw a specific error type for better handling upstream?`],
+        blocking: [`Missing check for empty items array.`],
+        context: 'null check implementation',
+      },
     },
-    collaborative: {
-      minor: [
-        "What do you think about adding a brief comment here explaining the business logic?",
-        "Nice work! One small suggestion - we could make this slightly more readable with optional chaining.",
-      ],
-      major: [
-        "I see what you're going for here. Have you considered the edge case where the array is empty? Let's discuss the best approach.",
-        "Good implementation! One thing I'd suggest is adding error boundaries. Want me to show you how we typically handle this?",
-      ],
-      blocking: [
-        "We need to address the null check before this goes to main. Happy to pair on this if helpful!",
-        "This could cause issues in production - let's sync up quickly to talk through the fix.",
-      ],
+    'datetime': {
+      educational: {
+        minor: [
+          `The timezone fix looks great! Small suggestion: consider using a constant for the default timezone fallback.`,
+          `Nice use of Intl.DateTimeFormat! For future reference, you can also use \`timeZoneName: 'short'\` to show the timezone in the output.`,
+        ],
+        major: [
+          `The timezone handling works, but we should also update the \`formatTimestamp\` function to be consistent. Currently it still uses UTC.`,
+          `Good fix! Let's also add tests with different timezone values to ensure this works globally.`,
+        ],
+        blocking: [
+          `The timezone parameter isn't being used consistently - some calls still hardcode UTC.`,
+          `This will break for users in timezones with half-hour offsets (like India). We need to handle those cases.`,
+        ],
+        context: 'timezone display fix',
+      },
+      collaborative: {
+        minor: [`Good timezone fix! Should we add a helper for common date formats?`],
+        major: [`The formatting looks good. Want to pair on adding timezone preference to user settings?`],
+        blocking: [`Some date functions still use the old UTC approach - let's fix those together.`],
+        context: 'timezone display fix',
+      },
+      direct: {
+        minor: [`Extract timezone fallback to constant.`],
+        major: [`Update formatTimestamp to match.`],
+        blocking: [`Inconsistent timezone usage across functions.`],
+        context: 'timezone display fix',
+      },
+      peer: {
+        minor: [`Consider adding timezone to the output for clarity.`],
+        major: [`Should we centralize timezone handling in a utility?`],
+        blocking: [`Half-hour timezone offsets not handled.`],
+        context: 'timezone display fix',
+      },
     },
-    direct: {
-      minor: [
-        "Add a type annotation here.",
-        "Consider using `const` instead of `let` since this value isn't reassigned.",
-      ],
-      major: [
-        "Extract this into a separate utility function.",
-        "Add error handling for the API call.",
-      ],
-      blocking: [
-        "Must validate input before processing. Security issue.",
-        "Missing null check. Will crash in production.",
-      ],
+    'loading-state': {
+      educational: {
+        minor: [
+          `Nice skeleton loader! Consider matching the exact dimensions of the real content for a smoother transition.`,
+          `Good UX improvement! One thing - we could animate the skeleton with a shimmer effect for better feedback.`,
+        ],
+        major: [
+          `The loading state works, but we should also handle the error state. What happens if the fetch fails?`,
+          `Great skeleton! Let's also add an aria-busy attribute for accessibility.`,
+        ],
+        blocking: [
+          `The skeleton count should match the expected number of items, not be hardcoded to 5.`,
+          `This causes a layout shift when content loads. The skeleton dimensions need to match the actual content.`,
+        ],
+        context: 'loading state implementation',
+      },
+      collaborative: {
+        minor: [`Nice loading state! What do you think about adding a shimmer animation?`],
+        major: [`Good work! Should we create a reusable skeleton component for consistency?`],
+        blocking: [`The hardcoded count causes mismatched expectations - let's discuss.`],
+        context: 'loading state implementation',
+      },
+      direct: {
+        minor: [`Match skeleton dimensions to content.`],
+        major: [`Add error state handling.`],
+        blocking: [`Skeleton count should be dynamic.`],
+        context: 'loading state implementation',
+      },
+      peer: {
+        minor: [`Optional: add shimmer animation.`],
+        major: [`Consider extracting to reusable component.`],
+        blocking: [`Layout shift when content loads.`],
+        context: 'loading state implementation',
+      },
     },
-    peer: {
-      minor: [
-        "Nit: spacing inconsistency.",
-        "Optional: could simplify with a ternary.",
-      ],
-      major: [
-        "Should we discuss the trade-offs of this approach?",
-        "Interesting choice here - what was your reasoning for avoiding the hook pattern?",
-      ],
-      blocking: [
-        "Need to address the race condition here.",
-        "This breaks the existing API contract.",
-      ],
+    'notifications': {
+      educational: {
+        minor: [
+          `Nice notification implementation! Consider adding an aria-live region for accessibility.`,
+          `Good work! The notification styling looks clean. Consider adding animation for smoother UX.`,
+        ],
+        major: [
+          `The notification system works, but we should also handle edge cases like rapid-fire notifications.`,
+          `Good implementation! Let's also add a way to dismiss notifications.`,
+        ],
+        blocking: [
+          `The notification logic needs proper state management to prevent duplicates.`,
+          `Critical: Notifications aren't clearing properly - this will cause memory leaks.`,
+        ],
+        context: 'notification implementation',
+      },
+      collaborative: {
+        minor: [`Nice notification! Should we add sound for important ones?`],
+        major: [`Good work! Want to pair on adding notification persistence?`],
+        blocking: [`The notification queue needs work - let's sync.`],
+        context: 'notification implementation',
+      },
+      direct: {
+        minor: [`Add aria-live for accessibility.`],
+        major: [`Handle notification queue.`],
+        blocking: [`Fix notification state management.`],
+        context: 'notification implementation',
+      },
+      peer: {
+        minor: [`Consider adding animation.`],
+        major: [`Should we debounce notifications?`],
+        blocking: [`Memory leak in notification handling.`],
+        context: 'notification implementation',
+      },
+    },
+    'payment': {
+      educational: {
+        minor: [
+          `Good payment handling! Consider adding currency formatting for better UX.`,
+          `Nice work! The payment flow looks clean. Small suggestion: log payment attempts for debugging.`,
+        ],
+        major: [
+          `The payment logic works, but we should add retry logic for failed transactions.`,
+          `Good implementation! Let's also add receipt generation after successful payments.`,
+        ],
+        blocking: [
+          `Critical: The payment amount isn't being validated before processing.`,
+          `The payment error handling is incomplete - users won't know what went wrong.`,
+        ],
+        context: 'payment flow implementation',
+      },
+      collaborative: {
+        minor: [`Nice payment UI! Should we add a loading state during processing?`],
+        major: [`Good work! Want to add webhook handling together?`],
+        blocking: [`Payment validation needs work - let's sync.`],
+        context: 'payment flow implementation',
+      },
+      direct: {
+        minor: [`Add currency formatting.`],
+        major: [`Add retry logic.`],
+        blocking: [`Validate payment amount.`],
+        context: 'payment flow implementation',
+      },
+      peer: {
+        minor: [`Consider adding payment logging.`],
+        major: [`Should we add refund handling?`],
+        blocking: [`Payment error handling incomplete.`],
+        context: 'payment flow implementation',
+      },
+    },
+    'validation': {
+      educational: {
+        minor: [
+          `Good validation! Consider using a validation library for consistency.`,
+          `Nice work! The validation messages are clear. Small suggestion: highlight invalid fields.`,
+        ],
+        major: [
+          `The validation works, but we should also validate on blur for better UX.`,
+          `Good implementation! Let's also add server-side validation to match.`,
+        ],
+        blocking: [
+          `Critical: The validation can be bypassed - we need server-side checks.`,
+          `The form submits even with invalid data - this needs fixing.`,
+        ],
+        context: 'form validation implementation',
+      },
+      collaborative: {
+        minor: [`Nice validation! Should we add real-time feedback?`],
+        major: [`Good work! Want to create reusable validation rules?`],
+        blocking: [`Validation bypass issue - let's sync.`],
+        context: 'form validation implementation',
+      },
+      direct: {
+        minor: [`Highlight invalid fields.`],
+        major: [`Add server-side validation.`],
+        blocking: [`Fix validation bypass.`],
+        context: 'form validation implementation',
+      },
+      peer: {
+        minor: [`Consider using Zod for validation.`],
+        major: [`Should we centralize validation rules?`],
+        blocking: [`Form submits with invalid data.`],
+        context: 'form validation implementation',
+      },
+    },
+    'error-handling': {
+      educational: {
+        minor: [
+          `Good error handling! Consider adding more specific error messages for users.`,
+          `Nice work! The try/catch is clean. Small suggestion: log errors for debugging.`,
+        ],
+        major: [
+          `The error handling works, but we should also add error boundaries for React components.`,
+          `Good implementation! Let's also add a fallback UI for error states.`,
+        ],
+        blocking: [
+          `Critical: Errors are being silently swallowed - we need proper logging.`,
+          `The error recovery logic is incomplete - users get stuck in error states.`,
+        ],
+        context: 'error handling implementation',
+      },
+      collaborative: {
+        minor: [`Nice error handling! Should we add error tracking?`],
+        major: [`Good work! Want to add error boundary together?`],
+        blocking: [`Silent error swallowing - let's sync.`],
+        context: 'error handling implementation',
+      },
+      direct: {
+        minor: [`Add error logging.`],
+        major: [`Add error boundaries.`],
+        blocking: [`Don't swallow errors.`],
+        context: 'error handling implementation',
+      },
+      peer: {
+        minor: [`Consider Sentry for tracking.`],
+        major: [`Should we add retry logic?`],
+        blocking: [`Error recovery incomplete.`],
+        context: 'error handling implementation',
+      },
+    },
+    'general': {
+      educational: {
+        minor: [
+          `Good implementation! Consider adding a brief comment explaining the business logic here.`,
+          `This works well. For maintainability, we could extract this into a separate utility function.`,
+        ],
+        major: [
+          `The logic looks correct, but I'd suggest adding error boundaries for robustness.`,
+          `Nice work! One thing - we should add input validation before processing.`,
+        ],
+        blocking: [
+          `This implementation needs proper error handling before we can merge.`,
+          `The edge cases aren't covered - this could crash in production.`,
+        ],
+        context: 'code implementation',
+      },
+      collaborative: {
+        minor: [`Nice implementation! What do you think about adding a comment for the next developer?`],
+        major: [`Good work! Should we add some unit tests for this?`],
+        blocking: [`Let's sync on error handling before merging.`],
+        context: 'code implementation',
+      },
+      direct: {
+        minor: [`Add a descriptive comment.`],
+        major: [`Add error handling.`],
+        blocking: [`Edge cases not covered.`],
+        context: 'code implementation',
+      },
+      peer: {
+        minor: [`Optional: could simplify with a helper.`],
+        major: [`Should we discuss the trade-offs here?`],
+        blocking: [`Need tests before merge.`],
+        context: 'code implementation',
+      },
     },
   };
   
-  const templates = feedbackTemplates[levelModifiers.feedbackTone];
+  const issueTemplates = ticketAwareFeedback[primaryIssue] || ticketAwareFeedback['general'];
+  const templates = issueTemplates[levelModifiers.feedbackTone];
+  const issueContext = templates.context;
   
   const files = [
     { name: 'src/utils/dateUtils.ts', lines: [12, 45, 67, 89] },
@@ -228,6 +495,7 @@ function generateInitialThreads(
       status: 'open',
       severity,
       createdAt: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+      issueContext,
     });
   }
   
@@ -238,6 +506,8 @@ export function PRReviewPanel({
   prReviewConfig,
   ticketKey,
   ticketTitle,
+  ticketType,
+  ticketDescription,
   branchName,
   commits,
   onThreadResolve,
@@ -247,8 +517,15 @@ export function PRReviewPanel({
 }: PRReviewPanelProps) {
   const { uiConfig, levelModifiers, reviewers } = prReviewConfig;
   
+  const ticketContext: TicketContext = {
+    key: ticketKey,
+    title: ticketTitle,
+    type: ticketType,
+    description: ticketDescription,
+  };
+  
   const [threads, setThreads] = useState<SimulatedThread[]>(() => 
-    generateInitialThreads(prReviewConfig, ticketKey)
+    generateInitialThreads(prReviewConfig, ticketContext)
   );
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(() => {
@@ -289,51 +566,261 @@ export function PRReviewPanel({
   const [awaitingResponse, setAwaitingResponse] = useState<Set<string>>(new Set());
   
   const getReviewerFollowUpMessage = useCallback((thread: SimulatedThread, userMessage: string): string => {
-    const reviewerName = thread.reviewerName;
+    const issueContext = thread.issueContext || 'code implementation';
     
-    const followUpMessages = {
-      educational: {
-        minor: [
-          `Great job applying that pattern! Your code looks much cleaner now. I'm marking this as resolved. 👍`,
-          `Perfect! That's exactly what I was suggesting. You're picking up these patterns quickly!`,
-          `Excellent work! The refactoring looks good. Keep up the great work!`,
-        ],
-        major: [
-          `Thanks for making those changes! I can see you've understood the principle. This looks much better now.`,
-          `Good improvement! The structure is cleaner. Let me know if you have any questions about why this approach works better.`,
-        ],
-        blocking: [
-          `I've reviewed your fix - the security concern is now addressed. Nice work catching the edge case too!`,
-          `The error handling looks solid now. Good job implementing the try/catch pattern correctly.`,
-        ],
+    const contextAwareFollowUps: Record<string, Record<string, { minor: string[]; major: string[]; blocking: string[] }>> = {
+      'null check implementation': {
+        educational: {
+          minor: [
+            `Nice handling of the null case! Your defensive coding is improving. 👍`,
+            `Good null check! You're thinking about edge cases like a pro.`,
+          ],
+          major: [
+            `The null handling looks solid now. Good job covering the edge cases!`,
+            `Much better! The null checks are comprehensive now.`,
+          ],
+          blocking: [
+            `Excellent - the null check is now complete. This will prevent the crash we were worried about.`,
+            `The null validation is solid. Good catch on the nested properties too!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Good null check! Looks solid.`],
+          major: [`The null handling is comprehensive now. Nice work!`],
+          blocking: [`This covers all the edge cases. Great fix!`],
+        },
+        direct: {
+          minor: [`Null check looks good.`],
+          major: [`Null handling approved.`],
+          blocking: [`Edge cases covered. Approved.`],
+        },
+        peer: {
+          minor: [`Good defensive coding.`],
+          major: [`Null cases handled properly.`],
+          blocking: [`This resolves the crash risk.`],
+        },
       },
-      collaborative: {
-        minor: [
-          `Looks good to me! Thanks for the quick update.`,
-          `That works well - nice improvement!`,
-        ],
-        major: [
-          `This is much better! I like the approach you took. Approved!`,
-          `Great collaboration on this - the code looks solid now.`,
-        ],
-        blocking: [
-          `Thanks for addressing this so thoroughly. The fix looks correct.`,
-          `This resolves the issue. Good work tracking down the root cause!`,
-        ],
+      'timezone display fix': {
+        educational: {
+          minor: [
+            `Great timezone handling! The Intl.DateTimeFormat approach is spot on. 👍`,
+            `Nice work! The timezone fix looks clean and consistent now.`,
+          ],
+          major: [
+            `The timezone logic is correct now. Users will see their local times properly!`,
+            `Good fix! The datetime handling is consistent across the codebase.`,
+          ],
+          blocking: [
+            `Excellent - the timezone handling is now correct. This will fix the display issues users were seeing.`,
+            `The datetime fix is solid. Good job making it consistent!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Good timezone fix! The formatting looks right.`],
+          major: [`The timezone handling is consistent now. Nice work!`],
+          blocking: [`This fixes the UTC display issue. Great job!`],
+        },
+        direct: {
+          minor: [`Timezone formatting looks correct.`],
+          major: [`Datetime handling approved.`],
+          blocking: [`Timezone fix verified.`],
+        },
+        peer: {
+          minor: [`Good use of Intl.DateTimeFormat.`],
+          major: [`Timezone logic looks solid.`],
+          blocking: [`This resolves the display issues.`],
+        },
       },
-      direct: {
-        minor: [`LGTM.`, `Approved.`, `✓`],
-        major: [`Looks good now.`, `Fixed. Approved.`],
-        blocking: [`Verified. Approved.`, `Issue resolved.`],
+      'loading state implementation': {
+        educational: {
+          minor: [
+            `Nice skeleton loader! The UX will be much smoother now. 👍`,
+            `Good loading state! Users will have better feedback during fetches.`,
+          ],
+          major: [
+            `The loading state implementation is solid. Great UX improvement!`,
+            `Much better! The skeleton matches the content layout nicely.`,
+          ],
+          blocking: [
+            `Excellent - the loading state is properly implemented. No more blank screens!`,
+            `The skeleton loader is well done. Good attention to layout matching!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Nice loading state! Looks smooth.`],
+          major: [`The skeleton implementation is clean. Nice work!`],
+          blocking: [`This improves the UX significantly. Great job!`],
+        },
+        direct: {
+          minor: [`Loading state looks good.`],
+          major: [`Skeleton implementation approved.`],
+          blocking: [`UX improvement verified.`],
+        },
+        peer: {
+          minor: [`Good skeleton implementation.`],
+          major: [`Loading feedback is solid.`],
+          blocking: [`This resolves the blank screen issue.`],
+        },
       },
-      peer: {
-        minor: [`Nice change. Agreed.`, `Works for me.`],
-        major: [`Good call on that approach.`, `Makes sense. Approved.`],
-        blocking: [`Good fix. This addresses my concern.`, `Solid solution.`],
+      'notification implementation': {
+        educational: {
+          minor: [
+            `Nice notification handling! The UX is much cleaner now. 👍`,
+            `Good work! The notification system looks well-structured.`,
+          ],
+          major: [
+            `The notification logic is solid now. Good job with the state management!`,
+            `Much better! The notification queue is properly handled.`,
+          ],
+          blocking: [
+            `Excellent - the notification system is properly implemented now!`,
+            `The notification handling is solid. No more memory leaks!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Nice notification fix! Looks good.`],
+          major: [`The notification system is clean now. Nice work!`],
+          blocking: [`This fixes the notification issues. Great job!`],
+        },
+        direct: {
+          minor: [`Notification handling looks good.`],
+          major: [`Notification system approved.`],
+          blocking: [`Notification fix verified.`],
+        },
+        peer: {
+          minor: [`Good notification implementation.`],
+          major: [`Notification state is solid.`],
+          blocking: [`This resolves the notification issues.`],
+        },
+      },
+      'payment flow implementation': {
+        educational: {
+          minor: [
+            `Nice payment handling! The flow is much cleaner now. 👍`,
+            `Good work! The payment validation looks solid.`,
+          ],
+          major: [
+            `The payment logic is correct now. Good job with the error handling!`,
+            `Much better! The payment flow is robust now.`,
+          ],
+          blocking: [
+            `Excellent - the payment validation is properly implemented now!`,
+            `The payment handling is solid. This will prevent failed transactions!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Nice payment fix! Looks good.`],
+          major: [`The payment flow is clean now. Nice work!`],
+          blocking: [`This fixes the payment issues. Great job!`],
+        },
+        direct: {
+          minor: [`Payment handling looks good.`],
+          major: [`Payment flow approved.`],
+          blocking: [`Payment fix verified.`],
+        },
+        peer: {
+          minor: [`Good payment implementation.`],
+          major: [`Payment validation is solid.`],
+          blocking: [`This resolves the payment issues.`],
+        },
+      },
+      'form validation implementation': {
+        educational: {
+          minor: [
+            `Nice validation! The form feedback is much clearer now. 👍`,
+            `Good work! The validation rules are well-structured.`,
+          ],
+          major: [
+            `The validation logic is solid now. Good job with the error messages!`,
+            `Much better! The form validation is comprehensive now.`,
+          ],
+          blocking: [
+            `Excellent - the validation is properly implemented now!`,
+            `The form validation is solid. No more bypassing!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Nice validation fix! Looks good.`],
+          major: [`The validation is clean now. Nice work!`],
+          blocking: [`This fixes the validation issues. Great job!`],
+        },
+        direct: {
+          minor: [`Validation looks good.`],
+          major: [`Validation approved.`],
+          blocking: [`Validation fix verified.`],
+        },
+        peer: {
+          minor: [`Good validation implementation.`],
+          major: [`Validation rules are solid.`],
+          blocking: [`This resolves the validation issues.`],
+        },
+      },
+      'error handling implementation': {
+        educational: {
+          minor: [
+            `Nice error handling! The recovery flow is much cleaner now. 👍`,
+            `Good work! The try/catch patterns are well-structured.`,
+          ],
+          major: [
+            `The error handling is solid now. Good job with the user feedback!`,
+            `Much better! The error recovery is comprehensive now.`,
+          ],
+          blocking: [
+            `Excellent - the error handling is properly implemented now!`,
+            `The error recovery is solid. No more silent failures!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Nice error handling fix! Looks good.`],
+          major: [`The error handling is clean now. Nice work!`],
+          blocking: [`This fixes the error issues. Great job!`],
+        },
+        direct: {
+          minor: [`Error handling looks good.`],
+          major: [`Error handling approved.`],
+          blocking: [`Error fix verified.`],
+        },
+        peer: {
+          minor: [`Good error handling.`],
+          major: [`Error recovery is solid.`],
+          blocking: [`This resolves the error issues.`],
+        },
+      },
+      'code implementation': {
+        educational: {
+          minor: [
+            `Great job applying that pattern! Your code looks much cleaner now. 👍`,
+            `Perfect! That's exactly what I was suggesting. You're picking up these patterns quickly!`,
+          ],
+          major: [
+            `Thanks for making those changes! I can see you've understood the principle. This looks much better now.`,
+            `Good improvement! The structure is cleaner now.`,
+          ],
+          blocking: [
+            `I've reviewed your fix - the concern is now addressed. Nice work!`,
+            `The implementation looks solid now. Good job!`,
+          ],
+        },
+        collaborative: {
+          minor: [`Looks good to me! Thanks for the quick update.`],
+          major: [`This is much better! I like the approach you took.`],
+          blocking: [`Thanks for addressing this thoroughly. The fix looks correct.`],
+        },
+        direct: {
+          minor: [`LGTM.`],
+          major: [`Looks good now.`],
+          blocking: [`Issue resolved.`],
+        },
+        peer: {
+          minor: [`Nice change. Agreed.`],
+          major: [`Good call on that approach.`],
+          blocking: [`Good fix. This addresses my concern.`],
+        },
       },
     };
     
-    const toneMessages = followUpMessages[levelModifiers.feedbackTone];
+    const contextMessages = contextAwareFollowUps[issueContext] || contextAwareFollowUps['code implementation'];
+    const toneMessages = contextMessages[levelModifiers.feedbackTone];
     const severityMessages = toneMessages[thread.severity];
     return severityMessages[Math.floor(Math.random() * severityMessages.length)];
   }, [levelModifiers.feedbackTone]);
