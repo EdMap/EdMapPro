@@ -67,6 +67,40 @@ The platform utilizes extensive adapter systems (`shared/adapters/planning/` and
 
 **Backlog Catalogue**: A unified `BACKLOG_CATALOGUE` in `shared/adapters/planning/backlog-catalogue.ts` serves as the single source of truth for all sprint items, integrated from planning to execution.
 
+### Code Execution System (Planned)
+
+> **Full Architecture**: See `docs/CODE_EXECUTION_ARCHITECTURE.md`
+
+edmap uses **LLM-Simulated Code Execution** instead of real sandboxed containers:
+
+**Approach:**
+- Users write code in an embedded Monaco editor
+- Static analysis (ESLint, TypeScript) catches real syntax/type errors
+- LLM analyzes code and simulates test execution
+- Combined feedback provides both accuracy (static) and education (LLM)
+
+**Why This Approach:**
+- Zero infrastructure costs (no containers/VMs)
+- Instant feedback (<2 seconds vs 10-40s cold starts)
+- Educational value (LLM explains *why* code works/fails)
+- Fits the simulation narrative perfectly
+- Cost-effective (~$30/mo for 1,000 users vs $170+ for containers)
+
+**Adapter Integration:**
+- `CodeEditorConfig`: Editor settings (language, theme, starter code)
+- `SimulatedExecutionConfig`: LLM simulation parameters
+- `CodeEditorModifiers` per level: Controls scaffolding amount
+
+**Level-Based Experience:**
+| Level | Starter Code | Tests Visible | Hints |
+|-------|--------------|---------------|-------|
+| Intern | 80% complete | All shown | Always |
+| Junior | Function stubs | Names only | On error |
+| Mid | File structure | Hidden | On request |
+| Senior | Empty project | Write your own | Never |
+
+**Language Roadmap:** TypeScript (MVP) → JavaScript → Python → C++
+
 ### PR Review System
 The PR Review system follows the same adapter architecture pattern, providing level-aware code review experiences:
 

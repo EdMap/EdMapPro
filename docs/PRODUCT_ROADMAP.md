@@ -145,6 +145,8 @@ Help students go from **Intern → Junior Ready** by exposing them to real-world
 
 | Feature | Description |
 |---------|-------------|
+| **Real Code Editor** | Embedded Monaco editor for actual code writing |
+| **LLM-Simulated Execution** | AI analyzes code and simulates test results |
 | **Portfolio System** | Collect work samples, shareable profile |
 | **Graduation Flow** | Final 1:1, badge award, exit experience |
 | **Language Adapters** | C/C++, Python problem templates |
@@ -196,6 +198,55 @@ The `LayoutConfig` interface provides adapter-driven UI control:
 
 ---
 
+## Code Execution System (Planned)
+
+> **Architecture Doc**: See `docs/CODE_EXECUTION_ARCHITECTURE.md` for full technical details.
+
+### Approach: LLM-Simulated Execution
+
+Instead of running code in sandboxed containers, edmap uses AI to analyze and simulate code execution:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  User writes code in Monaco Editor                          │
+│                    ↓                                        │
+│  ┌─────────────────┐    ┌─────────────────────────────────┐ │
+│  │ Static Analysis │    │ LLM Simulation                  │ │
+│  │ (Real errors)   │    │ (Predicts test pass/fail)       │ │
+│  └─────────────────┘    └─────────────────────────────────┘ │
+│                    ↓                                        │
+│  Combined feedback: Syntax errors + Test results + Tips     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why This Approach?
+
+| Benefit | Description |
+|---------|-------------|
+| **Zero infrastructure** | No containers, VMs, or sandboxes to manage |
+| **Instant feedback** | No cold starts, results in <2 seconds |
+| **Educational value** | LLM explains *why* code works/fails |
+| **Fits simulation** | Aligns with edmap's mentorship narrative |
+| **Cost-effective** | ~$30/month for 1,000 users vs $170+ for containers |
+
+### Level-Based Editor Experience
+
+| Level | Starter Code | Tests Visible | Hints |
+|-------|--------------|---------------|-------|
+| Intern | 80% complete | All shown | Always |
+| Junior | Function stubs | Names only | On error |
+| Mid | File structure | Hidden | On request |
+| Senior | Empty project | Write your own | Never |
+
+### Language Roadmap
+
+1. **Phase 1**: TypeScript (MVP)
+2. **Phase 2**: JavaScript
+3. **Phase 3**: Python
+4. **Phase 4**: C++
+
+---
+
 ## Git Workflow Simulation
 
 ### Command Flow
@@ -244,22 +295,30 @@ Branch → Code Work → npm test → Stage → Commit → Push → PR → Revie
 2. Wire up Sprint Retro ceremony (reflection and action items)
 3. Enable sprint cycling (complete retro → start next sprint)
 
-### P1: Enhanced Execution
-1. PR review flow in TicketWorkspace
+### P1: Real Code Editor & LLM Execution (NEW)
+1. Embed Monaco editor in TicketWorkspace
+2. Create code analysis API endpoint with LLM simulation
+3. Extend backlog catalogue with code challenges
+4. Level-based editor scaffolding (templates → empty)
+5. Integrate simulated test results with PR Review
+
+### P2: Enhanced Execution
+1. PR review flow in TicketWorkspace (partially complete)
 2. Mid-sprint interruptions (AI team asks questions)
 3. Burndown chart visualization
 
-### P2: Portfolio & Graduation
+### P3: Portfolio & Graduation
 1. Artifact collection during sprints
 2. Competency score tracking
 3. Graduation flow with badge award
 4. Shareable portfolio page
 
-### P3: Multi-Role Content
-1. Full PM workflow (no git, stakeholder focus)
-2. QA-specific problem templates
-3. DevOps infra scenarios
-4. Data Science experiment tracking
+### P4: Multi-Language & Multi-Role
+1. Python code challenges
+2. C++ code challenges
+3. Full PM workflow (no git, stakeholder focus)
+4. QA-specific problem templates
+5. DevOps infra scenarios
 
 ---
 
