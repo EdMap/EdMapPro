@@ -168,6 +168,40 @@ If the update is vague, gently ask for more detail. If it's good, acknowledge br
     autoMoveOnBranchCreate: true,
   },
   
+  codeWorkConfig: {
+    enabled: true,
+    baseMode: 'guided-diff',
+    requireCompletionBeforeStage: true,
+    showDiffView: true,
+    showRunTests: true,
+    steps: [
+      {
+        id: 'understand',
+        label: 'Understand the bug',
+        description: 'Read the code and identify the issue',
+        required: true,
+      },
+      {
+        id: 'implement',
+        label: 'Apply the fix',
+        description: 'Make the necessary code changes',
+        required: true,
+      },
+      {
+        id: 'test',
+        label: 'Test your changes',
+        description: 'Verify the fix works correctly',
+        required: true,
+      },
+    ],
+    mentorHints: [
+      'Take your time to understand the existing code before making changes.',
+      'Think about edge cases that might be affected by your fix.',
+      'Remember to test your changes before committing.',
+    ],
+    completionMessage: 'Great job! Your code changes are ready to be staged.',
+  },
+  
   aiInteractions: {
     personas: [
       {

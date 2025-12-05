@@ -72,6 +72,17 @@ If the summary lacks detail, ask for specifics. Acknowledge good facilitation br
     autoMoveOnBranchCreate: false,
   },
   
+  codeWorkConfig: {
+    enabled: false,
+    baseMode: 'skip',
+    requireCompletionBeforeStage: false,
+    showDiffView: false,
+    showRunTests: false,
+    steps: [],
+    mentorHints: [],
+    completionMessage: '',
+  },
+  
   aiInteractions: {
     personas: [
       {
