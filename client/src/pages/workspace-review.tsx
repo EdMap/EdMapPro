@@ -73,6 +73,8 @@ export default function WorkspaceReview() {
           journeyId={workspace.journeyId}
           companyName={workspace.companyName}
           role={workspace.role}
+          level={workspace.level}
+          sprintId={workspace.currentSprintId}
           onComplete={handleComplete}
           onBack={handleBack}
         />

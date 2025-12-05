@@ -101,7 +101,7 @@ export function ReviewModule({
   const { data: sprintData, isLoading: isLoadingSprint } = useQuery<{
     sprint: { id: number; goal: string; status: string };
   }>({
-    queryKey: ['/api/sprints', sprintId],
+    queryKey: [`/api/sprints/${sprintId}`],
     enabled: !!sprintId,
   });
 
@@ -114,7 +114,7 @@ export function ReviewModule({
     status: string;
     completedAt?: string;
   }[]>({
-    queryKey: ['/api/sprints', sprintId, 'tickets'],
+    queryKey: [`/api/sprints/${sprintId}/tickets`],
     enabled: !!sprintId,
   });
 
