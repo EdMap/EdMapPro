@@ -30,10 +30,14 @@ import {
   Send,
   Play,
   Target,
-  Coffee
+  Coffee,
+  Terminal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdvanceWorkspacePhase, type WorkspacePhase } from "@/hooks/use-sprint-workflow";
+import { EnvironmentSetup } from "./environment-setup";
+import { getOnboardingAdapter } from "@shared/adapters/onboarding";
+import type { Role, Level } from "@shared/adapters";
 
 interface TeamMember {
   name: string;
@@ -47,6 +51,7 @@ interface TeamMember {
 interface OnboardingProgress {
   teamIntrosComplete: Record<string, boolean>;
   docsRead: Record<string, boolean>;
+  environmentComplete: boolean;
   comprehensionComplete: boolean;
 }
 
@@ -55,6 +60,7 @@ interface OnboardingModuleProps {
   userId: number;
   companyName: string;
   role: string;
+  level?: string;
   onComplete: () => void;
   onBack?: () => void;
 }
@@ -118,17 +124,39 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
-type OnboardingStep = 'overview' | 'team-intro' | 'documentation' | 'comprehension';
+type OnboardingStep = 'overview' | 'team-intro' | 'documentation' | 'environment' | 'comprehension';
 
 export function OnboardingModule({ 
   workspaceId, 
   userId, 
   companyName, 
   role,
+  level = 'intern',
   onComplete,
   onBack 
 }: OnboardingModuleProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('overview');
+  
+  const normalizedRole = (role.toLowerCase().includes('developer') || role.toLowerCase().includes('engineer') 
+    ? 'developer' 
+    : role.toLowerCase().includes('pm') || role.toLowerCase().includes('product')
+    ? 'pm'
+    : role.toLowerCase().includes('qa')
+    ? 'qa'
+    : role.toLowerCase().includes('devops')
+    ? 'devops'
+    : 'developer') as Role;
+    
+  const normalizedLevel = (level.toLowerCase().includes('senior') 
+    ? 'senior' 
+    : level.toLowerCase().includes('mid')
+    ? 'mid'
+    : level.toLowerCase().includes('junior')
+    ? 'junior'
+    : 'intern') as Level;
+    
+  const onboardingAdapter = getOnboardingAdapter(normalizedRole, normalizedLevel);
+  const requiresGitTerminal = onboardingAdapter.requiresGitTerminal;
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [expandedDocs, setExpandedDocs] = useState<Record<string, boolean>>({});
   const [activeDocTab, setActiveDocTab] = useState<string>('product');
@@ -156,6 +184,7 @@ export function OnboardingModule({
   const [progress, setProgress] = useState<OnboardingProgress>({
     teamIntrosComplete: {},
     docsRead: {},
+    environmentComplete: !requiresGitTerminal,
     comprehensionComplete: false
   });
 
@@ -166,12 +195,24 @@ export function OnboardingModule({
   useEffect(() => {
     if (workspace?.workspaceMetadata?.onboardingProgress) {
       const savedProgress = workspace.workspaceMetadata.onboardingProgress;
-      setProgress(savedProgress);
+      const defaultedEnvironmentComplete = savedProgress.environmentComplete ?? !requiresGitTerminal;
+      
+      const updatedProgress = {
+        ...savedProgress,
+        environmentComplete: defaultedEnvironmentComplete
+      };
+      
+      setProgress(updatedProgress);
+      
       if (savedProgress.docsRead) {
         setExpandedDocs(savedProgress.docsRead);
       }
+      
+      if (savedProgress.environmentComplete === undefined && !requiresGitTerminal) {
+        saveProgressMutation.mutate(updatedProgress);
+      }
     }
-  }, [workspace]);
+  }, [workspace, requiresGitTerminal]);
 
   const [, navigate] = useLocation();
   const advanceWorkspacePhase = useAdvanceWorkspacePhase();
@@ -200,12 +241,16 @@ export function OnboardingModule({
   const docsReadCount = Object.values(progress.docsRead).filter(Boolean).length;
   const allTeamIntrosComplete = teamIntroCount >= DEFAULT_TEAM.length;
   const allDocsRead = docsReadCount >= DOCUMENTATION_SECTIONS.length;
+  const environmentComplete = progress.environmentComplete ?? !requiresGitTerminal;
   
-  const overallProgress = (
-    (teamIntroCount / DEFAULT_TEAM.length) * 33 +
-    (docsReadCount / DOCUMENTATION_SECTIONS.length) * 33 +
-    (progress.comprehensionComplete ? 34 : 0)
-  );
+  const totalSteps = requiresGitTerminal ? 4 : 3;
+  const completedSteps = 
+    (allDocsRead ? 1 : 0) +
+    (requiresGitTerminal && environmentComplete ? 1 : 0) +
+    (allTeamIntrosComplete ? 1 : 0) +
+    (progress.comprehensionComplete ? 1 : 0);
+  
+  const overallProgress = (completedSteps / totalSteps) * 100;
 
   const handleStartPlanning = async () => {
     try {
@@ -237,6 +282,12 @@ export function OnboardingModule({
   const handleComprehensionComplete = () => {
     const newProgress = { ...progress, comprehensionComplete: true };
     updateProgress(newProgress);
+  };
+  
+  const handleEnvironmentComplete = () => {
+    const newProgress = { ...progress, environmentComplete: true };
+    updateProgress(newProgress);
+    setCurrentStep('overview');
   };
 
   const handleSendMessage = async () => {
@@ -422,14 +473,62 @@ export function OnboardingModule({
           </CardContent>
         </Card>
 
-        {/* Step 2: Meet Your Team (unlocks after documentation) */}
+        {/* Step 2: Environment Setup (only for roles that require git terminal) */}
+        {requiresGitTerminal && (
+          <Card 
+            className={cn(
+              "cursor-pointer transition-all",
+              !allDocsRead ? "opacity-60 cursor-not-allowed" : "hover:shadow-md",
+              environmentComplete ? "border-green-200 bg-green-50/50 dark:bg-green-900/10" : ""
+            )}
+            onClick={() => allDocsRead && !environmentComplete && setCurrentStep('environment')}
+            data-testid="card-environment-setup"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "h-10 w-10 rounded-full flex items-center justify-center",
+                    environmentComplete ? "bg-green-100" : "bg-indigo-100"
+                  )}>
+                    <Terminal className={cn(
+                      "h-5 w-5",
+                      environmentComplete ? "text-green-600" : "text-indigo-600"
+                    )} />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Environment Setup</h4>
+                    <p className="text-sm text-gray-500">
+                      {!allDocsRead
+                        ? "Complete documentation first"
+                        : environmentComplete
+                        ? "Your dev environment is ready"
+                        : "Set up your local development environment"
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!allDocsRead && <Clock className="h-5 w-5 text-gray-400" />}
+                  {environmentComplete ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ) : allDocsRead ? (
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  ) : null}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Meet Your Team (unlocks after environment setup or documentation for PM) */}
         <Card 
           className={cn(
             "cursor-pointer transition-all",
-            !allDocsRead ? "opacity-60 cursor-not-allowed" : "hover:shadow-md",
+            !(allDocsRead && environmentComplete) ? "opacity-60 cursor-not-allowed" : "hover:shadow-md",
             allTeamIntrosComplete ? "border-green-200 bg-green-50/50 dark:bg-green-900/10" : ""
           )}
-          onClick={() => allDocsRead && setCurrentStep('team-intro')}
+          onClick={() => allDocsRead && environmentComplete && setCurrentStep('team-intro')}
           data-testid="card-team-intro"
         >
           <CardContent className="p-4">
@@ -447,23 +546,25 @@ export function OnboardingModule({
                 <div>
                   <h4 className="font-semibold">Meet Your Team</h4>
                   <p className="text-sm text-gray-500">
-                    {allDocsRead 
-                      ? "Get to know the people you'll be working with" 
-                      : "Complete documentation first"
+                    {!(allDocsRead && environmentComplete)
+                      ? requiresGitTerminal 
+                        ? "Complete environment setup first" 
+                        : "Complete documentation first"
+                      : "Get to know the people you'll be working with"
                     }
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {!allDocsRead && <Clock className="h-5 w-5 text-gray-400" />}
-                {allDocsRead && (
+                {!(allDocsRead && environmentComplete) && <Clock className="h-5 w-5 text-gray-400" />}
+                {allDocsRead && environmentComplete && (
                   <Badge variant={allTeamIntrosComplete ? "default" : "secondary"}>
                     {teamIntroCount}/{DEFAULT_TEAM.length}
                   </Badge>
                 )}
                 {allTeamIntrosComplete ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
-                ) : allDocsRead ? (
+                ) : (allDocsRead && environmentComplete) ? (
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 ) : null}
               </div>
@@ -1218,6 +1319,15 @@ export function OnboardingModule({
       {currentStep === 'overview' && renderOverview()}
       {currentStep === 'team-intro' && renderTeamIntro()}
       {currentStep === 'documentation' && renderDocumentation()}
+      {currentStep === 'environment' && requiresGitTerminal && (
+        <EnvironmentSetup
+          workspaceId={workspaceId}
+          role={normalizedRole}
+          level={normalizedLevel}
+          onComplete={handleEnvironmentComplete}
+          onBack={() => setCurrentStep('overview')}
+        />
+      )}
       {currentStep === 'comprehension' && renderComprehension()}
     </div>
   );
