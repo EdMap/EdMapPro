@@ -148,12 +148,22 @@ shared/adapters/execution/
   - Team chat panel
   - Quick action buttons (level-dependent)
   - Git workflow progress tracker
+  - **Code Work Panel**: Interactive code editing simulation between branch and stage steps
+
+**Code Work System:**
+- `CodeWorkConfig` interface defines mode ('guided', 'checklist', 'skip'), steps, and UI controls
+- `CodeSnippet` interface in backlog catalogue provides ticket-specific buggy code, fixed code, and test cases
+- Three-step workflow: Understand the bug → Apply the fix → Test your changes
+- Role differentiation: Developers get guided diff view, PMs skip code work entirely
+- Level overlays: Interns see detailed guidance, seniors get minimal checklist
+- Persistence: `codeWorkComplete` flag stored in `GitTicketState` with optimistic updates
+- Git workflow gating: `git add` command blocked until code work is complete
 
 **Navigation Flow:**
 ```
 Standup → Board → Ticket Workspace → Board (loop)
                         ↓
-                  PR Review → Done
+               Branch → Code Work → Stage → Commit → Push → PR → Done
 ```
 
 ### Backlog Catalogue
