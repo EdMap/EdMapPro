@@ -448,6 +448,7 @@ export function PlanningModule({
   const [isStaggering, setIsStaggering] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'chat' | 'backlog'>('chat');
   const [showPhaseTransitionHint, setShowPhaseTransitionHint] = useState(false);
+  const [pendingPhaseTransitionHint, setPendingPhaseTransitionHint] = useState(false);
   const staggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
@@ -487,11 +488,9 @@ export function PlanningModule({
       queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
       setInputMessage('');
       
-      // Show phase transition hint if this is a transition moment
+      // Queue phase transition hint to show after message staggering completes
       if (data.isPhaseTransitionCue) {
-        setShowPhaseTransitionHint(true);
-        // Auto-hide after 10 seconds
-        setTimeout(() => setShowPhaseTransitionHint(false), 10000);
+        setPendingPhaseTransitionHint(true);
       }
     },
     onError: async (error) => {
@@ -661,6 +660,16 @@ export function PlanningModule({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [visibleMessageCount]);
+  
+  // Show pending phase transition hint after staggering completes
+  useEffect(() => {
+    if (!isStaggering && pendingPhaseTransitionHint) {
+      setShowPhaseTransitionHint(true);
+      setPendingPhaseTransitionHint(false);
+      // Auto-hide after 10 seconds
+      setTimeout(() => setShowPhaseTransitionHint(false), 10000);
+    }
+  }, [isStaggering, pendingPhaseTransitionHint]);
   
   const handleSendMessage = () => {
     if (inputMessage.trim()) {
