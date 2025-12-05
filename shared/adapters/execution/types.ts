@@ -65,6 +65,35 @@ export interface TicketWorkConfig {
   autoMoveOnBranchCreate: boolean;
 }
 
+export type CodeWorkMode = 'guided-diff' | 'checklist' | 'freeform' | 'skip';
+
+export interface CodeSnippet {
+  filename: string;
+  language: string;
+  buggyCode: string;
+  fixedCode: string;
+  highlightLines?: number[];
+  explanation?: string;
+}
+
+export interface CodeWorkStep {
+  id: string;
+  label: string;
+  description: string;
+  required: boolean;
+}
+
+export interface CodeWorkConfig {
+  enabled: boolean;
+  mode: CodeWorkMode;
+  requireCompletionBeforeStage: boolean;
+  showDiffView: boolean;
+  showRunTests: boolean;
+  steps: CodeWorkStep[];
+  mentorHints: string[];
+  completionMessage: string;
+}
+
 export interface AIInteractionConfig {
   personas: AIPersona[];
   standupFacilitator: string;
@@ -153,6 +182,7 @@ export interface SprintExecutionAdapter {
   gitWorkflow: GitWorkflowConfig;
   standupConfig: StandupConfig;
   ticketWorkConfig: TicketWorkConfig;
+  codeWorkConfig: CodeWorkConfig;
   aiInteractions: AIInteractionConfig;
   prReviewConfig: PRReviewConfig;
   
@@ -174,6 +204,9 @@ export interface RoleExecutionAdapter {
     baseFeedbackPrompt: string;
   };
   ticketWorkConfig: TicketWorkConfig;
+  codeWorkConfig: Omit<CodeWorkConfig, 'mode'> & {
+    baseMode: CodeWorkMode;
+  };
   aiInteractions: Omit<AIInteractionConfig, 'responsePersonality'>;
   prReviewConfig: Omit<PRReviewConfig, 'commentTypes'>;
   
@@ -205,6 +238,14 @@ export interface LevelExecutionOverlay {
     showCommandHints: boolean;
     showNextStepPrompt: boolean;
     allowButtonShortcuts: boolean;
+  };
+  
+  codeWorkModifiers: {
+    modeOverride?: CodeWorkMode;
+    showDiffView: boolean;
+    showRunTests: boolean;
+    autoCompleteSteps: boolean;
+    mentorGuidance: 'heavy' | 'moderate' | 'light' | 'none';
   };
 }
 
