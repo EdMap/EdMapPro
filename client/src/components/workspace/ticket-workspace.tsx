@@ -35,6 +35,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getSprintExecutionAdapter } from "@shared/adapters";
+import { getBacklogItemById } from "@shared/adapters/planning/backlog-catalogue";
+import { CodeWorkPanel } from "./code-work-panel";
 import type { Role, Level, GitCommand } from "@shared/adapters";
 import type { SprintTicket, GitTicketState } from "@shared/schema";
 
@@ -134,6 +136,7 @@ export function TicketWorkspace({
   const [chatInput, setChatInput] = useState('');
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(true);
+  const [codeWorkComplete, setCodeWorkComplete] = useState(false);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
@@ -145,6 +148,13 @@ export function TicketWorkspace({
   });
 
   const gitState = useMemo(() => parseGitState(ticket?.gitState), [ticket?.gitState]);
+
+  const backlogItem = useMemo(() => {
+    if (!ticket?.ticketKey) return undefined;
+    return getBacklogItemById(ticket.ticketKey);
+  }, [ticket?.ticketKey]);
+
+  const codeWorkTemplate = backlogItem?.codeWork;
 
   const updateTicket = useMutation({
     mutationFn: async (updates: Partial<SprintTicket>) => {
@@ -272,6 +282,15 @@ export function TicketWorkspace({
     if (addCommands && addCommands.validPatterns.some(p => p.test(cmd))) {
       if (!gitState.branchName) {
         addTerminalLine('error', "You need to create a feature branch first. Try: git checkout -b feature/tick-001-fix");
+        return;
+      }
+      
+      if (adapter.codeWorkConfig.enabled && 
+          adapter.codeWorkConfig.requireCompletionBeforeStage && 
+          codeWorkTemplate && 
+          !codeWorkComplete) {
+        addTerminalLine('error', "Complete the code work first before staging. Review and apply the fix in the Code Work panel.");
+        addTerminalLine('hint', "Use the Code Work panel to understand the bug and apply the fix, then mark it complete.");
         return;
       }
       
@@ -587,6 +606,18 @@ export function TicketWorkspace({
                   )}
                   <span className={gitState.branchName ? '' : 'text-muted-foreground'}>Create branch</span>
                 </div>
+                {adapter.codeWorkConfig.enabled && codeWorkTemplate && (
+                  <div className="flex items-center gap-2 text-sm">
+                    {codeWorkComplete ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border-2 border-amber-500" />
+                    )}
+                    <span className={codeWorkComplete ? '' : 'text-amber-600 dark:text-amber-400 font-medium'}>
+                      Complete code work
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm">
                   {gitState.commits.length > 0 ? (
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -779,6 +810,26 @@ export function TicketWorkspace({
               </form>
             </div>
           </div>
+
+          {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && !codeWorkComplete && (
+            <div className="p-4 border-b bg-amber-50/30 dark:bg-amber-950/10">
+              <CodeWorkPanel
+                codeWorkConfig={adapter.codeWorkConfig}
+                codeWorkTemplate={codeWorkTemplate}
+                ticketTitle={ticket?.title || ''}
+                ticketType={ticket?.type || 'bug'}
+                onComplete={() => {
+                  setCodeWorkComplete(true);
+                  addTerminalLine('success', 'Code work completed! You can now stage your changes with: git add .');
+                  toast({
+                    title: "Code work complete",
+                    description: "Your changes are ready to be staged and committed.",
+                  });
+                }}
+                isComplete={codeWorkComplete}
+              />
+            </div>
+          )}
 
           {adapter.uiControls.showTeamChat && (
             <div className="h-64 flex flex-col">
