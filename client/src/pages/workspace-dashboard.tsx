@@ -173,6 +173,7 @@ export default function WorkspaceDashboard() {
             currentPhase={currentPhase}
             workspaceId={workspace.id}
             sprintId={workspace.currentSprintId}
+            journeyId={workspace.journeyId}
             size="md"
             showLabels={true}
             interactive={true}

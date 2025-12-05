@@ -47,6 +47,7 @@ interface PhaseStepperProps {
   completedPhases?: WorkspacePhase[];
   workspaceId: number;
   sprintId?: number | null;
+  journeyId?: number | null;
   orientation?: 'horizontal' | 'vertical';
   size?: 'sm' | 'md' | 'lg';
   showLabels?: boolean;
@@ -58,6 +59,7 @@ export function PhaseStepper({
   completedPhases = [],
   workspaceId,
   sprintId,
+  journeyId,
   orientation = 'horizontal',
   size = 'md',
   showLabels = true,
@@ -88,7 +90,7 @@ export function PhaseStepper({
       case 'planning':
         return `/workspace/${workspaceId}/planning`;
       case 'execution':
-        return sprintId ? `/sprint/${sprintId}` : null;
+        return (sprintId && journeyId) ? `/journey/${journeyId}/sprint/${sprintId}` : null;
       case 'review':
         return `/workspace/${workspaceId}/review`;
       case 'retro':
