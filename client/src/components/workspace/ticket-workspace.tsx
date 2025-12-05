@@ -572,16 +572,19 @@ Time:        0.842s`;
   const acceptanceCriteria = Array.isArray(ticket.acceptanceCriteria) ? ticket.acceptanceCriteria : [];
   const nextStep = getNextGitStep();
 
+  const layoutConfig = adapter.uiControls.layout;
+  const sidebarWidthClass = layoutConfig.sidebarWidth === 'narrow' ? 'w-72' : layoutConfig.sidebarWidth === 'wide' ? 'w-96' : 'w-80';
+
   return (
     <div className="h-screen flex flex-col bg-background" data-testid="ticket-workspace">
-      <header className="border-b px-4 py-3 flex items-center justify-between bg-background/95 backdrop-blur">
+      <header className="border-b px-4 py-3 flex items-center justify-between bg-background/95 backdrop-blur sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-board">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Board
           </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <div className="flex items-center gap-2">
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
+          <div className="hidden sm:flex items-center gap-2">
             <Badge variant="outline" className="font-mono">{ticket.ticketKey}</Badge>
             <Badge className={getTypeColor(ticket.type)} variant="secondary">
               <Icon className="h-3 w-3 mr-1" />
@@ -591,13 +594,21 @@ Time:        0.842s`;
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{ticket.storyPoints} pts</Badge>
-          <Badge variant="outline" className="capitalize">{ticket.priority} priority</Badge>
+          <Badge variant="outline" className="hidden sm:inline-flex">{ticket.storyPoints} pts</Badge>
+          <Badge variant="outline" className="capitalize">{ticket.priority}</Badge>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <aside className="w-80 border-r overflow-y-auto bg-muted/20">
+      <div className={cn(
+        "flex-1 flex overflow-hidden",
+        layoutConfig.mode === 'two-column' && "flex-col lg:flex-row"
+      )}>
+        <aside className={cn(
+          "overflow-y-auto bg-muted/20",
+          sidebarWidthClass,
+          "hidden lg:block",
+          layoutConfig.sidebarPosition === 'left' ? "border-r order-first" : "border-l order-last"
+        )}>
           <div className="p-4 space-y-4">
             <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-lg">

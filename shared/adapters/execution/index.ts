@@ -50,6 +50,18 @@ function mergeUIControls(
   roleControls: Partial<ExecutionUIControls>,
   levelOverrides: Partial<ExecutionUIControls>
 ): ExecutionUIControls {
+  const defaultLayout = {
+    mode: 'two-column' as const,
+    sidebarPosition: 'right' as const,
+    sidebarWidth: 'medium' as const,
+    codeWorkPosition: 'above-terminal' as const,
+    terminalHeight: 'medium' as const,
+    chatPosition: 'sidebar' as const,
+    collapsiblePanels: true,
+    animateTransitions: true,
+    mobileBreakpoint: 'lg' as const,
+  };
+
   const defaults: ExecutionUIControls = {
     showGitTerminal: true,
     showTeamChat: true,
@@ -61,12 +73,20 @@ function mergeUIControls(
     terminalHintsVisibility: 'on-error',
     allowShortcutButtons: false,
     splitPanelLayout: 'terminal-right',
+    layout: defaultLayout,
   };
   
+  const mergedLayout = {
+    ...defaultLayout,
+    ...roleControls.layout,
+    ...levelOverrides.layout,
+  };
+
   return {
     ...defaults,
     ...roleControls,
     ...levelOverrides,
+    layout: mergedLayout,
   };
 }
 

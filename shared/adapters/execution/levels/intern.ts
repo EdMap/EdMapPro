@@ -51,6 +51,17 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
     showMentorHints: true,
     terminalHintsVisibility: 'always',
     allowShortcutButtons: true,
+    layout: {
+      mode: 'two-column',
+      sidebarPosition: 'right',
+      sidebarWidth: 'wide',
+      codeWorkPosition: 'above-terminal',
+      terminalHeight: 'compact',
+      chatPosition: 'sidebar',
+      collapsiblePanels: false,
+      animateTransitions: true,
+      mobileBreakpoint: 'md',
+    },
   },
   
   difficultyOverrides: {

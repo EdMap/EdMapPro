@@ -57,6 +57,17 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
     showMentorHints: false,
     terminalHintsVisibility: 'never',
     allowShortcutButtons: false,
+    layout: {
+      mode: 'focus-terminal',
+      sidebarPosition: 'left',
+      sidebarWidth: 'narrow',
+      codeWorkPosition: 'above-terminal',
+      terminalHeight: 'expanded',
+      chatPosition: 'floating',
+      collapsiblePanels: true,
+      animateTransitions: false,
+      mobileBreakpoint: 'lg',
+    },
   },
   
   difficultyOverrides: {

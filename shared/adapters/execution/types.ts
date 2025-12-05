@@ -119,6 +119,21 @@ export interface PRReviewConfig {
   autoApproveThreshold: number;
 }
 
+export type LayoutMode = 'two-column' | 'stacked' | 'focus-code' | 'focus-terminal';
+export type PanelPosition = 'left' | 'right' | 'top' | 'bottom';
+
+export interface LayoutConfig {
+  mode: LayoutMode;
+  sidebarPosition: PanelPosition;
+  sidebarWidth: 'narrow' | 'medium' | 'wide';
+  codeWorkPosition: 'above-terminal' | 'below-terminal' | 'separate-panel';
+  terminalHeight: 'compact' | 'medium' | 'expanded';
+  chatPosition: 'sidebar' | 'main-bottom' | 'floating';
+  collapsiblePanels: boolean;
+  animateTransitions: boolean;
+  mobileBreakpoint: 'sm' | 'md' | 'lg';
+}
+
 export interface ExecutionUIControls {
   showGitTerminal: boolean;
   showTeamChat: boolean;
@@ -130,6 +145,7 @@ export interface ExecutionUIControls {
   terminalHintsVisibility: 'always' | 'on-error' | 'on-request' | 'never';
   allowShortcutButtons: boolean;
   splitPanelLayout: 'terminal-right' | 'terminal-bottom' | 'terminal-left';
+  layout: LayoutConfig;
 }
 
 export interface ExecutionDifficulty {

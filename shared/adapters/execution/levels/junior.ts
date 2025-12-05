@@ -57,6 +57,17 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
     showMentorHints: true,
     terminalHintsVisibility: 'on-error',
     allowShortcutButtons: true,
+    layout: {
+      mode: 'two-column',
+      sidebarPosition: 'right',
+      sidebarWidth: 'medium',
+      codeWorkPosition: 'above-terminal',
+      terminalHeight: 'medium',
+      chatPosition: 'sidebar',
+      collapsiblePanels: true,
+      animateTransitions: true,
+      mobileBreakpoint: 'md',
+    },
   },
   
   difficultyOverrides: {

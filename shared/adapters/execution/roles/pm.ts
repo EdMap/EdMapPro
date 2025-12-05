@@ -139,6 +139,17 @@ If the summary lacks detail, ask for specifics. Acknowledge good facilitation br
     showWorkflowProgress: true,
     showMentorHints: true,
     splitPanelLayout: 'terminal-right',
+    layout: {
+      mode: 'stacked',
+      sidebarPosition: 'right',
+      sidebarWidth: 'wide',
+      codeWorkPosition: 'above-terminal',
+      terminalHeight: 'compact',
+      chatPosition: 'main-bottom',
+      collapsiblePanels: true,
+      animateTransitions: true,
+      mobileBreakpoint: 'md',
+    },
   },
   
   difficulty: {

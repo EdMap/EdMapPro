@@ -258,6 +258,17 @@ If the update is vague, gently ask for more detail. If it's good, acknowledge br
     showWorkflowProgress: true,
     showMentorHints: true,
     splitPanelLayout: 'terminal-right',
+    layout: {
+      mode: 'two-column',
+      sidebarPosition: 'right',
+      sidebarWidth: 'medium',
+      codeWorkPosition: 'above-terminal',
+      terminalHeight: 'medium',
+      chatPosition: 'sidebar',
+      collapsiblePanels: true,
+      animateTransitions: true,
+      mobileBreakpoint: 'lg',
+    },
   },
   
   difficulty: {
