@@ -92,6 +92,13 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
       animateTransitions: true,
       mobileBreakpoint: 'md',
     },
+    reviewPhaseLayout: {
+      showGitTerminal: false,
+      showTeamChat: false,
+      showQuickActions: false,
+      panelWidth: 'full',
+      terminalCollapsible: true,
+    },
   },
   
   difficultyOverrides: {

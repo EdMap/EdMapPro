@@ -232,6 +232,14 @@ export interface LayoutConfig {
   mobileBreakpoint: 'sm' | 'md' | 'lg';
 }
 
+export interface ReviewPhaseLayout {
+  showGitTerminal: boolean;
+  showTeamChat: boolean;
+  showQuickActions: boolean;
+  panelWidth: 'full' | 'wide' | 'standard';
+  terminalCollapsible: boolean;
+}
+
 export interface ExecutionUIControls {
   showGitTerminal: boolean;
   showTeamChat: boolean;
@@ -244,6 +252,7 @@ export interface ExecutionUIControls {
   allowShortcutButtons: boolean;
   splitPanelLayout: 'terminal-right' | 'terminal-bottom' | 'terminal-left';
   layout: LayoutConfig;
+  reviewPhaseLayout?: ReviewPhaseLayout;
 }
 
 export interface ExecutionDifficulty {
