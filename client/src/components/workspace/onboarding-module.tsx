@@ -1134,11 +1134,11 @@ export function OnboardingModule({
             </div>
             {allDocsRead && (
               <Button 
-                onClick={() => setCurrentStep('team-intro')}
+                onClick={() => setCurrentStep(requiresGitTerminal && !environmentComplete ? 'environment' : 'team-intro')}
                 className="bg-teal-600 hover:bg-teal-700"
-                data-testid="button-continue-to-team"
+                data-testid="button-continue-after-docs"
               >
-                Meet Your Team
+                {requiresGitTerminal && !environmentComplete ? 'Set Up Environment' : 'Meet Your Team'}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             )}
