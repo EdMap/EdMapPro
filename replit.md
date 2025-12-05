@@ -153,7 +153,9 @@ shared/adapters/execution/
 **Code Work System:**
 - `CodeWorkConfig` interface defines mode ('guided', 'checklist', 'skip'), steps, and UI controls
 - `CodeSnippet` interface in backlog catalogue provides ticket-specific buggy code, fixed code, and test cases
-- Three-step workflow: Understand the bug → Apply the fix → Test your changes
+- Two-step workflow: Understand the bug → Apply the fix (review fixed code)
+- Code Work panel positioned ABOVE terminal (IDE-like layout)
+- Testing via terminal: `npm test` command with simulated pass/fail based on code work completion
 - Role differentiation: Developers get guided diff view, PMs skip code work entirely
 - Level overlays: Interns see detailed guidance, seniors get minimal checklist
 - Persistence: `codeWorkComplete` flag stored in `GitTicketState` with optimistic updates
@@ -163,8 +165,16 @@ shared/adapters/execution/
 ```
 Standup → Board → Ticket Workspace → Board (loop)
                         ↓
-               Branch → Code Work → Stage → Commit → Push → PR → Done
+               Branch → Code Work → npm test → Stage → Commit → Push → PR → Done
 ```
+
+**Terminal Commands:**
+- `git checkout -b <branch>` - Create feature branch
+- `npm test` - Run simulated tests (fails before code work, passes after)
+- `git add .` - Stage changes (blocked until code work complete)
+- `git commit -m "<msg>"` - Commit changes
+- `git push -u origin <branch>` - Push to remote
+- `gh pr create` - Create pull request
 
 ### Backlog Catalogue
 Located in `shared/adapters/planning/backlog-catalogue.ts`, the unified backlog catalogue serves as the single source of truth for sprint items across planning and execution phases.
