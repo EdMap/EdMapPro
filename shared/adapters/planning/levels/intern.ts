@@ -182,9 +182,12 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
     selectionGuidance: {
       mode: 'autoAssign',
       suggestedItemIds: ['TICK-001', 'TICK-004'],
-      confirmationPrompt: `Good thinking, team. I've selected TICK-001 and TICK-004 based on what Marcus and Alex recommended - you can see them highlighted in the backlog panel. {{userName}}, any questions about these items before we dig into the details?`,
+      confirmationPrompt: `Good thinking, team. I've selected TICK-001 and TICK-004 based on what Marcus and Alex recommended - you can see them highlighted in the backlog panel on the right.
+
+{{userName}}, take a moment to review the selected items. Feel free to ask questions about them, or if everything looks good, click Continue to move forward.`,
       visualCueCopy: 'Items selected by team',
-      backlogPanelHighlight: true
+      backlogPanelHighlight: true,
+      nextStepHint: 'Review selected items, then click Continue when ready'
     }
   },
   

@@ -126,6 +126,7 @@ export interface SelectionGuidance {
   confirmationPrompt?: string;
   visualCueCopy?: string;
   backlogPanelHighlight?: boolean;
+  nextStepHint?: string;
 }
 
 export interface LevelEngagement {

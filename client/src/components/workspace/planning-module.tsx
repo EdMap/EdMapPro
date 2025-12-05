@@ -77,6 +77,15 @@ interface MessageStaggerConfig {
   maxDelayMs: number;
 }
 
+interface SelectionGuidance {
+  mode: 'autoAssign' | 'prompted' | 'selfManaged';
+  suggestedItemIds?: string[];
+  confirmationPrompt?: string;
+  visualCueCopy?: string;
+  backlogPanelHighlight?: boolean;
+  nextStepHint?: string;
+}
+
 interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -93,6 +102,7 @@ interface LevelEngagement {
   };
   autoStartMessage: string;
   messageStagger?: MessageStaggerConfig;
+  selectionGuidance?: SelectionGuidance;
 }
 
 interface PlanningSessionState {
@@ -257,7 +267,8 @@ function BacklogPanel({
   capacity, 
   onToggleItem,
   disabled,
-  selectionCue
+  selectionCue,
+  nextStepHint
 }: { 
   items: BacklogItem[]; 
   selectedItems: string[]; 
@@ -265,6 +276,7 @@ function BacklogPanel({
   onToggleItem: (id: string) => void;
   disabled?: boolean;
   selectionCue?: string;
+  nextStepHint?: string;
 }) {
   const selectedPoints = items
     .filter(item => selectedItems.includes(item.id))
@@ -308,6 +320,14 @@ function BacklogPanel({
           <div className="flex items-center gap-1.5 mt-2 text-red-600 text-xs font-medium">
             <AlertCircle className="h-3 w-3" />
             Over capacity - remove some items
+          </div>
+        )}
+        {nextStepHint && selectedItems.length > 0 && !disabled && (
+          <div className="mt-3 p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 animate-pulse">
+            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 text-xs font-medium">
+              <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>{nextStepHint}</span>
+            </div>
           </div>
         )}
       </CardHeader>
@@ -1069,6 +1089,9 @@ export function PlanningModule({
             disabled={session.currentPhase === 'context'}
             selectionCue={sessionState?.adapterConfig?.engagement?.selectionGuidance?.mode === 'autoAssign' 
               ? sessionState?.adapterConfig?.engagement?.selectionGuidance?.visualCueCopy 
+              : undefined}
+            nextStepHint={session.currentPhase === 'discussion' && sessionState?.adapterConfig?.engagement?.selectionGuidance?.nextStepHint
+              ? sessionState?.adapterConfig?.engagement?.selectionGuidance?.nextStepHint
               : undefined}
           />
         </div>
