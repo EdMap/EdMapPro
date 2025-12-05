@@ -166,14 +166,16 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
             personaName: 'Marcus',
             personaRole: 'Senior Developer',
             phase: 'commitment',
-            message: `Based on what we've selected, I think we need a clear sprint goal. Something that ties these items together.`
+            message: `We've got the timezone fix and payment null check - both are critical bugs affecting users.`
           },
           {
             personaId: 'priya',
             personaName: 'Priya',
             personaRole: 'Product Manager',
             phase: 'commitment',
-            message: `Exactly. {{userName}}, what do you think should be our sprint goal? Try to capture the main theme of what we're trying to achieve.`,
+            message: `Right. Our sprint goal will be: "Improve payment reliability and fix user-facing timezone issues."
+
+{{userName}}, as a developer you'd typically help estimate and commit to the work, but the PM usually defines the goal. Does this goal make sense given what we've selected? Any questions before we start the sprint?`,
             requiresUserResponse: true
           }
         ]
@@ -188,6 +190,10 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
       visualCueCopy: 'Items selected by team',
       backlogPanelHighlight: true,
       nextStepHint: 'Review selected items, then click Continue when ready'
+    },
+    commitmentGuidance: {
+      mode: 'autoSet',
+      suggestedGoal: 'Improve payment reliability and fix user-facing timezone issues'
     }
   },
   

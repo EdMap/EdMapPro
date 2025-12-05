@@ -129,6 +129,11 @@ export interface SelectionGuidance {
   nextStepHint?: string;
 }
 
+export interface CommitmentGuidance {
+  mode: 'autoSet' | 'userDefined';
+  suggestedGoal?: string;
+}
+
 export interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -148,6 +153,7 @@ export interface LevelEngagement {
   phaseTransitionSequences?: PhaseTransitionSequence[];
   messageStagger?: MessageStaggerConfig;
   selectionGuidance?: SelectionGuidance;
+  commitmentGuidance?: CommitmentGuidance;
 }
 
 export interface LevelPlanningOverlay {
