@@ -151,6 +151,28 @@ export function TicketWorkspace({
   });
 
   const gitState = useMemo(() => parseGitState(ticket?.gitState), [ticket?.gitState]);
+  
+  const isInReviewPhase = gitState.prCreated && !gitState.isMerged;
+  
+  const reviewPhaseLayout = adapter.uiControls.reviewPhaseLayout || {
+    showGitTerminal: true,
+    showTeamChat: true,
+    showQuickActions: true,
+    panelWidth: 'standard',
+    terminalCollapsible: false,
+  };
+  
+  const shouldShowTerminal = isInReviewPhase 
+    ? reviewPhaseLayout.showGitTerminal 
+    : adapter.uiControls.showGitTerminal;
+  
+  const shouldShowTeamChat = isInReviewPhase 
+    ? reviewPhaseLayout.showTeamChat 
+    : adapter.uiControls.showTeamChat;
+  
+  const shouldShowQuickActions = isInReviewPhase 
+    ? reviewPhaseLayout.showQuickActions 
+    : adapter.uiControls.allowShortcutButtons;
 
   const backlogItem = useMemo(() => {
     if (!ticket?.ticketKey) return undefined;
@@ -742,7 +764,7 @@ Time:        0.842s`;
               </Card>
             )}
 
-            {adapter.uiControls.allowShortcutButtons && (
+            {shouldShowQuickActions && (
               <div className="space-y-2">
                 <h3 className="font-semibold text-sm p-2">Quick Actions</h3>
                 {!gitState.branchName && (
@@ -875,7 +897,11 @@ Time:        0.842s`;
           )}
 
           {adapter.prReviewConfig.enabled && gitState.prCreated && !gitState.isMerged && (
-            <div className="p-4 border-b bg-purple-50/30 dark:bg-purple-950/10">
+            <div className={cn(
+              "p-4 bg-purple-50/30 dark:bg-purple-950/10",
+              !shouldShowTerminal && !shouldShowTeamChat && "flex-1 overflow-auto",
+              (shouldShowTerminal || shouldShowTeamChat) && "border-b"
+            )}>
               <PRReviewPanel
                 prReviewConfig={adapter.prReviewConfig}
                 ticketKey={ticket.ticketKey}
@@ -938,59 +964,61 @@ Time:        0.842s`;
             </div>
           )}
 
-          <div className="flex-1 flex flex-col border-b">
-            <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-900 text-white">
-              <div className="flex items-center gap-2">
-                <Terminal className="h-4 w-4" />
-                <span className="text-sm font-medium">Terminal</span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white hover:text-white hover:bg-gray-800"
-                onClick={() => setTerminalLines([])}
-              >
-                Clear
-              </Button>
-            </div>
-            <div 
-              ref={terminalRef}
-              className="flex-1 bg-gray-900 p-4 font-mono text-sm overflow-y-auto min-h-[200px]"
-              onClick={() => terminalInputRef.current?.focus()}
-            >
-              {terminalLines.map((line) => (
-                <div
-                  key={line.id}
-                  className={cn(
-                    "whitespace-pre-wrap mb-1",
-                    line.type === 'command' && "text-green-400",
-                    line.type === 'output' && "text-gray-300",
-                    line.type === 'error' && "text-red-400",
-                    line.type === 'hint' && "text-yellow-400",
-                    line.type === 'success' && "text-green-300"
-                  )}
-                >
-                  {line.content}
+          {shouldShowTerminal && (
+            <div className="flex-1 flex flex-col border-b">
+              <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-900 text-white">
+                <div className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4" />
+                  <span className="text-sm font-medium">Terminal</span>
                 </div>
-              ))}
-              <form onSubmit={handleTerminalSubmit} className="flex items-center mt-2">
-                <span className="text-green-400 mr-2">$</span>
-                <input
-                  ref={terminalInputRef}
-                  type="text"
-                  value={currentCommand}
-                  onChange={(e) => setCurrentCommand(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 bg-transparent text-white outline-none"
-                  placeholder="Type a command..."
-                  autoFocus
-                  data-testid="input-terminal"
-                />
-              </form>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-white hover:text-white hover:bg-gray-800"
+                  onClick={() => setTerminalLines([])}
+                >
+                  Clear
+                </Button>
+              </div>
+              <div 
+                ref={terminalRef}
+                className="flex-1 bg-gray-900 p-4 font-mono text-sm overflow-y-auto min-h-[200px]"
+                onClick={() => terminalInputRef.current?.focus()}
+              >
+                {terminalLines.map((line) => (
+                  <div
+                    key={line.id}
+                    className={cn(
+                      "whitespace-pre-wrap mb-1",
+                      line.type === 'command' && "text-green-400",
+                      line.type === 'output' && "text-gray-300",
+                      line.type === 'error' && "text-red-400",
+                      line.type === 'hint' && "text-yellow-400",
+                      line.type === 'success' && "text-green-300"
+                    )}
+                  >
+                    {line.content}
+                  </div>
+                ))}
+                <form onSubmit={handleTerminalSubmit} className="flex items-center mt-2">
+                  <span className="text-green-400 mr-2">$</span>
+                  <input
+                    ref={terminalInputRef}
+                    type="text"
+                    value={currentCommand}
+                    onChange={(e) => setCurrentCommand(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="flex-1 bg-transparent text-white outline-none"
+                    placeholder="Type a command..."
+                    autoFocus
+                    data-testid="input-terminal"
+                  />
+                </form>
+              </div>
             </div>
-          </div>
+          )}
 
-          {adapter.uiControls.showTeamChat && (
+          {shouldShowTeamChat && (
             <div className="h-64 flex flex-col">
               <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
                 <div className="flex items-center gap-2">
