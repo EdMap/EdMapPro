@@ -286,39 +286,159 @@ export function PRReviewPanel({
     return groups;
   }, [threads]);
   
+  const [awaitingResponse, setAwaitingResponse] = useState<Set<string>>(new Set());
+  
+  const getReviewerFollowUpMessage = useCallback((thread: SimulatedThread, userMessage: string): string => {
+    const reviewerName = thread.reviewerName;
+    
+    const followUpMessages = {
+      educational: {
+        minor: [
+          `Great job applying that pattern! Your code looks much cleaner now. I'm marking this as resolved. 👍`,
+          `Perfect! That's exactly what I was suggesting. You're picking up these patterns quickly!`,
+          `Excellent work! The refactoring looks good. Keep up the great work!`,
+        ],
+        major: [
+          `Thanks for making those changes! I can see you've understood the principle. This looks much better now.`,
+          `Good improvement! The structure is cleaner. Let me know if you have any questions about why this approach works better.`,
+        ],
+        blocking: [
+          `I've reviewed your fix - the security concern is now addressed. Nice work catching the edge case too!`,
+          `The error handling looks solid now. Good job implementing the try/catch pattern correctly.`,
+        ],
+      },
+      collaborative: {
+        minor: [
+          `Looks good to me! Thanks for the quick update.`,
+          `That works well - nice improvement!`,
+        ],
+        major: [
+          `This is much better! I like the approach you took. Approved!`,
+          `Great collaboration on this - the code looks solid now.`,
+        ],
+        blocking: [
+          `Thanks for addressing this so thoroughly. The fix looks correct.`,
+          `This resolves the issue. Good work tracking down the root cause!`,
+        ],
+      },
+      direct: {
+        minor: [`LGTM.`, `Approved.`, `✓`],
+        major: [`Looks good now.`, `Fixed. Approved.`],
+        blocking: [`Verified. Approved.`, `Issue resolved.`],
+      },
+      peer: {
+        minor: [`Nice change. Agreed.`, `Works for me.`],
+        major: [`Good call on that approach.`, `Makes sense. Approved.`],
+        blocking: [`Good fix. This addresses my concern.`, `Solid solution.`],
+      },
+    };
+    
+    const toneMessages = followUpMessages[levelModifiers.feedbackTone];
+    const severityMessages = toneMessages[thread.severity];
+    return severityMessages[Math.floor(Math.random() * severityMessages.length)];
+  }, [levelModifiers.feedbackTone]);
+  
   const handleReply = useCallback((threadId: string) => {
     const content = replyInputs[threadId]?.trim();
     if (!content) return;
     
-    setThreads(prev => prev.map(thread => {
-      if (thread.id !== threadId) return thread;
-      
-      const newComment: SimulatedComment = {
-        id: `comment-${thread.id}-${thread.comments.length + 1}`,
-        authorId: 'user',
-        authorName: 'You',
-        authorRole: 'Developer',
-        content,
-        type: 'comment',
-        isUser: true,
-        createdAt: new Date().toISOString(),
-      };
-      
-      let newStatus = thread.status;
-      if (levelModifiers.autoResolveMinorOnResponse && thread.severity === 'minor') {
-        newStatus = 'resolved';
-      }
-      
+    const thread = threads.find(t => t.id === threadId);
+    if (!thread || thread.status === 'resolved') return;
+    
+    const userComment: SimulatedComment = {
+      id: `comment-${thread.id}-${thread.comments.length + 1}`,
+      authorId: 'user',
+      authorName: 'You',
+      authorRole: 'Developer',
+      content,
+      type: 'comment',
+      isUser: true,
+      createdAt: new Date().toISOString(),
+    };
+    
+    const shouldAutoResolve = levelModifiers.autoResolveMinorOnResponse && thread.severity === 'minor';
+    
+    if (shouldAutoResolve) {
+      setThreads(prev => prev.map(t => {
+        if (t.id !== threadId) return t;
+        return {
+          ...t,
+          comments: [...t.comments, userComment],
+          status: 'resolved' as const,
+        };
+      }));
+      setReplyInputs(prev => ({ ...prev, [threadId]: '' }));
+      setAwaitingResponse(prev => {
+        const next = new Set(prev);
+        next.delete(threadId);
+        return next;
+      });
+      onCommentSubmit(threadId, content);
+      onThreadResolve(threadId);
+      return;
+    }
+    
+    setThreads(prev => prev.map(t => {
+      if (t.id !== threadId) return t;
       return {
-        ...thread,
-        comments: [...thread.comments, newComment],
-        status: newStatus,
+        ...t,
+        comments: [...t.comments, userComment],
       };
     }));
     
     setReplyInputs(prev => ({ ...prev, [threadId]: '' }));
+    setAwaitingResponse(prev => {
+      const next = new Set(prev);
+      next.add(threadId);
+      return next;
+    });
     onCommentSubmit(threadId, content);
-  }, [replyInputs, levelModifiers.autoResolveMinorOnResponse, onCommentSubmit]);
+    
+    const responseDelay = levelModifiers.feedbackTone === 'direct' ? 1000 : 
+                          levelModifiers.feedbackTone === 'peer' ? 1500 : 2000;
+    
+    const replyTimestamp = Date.now();
+    
+    setTimeout(() => {
+      setAwaitingResponse(currentAwaiting => {
+        if (!currentAwaiting.has(threadId)) {
+          return currentAwaiting;
+        }
+        
+        setThreads(prev => {
+          const currentThread = prev.find(t => t.id === threadId);
+          if (!currentThread || currentThread.status === 'resolved') {
+            return prev;
+          }
+          
+          const reviewerResponse = getReviewerFollowUpMessage(currentThread, content);
+          
+          const reviewerComment: SimulatedComment = {
+            id: `comment-${threadId}-reviewer-${replyTimestamp}`,
+            authorId: currentThread.reviewerId,
+            authorName: currentThread.reviewerName,
+            authorRole: currentThread.reviewerRole,
+            content: reviewerResponse,
+            type: 'approval',
+            isUser: false,
+            createdAt: new Date().toISOString(),
+          };
+          
+          return prev.map(t => {
+            if (t.id !== threadId) return t;
+            return {
+              ...t,
+              comments: [...t.comments, reviewerComment],
+            };
+          });
+        });
+        
+        const next = new Set(currentAwaiting);
+        next.delete(threadId);
+        return next;
+      });
+    }, responseDelay);
+  }, [replyInputs, threads, levelModifiers.autoResolveMinorOnResponse, levelModifiers.feedbackTone, onCommentSubmit, onThreadResolve, getReviewerFollowUpMessage]);
   
   const handleResolve = useCallback((threadId: string) => {
     setThreads(prev => prev.map(thread => 
@@ -423,6 +543,7 @@ export function PRReviewPanel({
               uiConfig={uiConfig}
               levelModifiers={levelModifiers}
               showExampleResponse={levelModifiers.showExampleResponses}
+              isAwaitingResponse={awaitingResponse.has(thread.id)}
             />
           ))}
         </div>
@@ -483,6 +604,7 @@ export function PRReviewPanel({
                   levelModifiers={levelModifiers}
                   showExampleResponse={levelModifiers.showExampleResponses}
                   showCodeSnippet={uiConfig.inlineComments}
+                  isAwaitingResponse={awaitingResponse.has(thread.id)}
                 />
               ))}
             </div>
@@ -509,6 +631,7 @@ export function PRReviewPanel({
             levelModifiers={levelModifiers}
             showExampleResponse={levelModifiers.showExampleResponses}
             compact
+            isAwaitingResponse={awaitingResponse.has(thread.id)}
           />
         ))}
       </div>
@@ -725,6 +848,7 @@ interface ThreadCardProps {
   showExampleResponse?: boolean;
   showCodeSnippet?: boolean;
   compact?: boolean;
+  isAwaitingResponse?: boolean;
 }
 
 function ThreadCard({
@@ -740,6 +864,7 @@ function ThreadCard({
   showExampleResponse,
   showCodeSnippet = true,
   compact = false,
+  isAwaitingResponse = false,
 }: ThreadCardProps) {
   const isResolved = thread.status === 'resolved';
   
@@ -790,6 +915,11 @@ function ThreadCard({
                 <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
                   <Check className="h-3 w-3 mr-1" />
                   Resolved
+                </Badge>
+              ) : isAwaitingResponse ? (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs animate-pulse">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Awaiting response
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-xs">Open</Badge>
