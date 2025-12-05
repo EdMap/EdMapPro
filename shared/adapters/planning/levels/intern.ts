@@ -148,14 +148,6 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
             personaRole: 'QA Engineer',
             phase: 'discussion',
             message: `Agreed on the timezone fix. And I'd suggest we look at TICK-004 too - that null check in the payment flow is a risk. Both are quick wins at 2-3 points each.`
-          },
-          {
-            personaId: 'priya',
-            personaName: 'Priya',
-            personaRole: 'Product Manager',
-            phase: 'discussion',
-            message: `Good thinking. {{userName}}, looking at the backlog, is there anything that stands out to you or any questions about the items?`,
-            requiresUserResponse: true
           }
         ]
       },
@@ -190,7 +182,7 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
     selectionGuidance: {
       mode: 'autoAssign',
       suggestedItemIds: ['TICK-001', 'TICK-004'],
-      confirmationPrompt: `Based on our discussion, I've gone ahead and selected TICK-001 (timezone bug) and TICK-004 (payment null check) for the sprint - these are the items the team recommended as priorities. Does that look good to you, {{userName}}? You can adjust the selection in the backlog panel if you'd like.`,
+      confirmationPrompt: `Good thinking, team. I've selected TICK-001 and TICK-004 based on what Marcus and Alex recommended - you can see them highlighted in the backlog panel. {{userName}}, any questions about these items before we dig into the details?`,
       visualCueCopy: 'Items selected by team',
       backlogPanelHighlight: true
     }
