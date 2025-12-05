@@ -140,7 +140,7 @@ export function TicketWorkspace({
   }, [role, level]);
 
   const { data: ticket, isLoading, error } = useQuery<SprintTicket>({
-    queryKey: ['/api/tickets', ticketId],
+    queryKey: [`/api/tickets/${ticketId}`],
     enabled: !!ticketId,
   });
 
@@ -151,7 +151,7 @@ export function TicketWorkspace({
       return apiRequest('PATCH', `/api/tickets/${ticketId}`, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tickets', ticketId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
     },
   });
@@ -161,7 +161,7 @@ export function TicketWorkspace({
       return apiRequest('PATCH', `/api/tickets/${ticketId}/move`, { newStatus });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tickets', ticketId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
     },
     onError: (error: any) => {
