@@ -128,6 +128,38 @@ The PR Review system follows the same adapter architecture pattern, providing le
 - `revision_cycles`: Tracks change request iterations
 - `pr_review_events`: Audit log for review activities
 
+### Sprint Review System
+The Sprint Review system (`shared/adapters/review/`) provides role-aware, level-adjusted sprint review ceremonies:
+
+**Sprint Review Adapter Types** (`shared/adapters/review/types.ts`):
+- `SprintReviewConfig`: Merged config with demoConfig, feedbackConfig, prompts, uiConfig, evaluation
+- `RoleReviewConfig`: Base config per role with stakeholder personas, demo scripts, prompts
+- `LevelReviewOverlay`: Level-specific adjustments (demo format, feedback tone, UI)
+- `StakeholderPersona`: Extends AIPersona with expertise, feedbackStyle, focusAreas
+- `DemoConfig`: Demo format (guided/prompted/freeform), script steps, timing
+- `FeedbackConfig`: Stakeholder list, sentiment distribution, acknowledgement settings
+
+**Merge Precedence**: `getSprintReviewAdapter(role, level)` follows defaults → role → level.
+
+**Level-Specific Sprint Review Experience**:
+| Level | Demo Format | Script Visible | Timer | Feedback Tone | Feedback Distribution |
+|-------|-------------|----------------|-------|---------------|----------------------|
+| Intern | guided | Yes + hints | Hidden | encouraging | 70% positive |
+| Junior | prompted | Yes | Hidden | constructive | 50% positive, 25% suggestion |
+| Mid | prompted | No | Visible | direct | 40% positive, 30% suggestion |
+| Senior | freeform | No | Visible | challenging | 25% positive, 35% suggestion |
+
+**Role-Specific Stakeholders**:
+- **Developer**: Engineering Manager, Tech Lead, QA Lead, Product Owner
+- **PM**: VP of Product, Director of Engineering, Customer Success, Design Lead
+
+**Features**:
+- Dynamic demo script based on completed tickets
+- AI-generated stakeholder feedback (with fallback)
+- Acknowledgement tracking for feedback
+- Sprint goal achievement display
+- Transition to Retrospective phase
+
 ## External Dependencies
 
 ### AI Services
