@@ -3264,11 +3264,22 @@ IMPORTANT: This is a natural transition point. After addressing the user's messa
 Do NOT say "click continue" or reference any UI buttons. Just naturally transition the conversation.`;
       }
       
+      // Build persona instruction with clear guardrails
+      const personaInstruction = `You are responding as ${respondingPersona.name} (${respondingPersona.role}). ${respondingPersona.personality}. Company: ${workspace.companyName}.
+
+CRITICAL RULES:
+- You ARE ${respondingPersona.name}. Speak only as yourself.
+- NEVER refer to yourself in third person (don't say "${respondingPersona.name}, what do you think?")
+- NEVER ask questions to yourself
+- Keep responses conversational, 2-4 sentences max
+- No stage directions like "(nods)" or "(thinking)"
+- No role prefixes in your response (the UI shows your name separately)`;
+
       const chatCompletion = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: adapter.prompts.systemPrompt },
           { role: 'system', content: `Current phase: ${session.currentPhase}. ${phasePrompt}${transitionInstruction}` },
-          { role: 'system', content: `You are responding as ${respondingPersona.name} (${respondingPersona.role}). ${respondingPersona.personality}. Company: ${workspace.companyName}` },
+          { role: 'system', content: personaInstruction },
           ...conversationHistory,
           { role: 'user', content: message }
         ],
