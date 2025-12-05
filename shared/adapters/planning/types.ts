@@ -78,6 +78,7 @@ export interface SprintPlanningAdapter {
   evaluation: PlanningEvaluation;
   engagement: LevelEngagement;
   learningObjectives: PlanningLearningObjectives[];
+  commitmentGuidance: CommitmentGuidance;
 }
 
 export interface RolePlanningAdapter {
@@ -92,6 +93,7 @@ export interface RolePlanningAdapter {
   difficulty: Partial<PlanningDifficulty>;
   evaluation: Partial<PlanningEvaluation>;
   learningObjectives: PlanningLearningObjectives[];
+  commitmentGuidance: CommitmentGuidance;
 }
 
 export type EngagementMode = 'shadow' | 'guided' | 'active' | 'facilitator';

@@ -3372,15 +3372,13 @@ CRITICAL RULES:
             .replace(/\{\{userRole\}\}/g, userRole);
         };
         
-        // Handle commitment guidance for commitment phase (auto-set goal for developer roles where AI is facilitator)
-        const commitmentGuidance = adapter.engagement?.commitmentGuidance;
+        // Handle commitment guidance for commitment phase
+        // Auto-set goal for developer roles (AI PM defines goal), user-defined for PM roles
+        const commitmentGuidance = adapter.commitmentGuidance;
         if (nextPhase === 'commitment' && commitmentGuidance?.mode === 'autoSet' && commitmentGuidance.suggestedGoal) {
-          // Only auto-set if AI is the facilitator (not PM role)
-          if (adapter.prompts.facilitator === 'ai') {
-            await storage.updatePlanningSession(session.id, {
-              goalStatement: commitmentGuidance.suggestedGoal,
-            });
-          }
+          await storage.updatePlanningSession(session.id, {
+            goalStatement: commitmentGuidance.suggestedGoal,
+          });
         }
         
         // Handle selection guidance for discussion phase (auto-assign items for interns)

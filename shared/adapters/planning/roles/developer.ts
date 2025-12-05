@@ -139,7 +139,12 @@ Be encouraging. Keep your response to 2-4 sentences. Only speak as yourself.`,
         'Ask questions before committing, not after'
       ]
     }
-  ]
+  ],
+  
+  commitmentGuidance: {
+    mode: 'autoSet',
+    suggestedGoal: 'Improve payment reliability and fix user-facing timezone issues'
+  }
 };
 
 export const qaPlanningAdapter: RolePlanningAdapter = {

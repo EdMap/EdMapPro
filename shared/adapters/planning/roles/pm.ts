@@ -138,5 +138,9 @@ Be supportive but ensure the commitment is realistic.`,
         'Leave room for questions before committing'
       ]
     }
-  ]
+  ],
+  
+  commitmentGuidance: {
+    mode: 'userDefined'
+  }
 };

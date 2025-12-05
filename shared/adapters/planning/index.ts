@@ -161,7 +161,8 @@ export function getSprintPlanningAdapter(role: Role, level: Level): SprintPlanni
     difficulty: mergeDifficulty(roleAdapter.difficulty, levelOverlay.difficultyOverrides),
     evaluation: mergeEvaluation(roleAdapter.evaluation, levelOverlay.evaluationOverrides),
     engagement,
-    learningObjectives: roleAdapter.learningObjectives
+    learningObjectives: roleAdapter.learningObjectives,
+    commitmentGuidance: roleAdapter.commitmentGuidance
   };
 }
 

@@ -190,10 +190,6 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
       visualCueCopy: 'Items selected by team',
       backlogPanelHighlight: true,
       nextStepHint: 'Review selected items, then click Continue when ready'
-    },
-    commitmentGuidance: {
-      mode: 'autoSet',
-      suggestedGoal: 'Improve payment reliability and fix user-facing timezone issues'
     }
   },
   
