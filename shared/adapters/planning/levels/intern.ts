@@ -186,7 +186,14 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
           }
         ]
       }
-    ]
+    ],
+    selectionGuidance: {
+      mode: 'autoAssign',
+      suggestedItemIds: ['TICK-001', 'TICK-004'],
+      confirmationPrompt: `Based on our discussion, I've gone ahead and selected TICK-001 (timezone bug) and TICK-004 (payment null check) for the sprint - these are the items the team recommended as priorities. Does that look good to you, {{userName}}? You can adjust the selection in the backlog panel if you'd like.`,
+      visualCueCopy: 'Items selected by team',
+      backlogPanelHighlight: true
+    }
   },
   
   uiOverrides: {

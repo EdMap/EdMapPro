@@ -216,11 +216,11 @@ function ChatMessage({ message }: { message: PlanningMessage }) {
   
   return (
     <div className={cn(
-      "flex gap-3 mb-4",
+      "flex gap-3.5 mb-5",
       message.isUser && "flex-row-reverse"
     )}>
       <Avatar className={cn(
-        "h-9 w-9 flex-shrink-0 border-2",
+        "h-10 w-10 flex-shrink-0 border-2 shadow-sm",
         message.isUser 
           ? "bg-indigo-100 border-indigo-200" 
           : cn(colorClass.split(' ')[0], "border-white dark:border-gray-700")
@@ -231,13 +231,13 @@ function ChatMessage({ message }: { message: PlanningMessage }) {
         )}>{avatar}</AvatarFallback>
       </Avatar>
       <div className={cn(
-        "max-w-[85%] rounded-xl px-4 py-3 shadow-sm",
+        "max-w-[80%] rounded-2xl px-4 py-3.5 shadow-sm",
         message.isUser 
-          ? "bg-indigo-500 text-white rounded-br-md" 
-          : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-bl-md"
+          ? "bg-indigo-500 text-white rounded-br-sm" 
+          : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-bl-sm"
       )}>
         {!message.isUser && (
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-2">
             <span className={cn("font-semibold text-sm", colorClass.split(' ')[1])}>{message.sender}</span>
             <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 font-normal text-muted-foreground">{message.senderRole}</Badge>
           </div>
@@ -256,13 +256,15 @@ function BacklogPanel({
   selectedItems, 
   capacity, 
   onToggleItem,
-  disabled 
+  disabled,
+  selectionCue
 }: { 
   items: BacklogItem[]; 
   selectedItems: string[]; 
   capacity: number;
   onToggleItem: (id: string) => void;
   disabled?: boolean;
+  selectionCue?: string;
 }) {
   const selectedPoints = items
     .filter(item => selectedItems.includes(item.id))
@@ -281,6 +283,12 @@ function BacklogPanel({
               <CardTitle className="text-sm font-semibold">Sprint Backlog</CardTitle>
               <CardDescription className="text-xs">Select items for this sprint</CardDescription>
             </div>
+            {selectionCue && selectedItems.length > 0 && (
+              <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                {selectionCue}
+              </Badge>
+            )}
           </div>
           <div className="text-right">
             <div className={cn(
@@ -305,7 +313,7 @@ function BacklogPanel({
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full">
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2.5">
             {items.map(item => {
               const Icon = getTypeIcon(item.type);
               const isSelected = selectedItems.includes(item.id);
@@ -319,11 +327,11 @@ function BacklogPanel({
                 <div 
                   key={item.id}
                   className={cn(
-                    "p-4 rounded-xl border-2 transition-all bg-white dark:bg-gray-800",
-                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:shadow-md",
+                    "p-3.5 rounded-lg border transition-all bg-white dark:bg-gray-800",
+                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:shadow-md hover:scale-[1.01]",
                     isSelected 
-                      ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 shadow-sm" 
-                      : "border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+                      ? "border-indigo-400 bg-indigo-50/80 dark:bg-indigo-900/30 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800" 
+                      : "border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
                   )}
                   onClick={handleItemClick}
                   data-testid={`backlog-item-${item.id}`}
@@ -363,10 +371,15 @@ function BacklogPanel({
 function LearningObjectives({ phase, role, level }: { phase: string; role: string; level: string }) {
   const [isExpanded, setIsExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
+      const hasSeenBefore = localStorage.getItem('planning-learning-objectives-seen');
+      if (!hasSeenBefore) {
+        localStorage.setItem('planning-learning-objectives-seen', 'true');
+        return true;
+      }
       const stored = localStorage.getItem('planning-learning-objectives-expanded');
-      return stored === null ? true : stored === 'true';
+      return stored === 'true';
     }
-    return true;
+    return false;
   });
   
   const objectives: Record<string, string[]> = {
@@ -875,8 +888,8 @@ export function PlanningModule({
                   {session.currentPhase === 'commitment' && "Finalize the sprint commitment"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 overflow-hidden p-0 min-h-[300px] bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-gray-800">
-                <ScrollArea className="h-full p-4">
+              <CardContent className="flex-1 overflow-hidden p-0 min-h-[400px] lg:min-h-[450px] bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-gray-800">
+                <ScrollArea className="h-full p-5">
                   {messages.length === 0 && session.currentPhase === 'context' && (
                     <div className="text-center py-8 text-muted-foreground">
                       <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -893,9 +906,21 @@ export function PlanningModule({
                       )}
                     </div>
                   )}
-                  {messages.slice(0, visibleMessageCount).map((msg) => (
-                    <ChatMessage key={msg.id} message={msg} />
-                  ))}
+                  {messages.slice(0, visibleMessageCount).map((msg, index) => {
+                    const prevMsg = index > 0 ? messages[index - 1] : null;
+                    const showSeparator = prevMsg && prevMsg.isUser !== msg.isUser;
+                    
+                    return (
+                      <div key={msg.id}>
+                        {showSeparator && (
+                          <div className="flex items-center gap-3 my-4">
+                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+                          </div>
+                        )}
+                        <ChatMessage message={msg} />
+                      </div>
+                    );
+                  })}
                   {isStaggering && visibleMessageCount < messages.length && (
                     <div className="flex gap-3 mb-5">
                       <Avatar className="h-9 w-9 bg-gray-100 border-2 border-gray-200 flex-shrink-0">
@@ -1042,6 +1067,9 @@ export function PlanningModule({
             capacity={capacity}
             onToggleItem={handleToggleItem}
             disabled={session.currentPhase === 'context'}
+            selectionCue={sessionState?.adapterConfig?.engagement?.selectionGuidance?.mode === 'autoAssign' 
+              ? sessionState?.adapterConfig?.engagement?.selectionGuidance?.visualCueCopy 
+              : undefined}
           />
         </div>
       </div>

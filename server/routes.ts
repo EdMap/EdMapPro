@@ -3363,21 +3363,43 @@ CRITICAL RULES:
         const workspace = await storage.getWorkspaceInstance(workspaceId);
         const user = await storage.getUser(workspace?.userId || 0);
         
+        // Helper to personalize messages
+        const personalize = (text: string) => {
+          const userName = user?.username || 'team member';
+          const userRole = workspace?.role || 'Developer';
+          return text
+            .replace(/\{\{userName\}\}/g, userName)
+            .replace(/\{\{userRole\}\}/g, userRole);
+        };
+        
+        // Handle selection guidance for discussion phase (auto-assign items for interns)
+        const selectionGuidance = adapter.engagement?.selectionGuidance;
+        if (nextPhase === 'discussion' && selectionGuidance?.mode === 'autoAssign' && selectionGuidance.suggestedItemIds) {
+          // Get backlog items and validate suggested IDs exist
+          const backlogItems = (session.backlogItems as Array<{ id: string; points: number }>) || [];
+          const validSuggestedIds = selectionGuidance.suggestedItemIds.filter(
+            suggestedId => backlogItems.some(item => item.id === suggestedId)
+          );
+          
+          if (validSuggestedIds.length > 0) {
+            // Calculate actual capacity used from selected item points
+            const capacityUsed = backlogItems
+              .filter(item => validSuggestedIds.includes(item.id))
+              .reduce((sum, item) => sum + (item.points || 0), 0);
+            
+            await storage.updatePlanningSession(session.id, {
+              selectedItems: validSuggestedIds,
+              capacityUsed,
+            });
+          }
+        }
+        
         // Get the transition sequence for this phase from the adapter
         const transitionSequence = adapter.engagement?.phaseTransitionSequences?.find(
           seq => seq.phase === nextPhase
         );
         
         if (transitionSequence && transitionSequence.steps.length > 0) {
-          // Helper to personalize messages
-          const personalize = (text: string) => {
-            const userName = user?.username || 'team member';
-            const userRole = workspace?.role || 'Developer';
-            return text
-              .replace(/\{\{userName\}\}/g, userName)
-              .replace(/\{\{userRole\}\}/g, userRole);
-          };
-          
           // Insert all messages from the sequence
           for (const step of transitionSequence.steps) {
             await storage.createPlanningMessage({
@@ -3393,6 +3415,18 @@ CRITICAL RULES:
             if (step.requiresUserResponse) {
               break;
             }
+          }
+          
+          // Add selection confirmation message for autoAssign mode in discussion phase
+          if (nextPhase === 'discussion' && selectionGuidance?.mode === 'autoAssign' && selectionGuidance.confirmationPrompt) {
+            await storage.createPlanningMessage({
+              sessionId: session.id,
+              sender: 'Priya',
+              senderRole: 'Product Manager',
+              message: personalize(selectionGuidance.confirmationPrompt),
+              phase: nextPhase,
+              isUser: false,
+            });
           }
         } else {
           // Fallback: simple transition message from Priya

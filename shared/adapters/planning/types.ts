@@ -118,6 +118,16 @@ export interface PhaseTransitionSequence {
   steps: AutoStartStep[];
 }
 
+export type SelectionGuidanceMode = 'autoAssign' | 'prompted' | 'selfManaged';
+
+export interface SelectionGuidance {
+  mode: SelectionGuidanceMode;
+  suggestedItemIds?: string[];
+  confirmationPrompt?: string;
+  visualCueCopy?: string;
+  backlogPanelHighlight?: boolean;
+}
+
 export interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -136,6 +146,7 @@ export interface LevelEngagement {
   autoStartSequence?: AutoStartStep[];
   phaseTransitionSequences?: PhaseTransitionSequence[];
   messageStagger?: MessageStaggerConfig;
+  selectionGuidance?: SelectionGuidance;
 }
 
 export interface LevelPlanningOverlay {
