@@ -3594,7 +3594,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     }
 
     const currentPhase = workspace.currentPhase as WorkspacePhase;
-    const phaseChecklist = this.getPhaseChecklist(currentPhase, workspace, currentSprint);
+    const phaseChecklist = await this.getPhaseChecklist(currentPhase, workspace, currentSprint, workspaceId);
     const nextActions = this.getPhaseNextActions(currentPhase, workspaceId, workspace.currentSprintId);
 
     return {
@@ -3607,11 +3607,12 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     };
   }
 
-  private getPhaseChecklist(
+  private async getPhaseChecklist(
     phase: WorkspacePhase, 
     workspace: WorkspaceInstance,
-    currentSprint: Sprint | null
-  ): { item: string; completed: boolean; required: boolean }[] {
+    currentSprint: Sprint | null,
+    workspaceId: number
+  ): Promise<{ item: string; completed: boolean; required: boolean }[]> {
     switch (phase) {
       case 'onboarding': {
         const onboardingProgress = (workspace.workspaceMetadata as any)?.onboardingProgress;
@@ -3628,13 +3629,21 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
           { item: 'Complete comprehension check', completed: comprehensionComplete, required: true },
         ];
       }
-      case 'planning':
+      case 'planning': {
+        const planningSession = await this.getPlanningSessionByWorkspace(workspaceId);
+        const selectedItems = (planningSession?.selectedItems as string[]) || [];
+        const hasSelectedItems = selectedItems.length > 0;
+        const hasGoal = !!planningSession?.goalStatement;
+        const hasReviewedBacklog = planningSession?.currentPhase !== 'context';
+        const isCommitted = planningSession?.currentPhase === 'commitment' && hasGoal && hasSelectedItems;
+        
         return [
-          { item: 'Review product backlog', completed: false, required: true },
-          { item: 'Select priority items', completed: false, required: true },
-          { item: 'Set sprint goal', completed: !!currentSprint?.goal, required: true },
-          { item: 'Commit to sprint scope', completed: false, required: true },
+          { item: 'Review product backlog', completed: hasReviewedBacklog, required: true },
+          { item: 'Select priority items', completed: hasSelectedItems, required: true },
+          { item: 'Set sprint goal', completed: hasGoal, required: true },
+          { item: 'Commit to sprint scope', completed: isCommitted, required: true },
         ];
+      }
       case 'execution':
         return [
           { item: 'Attend daily standup', completed: false, required: true },
