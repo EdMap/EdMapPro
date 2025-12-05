@@ -30,6 +30,7 @@ interface CodeWorkPanelProps {
   ticketType: string;
   onComplete: () => void;
   isComplete: boolean;
+  isSaving?: boolean;
 }
 
 interface StepStatus {
@@ -44,6 +45,7 @@ export function CodeWorkPanel({
   ticketType,
   onComplete,
   isComplete,
+  isSaving = false,
 }: CodeWorkPanelProps) {
   const [activeTab, setActiveTab] = useState<'buggy' | 'fixed' | 'diff'>('buggy');
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
@@ -377,12 +379,22 @@ export function CodeWorkPanel({
           <div className="pt-2 border-t">
             <Button
               onClick={onComplete}
-              className="w-full gap-2 bg-green-600 hover:bg-green-700"
+              disabled={isSaving}
+              className="w-full gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50"
               data-testid="complete-code-work-btn"
             >
-              <CheckCheck className="w-4 h-4" />
-              Mark Code Work Complete
-              <ArrowRight className="w-4 h-4" />
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCheck className="w-4 h-4" />
+                  Mark Code Work Complete
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </Button>
             {codeWorkConfig.completionMessage && (
               <p className="text-xs text-center text-muted-foreground mt-2">

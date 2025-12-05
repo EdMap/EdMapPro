@@ -1733,6 +1733,7 @@ export type GitEvent = typeof gitEvents.$inferSelect;
 export interface GitTicketState {
   branchName: string | null;
   branchCreatedAt: string | null;
+  codeWorkComplete: boolean;
   commits: {
     hash: string;
     message: string;

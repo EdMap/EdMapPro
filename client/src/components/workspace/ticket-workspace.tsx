@@ -71,6 +71,7 @@ function parseGitState(gitState: unknown): GitTicketState {
   const defaultState: GitTicketState = {
     branchName: null,
     branchCreatedAt: null,
+    codeWorkComplete: false,
     commits: [],
     isPushed: false,
     prCreated: false,
@@ -136,7 +137,8 @@ export function TicketWorkspace({
   const [chatInput, setChatInput] = useState('');
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(true);
-  const [codeWorkComplete, setCodeWorkComplete] = useState(false);
+  const [optimisticCodeWorkComplete, setOptimisticCodeWorkComplete] = useState<boolean | null>(null);
+  const [isCodeWorkSaving, setIsCodeWorkSaving] = useState(false);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
@@ -155,6 +157,8 @@ export function TicketWorkspace({
   }, [ticket?.ticketKey]);
 
   const codeWorkTemplate = backlogItem?.codeWork;
+  
+  const codeWorkComplete = optimisticCodeWorkComplete ?? (gitState.codeWorkComplete || false);
 
   const updateTicket = useMutation({
     mutationFn: async (updates: Partial<SprintTicket>) => {
@@ -189,7 +193,7 @@ export function TicketWorkspace({
 
   const addTerminalLine = useCallback((type: TerminalLine['type'], content: string) => {
     setTerminalLines(prev => [...prev, {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       type,
       content,
       timestamp: new Date(),
@@ -282,6 +286,11 @@ export function TicketWorkspace({
     if (addCommands && addCommands.validPatterns.some(p => p.test(cmd))) {
       if (!gitState.branchName) {
         addTerminalLine('error', "You need to create a feature branch first. Try: git checkout -b feature/tick-001-fix");
+        return;
+      }
+      
+      if (isCodeWorkSaving) {
+        addTerminalLine('error', "Please wait while code work progress is being saved...");
         return;
       }
       
@@ -818,15 +827,38 @@ export function TicketWorkspace({
                 codeWorkTemplate={codeWorkTemplate}
                 ticketTitle={ticket?.title || ''}
                 ticketType={ticket?.type || 'bug'}
-                onComplete={() => {
-                  setCodeWorkComplete(true);
-                  addTerminalLine('success', 'Code work completed! You can now stage your changes with: git add .');
-                  toast({
-                    title: "Code work complete",
-                    description: "Your changes are ready to be staged and committed.",
-                  });
+                onComplete={async () => {
+                  setOptimisticCodeWorkComplete(true);
+                  setIsCodeWorkSaving(true);
+                  
+                  try {
+                    const newGitState: GitTicketState = {
+                      ...gitState,
+                      codeWorkComplete: true,
+                    };
+                    await apiRequest('PATCH', `/api/tickets/${ticketId}`, { gitState: newGitState });
+                    queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
+                    
+                    addTerminalLine('success', 'Code work completed! You can now stage your changes with: git add .');
+                    toast({
+                      title: "Code work complete",
+                      description: "Your changes are ready to be staged and committed.",
+                    });
+                  } catch (err) {
+                    setOptimisticCodeWorkComplete(null);
+                    addTerminalLine('error', 'Failed to save code work progress. Please try again.');
+                    toast({
+                      title: "Error",
+                      description: "Failed to save code work progress.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsCodeWorkSaving(false);
+                  }
                 }}
                 isComplete={codeWorkComplete}
+                isSaving={isCodeWorkSaving}
               />
             </div>
           )}
