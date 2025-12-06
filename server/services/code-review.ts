@@ -160,11 +160,48 @@ function parseReviewResponse(
 }
 
 export class CodeReviewService {
+  private validateRequest(request: CodeReviewRequest): { valid: boolean; error?: string } {
+    if (!request.files || Object.keys(request.files).length === 0) {
+      return { valid: false, error: 'No code files provided for review' };
+    }
+    
+    const hasContent = Object.values(request.files).some(content => 
+      content && content.trim().length > 0
+    );
+    
+    if (!hasContent) {
+      return { valid: false, error: 'All code files are empty' };
+    }
+    
+    return { valid: true };
+  }
+
   async reviewCode(
     request: CodeReviewRequest,
     reviewer: ReviewerPersona,
     levelConfig: LLMReviewLevelConfig
   ): Promise<CodeReviewResponse> {
+    const validation = this.validateRequest(request);
+    if (!validation.valid) {
+      console.log(`[CodeReview] Validation failed: ${validation.error}`);
+      return {
+        success: false,
+        reviewerId: reviewer.id,
+        comments: [{
+          id: `${reviewer.id}-comment-1`,
+          reviewerId: reviewer.id,
+          reviewerName: reviewer.name,
+          reviewerRole: reviewer.role,
+          content: validation.error || 'Unable to review code',
+          severity: 'minor',
+          type: 'suggestion',
+          requiresResponse: false,
+        }],
+        overallAssessment: 'No code available to review.',
+        approvalStatus: 'needs_discussion',
+      };
+    }
+
     if (!process.env.GROQ_API_KEY) {
       console.log('[CodeReview] No GROQ_API_KEY, using mock response');
       return this.createMockResponse(reviewer);

@@ -197,22 +197,29 @@ export function TicketWorkspace({
   // Computed value with fallback for rendering
   const isFullEditorMode = useMonacoEditor ?? (codeExecutionAdapter?.ui.defaultEditorMode === 'full') ?? true;
   
-  const codeFilesForReview = useMemo(() => {
-    if (!ticket?.ticketKey) return {};
+  const [codeFilesForReview, setCodeFilesForReview] = useState<Record<string, string>>({});
+  
+  useEffect(() => {
+    if (!ticket?.ticketKey) return;
     try {
       const storageKey = `edmap-code-${ticket.ticketKey}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed === 'object' && parsed !== null) {
-          return parsed as Record<string, string>;
+          setCodeFilesForReview(parsed as Record<string, string>);
+          return;
         }
       }
     } catch (e) {
       console.error('Failed to load code files for review:', e);
     }
-    return codeExecutionAdapter?.files.starterFiles || {};
+    setCodeFilesForReview(codeExecutionAdapter?.files.starterFiles || {});
   }, [ticket?.ticketKey, codeExecutionAdapter?.files.starterFiles]);
+  
+  const handleCodeFilesChange = useCallback((files: Record<string, string>) => {
+    setCodeFilesForReview(files);
+  }, []);
 
   const reviewPhaseLayout = adapter.uiControls.reviewPhaseLayout || {
     showGitTerminal: true,
@@ -1188,6 +1195,7 @@ Time:        0.842s`;
                     externalRunTests={triggerExternalTests}
                     onExternalRunTestsComplete={() => setTriggerExternalTests(false)}
                     onTestResult={handleTestResult}
+                    onFilesChange={handleCodeFilesChange}
                     hideSubmitButton={true}
                   />
                 </div>
@@ -1258,6 +1266,7 @@ Time:        0.842s`;
                   externalRunTests={triggerExternalTests}
                   onExternalRunTestsComplete={() => setTriggerExternalTests(false)}
                   onTestResult={handleTestResult}
+                  onFilesChange={handleCodeFilesChange}
                   hideSubmitButton={true}
                 />
               </div>

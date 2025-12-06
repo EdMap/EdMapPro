@@ -135,14 +135,16 @@ export function CodeEditorPanel({
   }, [analyzeCodeMutation]);
   
   const handleReset = useCallback(() => {
-    setFiles(adapter.files.starterFiles);
+    const starterFiles = adapter.files.starterFiles;
+    setFiles(starterFiles);
     setLastResult(null);
+    onFilesChange?.(starterFiles);
     try {
       localStorage.removeItem(storageKey);
     } catch (e) {
       console.error('Failed to clear saved code:', e);
     }
-  }, [adapter.files.starterFiles, storageKey]);
+  }, [adapter.files.starterFiles, storageKey, onFilesChange]);
   
   const handleRequestHint = useCallback(() => {
     if (adapter.scaffolding.hintLevel === 'never') return;
