@@ -36,9 +36,12 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getSprintExecutionAdapter } from "@shared/adapters";
 import { getBacklogItemById } from "@shared/adapters/planning/backlog-catalogue";
+import { getCodeExecutionAdapter, createCodeChallengeFromBacklog } from "@shared/adapters/code-execution";
 import { CodeWorkPanel } from "./code-work-panel";
+import { CodeEditorPanel } from "./code-editor";
 import { PRReviewPanel } from "./pr-review-panel";
 import type { Role, Level, GitCommand } from "@shared/adapters";
+import type { ExecutionResponse } from "@shared/adapters/code-execution/types";
 import type { SprintTicket, GitTicketState } from "@shared/schema";
 
 interface TicketWorkspaceProps {
@@ -140,6 +143,7 @@ export function TicketWorkspace({
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(true);
   const [optimisticCodeWorkComplete, setOptimisticCodeWorkComplete] = useState<boolean | null>(null);
   const [isCodeWorkSaving, setIsCodeWorkSaving] = useState(false);
+  const [useMonacoEditor, setUseMonacoEditor] = useState(false);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
@@ -190,6 +194,21 @@ export function TicketWorkspace({
   const codeWorkTemplate = backlogItem?.codeWork;
   
   const codeWorkComplete = optimisticCodeWorkComplete ?? (gitState.codeWorkComplete || false);
+
+  const codeExecutionAdapter = useMemo(() => {
+    if (!codeWorkTemplate) return null;
+    
+    const codeChallenge = createCodeChallengeFromBacklog(
+      codeWorkTemplate,
+      backlogItem?.acceptanceCriteria || []
+    );
+    
+    return getCodeExecutionAdapter({
+      role: role as Role,
+      level: level as Level,
+      codeChallenge,
+    });
+  }, [codeWorkTemplate, backlogItem?.acceptanceCriteria, role, level]);
 
   const updateTicket = useMutation({
     mutationFn: async (updates: Partial<SprintTicket>) => {
@@ -862,45 +881,108 @@ Time:        0.842s`;
 
         <main className="flex-1 flex flex-col">
           {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && !codeWorkComplete && (
-            <div className="p-4 border-b bg-amber-50/30 dark:bg-amber-950/10">
-              <CodeWorkPanel
-                codeWorkConfig={adapter.codeWorkConfig}
-                codeWorkTemplate={codeWorkTemplate}
-                ticketTitle={ticket?.title || ''}
-                ticketType={ticket?.type || 'bug'}
-                onComplete={async () => {
-                  setOptimisticCodeWorkComplete(true);
-                  setIsCodeWorkSaving(true);
-                  
-                  try {
-                    const newGitState: GitTicketState = {
-                      ...gitState,
-                      codeWorkComplete: true,
-                    };
-                    await apiRequest('PATCH', `/api/tickets/${ticketId}`, { gitState: newGitState });
-                    queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
-                    queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
-                    
-                    addTerminalLine('success', 'Code work completed! Run "npm test" to verify your fix, then stage with: git add .');
-                    toast({
-                      title: "Code work complete",
-                      description: "Run npm test to verify, then stage and commit your changes.",
-                    });
-                  } catch (err) {
-                    setOptimisticCodeWorkComplete(null);
-                    addTerminalLine('error', 'Failed to save code work progress. Please try again.');
-                    toast({
-                      title: "Error",
-                      description: "Failed to save code work progress.",
-                      variant: "destructive",
-                    });
-                  } finally {
-                    setIsCodeWorkSaving(false);
-                  }
-                }}
-                isComplete={codeWorkComplete}
-                isSaving={isCodeWorkSaving}
-              />
+            <div className={cn(
+              "border-b",
+              useMonacoEditor ? "flex-1 overflow-hidden" : "p-4 bg-amber-50/30 dark:bg-amber-950/10"
+            )}>
+              <div className="flex items-center justify-end gap-2 px-4 py-2 border-b bg-muted/20">
+                <span className="text-xs text-muted-foreground mr-2">Editor Mode:</span>
+                <Button
+                  size="sm"
+                  variant={!useMonacoEditor ? "secondary" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => setUseMonacoEditor(false)}
+                  data-testid="button-simple-mode"
+                >
+                  Simple
+                </Button>
+                <Button
+                  size="sm"
+                  variant={useMonacoEditor ? "secondary" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => setUseMonacoEditor(true)}
+                  data-testid="button-monaco-mode"
+                >
+                  Full Editor
+                </Button>
+              </div>
+              
+              {!useMonacoEditor ? (
+                <div className="p-4">
+                  <CodeWorkPanel
+                    codeWorkConfig={adapter.codeWorkConfig}
+                    codeWorkTemplate={codeWorkTemplate}
+                    ticketTitle={ticket?.title || ''}
+                    ticketType={ticket?.type || 'bug'}
+                    onComplete={async () => {
+                      setOptimisticCodeWorkComplete(true);
+                      setIsCodeWorkSaving(true);
+                      
+                      try {
+                        const newGitState: GitTicketState = {
+                          ...gitState,
+                          codeWorkComplete: true,
+                        };
+                        await apiRequest('PATCH', `/api/tickets/${ticketId}`, { gitState: newGitState });
+                        queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
+                        queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
+                        
+                        addTerminalLine('success', 'Code work completed! Run "npm test" to verify your fix, then stage with: git add .');
+                        toast({
+                          title: "Code work complete",
+                          description: "Run npm test to verify, then stage and commit your changes.",
+                        });
+                      } catch (err) {
+                        setOptimisticCodeWorkComplete(null);
+                        addTerminalLine('error', 'Failed to save code work progress. Please try again.');
+                        toast({
+                          title: "Error",
+                          description: "Failed to save code work progress.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsCodeWorkSaving(false);
+                      }
+                    }}
+                    isComplete={codeWorkComplete}
+                    isSaving={isCodeWorkSaving}
+                  />
+                </div>
+              ) : codeExecutionAdapter && (
+                <div className="flex-1 h-[500px]">
+                  <CodeEditorPanel
+                    adapter={codeExecutionAdapter}
+                    ticketId={ticket?.ticketKey || String(ticketId)}
+                    onSubmit={async (files, result) => {
+                      if (result.overallPass) {
+                        setOptimisticCodeWorkComplete(true);
+                        setIsCodeWorkSaving(true);
+                        
+                        try {
+                          const newGitState: GitTicketState = {
+                            ...gitState,
+                            codeWorkComplete: true,
+                          };
+                          await apiRequest('PATCH', `/api/tickets/${ticketId}`, { gitState: newGitState });
+                          queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/sprints', sprintId, 'tickets'] });
+                          
+                          addTerminalLine('success', 'All tests passed! Code submitted successfully.');
+                          toast({
+                            title: "Code submitted",
+                            description: "All tests passed. Your code has been submitted.",
+                          });
+                        } catch (err) {
+                          setOptimisticCodeWorkComplete(null);
+                          addTerminalLine('error', 'Failed to save code work progress. Please try again.');
+                        } finally {
+                          setIsCodeWorkSaving(false);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 

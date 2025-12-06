@@ -4001,6 +4001,59 @@ isFirstResponse ?
     }
   });
 
+  // ============================================================================
+  // Code Analysis Endpoint (LLM-Simulated Execution)
+  // ============================================================================
+  
+  app.post("/api/analyze-code", async (req, res) => {
+    try {
+      const { codeAnalysisService } = await import("./services/code-analysis");
+      
+      const analyzeCodeSchema = z.object({
+        ticketId: z.string(),
+        files: z.record(z.string()),
+        testCases: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string(),
+          input: z.string().optional(),
+          expectedOutput: z.string().optional(),
+          assertions: z.array(z.string()),
+          hidden: z.boolean(),
+        })),
+        language: z.enum(['typescript', 'javascript', 'python', 'cpp']),
+        userLevel: z.enum(['intern', 'junior', 'mid', 'senior']),
+        userRole: z.enum(['developer', 'pm', 'qa', 'devops', 'data_science']),
+      });
+      
+      const input = analyzeCodeSchema.parse(req.body);
+      
+      const result = await codeAnalysisService.analyzeCode(input);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to analyze code:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to analyze code" });
+    }
+  });
+  
+  app.get("/api/code-execution/provider", async (req, res) => {
+    try {
+      const { codeAnalysisService } = await import("./services/code-analysis");
+      const info = codeAnalysisService.getProviderInfo();
+      res.json(info);
+    } catch (error) {
+      console.error("Failed to get provider info:", error);
+      res.status(500).json({ message: "Failed to get provider info" });
+    }
+  });
+
   // Helper function for fallback Sarah responses
   function getFallbackSarahResponse(messageCount: number, offerNextSteps: boolean): string {
     if (offerNextSteps || messageCount >= 3) {
