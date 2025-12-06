@@ -144,6 +144,8 @@ export function TicketWorkspace({
   const [optimisticCodeWorkComplete, setOptimisticCodeWorkComplete] = useState<boolean | null>(null);
   const [isCodeWorkSaving, setIsCodeWorkSaving] = useState(false);
   const [useMonacoEditor, setUseMonacoEditor] = useState(false);
+  const [triggerExternalTests, setTriggerExternalTests] = useState(false);
+  const [lastTestResult, setLastTestResult] = useState<ExecutionResponse | null>(null);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
@@ -250,6 +252,45 @@ export function TicketWorkspace({
     }]);
   }, []);
 
+  const handleTestResult = useCallback((result: ExecutionResponse) => {
+    setLastTestResult(result);
+    
+    const passed = result.testResults.filter(t => t.passed).length;
+    const failed = result.testResults.filter(t => !t.passed).length;
+    const total = result.testResults.length;
+    
+    if (result.allPassed) {
+      let output = `\nPASS  All tests passed!\n\n`;
+      result.testResults.forEach(test => {
+        output += `  ✓ ${test.name} (${Math.floor(Math.random() * 10 + 2)}ms)\n`;
+      });
+      output += `\nTest Suites: 1 passed, 1 total\n`;
+      output += `Tests:       ${passed} passed, ${total} total\n`;
+      output += `Time:        ${(Math.random() * 0.5 + 0.3).toFixed(3)}s`;
+      addTerminalLine('success', output);
+      addTerminalLine('hint', 'All tests passing! Now stage your changes with: git add .');
+    } else {
+      let output = `\nFAIL  Some tests failed\n\n`;
+      result.testResults.forEach(test => {
+        if (test.passed) {
+          output += `  ✓ ${test.name} (${Math.floor(Math.random() * 10 + 2)}ms)\n`;
+        } else {
+          output += `  ✕ ${test.name} (${Math.floor(Math.random() * 15 + 5)}ms)\n`;
+          if (test.error) {
+            output += `    Error: ${test.error}\n`;
+          }
+        }
+      });
+      output += `\nTest Suites: 1 failed, 1 total\n`;
+      output += `Tests:       ${failed} failed, ${passed} passed, ${total} total`;
+      addTerminalLine('error', output);
+      
+      if (result.feedback) {
+        addTerminalLine('hint', `AI Feedback: ${result.feedback}`);
+      }
+    }
+  }, [addTerminalLine]);
+
   const getNextGitStep = useCallback((): GitCommand | null => {
     if (!adapter.gitWorkflow.commands.length) return null;
     
@@ -293,30 +334,35 @@ export function TicketWorkspace({
       
       addTerminalLine('output', '\n> Running tests...\n');
       
-      setTimeout(() => {
-        if (!codeWorkComplete) {
-          const defaultFailingOutput = `FAIL  src/utils/dateUtils.test.ts
+      if (useMonacoEditor && codeExecutionAdapter) {
+        setTriggerExternalTests(true);
+        addTerminalLine('info', 'Analyzing your code with AI...');
+      } else {
+        setTimeout(() => {
+          if (!codeWorkComplete) {
+            const defaultFailingOutput = `FAIL  src/utils/dateUtils.test.ts
   ✕ formatTransactionDate should use user timezone (12ms)
   ✕ formatTimestamp should respect locale settings (8ms)
 
 Test Suites: 1 failed, 1 total
 Tests:       2 failed, 0 passed, 2 total`;
-          const failingOutput = codeWorkTemplate?.testOutput?.failing || defaultFailingOutput;
-          addTerminalLine('error', failingOutput);
-          addTerminalLine('hint', 'The tests are failing because the bug hasn\'t been fixed yet. Review and apply the fix in the Code Work panel above, then run npm test again.');
-        } else {
-          const defaultTestOutput = `PASS  src/utils/dateUtils.test.ts
+            const failingOutput = codeWorkTemplate?.testOutput?.failing || defaultFailingOutput;
+            addTerminalLine('error', failingOutput);
+            addTerminalLine('hint', 'The tests are failing because the bug hasn\'t been fixed yet. Review and apply the fix in the Code Work panel above, then run npm test again.');
+          } else {
+            const defaultTestOutput = `PASS  src/utils/dateUtils.test.ts
   ✓ formatTransactionDate should use user timezone (5ms)
   ✓ formatTimestamp should respect locale settings (3ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       2 passed, 2 total
 Time:        0.842s`;
-          const testOutput = codeWorkTemplate?.testOutput?.passing || defaultTestOutput;
-          addTerminalLine('success', testOutput);
-          addTerminalLine('hint', 'All tests passing! Now stage your changes with: git add .');
-        }
-      }, 1500);
+            const testOutput = codeWorkTemplate?.testOutput?.passing || defaultTestOutput;
+            addTerminalLine('success', testOutput);
+            addTerminalLine('hint', 'All tests passing! Now stage your changes with: git add .');
+          }
+        }, 1500);
+      }
       return;
     }
     
@@ -1007,6 +1053,9 @@ Time:        0.842s`;
                         }
                       }
                     }}
+                    externalRunTests={triggerExternalTests}
+                    onExternalRunTestsComplete={() => setTriggerExternalTests(false)}
+                    onTestResult={handleTestResult}
                   />
                 </div>
               )}

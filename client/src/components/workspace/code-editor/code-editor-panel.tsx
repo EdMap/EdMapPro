@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,10 @@ interface CodeEditorPanelProps {
   chatMessages?: ChatMessage[];
   onSendChat?: (message: string) => void;
   unreadChatCount?: number;
+  onFilesChange?: (files: Record<string, string>) => void;
+  onTestResult?: (result: ExecutionResponse) => void;
+  externalRunTests?: boolean;
+  onExternalRunTestsComplete?: () => void;
 }
 
 export function CodeEditorPanel({ 
@@ -52,6 +56,10 @@ export function CodeEditorPanel({
   chatMessages = [],
   onSendChat,
   unreadChatCount = 0,
+  onFilesChange,
+  onTestResult,
+  externalRunTests = false,
+  onExternalRunTestsComplete,
 }: CodeEditorPanelProps) {
   const [files, setFiles] = useState<Record<string, string>>(adapter.files.starterFiles);
   const [activeFile, setActiveFile] = useState<string>(Object.keys(adapter.files.starterFiles)[0] || '');
@@ -75,14 +83,29 @@ export function CodeEditorPanel({
     },
     onSuccess: (result) => {
       setLastResult(result);
+      onTestResult?.(result);
     },
   });
+
+  useEffect(() => {
+    if (externalRunTests && !analyzeCodeMutation.isPending) {
+      analyzeCodeMutation.mutate(undefined, {
+        onSettled: () => {
+          onExternalRunTestsComplete?.();
+        }
+      });
+    }
+  }, [externalRunTests]);
   
   const handleEditorChange = useCallback((value: string | undefined) => {
     if (value !== undefined && activeFile) {
-      setFiles(prev => ({ ...prev, [activeFile]: value }));
+      setFiles(prev => {
+        const newFiles = { ...prev, [activeFile]: value };
+        onFilesChange?.(newFiles);
+        return newFiles;
+      });
     }
-  }, [activeFile]);
+  }, [activeFile, onFilesChange]);
   
   const handleRunTests = useCallback(() => {
     analyzeCodeMutation.mutate();
