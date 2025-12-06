@@ -955,7 +955,8 @@ Time:        0.842s`;
         </aside>
 
         <main className="flex-1 flex flex-col">
-          {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && !codeWorkComplete && (
+          {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && 
+           (!codeWorkComplete || (useMonacoEditor && !gitState.prCreated)) && (
             <div className={cn(
               "border-b",
               useMonacoEditor ? "flex-1 overflow-hidden" : "p-4 bg-amber-50/30 dark:bg-amber-950/10"
