@@ -37,6 +37,8 @@ import type {
   PRReviewModifiers,
   ReviewThread as AdapterReviewThread,
   ReviewThreadComment,
+  ConceptExplanation,
+  PRReviewKnowledgeBase,
 } from "@shared/adapters/execution/types";
 
 interface PRReviewPanelProps {
@@ -145,6 +147,66 @@ function extractIssueKeywords(ticket: TicketContext): string[] {
   }
   
   return keywords.length > 0 ? keywords : ['general'];
+}
+
+function extractQuestionConcept(
+  userMessage: string, 
+  previousComment: string,
+  knowledgeBase?: PRReviewKnowledgeBase
+): ConceptExplanation | null {
+  if (!knowledgeBase?.concepts) return null;
+  
+  const lowerMessage = userMessage.toLowerCase();
+  const lowerPrevious = previousComment.toLowerCase();
+  const combinedContext = `${lowerMessage} ${lowerPrevious}`;
+  
+  // First, try to find an exact match from the user's question
+  for (const concept of knowledgeBase.concepts) {
+    // Check concept name
+    if (lowerMessage.includes(concept.concept.toLowerCase())) {
+      return concept;
+    }
+    // Check aliases
+    for (const alias of concept.aliases) {
+      if (lowerMessage.includes(alias.toLowerCase())) {
+        return concept;
+      }
+    }
+  }
+  
+  // If no match in user message, check the previous reviewer comment for context
+  for (const concept of knowledgeBase.concepts) {
+    if (lowerPrevious.includes(concept.concept.toLowerCase())) {
+      return concept;
+    }
+    for (const alias of concept.aliases) {
+      if (lowerPrevious.includes(alias.toLowerCase())) {
+        return concept;
+      }
+    }
+  }
+  
+  return null;
+}
+
+function formatConceptResponse(
+  concept: ConceptExplanation,
+  reviewer: ReviewerPersona,
+  includeExample: boolean = true
+): string {
+  let response = concept.explanation;
+  
+  // Add code example if available and appropriate
+  if (includeExample && concept.codeExample) {
+    response += `\n\n\`\`\`javascript\n${concept.codeExample}\n\`\`\``;
+  }
+  
+  // Add QA-specific angle for Alex or QA roles
+  if (concept.qaAngle && (reviewer.id === 'alex' || reviewer.role.toLowerCase().includes('qa'))) {
+    response += `\n\n${concept.qaAngle}`;
+  }
+  
+  return response;
 }
 
 function generateInitialThreads(
