@@ -70,6 +70,14 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
       highlightUnresolved: false,
       showRevisionHistory: true,
     },
+    llmReviewConfig: {
+      explanationDepth: 'concise',
+      includeCodeExamples: false,
+      includeWhyExplanations: false,
+      assumeKnowledgeLevel: 'expert',
+      toneModifier: 'Engage as a peer. Discuss trade-offs and architectural implications. Challenge assumptions. Be brief but thorough on complex topics.',
+      maxCommentsPerReviewer: 5,
+    },
   },
   
   uiOverrides: {

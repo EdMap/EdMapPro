@@ -70,6 +70,14 @@ export const midExecutionOverlay: LevelExecutionOverlay = {
       highlightUnresolved: true,
       showRevisionHistory: true,
     },
+    llmReviewConfig: {
+      explanationDepth: 'concise',
+      includeCodeExamples: false,
+      includeWhyExplanations: false,
+      assumeKnowledgeLevel: 'advanced',
+      toneModifier: 'Be direct and professional. Assume they know the fundamentals. Focus on team standards and architectural concerns.',
+      maxCommentsPerReviewer: 4,
+    },
   },
   
   uiOverrides: {

@@ -132,12 +132,24 @@ export interface PRReviewKnowledgeBase {
   concepts: ConceptExplanation[];
 }
 
+export interface ReviewerPromptConfig {
+  systemPrompt: string;
+  reviewPrompt: string;
+  focusInstructions: string[];
+  severityGuidelines: {
+    blocking: string;
+    major: string;
+    minor: string;
+  };
+}
+
 export interface ReviewerPersona extends AIPersona {
   expertise: string[];
   reviewStyle: 'thorough' | 'balanced' | 'quick';
   focusAreas: string[];
   typicalCommentCount: number;
   responsePatterns?: ReviewerResponsePatterns;
+  promptConfig?: ReviewerPromptConfig;
 }
 
 export interface ReviewThreadComment {
@@ -276,6 +288,16 @@ export interface PRReviewModifiers {
   minorResponseBehavior: MinorResponseBehavior;
   requireExplicitApprovalRequest: boolean;
   uiOverrides: Partial<PRReviewUIConfig>;
+  llmReviewConfig: LLMReviewLevelConfig;
+}
+
+export interface LLMReviewLevelConfig {
+  explanationDepth: 'detailed' | 'moderate' | 'concise';
+  includeCodeExamples: boolean;
+  includeWhyExplanations: boolean;
+  assumeKnowledgeLevel: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  toneModifier: string;
+  maxCommentsPerReviewer: number;
 }
 
 export type LayoutMode = 'two-column' | 'stacked' | 'focus-code' | 'focus-terminal';

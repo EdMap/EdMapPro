@@ -70,6 +70,14 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
       highlightUnresolved: true,
       showRevisionHistory: true,
     },
+    llmReviewConfig: {
+      explanationDepth: 'moderate',
+      includeCodeExamples: true,
+      includeWhyExplanations: true,
+      assumeKnowledgeLevel: 'intermediate',
+      toneModifier: 'Be supportive but push for growth. Explain the reasoning behind suggestions. Treat them as a capable developer who is still learning team patterns.',
+      maxCommentsPerReviewer: 3,
+    },
   },
   
   uiOverrides: {

@@ -64,6 +64,14 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
       highlightUnresolved: true,
       showRevisionHistory: false,
     },
+    llmReviewConfig: {
+      explanationDepth: 'detailed',
+      includeCodeExamples: true,
+      includeWhyExplanations: true,
+      assumeKnowledgeLevel: 'beginner',
+      toneModifier: 'Be encouraging and patient. Explain concepts as if teaching someone new to professional development. Use simple language and provide context for why things matter.',
+      maxCommentsPerReviewer: 2,
+    },
   },
   
   uiOverrides: {
