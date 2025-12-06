@@ -261,6 +261,33 @@ If the update is vague, gently ask for more detail. If it's good, acknowledge br
         expertise: ['architecture', 'code-patterns', 'performance'],
         reviewStyle: 'thorough',
         focusAreas: ['code structure', 'naming', 'maintainability'],
+        responsePatterns: {
+          clarification: [
+            "Good question! Let me break this down - {context}. The key thing to focus on is the pattern here, not just the fix.",
+            "Sure, happy to clarify. What I'm suggesting is {context}. This follows our team's standard approach for maintainability.",
+            "Ah, I should have been clearer. The issue is about {context}. Think of it as future-proofing the code.",
+          ],
+          question: [
+            "That's a great question to ask! {context}. Understanding the 'why' will help you spot similar patterns elsewhere.",
+            "Good thinking! The reason is {context}. This is actually a common pattern you'll see across our codebase.",
+            "I like that you're asking why. {context}. It's this kind of curiosity that makes code reviews valuable.",
+          ],
+          willFix: [
+            "Sounds good! Take your time with it. Feel free to ping me if you run into any issues.",
+            "Great, thanks! No rush - just request a re-review when you've pushed the changes.",
+            "Perfect. I'll keep an eye out for the update. Let me know if you want to pair on it.",
+          ],
+          acknowledgment: [
+            "Thanks for addressing this. You can resolve the thread when ready, or ping me if you need another look.",
+            "Got it. Mark this as resolved when you're done, or let me know if you want me to take another look.",
+            "Noted! Feel free to close this out or push an update for re-review.",
+          ],
+          approval: [
+            "This looks great now. Nice work on the refactor!",
+            "Much better! The code is cleaner and more maintainable. Good job.",
+            "Excellent work. This is exactly what I was hoping for.",
+          ],
+        },
       },
       {
         id: 'alex',
@@ -272,6 +299,33 @@ If the update is vague, gently ask for more detail. If it's good, acknowledge br
         expertise: ['testing', 'edge-cases', 'error-handling'],
         reviewStyle: 'balanced',
         focusAreas: ['test coverage', 'error handling', 'validation'],
+        responsePatterns: {
+          clarification: [
+            "Sure! The edge case I'm worried about is {context}. We've seen this cause issues in production before.",
+            "Let me explain - {context}. From a QA perspective, these are the scenarios that tend to slip through.",
+            "Good catch asking. The concern is {context}. I'd want to see a test covering this specifically.",
+          ],
+          question: [
+            "Good question! {context}. I've seen bugs like this in the wild, so it's worth handling explicitly.",
+            "The reason is {context}. Our test suite should catch this, but defensive coding is always good.",
+            "From a testing standpoint, {context}. Better to handle it now than debug it in prod.",
+          ],
+          willFix: [
+            "Perfect, thanks! Make sure to add a test case for this scenario too if you can.",
+            "Great! Consider adding an edge case test when you push the fix.",
+            "Sounds good. A quick unit test for this would be awesome if time permits.",
+          ],
+          acknowledgment: [
+            "Thanks! Resolve when ready. If you added test coverage, even better!",
+            "Got it. Close this out when addressed - bonus points for test coverage.",
+            "Noted. Mark resolved when done, and let me know if you want me to review the test approach.",
+          ],
+          approval: [
+            "Looks solid! The edge cases are handled well now.",
+            "Nice fix! This should prevent the issue from happening in prod.",
+            "Good work. The error handling is much more robust now.",
+          ],
+        },
       },
     ],
     baseUIConfig: {

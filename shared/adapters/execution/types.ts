@@ -112,11 +112,20 @@ export interface PRReviewComment {
 
 export type ReviewPhase = 'awaiting_review' | 'in_review' | 'changes_requested' | 'approved' | 'merged';
 
+export interface ReviewerResponsePatterns {
+  clarification: string[];
+  question: string[];
+  willFix: string[];
+  acknowledgment: string[];
+  approval: string[];
+}
+
 export interface ReviewerPersona extends AIPersona {
   expertise: string[];
   reviewStyle: 'thorough' | 'balanced' | 'quick';
   focusAreas: string[];
   typicalCommentCount: number;
+  responsePatterns?: ReviewerResponsePatterns;
 }
 
 export interface ReviewThreadComment {

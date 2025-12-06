@@ -911,6 +911,46 @@ export function PRReviewPanel({
     const issueContext = thread.issueContext || 'code implementation';
     const tone = levelModifiers.feedbackTone;
     
+    // Find the reviewer persona from adapter config
+    const reviewerPersona = reviewers.find(r => r.id === thread.reviewerId);
+    const reviewerPatterns = reviewerPersona?.responsePatterns;
+    
+    // Helper to fill in context placeholder and pick random response
+    const fillAndPick = (templates: string[]): string => {
+      const template = templates[Math.floor(Math.random() * templates.length)];
+      return template.replace('{context}', issueContext);
+    };
+    
+    // If reviewer has specific patterns, use those for a personalized response
+    if (reviewerPatterns) {
+      let responses: string[];
+      let shouldResolve = false;
+      
+      switch (intent) {
+        case 'clarification-request':
+          responses = reviewerPatterns.clarification;
+          break;
+        case 'question':
+          responses = reviewerPatterns.question;
+          break;
+        case 'will-fix':
+          responses = reviewerPatterns.willFix;
+          break;
+        case 'acknowledgment':
+        default:
+          responses = reviewerPatterns.acknowledgment;
+          shouldResolve = thread.severity === 'minor' && levelModifiers.autoResolveMinorOnResponse;
+          break;
+      }
+      
+      return {
+        response: fillAndPick(responses),
+        shouldResolve,
+      };
+    }
+    
+    // Fallback to tone-based responses if no reviewer patterns
+    
     const clarificationResponses: Record<string, Record<string, string[]>> = {
       educational: {
         'null check implementation': [
@@ -1042,7 +1082,7 @@ export function PRReviewPanel({
       response: responses[Math.floor(Math.random() * responses.length)],
       shouldResolve,
     };
-  }, [levelModifiers.feedbackTone, levelModifiers.autoResolveMinorOnResponse]);
+  }, [levelModifiers.feedbackTone, levelModifiers.autoResolveMinorOnResponse, reviewers]);
   
   const handleReply = useCallback((threadId: string) => {
     const content = replyInputs[threadId]?.trim();
