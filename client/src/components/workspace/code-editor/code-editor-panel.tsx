@@ -73,14 +73,29 @@ interface CodeEditorPanelProps {
 }
 
 export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanelProps) {
-  const layout = adapter.ui.layout ?? defaultLayout;
+  const layout = useMemo(() => {
+    const adapterLayout = adapter.ui.layout;
+    if (!adapterLayout) return defaultLayout;
+    return {
+      ...defaultLayout,
+      ...adapterLayout,
+      responsiveBreakpoints: {
+        ...defaultLayout.responsiveBreakpoints,
+        ...adapterLayout.responsiveBreakpoints,
+      },
+      zenModeConfig: {
+        ...defaultLayout.zenModeConfig,
+        ...adapterLayout.zenModeConfig,
+      },
+    };
+  }, [adapter.ui.layout]);
   
   const [files, setFiles] = useState<Record<string, string>>(adapter.files.starterFiles);
   const [activeFile, setActiveFile] = useState<string>(Object.keys(adapter.files.starterFiles)[0] || '');
   const [lastResult, setLastResult] = useState<ExecutionResponse | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [showHint, setShowHint] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(layout.sidebarDefaultCollapsed);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(layout.sidebarDefaultCollapsed ?? false);
   const [testsExpanded, setTestsExpanded] = useState(true);
   const [outputExpanded, setOutputExpanded] = useState(true);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -93,9 +108,9 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  const isCompactMode = windowWidth < layout.responsiveBreakpoints.compactToolbar;
-  const isZenMode = windowWidth < layout.responsiveBreakpoints.zenMode;
-  const shouldAutoCollapseSidebar = windowWidth < layout.responsiveBreakpoints.collapseSidebar;
+  const isCompactMode = windowWidth < (layout.responsiveBreakpoints?.compactToolbar ?? 768);
+  const isZenMode = windowWidth < (layout.responsiveBreakpoints?.zenMode ?? 640);
+  const shouldAutoCollapseSidebar = windowWidth < (layout.responsiveBreakpoints?.collapseSidebar ?? 1024);
   
   useEffect(() => {
     if (shouldAutoCollapseSidebar && !sidebarCollapsed) {
@@ -161,16 +176,16 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
   const totalTests = lastResult?.testResults.length || adapter.testCases.length;
   
   const editorFontSize = isZenMode
-    ? adapter.editor.fontSize + layout.zenModeConfig.increaseFontSize
+    ? adapter.editor.fontSize + (layout.zenModeConfig?.increaseFontSize ?? 2)
     : adapter.editor.fontSize;
   
-  const showMinimap = isZenMode && layout.zenModeConfig.hideMinimap
+  const showMinimap = isZenMode && (layout.zenModeConfig?.hideMinimap ?? true)
     ? false
     : adapter.editor.minimap;
   
-  const toolbarStyle = layout.toolbarStyle;
-  const primaryActions = layout.primaryActions;
-  const secondaryActions = layout.secondaryActions;
+  const toolbarStyle = layout.toolbarStyle ?? 'full';
+  const primaryActions = layout.primaryActions ?? ['run', 'submit'];
+  const secondaryActions = layout.secondaryActions ?? ['reset', 'hint', 'format'];
   
   const hasSecondaryActions = secondaryActions.some(action => {
     if (action === 'hint') return adapter.scaffolding.hintLevel !== 'never';
@@ -244,7 +259,7 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
             </DropdownMenu>
           )}
           
-          {layout.sidebarCollapsible && (
+          {(layout.sidebarCollapsible ?? true) && (
             <Button
               size="sm"
               variant="ghost"
@@ -269,7 +284,7 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
             minSize={50}
           >
             <div className="flex h-full">
-              {layout.fileNavigator === 'vertical' && fileNames.length > 1 && (
+              {(layout.fileNavigator ?? 'tabs') === 'vertical' && fileNames.length > 1 && (
                 <div className="w-10 border-r bg-muted/20 flex flex-col items-center py-2 gap-1">
                   {fileNames.map(fileName => (
                     <Button
@@ -288,7 +303,7 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
               )}
               
               <div className="flex-1 flex flex-col">
-                {layout.fileNavigator === 'tabs' && fileNames.length > 1 && (
+                {(layout.fileNavigator ?? 'tabs') === 'tabs' && fileNames.length > 1 && (
                   <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/20 overflow-x-auto">
                     {fileNames.map(fileName => (
                       <Button
@@ -435,7 +450,7 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
         </div>
       )}
       
-      {layout.showStatusBar && lastResult && (
+      {(layout.showStatusBar ?? true) && lastResult && (
         <div className="border-t px-3 py-1.5 bg-muted/30 flex items-center justify-between text-xs">
           <div className="flex items-center gap-3">
             <span className="text-muted-foreground">
