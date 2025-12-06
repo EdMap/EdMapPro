@@ -38,7 +38,7 @@ export const juniorCodeExecutionOverlay: LevelCodeExecutionOverlay = {
     layoutMode: 'side-by-side',
     defaultEditorMode: 'full',
     showHintPanel: true,
-    toolbarActions: ['format', 'reset'],
+    toolbarActions: [],
   },
   
   starterCodeTransform: (code: string) => {

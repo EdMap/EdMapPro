@@ -38,7 +38,7 @@ export const midCodeExecutionOverlay: LevelCodeExecutionOverlay = {
     layoutMode: 'side-by-side',
     defaultEditorMode: 'full',
     showHintPanel: false,
-    toolbarActions: ['format', 'reset'],
+    toolbarActions: [],
   },
   
   starterCodeTransform: (code: string) => {

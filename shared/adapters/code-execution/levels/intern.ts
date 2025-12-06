@@ -39,7 +39,7 @@ export const internCodeExecutionOverlay: LevelCodeExecutionOverlay = {
     layoutMode: 'stacked',
     defaultEditorMode: 'full',
     showHintPanel: true,
-    toolbarActions: ['format', 'reset'],
+    toolbarActions: [],
     panelSizes: {
       editor: 50,
       tests: 25,

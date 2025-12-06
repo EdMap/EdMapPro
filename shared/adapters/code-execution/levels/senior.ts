@@ -40,7 +40,7 @@ export const seniorCodeExecutionOverlay: LevelCodeExecutionOverlay = {
     defaultEditorMode: 'full',
     showHintPanel: false,
     showFileTree: true,
-    toolbarActions: ['format', 'reset'],
+    toolbarActions: [],
     panelSizes: {
       editor: 70,
       tests: 15,
