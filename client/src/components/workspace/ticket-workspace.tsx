@@ -967,24 +967,66 @@ Time:        0.842s`;
 
         <main className="flex-1 flex flex-col">
           {adapter.codeWorkConfig.enabled && codeWorkTemplate && !gitState.branchName && (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="max-w-md text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <GitBranch className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Pre-branch terminal view - uses adapter's gitWorkflow for instructions */}
+              <div className="flex-1 flex flex-col bg-gray-900">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+                  <div className="flex items-center gap-2 text-white">
+                    <Terminal className="h-4 w-4" />
+                    <span className="text-sm font-medium">Terminal</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-amber-400 border-amber-400/50 text-xs">
+                      Step 1: {adapter.gitWorkflow.commands.find(c => c.id === 'branch')?.instruction || 'Create branch'}
+                    </Badge>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold">Create a Feature Branch</h3>
-                <p className="text-muted-foreground">
-                  Before you can start coding, you need to create a feature branch for this ticket.
-                  This is a standard practice in professional development workflows.
-                </p>
-                <div className="bg-gray-900 rounded-lg p-4 text-left">
-                  <code className="text-green-400 text-sm font-mono">
-                    git checkout -b feature/{ticket.ticketKey.toLowerCase()}
+                
+                {/* Instruction banner from adapter */}
+                <div className="px-4 py-3 bg-amber-900/30 border-b border-amber-700/50">
+                  <p className="text-amber-200 text-sm">
+                    {adapter.gitWorkflow.commands.find(c => c.id === 'branch')?.hint || 'Use git checkout -b with a descriptive branch name'}
+                  </p>
+                  <code className="text-green-400 text-sm font-mono mt-1 block">
+                    git checkout -b feature/{ticket.ticketKey.toLowerCase()}-fix
                   </code>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Use the terminal in the sidebar or Quick Actions to create your branch.
-                </p>
+                
+                <div 
+                  ref={terminalRef}
+                  className="flex-1 p-4 font-mono text-sm overflow-y-auto"
+                  onClick={() => terminalInputRef.current?.focus()}
+                >
+                  {terminalLines.map((line) => (
+                    <div
+                      key={line.id}
+                      className={cn(
+                        "whitespace-pre-wrap mb-1",
+                        line.type === 'command' && "text-green-400",
+                        line.type === 'output' && "text-gray-300",
+                        line.type === 'error' && "text-red-400",
+                        line.type === 'hint' && "text-yellow-400",
+                        line.type === 'success' && "text-green-300"
+                      )}
+                    >
+                      {line.content}
+                    </div>
+                  ))}
+                  <form onSubmit={handleTerminalSubmit} className="flex items-center mt-2">
+                    <span className="text-green-400 mr-2">$</span>
+                    <input
+                      ref={terminalInputRef}
+                      type="text"
+                      value={currentCommand}
+                      onChange={(e) => setCurrentCommand(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      className="flex-1 bg-transparent text-white outline-none"
+                      placeholder="Type git checkout -b feature/..."
+                      autoFocus
+                      data-testid="input-terminal-prebranch"
+                    />
+                  </form>
+                </div>
               </div>
             </div>
           )}
