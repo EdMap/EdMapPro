@@ -143,7 +143,7 @@ export function TicketWorkspace({
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(true);
   const [optimisticCodeWorkComplete, setOptimisticCodeWorkComplete] = useState<boolean | null>(null);
   const [isCodeWorkSaving, setIsCodeWorkSaving] = useState(false);
-  const [useMonacoEditor, setUseMonacoEditor] = useState(true);
+  const [useMonacoEditor, setUseMonacoEditor] = useState<boolean | null>(null);
   const [triggerExternalTests, setTriggerExternalTests] = useState(false);
   const [lastTestResult, setLastTestResult] = useState<ExecutionResponse | null>(null);
 
@@ -159,34 +159,6 @@ export function TicketWorkspace({
   const gitState = useMemo(() => parseGitState(ticket?.gitState), [ticket?.gitState]);
   
   const isInReviewPhase = gitState.prCreated && !gitState.isMerged;
-  
-  const reviewPhaseLayout = adapter.uiControls.reviewPhaseLayout || {
-    showGitTerminal: true,
-    showTeamChat: true,
-    showQuickActions: true,
-    panelWidth: 'standard',
-    terminalCollapsible: false,
-  };
-  
-  const shouldShowTerminal = !useMonacoEditor && (isInReviewPhase 
-    ? reviewPhaseLayout.showGitTerminal 
-    : adapter.uiControls.showGitTerminal);
-  
-  const shouldShowTeamChat = !useMonacoEditor && (isInReviewPhase 
-    ? reviewPhaseLayout.showTeamChat 
-    : adapter.uiControls.showTeamChat);
-  
-  const shouldShowQuickActions = isInReviewPhase 
-    ? reviewPhaseLayout.showQuickActions 
-    : adapter.uiControls.allowShortcutButtons;
-  
-  const reviewPanelWidthClass = isInReviewPhase 
-    ? reviewPhaseLayout.panelWidth === 'full' 
-      ? 'max-w-none' 
-      : reviewPhaseLayout.panelWidth === 'wide' 
-        ? 'max-w-4xl' 
-        : 'max-w-3xl'
-    : '';
 
   const backlogItem = useMemo(() => {
     if (!ticket?.ticketKey) return undefined;
@@ -211,6 +183,45 @@ export function TicketWorkspace({
       codeChallenge,
     });
   }, [codeWorkTemplate, backlogItem?.acceptanceCriteria, role, level]);
+
+  // Sync editor mode from adapter config (respects adapter architecture)
+  useEffect(() => {
+    if (codeExecutionAdapter && useMonacoEditor === null) {
+      const defaultMode = codeExecutionAdapter.ui.defaultEditorMode;
+      setUseMonacoEditor(defaultMode === 'full');
+    }
+  }, [codeExecutionAdapter, useMonacoEditor]);
+
+  // Computed value with fallback for rendering
+  const isFullEditorMode = useMonacoEditor ?? (codeExecutionAdapter?.ui.defaultEditorMode === 'full') ?? true;
+  
+  const reviewPhaseLayout = adapter.uiControls.reviewPhaseLayout || {
+    showGitTerminal: true,
+    showTeamChat: true,
+    showQuickActions: true,
+    panelWidth: 'standard',
+    terminalCollapsible: false,
+  };
+  
+  const shouldShowTerminal = !isFullEditorMode && (isInReviewPhase 
+    ? reviewPhaseLayout.showGitTerminal 
+    : adapter.uiControls.showGitTerminal);
+  
+  const shouldShowTeamChat = !isFullEditorMode && (isInReviewPhase 
+    ? reviewPhaseLayout.showTeamChat 
+    : adapter.uiControls.showTeamChat);
+  
+  const shouldShowQuickActions = isInReviewPhase 
+    ? reviewPhaseLayout.showQuickActions 
+    : adapter.uiControls.allowShortcutButtons;
+  
+  const reviewPanelWidthClass = isInReviewPhase 
+    ? reviewPhaseLayout.panelWidth === 'full' 
+      ? 'max-w-none' 
+      : reviewPhaseLayout.panelWidth === 'wide' 
+        ? 'max-w-4xl' 
+        : 'max-w-3xl'
+    : '';
 
   const updateTicket = useMutation({
     mutationFn: async (updates: Partial<SprintTicket>) => {
@@ -348,7 +359,7 @@ export function TicketWorkspace({
       
       addTerminalLine('output', '\n> Running tests...\n');
       
-      if (useMonacoEditor && codeExecutionAdapter) {
+      if (isFullEditorMode && codeExecutionAdapter) {
         setTriggerExternalTests(true);
         addTerminalLine('info', 'Analyzing your code with AI...');
       } else {
@@ -440,7 +451,7 @@ Time:        0.842s`;
         return;
       }
       
-      if (useMonacoEditor && codeExecutionAdapter) {
+      if (isFullEditorMode && codeExecutionAdapter) {
         if (!lastTestResult) {
           addTerminalLine('error', "Run tests first before staging. Use: npm test");
           addTerminalLine('hint', "Tests verify your code is correct before you commit.");
@@ -955,17 +966,40 @@ Time:        0.842s`;
         </aside>
 
         <main className="flex-1 flex flex-col">
+          {adapter.codeWorkConfig.enabled && codeWorkTemplate && !gitState.branchName && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="max-w-md text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <GitBranch className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h3 className="text-lg font-semibold">Create a Feature Branch</h3>
+                <p className="text-muted-foreground">
+                  Before you can start coding, you need to create a feature branch for this ticket.
+                  This is a standard practice in professional development workflows.
+                </p>
+                <div className="bg-gray-900 rounded-lg p-4 text-left">
+                  <code className="text-green-400 text-sm font-mono">
+                    git checkout -b feature/{ticket.ticketKey.toLowerCase()}
+                  </code>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use the terminal in the sidebar or Quick Actions to create your branch.
+                </p>
+              </div>
+            </div>
+          )}
+          
           {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && 
-           (!codeWorkComplete || (useMonacoEditor && !gitState.prCreated)) && (
+           (!codeWorkComplete || (isFullEditorMode && !gitState.prCreated)) && (
             <div className={cn(
               "border-b",
-              useMonacoEditor ? "flex-1 overflow-hidden" : "p-4 bg-amber-50/30 dark:bg-amber-950/10"
+              isFullEditorMode ? "flex-1 overflow-hidden" : "p-4 bg-amber-50/30 dark:bg-amber-950/10"
             )}>
               <div className="flex items-center justify-end gap-2 px-4 py-2 border-b bg-muted/20">
                 <span className="text-xs text-muted-foreground mr-2">Editor Mode:</span>
                 <Button
                   size="sm"
-                  variant={!useMonacoEditor ? "secondary" : "ghost"}
+                  variant={!isFullEditorMode ? "secondary" : "ghost"}
                   className="h-7 text-xs"
                   onClick={() => setUseMonacoEditor(false)}
                   data-testid="button-simple-mode"
@@ -974,7 +1008,7 @@ Time:        0.842s`;
                 </Button>
                 <Button
                   size="sm"
-                  variant={useMonacoEditor ? "secondary" : "ghost"}
+                  variant={isFullEditorMode ? "secondary" : "ghost"}
                   className="h-7 text-xs"
                   onClick={() => setUseMonacoEditor(true)}
                   data-testid="button-monaco-mode"
@@ -983,7 +1017,7 @@ Time:        0.842s`;
                 </Button>
               </div>
               
-              {!useMonacoEditor ? (
+              {!isFullEditorMode ? (
                 <div className="p-4">
                   <CodeWorkPanel
                     codeWorkConfig={adapter.codeWorkConfig}
