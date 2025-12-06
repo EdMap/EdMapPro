@@ -921,12 +921,18 @@ export function PRReviewPanel({
     const questionPatterns = [
       /\?$/,
       /^(what|why|how|when|where|which|who|could you|can you|would you|should i|do you|is it|are you|does this)/i,
-      /not sure (about|if|whether|why)/i,
+      /what (is|are|does|do|was|were)/i,
+      /not sure (about|if|whether|why|i'm|i am)/i,
+      /not familiar/i,
+      /unfamiliar with/i,
       /confused about/i,
       /don't understand/i,
       /what do you mean/i,
       /can you explain/i,
+      /could you explain/i,
       /could you clarify/i,
+      /explain.*(to me|this|that|what|how|why)/i,
+      /i don't know (what|how|why)/i,
     ];
     
     const willFixPatterns = [
@@ -972,10 +978,51 @@ export function PRReviewPanel({
   ): { response: string; shouldResolve: boolean } => {
     const issueContext = thread.issueContext || 'code implementation';
     const tone = levelModifiers.feedbackTone;
+    const knowledgeBase = prReviewConfig.knowledgeBase;
     
     // Find the reviewer persona from adapter config
     const reviewerPersona = reviewers.find(r => r.id === thread.reviewerId);
     const reviewerPatterns = reviewerPersona?.responsePatterns;
+    
+    // Get the last reviewer comment to understand what the user might be asking about
+    const lastReviewerComment = thread.comments
+      .filter(c => !c.isUser)
+      .pop()?.content || '';
+    
+    // For questions and clarification requests, try to find a concept explanation
+    if ((intent === 'question' || intent === 'clarification-request') && reviewerPersona) {
+      const concept = extractQuestionConcept(userMessage, lastReviewerComment, knowledgeBase);
+      
+      if (concept) {
+        // We found a concept - generate a helpful explanation
+        const explanation = formatConceptResponse(concept, reviewerPersona, true);
+        
+        // Add a reviewer-specific intro based on their personality
+        let intro = '';
+        if (reviewerPersona.id === 'marcus') {
+          const intros = [
+            "Great question! Let me explain:\n\n",
+            "Good that you're asking! Here's the breakdown:\n\n",
+            "Happy to clarify! So here's the thing:\n\n",
+          ];
+          intro = intros[Math.floor(Math.random() * intros.length)];
+        } else if (reviewerPersona.id === 'alex') {
+          const intros = [
+            "Sure! From a quality perspective:\n\n",
+            "Good question! Here's why this matters:\n\n",
+            "Let me explain - this is actually important:\n\n",
+          ];
+          intro = intros[Math.floor(Math.random() * intros.length)];
+        } else {
+          intro = "Good question! ";
+        }
+        
+        return {
+          response: intro + explanation,
+          shouldResolve: false,
+        };
+      }
+    }
     
     // Helper to fill in context placeholder and pick random response
     const fillAndPick = (templates: string[]): string => {
@@ -1144,7 +1191,7 @@ export function PRReviewPanel({
       response: responses[Math.floor(Math.random() * responses.length)],
       shouldResolve,
     };
-  }, [levelModifiers.feedbackTone, levelModifiers.autoResolveMinorOnResponse, reviewers]);
+  }, [levelModifiers.feedbackTone, levelModifiers.autoResolveMinorOnResponse, reviewers, prReviewConfig.knowledgeBase]);
   
   const handleReply = useCallback((threadId: string) => {
     const content = replyInputs[threadId]?.trim();
