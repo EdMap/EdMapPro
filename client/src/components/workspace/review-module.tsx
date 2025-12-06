@@ -226,18 +226,25 @@ export function ReviewModule({
 
   const completePhase = useMutation({
     mutationFn: async () => {
-      return apiRequest('PATCH', `/api/workspaces/${workspaceId}/phase`, {
-        newPhase: 'retro' as WorkspacePhase,
-        status: 'completed',
+      // First save final review progress to metadata
+      await apiRequest('PATCH', `/api/workspaces/${workspaceId}/metadata`, {
+        reviewProgress: {
+          demoComplete: true,
+          feedbackComplete: true,
+          demoNotes,
+          feedbackReceived: generatedFeedback.length,
+          completedTickets: completedTickets.map(t => t.id),
+          totalPoints,
+        }
+      });
+      
+      // Then advance to next phase using the standard advance endpoint
+      return apiRequest('POST', `/api/workspaces/${workspaceId}/advance`, {
         payload: {
           demoNotes,
           feedbackReceived: generatedFeedback.length,
           completedTickets: completedTickets.map(t => t.id),
           totalPoints,
-          reviewProgress: {
-            demoComplete: true,
-            feedbackComplete: true,
-          }
         }
       });
     },

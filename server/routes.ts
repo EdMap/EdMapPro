@@ -2973,6 +2973,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/workspaces/:workspaceId/phase - Update workspace phase directly
+  app.patch("/api/workspaces/:workspaceId/phase", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const { newPhase, status, payload } = req.body;
+      
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      // Update the workspace phase
+      const updated = await storage.updateWorkspaceInstance(workspaceId, {
+        currentPhase: newPhase,
+      });
+      
+      // Also update metadata with any payload data
+      if (payload) {
+        const existingMetadata = (workspace.workspaceMetadata as Record<string, unknown>) || {};
+        await storage.updateWorkspaceInstance(workspaceId, {
+          workspaceMetadata: { ...existingMetadata, ...payload },
+        });
+      }
+      
+      // Record the phase event
+      await storage.createWorkspacePhaseEvent({
+        workspaceId,
+        phase: newPhase,
+        sprintId: workspace.currentSprintId,
+        status: status || 'completed',
+        payload: payload || {},
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Failed to update workspace phase:", error);
+      res.status(500).json({ message: "Failed to update workspace phase" });
+    }
+  });
+
   // POST /api/workspaces/:workspaceId/advance - Advance to next phase
   app.post("/api/workspaces/:workspaceId/advance", async (req, res) => {
     try {
