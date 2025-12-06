@@ -137,6 +137,9 @@ Help students go from **Intern → Junior Ready** by exposing them to real-world
 | **Layout Config System** | Adapter-driven responsive layouts | `shared/adapters/execution/types.ts` |
 | **Sprint Review** | Role-aware demo with AI stakeholder feedback | `shared/adapters/review/`, `client/src/components/workspace/review-module.tsx` |
 | **Sprint Retrospective** | Level-adjusted facilitation with sprint context | `shared/adapters/retro/`, `client/src/components/workspace/retro-module.tsx` |
+| **Monaco Code Editor** | Embedded code editor with syntax highlighting | `client/src/components/workspace/code-editor/code-editor-panel.tsx` |
+| **LLM Code Execution** | AI-powered code analysis and test simulation | `server/services/code-analysis.ts`, `shared/adapters/code-execution/` |
+| **Code Execution Adapters** | Role/level-based scaffolding for code challenges | `shared/adapters/code-execution/` |
 
 ### 🔄 Partially Implemented
 
@@ -149,8 +152,6 @@ Help students go from **Intern → Junior Ready** by exposing them to real-world
 
 | Feature | Description |
 |---------|-------------|
-| **Real Code Editor** | Embedded Monaco editor for actual code writing |
-| **LLM-Simulated Execution** | AI analyzes code and simulates test results |
 | **Portfolio System** | Collect work samples, shareable profile |
 | **Graduation Flow** | Final 1:1, badge award, exit experience |
 | **Language Adapters** | C/C++, Python problem templates |
@@ -234,7 +235,7 @@ The `LayoutConfig` interface provides adapter-driven UI control:
 
 ---
 
-## Code Execution System (Planned)
+## Code Execution System (Implemented)
 
 > **Architecture Doc**: See `docs/CODE_EXECUTION_ARCHITECTURE.md` for full technical details.
 
@@ -331,12 +332,12 @@ Branch → Code Work → npm test → Stage → Commit → Push → PR → Revie
 2. ~~Wire up Sprint Retro ceremony (reflection and action items)~~ ✅
 3. Enable sprint cycling (complete retro → start next sprint) - *partial*
 
-### P1: Real Code Editor & LLM Execution
-1. Embed Monaco editor in TicketWorkspace
-2. Create code analysis API endpoint with LLM simulation
-3. Extend backlog catalogue with code challenges
-4. Level-based editor scaffolding (templates → empty)
-5. Integrate simulated test results with PR Review
+### ✅ P1: Real Code Editor & LLM Execution (DONE)
+1. ~~Embed Monaco editor in TicketWorkspace~~ ✅
+2. ~~Create code analysis API endpoint with LLM simulation~~ ✅
+3. ~~Extend backlog catalogue with code challenges~~ ✅
+4. ~~Level-based editor scaffolding (templates → empty)~~ ✅
+5. Integrate simulated test results with PR Review - *partial*
 
 ### P2: Enhanced Execution
 1. PR review flow in TicketWorkspace (partially complete)
