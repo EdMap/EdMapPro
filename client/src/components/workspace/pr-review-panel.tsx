@@ -851,6 +851,199 @@ export function PRReviewPanel({
     return severityMessages[Math.floor(Math.random() * severityMessages.length)];
   }, [levelModifiers.feedbackTone]);
   
+  type UserMessageIntent = 'question' | 'acknowledgment' | 'will-fix' | 'clarification-request';
+  
+  const analyzeUserMessageIntent = useCallback((message: string): UserMessageIntent => {
+    const lowerMessage = message.toLowerCase().trim();
+    
+    const questionPatterns = [
+      /\?$/,
+      /^(what|why|how|when|where|which|who|could you|can you|would you|should i|do you|is it|are you|does this)/i,
+      /not sure (about|if|whether|why)/i,
+      /confused about/i,
+      /don't understand/i,
+      /what do you mean/i,
+      /can you explain/i,
+      /could you clarify/i,
+    ];
+    
+    const willFixPatterns = [
+      /i('ll| will) (fix|update|change|modify|address|implement|add|remove)/i,
+      /let me (fix|update|change|modify|address|implement|add|remove)/i,
+      /going to (fix|update|change|modify|address)/i,
+      /will (make|do|push|commit) (that|this|the)/i,
+      /i('ll| will) (push|commit|update)/i,
+      /make (that|this|the) change/i,
+      /update (the|my) code/i,
+      /working on (it|this|that)/i,
+      /on it/i,
+    ];
+    
+    const clarificationPatterns = [
+      /what (exactly|specifically)/i,
+      /which (file|line|part|section)/i,
+      /where (should|do|is)/i,
+      /could you (point|show|be more specific)/i,
+      /can you give.*example/i,
+      /not sure what you mean/i,
+    ];
+    
+    if (clarificationPatterns.some(p => p.test(lowerMessage))) {
+      return 'clarification-request';
+    }
+    
+    if (questionPatterns.some(p => p.test(lowerMessage))) {
+      return 'question';
+    }
+    
+    if (willFixPatterns.some(p => p.test(lowerMessage))) {
+      return 'will-fix';
+    }
+    
+    return 'acknowledgment';
+  }, []);
+  
+  const getIntelligentFollowUp = useCallback((
+    thread: SimulatedThread, 
+    userMessage: string, 
+    intent: UserMessageIntent
+  ): { response: string; shouldResolve: boolean } => {
+    const issueContext = thread.issueContext || 'code implementation';
+    const tone = levelModifiers.feedbackTone;
+    
+    const clarificationResponses: Record<string, Record<string, string[]>> = {
+      educational: {
+        'null check implementation': [
+          `Great question! The null check should go at the top of the function, before you access any properties. For example:\n\`\`\`\nif (!customer?.cart) return null;\n\`\`\`\nThis prevents the crash when cart is undefined.`,
+          `I should have been clearer - look at line where you access \`cart.items\`. We need to make sure \`cart\` exists first. Optional chaining (\`?.\`) or an early return both work well here.`,
+        ],
+        'timezone display fix': [
+          `Good question! The timezone should be formatted using \`Intl.DateTimeFormat\`. The key is passing the user's timezone preference as the \`timeZone\` option.`,
+          `Let me clarify - the issue is on the line where you call \`toLocaleString()\`. You need to pass the timezone explicitly rather than relying on the browser default.`,
+        ],
+        'code implementation': [
+          `Good question! Let me explain - the key change needed is to add validation before the operation. This ensures we handle edge cases gracefully.`,
+          `I should clarify - the fix should go in the function where we process the data. Adding a check early prevents issues downstream.`,
+        ],
+      },
+      collaborative: {
+        'null check implementation': [`Sure! Look at line 42 - we need \`if (!cart?.items)\` before accessing the array.`],
+        'timezone display fix': [`Of course! The \`Intl.DateTimeFormat\` API is the way to go - pass \`{ timeZone: userPreference }\` as options.`],
+        'code implementation': [`Happy to clarify - the change should validate the input before processing it.`],
+      },
+      direct: {
+        'null check implementation': [`Line 42 - add \`if (!cart?.items) return;\``],
+        'timezone display fix': [`Use \`Intl.DateTimeFormat\` with the timeZone option.`],
+        'code implementation': [`Add input validation before the main logic.`],
+      },
+      peer: {
+        'null check implementation': [`Ah my bad, wasn't clear. The cart.items access needs a guard - optional chaining or early return.`],
+        'timezone display fix': [`Sure - the Intl.DateTimeFormat with explicit timezone option is what we need here.`],
+        'code implementation': [`Fair point. We need validation before the operation - check the input first.`],
+      },
+    };
+    
+    const questionResponses: Record<string, Record<string, string[]>> = {
+      educational: {
+        'null check implementation': [
+          `That's a thoughtful question! The null check is important because without it, if the data is missing, the app will crash. It's a best practice to always validate before accessing nested properties.`,
+          `Great thinking! Yes, defensive coding like this prevents runtime errors. Even if we "know" the data should exist, external factors (API changes, race conditions) can cause unexpected nulls.`,
+        ],
+        'timezone display fix': [
+          `Excellent question! The reason we use explicit timezone handling is consistency - the same timestamp should display the same way regardless of where the user is located.`,
+          `Good thinking! Browser defaults can vary, so explicitly setting the timezone ensures all users see the correct time for their preference.`,
+        ],
+        'code implementation': [
+          `That's a great question! This pattern helps maintain code quality and prevents bugs from slipping into production.`,
+          `Good thinking! The reason for this approach is maintainability - it makes the code easier to understand and debug.`,
+        ],
+      },
+      collaborative: {
+        'null check implementation': [`Good point! The null check prevents crashes when data is unexpectedly missing.`],
+        'timezone display fix': [`Good question! Explicit timezones ensure consistent display across all user locations.`],
+        'code implementation': [`Good thinking! This approach keeps the code clean and prevents subtle bugs.`],
+      },
+      direct: {
+        'null check implementation': [`Prevents crashes from undefined data.`],
+        'timezone display fix': [`Ensures consistent time display.`],
+        'code implementation': [`Prevents bugs and improves maintainability.`],
+      },
+      peer: {
+        'null check implementation': [`Yeah the null check catches edge cases where the API might return incomplete data.`],
+        'timezone display fix': [`The explicit timezone avoids issues with browser defaults varying.`],
+        'code implementation': [`This pattern is more robust for edge cases we might not anticipate.`],
+      },
+    };
+    
+    const willFixResponses: Record<string, string[]> = {
+      educational: [
+        `Sounds good! Take your time with the changes. Once you've updated the code, you can push a new commit and request a re-review. Let me know if you have any questions while implementing!`,
+        `Perfect! Feel free to reach out if you run into any issues while making the changes. Once you're done, push the update and I'll take another look.`,
+      ],
+      collaborative: [
+        `Awesome, sounds good! Ping me when you've pushed the changes.`,
+        `Great! Let me know when the update is ready for another look.`,
+      ],
+      direct: [
+        `OK. Push the update when ready.`,
+        `Sounds good. Request re-review when done.`,
+      ],
+      peer: [
+        `Cool, just push when you're ready and I'll re-review.`,
+        `Sounds good. No rush - just ping me when it's updated.`,
+      ],
+    };
+    
+    const acknowledgmentResponses: Record<string, string[]> = {
+      educational: [
+        `Thanks for the update! If you've made the change, feel free to mark this as resolved. If you're planning to update the code, push the new commit and request a re-review when ready.`,
+        `Got it! If this is addressed in the current code, you can resolve this thread. Otherwise, let me know when you've pushed the fix!`,
+      ],
+      collaborative: [
+        `Thanks! Resolve this when you've addressed it, or let me know if you need to push an update.`,
+        `Got it! Mark as resolved if it's done, or push the changes for re-review.`,
+      ],
+      direct: [
+        `Noted. Resolve when addressed.`,
+        `OK. Mark resolved or push update.`,
+      ],
+      peer: [
+        `Cool, resolve when you're good or push the update.`,
+        `Sounds good. Close this out when it's addressed.`,
+      ],
+    };
+    
+    let responses: string[];
+    let shouldResolve = false;
+    
+    switch (intent) {
+      case 'clarification-request':
+        const clarificationContext = clarificationResponses[tone] || clarificationResponses.educational;
+        responses = clarificationContext[issueContext] || clarificationContext['code implementation'];
+        shouldResolve = false;
+        break;
+      case 'question':
+        const questionContext = questionResponses[tone] || questionResponses.educational;
+        responses = questionContext[issueContext] || questionContext['code implementation'];
+        shouldResolve = false;
+        break;
+      case 'will-fix':
+        responses = willFixResponses[tone] || willFixResponses.educational;
+        shouldResolve = false;
+        break;
+      case 'acknowledgment':
+      default:
+        responses = acknowledgmentResponses[tone] || acknowledgmentResponses.educational;
+        shouldResolve = thread.severity === 'minor' && levelModifiers.autoResolveMinorOnResponse;
+        break;
+    }
+    
+    return {
+      response: responses[Math.floor(Math.random() * responses.length)],
+      shouldResolve,
+    };
+  }, [levelModifiers.feedbackTone, levelModifiers.autoResolveMinorOnResponse]);
+  
   const handleReply = useCallback((threadId: string) => {
     const content = replyInputs[threadId]?.trim();
     if (!content) return;
@@ -869,9 +1062,10 @@ export function PRReviewPanel({
       createdAt: new Date().toISOString(),
     };
     
-    const shouldAutoResolve = levelModifiers.autoResolveMinorOnResponse && thread.severity === 'minor';
+    const minorBehavior = levelModifiers.minorResponseBehavior || 'manual';
+    const userIntent = analyzeUserMessageIntent(content);
     
-    if (shouldAutoResolve) {
+    if (minorBehavior === 'auto-resolve' && thread.severity === 'minor') {
       setThreads(prev => prev.map(t => {
         if (t.id !== threadId) return t;
         return {
@@ -924,7 +1118,17 @@ export function PRReviewPanel({
             return prev;
           }
           
-          const reviewerResponse = getReviewerFollowUpMessage(currentThread, content);
+          let reviewerResponse: string;
+          let shouldResolveThread = false;
+          
+          if (minorBehavior === 'intelligent-follow-up' || 
+              (minorBehavior === 'manual' && currentThread.severity !== 'minor')) {
+            const followUp = getIntelligentFollowUp(currentThread, content, userIntent);
+            reviewerResponse = followUp.response;
+            shouldResolveThread = followUp.shouldResolve;
+          } else {
+            reviewerResponse = getReviewerFollowUpMessage(currentThread, content);
+          }
           
           const reviewerComment: SimulatedComment = {
             id: `comment-${threadId}-reviewer-${replyTimestamp}`,
@@ -932,16 +1136,21 @@ export function PRReviewPanel({
             authorName: currentThread.reviewerName,
             authorRole: currentThread.reviewerRole,
             content: reviewerResponse,
-            type: 'approval',
+            type: shouldResolveThread ? 'approval' : 'comment',
             isUser: false,
             createdAt: new Date().toISOString(),
           };
+          
+          if (shouldResolveThread) {
+            onThreadResolve(threadId);
+          }
           
           return prev.map(t => {
             if (t.id !== threadId) return t;
             return {
               ...t,
               comments: [...t.comments, reviewerComment],
+              ...(shouldResolveThread ? { status: 'resolved' as const } : {}),
             };
           });
         });
@@ -951,7 +1160,7 @@ export function PRReviewPanel({
         return next;
       });
     }, responseDelay);
-  }, [replyInputs, threads, levelModifiers.autoResolveMinorOnResponse, levelModifiers.feedbackTone, onCommentSubmit, onThreadResolve, getReviewerFollowUpMessage]);
+  }, [replyInputs, threads, levelModifiers.minorResponseBehavior, levelModifiers.feedbackTone, onCommentSubmit, onThreadResolve, getReviewerFollowUpMessage, analyzeUserMessageIntent, getIntelligentFollowUp]);
   
   const handleResolve = useCallback((threadId: string) => {
     setThreads(prev => prev.map(thread => 
