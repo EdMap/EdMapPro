@@ -4067,6 +4067,53 @@ isFirstResponse ?
   });
 
   // ============================================================================
+  // Code Review Endpoint (LLM-Powered PR Reviews)
+  // ============================================================================
+  
+  app.post("/api/code-review", async (req, res) => {
+    try {
+      const { codeReviewService } = await import("./services/code-review");
+      const { getSprintExecutionAdapter } = await import("@shared/adapters/execution");
+      
+      const codeReviewSchema = z.object({
+        ticketId: z.string(),
+        ticketTitle: z.string(),
+        ticketDescription: z.string(),
+        files: z.record(z.string()),
+        userLevel: z.enum(['intern', 'junior', 'mid', 'senior']),
+        userRole: z.enum(['developer', 'pm', 'qa', 'devops', 'data_science']),
+      });
+      
+      const input = codeReviewSchema.parse(req.body);
+      
+      const adapter = getSprintExecutionAdapter(input.userRole, input.userLevel);
+      const prConfig = adapter.prReviewConfig;
+      
+      const results = await codeReviewService.reviewCodeWithAllReviewers(input, prConfig);
+      
+      res.json({
+        success: true,
+        reviews: results,
+        reviewers: prConfig.reviewers.map(r => ({
+          id: r.id,
+          name: r.name,
+          role: r.role,
+          color: r.color,
+        })),
+      });
+    } catch (error) {
+      console.error("Failed to review code:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to review code" });
+    }
+  });
+
+  // ============================================================================
   // Code Analysis Endpoint (LLM-Simulated Execution)
   // ============================================================================
   
