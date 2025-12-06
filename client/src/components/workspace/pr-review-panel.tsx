@@ -1216,7 +1216,7 @@ export function PRReviewPanel({
             </div>
           </div>
           
-          {uiConfig.showReturnToCode && onReturnToCode && blockingCount > 0 && (
+          {uiConfig.showReturnToCode && onReturnToCode && reviewPhase === 'changes_requested' && (
             <Button
               variant="default"
               size="sm"

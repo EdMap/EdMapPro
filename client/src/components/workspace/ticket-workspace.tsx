@@ -31,6 +31,7 @@ import {
   Bug,
   Star,
   Wrench,
+  FileCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -146,6 +147,7 @@ export function TicketWorkspace({
   const [useMonacoEditor, setUseMonacoEditor] = useState<boolean | null>(null);
   const [triggerExternalTests, setTriggerExternalTests] = useState(false);
   const [lastTestResult, setLastTestResult] = useState<ExecutionResponse | null>(null);
+  const [showCodeDuringReview, setShowCodeDuringReview] = useState(false);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
@@ -1166,7 +1168,76 @@ Time:        0.842s`;
             </div>
           )}
 
-          {adapter.prReviewConfig.enabled && gitState.prCreated && !gitState.isMerged && (
+          {showCodeDuringReview && gitState.prCreated && !gitState.isMerged && codeExecutionAdapter && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2 border-b bg-amber-100 dark:bg-amber-900/30">
+                <div className="flex items-center gap-2">
+                  <FileCode className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Addressing Review Feedback
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowCodeDuringReview(false)}
+                  className="h-7 text-xs"
+                  data-testid="button-back-to-pr"
+                >
+                  <ArrowLeft className="h-3 w-3 mr-1" />
+                  Back to PR Review
+                </Button>
+              </div>
+              <div className="flex-1 h-full min-h-[600px]">
+                <CodeEditorPanel
+                  adapter={codeExecutionAdapter}
+                  ticketId={ticket?.ticketKey || String(ticketId)}
+                  terminalLines={terminalLines.map(line => ({
+                    type: line.type === 'command' ? 'input' : line.type as 'output' | 'error' | 'success' | 'info',
+                    content: line.content,
+                    timestamp: line.timestamp,
+                  }))}
+                  onTerminalCommand={(cmd) => {
+                    addTerminalLine('command', `$ ${cmd}`);
+                    processGitCommand(cmd);
+                  }}
+                  chatMessages={chatMessages.map(msg => ({
+                    id: msg.id,
+                    sender: msg.from,
+                    senderRole: msg.role,
+                    content: msg.content,
+                    timestamp: msg.timestamp,
+                    isUser: msg.from === 'You',
+                  }))}
+                  onSendChat={(message) => {
+                    setChatMessages(prev => [...prev, {
+                      id: Date.now().toString(),
+                      from: 'You',
+                      role: 'Developer',
+                      content: message,
+                      color: 'bg-blue-500',
+                      timestamp: new Date(),
+                    }]);
+                  }}
+                  onSubmit={async (files, result) => {
+                    if (result.overallPass) {
+                      addTerminalLine('success', 'Tests passed! You can now go back to PR review and request re-review.');
+                      toast({
+                        title: "Tests passed",
+                        description: "Go back to PR review and request re-review from your team.",
+                      });
+                    }
+                  }}
+                  externalRunTests={triggerExternalTests}
+                  onExternalRunTestsComplete={() => setTriggerExternalTests(false)}
+                  onTestResult={handleTestResult}
+                  hideSubmitButton={true}
+                />
+              </div>
+            </div>
+          )}
+
+          {adapter.prReviewConfig.enabled && gitState.prCreated && !gitState.isMerged && !showCodeDuringReview && (
             <div className={cn(
               "p-4 bg-purple-50/30 dark:bg-purple-950/10",
               !shouldShowTerminal && !shouldShowTeamChat && "flex-1 overflow-auto",
@@ -1197,6 +1268,10 @@ Time:        0.842s`;
                     color: 'bg-teal-500',
                     timestamp: new Date(),
                   }]);
+                }}
+                onReturnToCode={() => {
+                  setShowCodeDuringReview(true);
+                  addTerminalLine('info', 'Returning to code editor to address review feedback...');
                 }}
                 onMerge={() => {
                   addTerminalLine('success', `
