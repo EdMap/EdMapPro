@@ -252,7 +252,7 @@ export function TicketWorkspace({
     }]);
   }, []);
 
-  const handleTestResult = useCallback((result: ExecutionResponse) => {
+  const handleTestResult = useCallback(async (result: ExecutionResponse) => {
     setLastTestResult(result);
     
     const passed = result.testResults.filter(t => t.passed).length;
@@ -269,6 +269,20 @@ export function TicketWorkspace({
       output += `Time:        ${(result.latencyMs / 1000).toFixed(3)}s`;
       addTerminalLine('success', output);
       addTerminalLine('hint', 'All tests passing! Now stage your changes with: git add .');
+      
+      if (!gitState.codeWorkComplete) {
+        setOptimisticCodeWorkComplete(true);
+        try {
+          const newGitState: GitTicketState = {
+            ...gitState,
+            codeWorkComplete: true,
+          };
+          await apiRequest('PATCH', `/api/tickets/${ticketId}`, { gitState: newGitState });
+          queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
+        } catch (err) {
+          setOptimisticCodeWorkComplete(null);
+        }
+      }
     } else {
       let output = `\nFAIL  Some tests failed\n\n`;
       result.testResults.forEach(test => {
@@ -289,7 +303,7 @@ export function TicketWorkspace({
         addTerminalLine('hint', `AI Feedback: ${result.feedback.summary}`);
       }
     }
-  }, [addTerminalLine]);
+  }, [addTerminalLine, gitState, ticketId]);
 
   const getNextGitStep = useCallback((): GitCommand | null => {
     if (!adapter.gitWorkflow.commands.length) return null;
@@ -504,7 +518,12 @@ Time:        0.842s`;
         ? pushCommands.successOutput(ticket?.ticketKey || 'TICK-001')
         : pushCommands.successOutput;
       
-      addTerminalLine('success', output.replace(/\$\{ticketId\.toLowerCase\(\)\}/g, (ticket?.ticketKey || 'tick-001').toLowerCase()));
+      const formattedOutput = output
+        .replace(/\$\{ticketId\.toLowerCase\(\)\}/g, (ticket?.ticketKey || 'tick-001').toLowerCase())
+        .replace(/\$\{branchName\}/g, gitState.branchName || 'feature-branch')
+        .replace(/feature\/[a-z0-9-]+/gi, gitState.branchName || 'feature-branch');
+      
+      addTerminalLine('success', formattedOutput);
       
       const newGitState: GitTicketState = {
         ...gitState,
