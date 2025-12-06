@@ -209,6 +209,24 @@ shared/adapters/retro/
     └── senior.ts      # Self-directed, no starter cards
 ```
 
+### Code Execution Adapters
+
+```
+shared/adapters/code-execution/
+├── index.ts           # Factory: getCodeExecutionAdapter(role, level)
+├── types.ts           # ExecutionProvider, CodeChallenge, ExecutionResponse
+├── roles/
+│   ├── developer.ts   # Full editing, all tests, complete feedback
+│   └── pm.ts          # Read-only code, simplified tests, high-level feedback
+└── levels/
+    ├── intern.ts      # 80% scaffolded code, all tests visible, always hints
+    ├── junior.ts      # Function stubs, test names only, on-error hints
+    ├── mid.ts         # File structure only, hidden tests, on-request hints
+    └── senior.ts      # Empty project, write own tests, no hints
+└── providers/
+    └── llm-provider.ts # Groq-powered code analysis and test simulation
+```
+
 ### Layout Configuration System
 
 The `LayoutConfig` interface provides adapter-driven UI control:

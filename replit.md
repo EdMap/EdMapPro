@@ -26,7 +26,11 @@ Key features include:
 
 The platform extensively uses adapter systems for sprint planning, execution, PR review, sprint review, and retrospective phases. These adapters dynamically configure prompts, personas, guidance levels, and UI layouts based on user role and experience level.
 
-**Code Execution System**: edmap uses LLM-simulated code execution, providing instant feedback and educational value without the overhead of sandboxed containers. This approach leverages static analysis (ESLint, TypeScript) combined with LLM simulation for test execution, offering a cost-effective and pedagogically rich experience. The system is level-aware, adjusting starter code, test visibility, and hints.
+**Code Execution System**: edmap uses LLM-simulated code execution via Monaco editor integration, providing instant feedback and educational value without the overhead of sandboxed containers. The system features:
+-   **Monaco Editor**: Full code editor with syntax highlighting in TicketWorkspace (`client/src/components/workspace/code-editor/code-editor-panel.tsx`)
+-   **Code Execution Adapters**: Role/level-based scaffolding (`shared/adapters/code-execution/`) with ExecutionProvider interface for future extensibility
+-   **LLM Code Analysis**: Groq-powered backend service (`server/services/code-analysis.ts`) with `/api/analyze-code` endpoint
+-   **Level-aware scaffolding**: Intern gets 80% complete code, Senior gets empty files; tests and hints adjust by level
 
 **PR Review System**: Utilizes adapter architecture to provide level-aware code review experiences, configuring `PRReviewConfig` based on role and level, influencing layout, feedback tone, severity distribution, and auto-resolution of minor comments.
 
