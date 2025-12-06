@@ -40,7 +40,7 @@ export const pmCodeExecutionConfig: RoleCodeExecutionConfig = {
     showOutputPanel: true,
     showHintPanel: false,
     showToolbar: true,
-    toolbarActions: ['run'],
+    toolbarActions: ['format', 'reset'],
     panelSizes: {
       editor: 50,
       tests: 25,

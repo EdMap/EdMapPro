@@ -39,7 +39,7 @@ export const developerCodeExecutionConfig: RoleCodeExecutionConfig = {
     showOutputPanel: true,
     showHintPanel: true,
     showToolbar: true,
-    toolbarActions: ['run', 'format', 'reset', 'hint', 'submit'],
+    toolbarActions: ['format', 'reset'],
     panelSizes: {
       editor: 60,
       tests: 20,
