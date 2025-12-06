@@ -1,5 +1,11 @@
 import { useState, useCallback, useMemo, useEffect, Component, type ReactNode } from "react";
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
+
+loader.config({
+  paths: {
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs'
+  }
+});
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +106,30 @@ interface CodeEditorPanelProps {
 }
 
 function CodeEditorPanelInner({ adapter, ticketId, onSubmit }: CodeEditorPanelProps) {
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (event.message?.includes('monaco') || event.message?.includes('editor')) {
+        event.preventDefault();
+        console.warn('Monaco editor error suppressed:', event.message);
+      }
+    };
+    
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (typeof event.reason === 'string' || !(event.reason instanceof Error)) {
+        event.preventDefault();
+        console.warn('Non-Error rejection suppressed:', event.reason);
+      }
+    };
+    
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   if (!adapter) {
     return (
       <div className="p-4 text-muted-foreground">
@@ -367,8 +397,8 @@ function CodeEditorPanelInner({ adapter, ticketId, onSubmit }: CodeEditorPanelPr
                 <div className="flex-1">
                   <Editor
                     height="100%"
-                    language={getLanguageForMonaco(adapter.editor.language)}
-                    theme={adapter.editor.theme}
+                    language={getLanguageForMonaco(adapter?.editor?.language ?? 'typescript')}
+                    theme={adapter?.editor?.theme ?? 'vs-dark'}
                     value={files[activeFile] || ''}
                     onChange={handleEditorChange}
                     loading={
@@ -376,16 +406,13 @@ function CodeEditorPanelInner({ adapter, ticketId, onSubmit }: CodeEditorPanelPr
                         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                       </div>
                     }
-                    onMount={() => {
-                      console.log('Monaco editor mounted');
-                    }}
                     options={{
                       minimap: { enabled: showMinimap },
                       fontSize: editorFontSize,
-                      lineNumbers: adapter.editor.lineNumbers ? 'on' : 'off',
-                      wordWrap: adapter.editor.wordWrap,
-                      tabSize: adapter.editor.tabSize,
-                      readOnly: adapter.editor.readOnly,
+                      lineNumbers: (adapter?.editor?.lineNumbers ?? true) ? 'on' : 'off',
+                      wordWrap: adapter?.editor?.wordWrap ?? 'on',
+                      tabSize: adapter?.editor?.tabSize ?? 2,
+                      readOnly: adapter?.editor?.readOnly ?? false,
                       scrollBeyondLastLine: false,
                       automaticLayout: true,
                       padding: { top: 12 },
