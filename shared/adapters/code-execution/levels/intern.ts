@@ -36,36 +36,13 @@ export const internCodeExecutionOverlay: LevelCodeExecutionOverlay = {
   },
   
   uiOverrides: {
-    layoutMode: 'side-by-side',
+    layoutMode: 'stacked',
     showHintPanel: true,
     toolbarActions: ['run', 'hint', 'submit'],
     panelSizes: {
-      editor: 65,
-      tests: 20,
-      output: 15,
-    },
-    layout: {
-      sidebarPosition: 'right',
-      sidebarDefaultWidth: 300,
-      sidebarMinWidth: 240,
-      sidebarMaxWidth: 400,
-      sidebarCollapsible: true,
-      sidebarDefaultCollapsed: false,
-      fileNavigator: 'tabs',
-      toolbarStyle: 'full',
-      primaryActions: ['run', 'submit'],
-      secondaryActions: ['hint'],
-      showStatusBar: true,
-      responsiveBreakpoints: {
-        collapseSidebar: 1024,
-        compactToolbar: 768,
-        zenMode: 640,
-      },
-      zenModeConfig: {
-        hideMinimap: true,
-        increaseFontSize: 2,
-        hideLineNumbers: false,
-      },
+      editor: 50,
+      tests: 25,
+      output: 25,
     },
   },
   

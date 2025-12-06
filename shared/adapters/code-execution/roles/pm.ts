@@ -35,29 +35,6 @@ export const pmCodeExecutionConfig: RoleCodeExecutionConfig = {
   
   ui: {
     layoutMode: 'stacked',
-    layout: {
-      sidebarPosition: 'right',
-      sidebarDefaultWidth: 280,
-      sidebarMinWidth: 200,
-      sidebarMaxWidth: 400,
-      sidebarCollapsible: true,
-      sidebarDefaultCollapsed: false,
-      fileNavigator: 'tabs',
-      toolbarStyle: 'compact',
-      primaryActions: ['run'],
-      secondaryActions: [],
-      showStatusBar: true,
-      responsiveBreakpoints: {
-        collapseSidebar: 1024,
-        compactToolbar: 768,
-        zenMode: 640,
-      },
-      zenModeConfig: {
-        hideMinimap: true,
-        increaseFontSize: 2,
-        hideLineNumbers: false,
-      },
-    },
     showFileTree: false,
     showTestPanel: true,
     showOutputPanel: true,
@@ -65,9 +42,9 @@ export const pmCodeExecutionConfig: RoleCodeExecutionConfig = {
     showToolbar: true,
     toolbarActions: ['run'],
     panelSizes: {
-      editor: 60,
-      tests: 20,
-      output: 20,
+      editor: 50,
+      tests: 25,
+      output: 25,
     },
   },
   

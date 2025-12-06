@@ -38,34 +38,6 @@ export const midCodeExecutionOverlay: LevelCodeExecutionOverlay = {
     layoutMode: 'side-by-side',
     showHintPanel: false,
     toolbarActions: ['run', 'format', 'reset', 'submit'],
-    panelSizes: {
-      editor: 75,
-      tests: 12,
-      output: 13,
-    },
-    layout: {
-      sidebarPosition: 'right',
-      sidebarDefaultWidth: 260,
-      sidebarMinWidth: 200,
-      sidebarMaxWidth: 360,
-      sidebarCollapsible: true,
-      sidebarDefaultCollapsed: false,
-      fileNavigator: 'vertical',
-      toolbarStyle: 'compact',
-      primaryActions: ['run', 'submit'],
-      secondaryActions: ['reset', 'format'],
-      showStatusBar: true,
-      responsiveBreakpoints: {
-        collapseSidebar: 960,
-        compactToolbar: 768,
-        zenMode: 640,
-      },
-      zenModeConfig: {
-        hideMinimap: false,
-        increaseFontSize: 1,
-        hideLineNumbers: false,
-      },
-    },
   },
   
   starterCodeTransform: (code: string) => {

@@ -198,21 +198,16 @@ export function TicketWorkspace({
   const codeExecutionAdapter = useMemo(() => {
     if (!codeWorkTemplate) return null;
     
-    try {
-      const codeChallenge = createCodeChallengeFromBacklog(
-        codeWorkTemplate,
-        backlogItem?.acceptanceCriteria || []
-      );
-      
-      return getCodeExecutionAdapter({
-        role: role as Role,
-        level: level as Level,
-        codeChallenge,
-      });
-    } catch (e) {
-      console.error('Error creating code execution adapter:', e);
-      return null;
-    }
+    const codeChallenge = createCodeChallengeFromBacklog(
+      codeWorkTemplate,
+      backlogItem?.acceptanceCriteria || []
+    );
+    
+    return getCodeExecutionAdapter({
+      role: role as Role,
+      level: level as Level,
+      codeChallenge,
+    });
   }, [codeWorkTemplate, backlogItem?.acceptanceCriteria, role, level]);
 
   const updateTicket = useMutation({

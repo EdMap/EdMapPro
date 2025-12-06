@@ -1,58 +1,12 @@
-import { useState, useCallback, useMemo, useEffect, Component, type ReactNode } from "react";
-import Editor, { loader } from "@monaco-editor/react";
-
-loader.config({
-  paths: {
-    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs'
-  }
-});
+import { useState, useCallback, useMemo } from "react";
+import Editor from "@monaco-editor/react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-class CodeEditorErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
-    console.error('CodeEditorPanel error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg">
-          <p className="font-medium">Error loading code editor</p>
-          <p className="text-sm mt-1">{this.state.error?.message}</p>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Play,
@@ -60,44 +14,15 @@ import {
   Lightbulb,
   CheckCircle2,
   XCircle,
+  AlertTriangle,
   FileCode,
   TestTube,
   Loader2,
   Code2,
   Send,
-  ChevronRight,
-  ChevronDown,
-  MoreVertical,
-  PanelRightClose,
-  PanelRight,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { CodeExecutionAdapter, ExecutionResponse, TestCase, EditorLayoutConfig } from "@shared/adapters/code-execution/types";
-
-const defaultLayout: EditorLayoutConfig = {
-  sidebarPosition: 'right',
-  sidebarDefaultWidth: 300,
-  sidebarMinWidth: 200,
-  sidebarMaxWidth: 450,
-  sidebarCollapsible: true,
-  sidebarDefaultCollapsed: false,
-  fileNavigator: 'tabs',
-  toolbarStyle: 'full',
-  primaryActions: ['run', 'submit'],
-  secondaryActions: ['reset', 'hint', 'format'],
-  showStatusBar: true,
-  responsiveBreakpoints: {
-    collapseSidebar: 1024,
-    compactToolbar: 768,
-    zenMode: 640,
-  },
-  zenModeConfig: {
-    hideMinimap: true,
-    increaseFontSize: 2,
-    hideLineNumbers: false,
-  },
-};
+import type { CodeExecutionAdapter, ExecutionResponse, TestCase } from "@shared/adapters/code-execution/types";
 
 interface CodeEditorPanelProps {
   adapter: CodeExecutionAdapter;
@@ -105,101 +30,24 @@ interface CodeEditorPanelProps {
   onSubmit?: (files: Record<string, string>, result: ExecutionResponse) => void;
 }
 
-function CodeEditorPanelInner({ adapter, ticketId, onSubmit }: CodeEditorPanelProps) {
-  useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      if (event.message?.includes('monaco') || event.message?.includes('editor')) {
-        event.preventDefault();
-        console.warn('Monaco editor error suppressed:', event.message);
-      }
-    };
-    
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (typeof event.reason === 'string' || !(event.reason instanceof Error)) {
-        event.preventDefault();
-        console.warn('Non-Error rejection suppressed:', event.reason);
-      }
-    };
-    
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    
-    return () => {
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-    };
-  }, []);
-
-  if (!adapter) {
-    return (
-      <div className="p-4 text-muted-foreground">
-        Loading editor...
-      </div>
-    );
-  }
-
-  const layout = useMemo(() => {
-    try {
-      const adapterLayout = adapter?.ui?.layout;
-      if (!adapterLayout) return defaultLayout;
-      return {
-        ...defaultLayout,
-        ...adapterLayout,
-        responsiveBreakpoints: {
-          ...defaultLayout.responsiveBreakpoints,
-          ...adapterLayout.responsiveBreakpoints,
-        },
-        zenModeConfig: {
-          ...defaultLayout.zenModeConfig,
-          ...adapterLayout.zenModeConfig,
-        },
-      };
-    } catch (e) {
-      console.error('Error merging layout:', e);
-      return defaultLayout;
-    }
-  }, [adapter?.ui?.layout]);
-
-  const starterFiles = adapter?.files?.starterFiles ?? {};
-  const fileKeys = Object.keys(starterFiles);
-  
-  const [files, setFiles] = useState<Record<string, string>>(starterFiles);
-  const [activeFile, setActiveFile] = useState<string>(fileKeys[0] || '');
+export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanelProps) {
+  const [files, setFiles] = useState<Record<string, string>>(adapter.files.starterFiles);
+  const [activeFile, setActiveFile] = useState<string>(Object.keys(adapter.files.starterFiles)[0] || '');
   const [lastResult, setLastResult] = useState<ExecutionResponse | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [showHint, setShowHint] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(layout.sidebarDefaultCollapsed ?? false);
-  const [testsExpanded, setTestsExpanded] = useState(true);
-  const [outputExpanded, setOutputExpanded] = useState(true);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   
   const fileNames = useMemo(() => Object.keys(files), [files]);
-  
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  const isCompactMode = windowWidth < (layout.responsiveBreakpoints?.compactToolbar ?? 768);
-  const isZenMode = windowWidth < (layout.responsiveBreakpoints?.zenMode ?? 640);
-  const shouldAutoCollapseSidebar = windowWidth < (layout.responsiveBreakpoints?.collapseSidebar ?? 1024);
-  
-  useEffect(() => {
-    if (shouldAutoCollapseSidebar && !sidebarCollapsed) {
-      setSidebarCollapsed(true);
-    }
-  }, [shouldAutoCollapseSidebar]);
   
   const analyzeCodeMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/analyze-code', {
         ticketId,
         files,
-        testCases: adapter?.testCases ?? [],
-        language: adapter?.editor?.language ?? 'typescript',
-        userLevel: adapter?.metadata?.level ?? 'intern',
-        userRole: adapter?.metadata?.role ?? 'developer',
+        testCases: adapter.testCases,
+        language: adapter.editor.language,
+        userLevel: adapter.metadata.level,
+        userRole: adapter.metadata.role,
       });
       return response.json() as Promise<ExecutionResponse>;
     },
@@ -219,15 +67,15 @@ function CodeEditorPanelInner({ adapter, ticketId, onSubmit }: CodeEditorPanelPr
   }, [analyzeCodeMutation]);
   
   const handleReset = useCallback(() => {
-    setFiles(adapter?.files?.starterFiles ?? {});
+    setFiles(adapter.files.starterFiles);
     setLastResult(null);
-  }, [adapter?.files?.starterFiles]);
+  }, [adapter.files.starterFiles]);
   
   const handleRequestHint = useCallback(() => {
-    if (adapter?.scaffolding?.hintLevel === 'never') return;
+    if (adapter.scaffolding.hintLevel === 'never') return;
     setShowHint(true);
     setHintsUsed(prev => prev + 1);
-  }, [adapter?.scaffolding?.hintLevel]);
+  }, [adapter.scaffolding.hintLevel]);
   
   const handleSubmit = useCallback(() => {
     if (lastResult && onSubmit) {
@@ -248,318 +96,181 @@ function CodeEditorPanelInner({ adapter, ticketId, onSubmit }: CodeEditorPanelPr
   const passedTests = lastResult?.testResults.filter(t => t.passed).length || 0;
   const totalTests = lastResult?.testResults.length || adapter.testCases.length;
   
-  const editorFontSize = isZenMode
-    ? adapter.editor.fontSize + (layout.zenModeConfig?.increaseFontSize ?? 2)
-    : adapter.editor.fontSize;
-  
-  const showMinimap = isZenMode && (layout.zenModeConfig?.hideMinimap ?? true)
-    ? false
-    : adapter.editor.minimap;
-  
-  const toolbarStyle = layout.toolbarStyle ?? 'full';
-  const primaryActions = layout.primaryActions ?? ['run', 'submit'];
-  const secondaryActions = layout.secondaryActions ?? ['reset', 'hint', 'format'];
-  
-  const hasSecondaryActions = secondaryActions.some(action => {
-    if (action === 'hint') return adapter.scaffolding.hintLevel !== 'never';
-    if (action === 'reset') return true;
-    if (action === 'format') return true;
-    return false;
-  });
-  
   return (
     <div className="flex flex-col h-full bg-background" data-testid="code-editor-panel">
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
         <div className="flex items-center gap-2">
-          <Code2 className="w-4 h-4 text-muted-foreground" />
-          <span className="font-medium text-sm hidden sm:inline">Code Editor</span>
+          <Code2 className="w-4 h-4" />
+          <span className="font-medium text-sm">Code Editor</span>
           <Badge variant="outline" className="text-xs">
             {adapter.editor.language.toUpperCase()}
           </Badge>
         </div>
         
-        <div className="flex items-center gap-1.5">
-          {primaryActions.includes('run') && (
+        <div className="flex items-center gap-2">
+          {adapter.ui.toolbarActions.includes('run') && (
             <Button
               size="sm"
               onClick={handleRunTests}
               disabled={analyzeCodeMutation.isPending}
-              className="h-8"
               data-testid="button-run-tests"
             >
               {analyzeCodeMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
               ) : (
-                <Play className="w-4 h-4" />
+                <Play className="w-4 h-4 mr-1" />
               )}
-              {toolbarStyle !== 'icon-only' && <span className="ml-1.5">Run</span>}
+              Run Tests
             </Button>
           )}
           
-          {primaryActions.includes('submit') && lastResult?.overallPass && (
+          {adapter.ui.toolbarActions.includes('hint') && adapter.scaffolding.hintLevel !== 'never' && (
             <Button
               size="sm"
-              className="h-8 bg-green-600 hover:bg-green-700"
-              onClick={handleSubmit}
-              data-testid="button-submit"
+              variant="outline"
+              onClick={handleRequestHint}
+              data-testid="button-hint"
             >
-              <Send className="w-4 h-4" />
-              {toolbarStyle !== 'icon-only' && <span className="ml-1.5">Submit</span>}
+              <Lightbulb className="w-4 h-4 mr-1" />
+              Hint
             </Button>
           )}
           
-          {hasSecondaryActions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {secondaryActions.includes('hint') && adapter.scaffolding.hintLevel !== 'never' && (
-                  <DropdownMenuItem onClick={handleRequestHint}>
-                    <Lightbulb className="w-4 h-4 mr-2" />
-                    Show Hint
-                  </DropdownMenuItem>
-                )}
-                {secondaryActions.includes('reset') && (
-                  <DropdownMenuItem onClick={handleReset}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reset Code
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          
-          {(layout.sidebarCollapsible ?? true) && (
+          {adapter.ui.toolbarActions.includes('reset') && (
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              data-testid="button-toggle-sidebar"
+              onClick={handleReset}
+              data-testid="button-reset"
             >
-              {sidebarCollapsed ? (
-                <PanelRight className="w-4 h-4" />
-              ) : (
-                <PanelRightClose className="w-4 h-4" />
-              )}
+              <RotateCcw className="w-4 h-4 mr-1" />
+              Reset
+            </Button>
+          )}
+          
+          {adapter.ui.toolbarActions.includes('submit') && lastResult?.overallPass && (
+            <Button
+              size="sm"
+              variant="default"
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleSubmit}
+              data-testid="button-submit"
+            >
+              <Send className="w-4 h-4 mr-1" />
+              Submit
             </Button>
           )}
         </div>
       </div>
       
-      <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          <ResizablePanel
-            defaultSize={sidebarCollapsed ? 100 : 70}
-            minSize={50}
-          >
-            <div className="flex h-full">
-              {(layout.fileNavigator ?? 'tabs') === 'vertical' && fileNames.length > 1 && (
-                <div className="w-10 border-r bg-muted/20 flex flex-col items-center py-2 gap-1">
-                  {fileNames.map(fileName => (
-                    <Button
-                      key={fileName}
-                      size="sm"
-                      variant={activeFile === fileName ? "secondary" : "ghost"}
-                      className="w-8 h-8 p-0"
-                      onClick={() => setActiveFile(fileName)}
-                      title={fileName}
-                      data-testid={`tab-file-${fileName}`}
-                    >
-                      <FileCode className="w-4 h-4" />
-                    </Button>
-                  ))}
-                </div>
-              )}
-              
-              <div className="flex-1 flex flex-col">
-                {(layout.fileNavigator ?? 'tabs') === 'tabs' && fileNames.length > 1 && (
-                  <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/20 overflow-x-auto">
-                    {fileNames.map(fileName => (
-                      <Button
-                        key={fileName}
-                        size="sm"
-                        variant={activeFile === fileName ? "secondary" : "ghost"}
-                        className="text-xs h-7"
-                        onClick={() => setActiveFile(fileName)}
-                        data-testid={`tab-file-${fileName}`}
-                      >
-                        <FileCode className="w-3 h-3 mr-1" />
-                        {fileName.split('/').pop()}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-                
-                <div className="flex-1">
-                  <Editor
-                    height="100%"
-                    language={getLanguageForMonaco(adapter?.editor?.language ?? 'typescript')}
-                    theme={adapter?.editor?.theme ?? 'vs-dark'}
-                    value={files[activeFile] || ''}
-                    onChange={handleEditorChange}
-                    loading={
-                      <div className="flex items-center justify-center h-full">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                      </div>
-                    }
-                    options={{
-                      minimap: { enabled: showMinimap },
-                      fontSize: editorFontSize,
-                      lineNumbers: (adapter?.editor?.lineNumbers ?? true) ? 'on' : 'off',
-                      wordWrap: adapter?.editor?.wordWrap ?? 'on',
-                      tabSize: adapter?.editor?.tabSize ?? 2,
-                      readOnly: adapter?.editor?.readOnly ?? false,
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                      padding: { top: 12 },
-                    }}
-                  />
-                </div>
-              </div>
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col">
+          {fileNames.length > 1 && (
+            <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/20 overflow-x-auto">
+              {fileNames.map(fileName => (
+                <Button
+                  key={fileName}
+                  size="sm"
+                  variant={activeFile === fileName ? "secondary" : "ghost"}
+                  className="text-xs h-7"
+                  onClick={() => setActiveFile(fileName)}
+                  data-testid={`tab-file-${fileName}`}
+                >
+                  <FileCode className="w-3 h-3 mr-1" />
+                  {fileName.split('/').pop()}
+                </Button>
+              ))}
             </div>
-          </ResizablePanel>
+          )}
           
-          {!sidebarCollapsed && (adapter.ui.showTestPanel || adapter.ui.showOutputPanel) && (
-            <>
-              <ResizableHandle withHandle className="w-1.5 bg-border/50 hover:bg-primary/20 transition-colors" />
-              <ResizablePanel
-                defaultSize={30}
-                minSize={20}
-                maxSize={50}
-              >
-                <div className="h-full flex flex-col bg-muted/10">
-                  <ScrollArea className="flex-1">
-                    <div className="p-2 space-y-2">
-                      {adapter.ui.showTestPanel && (
-                        <Collapsible open={testsExpanded} onOpenChange={setTestsExpanded}>
-                          <CollapsibleTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-between h-8 px-2"
-                            >
-                              <div className="flex items-center gap-2">
-                                {testsExpanded ? (
-                                  <ChevronDown className="w-4 h-4" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4" />
-                                )}
-                                <TestTube className="w-4 h-4" />
-                                <span className="text-sm font-medium">Tests</span>
-                              </div>
-                              {lastResult && (
-                                <Badge 
-                                  variant={lastResult.overallPass ? "default" : "destructive"} 
-                                  className="text-xs h-5"
-                                >
-                                  {passedTests}/{totalTests}
-                                </Badge>
-                              )}
-                            </Button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="pt-2 space-y-1.5">
-                              <TestCasesList
-                                testCases={adapter.testCases}
-                                results={lastResult?.testResults}
-                                scaffolding={adapter.scaffolding}
-                              />
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      )}
-                      
-                      {adapter.ui.showOutputPanel && (
-                        <Collapsible open={outputExpanded} onOpenChange={setOutputExpanded}>
-                          <CollapsibleTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-between h-8 px-2"
-                            >
-                              <div className="flex items-center gap-2">
-                                {outputExpanded ? (
-                                  <ChevronDown className="w-4 h-4" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4" />
-                                )}
-                                <Sparkles className="w-4 h-4" />
-                                <span className="text-sm font-medium">Feedback</span>
-                              </div>
-                            </Button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="pt-2">
-                              <OutputPanel result={lastResult} scaffolding={adapter.scaffolding} />
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      )}
+          <div className="flex-1">
+            <Editor
+              height="100%"
+              language={getLanguageForMonaco(adapter.editor.language)}
+              theme={adapter.editor.theme}
+              value={files[activeFile] || ''}
+              onChange={handleEditorChange}
+              options={{
+                minimap: { enabled: adapter.editor.minimap },
+                fontSize: adapter.editor.fontSize,
+                lineNumbers: adapter.editor.lineNumbers ? 'on' : 'off',
+                wordWrap: adapter.editor.wordWrap,
+                tabSize: adapter.editor.tabSize,
+                readOnly: adapter.editor.readOnly,
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+              }}
+            />
+          </div>
+        </div>
+        
+        {(adapter.ui.showTestPanel || adapter.ui.showOutputPanel) && (
+          <div className="w-80 border-l flex flex-col">
+            <Tabs defaultValue="tests" className="flex-1 flex flex-col">
+              <TabsList className="w-full justify-start rounded-none border-b">
+                {adapter.ui.showTestPanel && (
+                  <TabsTrigger value="tests" className="text-xs">
+                    <TestTube className="w-3 h-3 mr-1" />
+                    Tests
+                    {lastResult && (
+                      <Badge 
+                        variant={lastResult.overallPass ? "default" : "destructive"} 
+                        className="ml-2 text-xs"
+                      >
+                        {passedTests}/{totalTests}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                )}
+                {adapter.ui.showOutputPanel && (
+                  <TabsTrigger value="output" className="text-xs">
+                    Output
+                  </TabsTrigger>
+                )}
+              </TabsList>
+              
+              {adapter.ui.showTestPanel && (
+                <TabsContent value="tests" className="flex-1 m-0 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="p-3 space-y-3">
+                      <TestCasesList
+                        testCases={adapter.testCases}
+                        results={lastResult?.testResults}
+                        scaffolding={adapter.scaffolding}
+                      />
                     </div>
                   </ScrollArea>
-                </div>
-              </ResizablePanel>
-            </>
-          )}
-        </ResizablePanelGroup>
+                </TabsContent>
+              )}
+              
+              {adapter.ui.showOutputPanel && (
+                <TabsContent value="output" className="flex-1 m-0 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="p-3">
+                      <OutputPanel result={lastResult} scaffolding={adapter.scaffolding} />
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              )}
+            </Tabs>
+          </div>
+        )}
       </div>
       
       {adapter.ui.showHintPanel && showHint && adapter.hints.length > 0 && (
         <div className="border-t p-3 bg-amber-50 dark:bg-amber-950/30">
           <div className="flex items-start gap-2">
-            <Lightbulb className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="min-w-0">
+            <Lightbulb className="w-4 h-4 text-amber-600 mt-0.5" />
+            <div>
               <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Hint</p>
               <p className="text-sm text-amber-800 dark:text-amber-200">
                 {adapter.hints[Math.min(hintsUsed - 1, adapter.hints.length - 1)]}
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 flex-shrink-0"
-              onClick={() => setShowHint(false)}
-            >
-              <XCircle className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-      
-      {(layout.showStatusBar ?? true) && lastResult && (
-        <div className="border-t px-3 py-1.5 bg-muted/30 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-3">
-            <span className="text-muted-foreground">
-              Last run: {new Date(lastResult.timestamp).toLocaleTimeString()}
-            </span>
-            <span className="text-muted-foreground">
-              {lastResult.latencyMs}ms
-            </span>
-          </div>
-          <div className={cn(
-            "flex items-center gap-1.5",
-            lastResult.overallPass ? "text-green-600" : "text-red-600"
-          )}>
-            {lastResult.overallPass ? (
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            ) : (
-              <XCircle className="w-3.5 h-3.5" />
-            )}
-            <span>{passedTests}/{totalTests} tests passed</span>
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-export function CodeEditorPanel(props: CodeEditorPanelProps) {
-  return (
-    <CodeEditorErrorBoundary>
-      <CodeEditorPanelInner {...props} />
-    </CodeEditorErrorBoundary>
   );
 }
 
@@ -572,58 +283,56 @@ interface TestCasesListProps {
 function TestCasesList({ testCases, results, scaffolding }: TestCasesListProps) {
   if (testCases.length === 0) {
     return (
-      <div className="text-center py-4 text-muted-foreground">
-        <TestTube className="w-6 h-6 mx-auto mb-1.5 opacity-50" />
-        <p className="text-xs">No test cases</p>
+      <div className="text-center py-6 text-muted-foreground">
+        <TestTube className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No test cases defined</p>
       </div>
     );
   }
   
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       {testCases.map(testCase => {
         const result = results?.find(r => r.testId === testCase.id);
         const showDetails = scaffolding.testVisibility === 'all' || 
           (scaffolding.testVisibility === 'names' && !testCase.hidden);
         
         return (
-          <div
-            key={testCase.id}
-            className={cn(
-              "rounded-md border p-2 text-sm",
-              result?.passed === true && "border-green-500/50 bg-green-50/50 dark:bg-green-950/20",
-              result?.passed === false && "border-red-500/50 bg-red-50/50 dark:bg-red-950/20",
-              !result && "border-border bg-background"
-            )}
-          >
-            <div className="flex items-start gap-2">
-              {result ? (
-                result.passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+          <Card key={testCase.id} className={cn(
+            "border",
+            result?.passed === true && "border-green-500 bg-green-50 dark:bg-green-950/20",
+            result?.passed === false && "border-red-500 bg-red-50 dark:bg-red-950/20",
+          )}>
+            <CardContent className="p-3">
+              <div className="flex items-start gap-2">
+                {result ? (
+                  result.passed ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-600 mt-0.5" />
+                  )
                 ) : (
-                  <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                )
-              ) : (
-                <div className="w-4 h-4 rounded-full border-2 mt-0.5 flex-shrink-0" />
-              )}
-              
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{testCase.name}</p>
-                
-                {showDetails && testCase.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                    {testCase.description}
-                  </p>
+                  <div className="w-4 h-4 rounded-full border-2 mt-0.5" />
                 )}
                 
-                {result && !result.passed && scaffolding.feedbackDetail !== 'minimal' && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                    {result.explanation}
-                  </p>
-                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{testCase.name}</p>
+                  
+                  {showDetails && testCase.description && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {testCase.description}
+                    </p>
+                  )}
+                  
+                  {result && !result.passed && scaffolding.feedbackDetail !== 'minimal' && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                      {result.explanation}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         );
       })}
     </div>
@@ -638,51 +347,57 @@ interface OutputPanelProps {
 function OutputPanel({ result, scaffolding }: OutputPanelProps) {
   if (!result) {
     return (
-      <div className="text-center py-4 text-muted-foreground">
-        <Play className="w-6 h-6 mx-auto mb-1.5 opacity-50" />
-        <p className="text-xs">Run tests to see feedback</p>
+      <div className="text-center py-6 text-muted-foreground">
+        <Play className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">Run tests to see output</p>
       </div>
     );
   }
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className={cn(
-        "p-2.5 rounded-md text-sm",
+        "p-3 rounded-lg",
         result.overallPass 
           ? "bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100"
           : "bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-100"
       )}>
         <div className="flex items-center gap-2">
           {result.overallPass ? (
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            <CheckCircle2 className="w-5 h-5" />
           ) : (
-            <XCircle className="w-4 h-4 flex-shrink-0" />
+            <XCircle className="w-5 h-5" />
           )}
-          <span className="font-medium text-xs">
+          <span className="font-medium">
             {result.overallPass ? 'All tests passed!' : 'Some tests failed'}
           </span>
         </div>
       </div>
       
       {result.feedback && (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">{result.feedback.summary}</p>
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium mb-1">Summary</p>
+            <p className="text-sm text-muted-foreground">{result.feedback.summary}</p>
+          </div>
           
           {result.feedback.improvements.length > 0 && scaffolding.feedbackDetail !== 'minimal' && (
-            <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
-              {result.feedback.improvements.slice(0, 3).map((imp, i) => (
-                <li key={i} className="truncate">{imp}</li>
-              ))}
-            </ul>
+            <div>
+              <p className="text-sm font-medium mb-1">Improvements</p>
+              <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                {result.feedback.improvements.map((imp, i) => (
+                  <li key={i}>{imp}</li>
+                ))}
+              </ul>
+            </div>
           )}
           
           {result.feedback.mentorComment && scaffolding.showMentorTips && (
-            <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md">
-              <p className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-0.5">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
                 Mentor Tip
               </p>
-              <p className="text-xs text-blue-800 dark:text-blue-200">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
                 {result.feedback.mentorComment}
               </p>
             </div>
@@ -690,16 +405,24 @@ function OutputPanel({ result, scaffolding }: OutputPanelProps) {
         </div>
       )}
       
+      {scaffolding.showExecutionTrace && result.executionTrace && (
+        <div>
+          <p className="text-sm font-medium mb-1">Execution Trace</p>
+          <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+            {result.executionTrace}
+          </pre>
+        </div>
+      )}
+      
       {result.staticAnalysis.errors.length > 0 && (
         <div>
-          <p className="text-xs font-medium mb-1 text-red-600">Errors</p>
+          <p className="text-sm font-medium mb-1 text-red-600">Static Analysis Errors</p>
           <div className="space-y-1">
-            {result.staticAnalysis.errors.slice(0, 3).map((error, i) => (
-              <div key={i} className="text-xs bg-red-50 dark:bg-red-950/30 p-1.5 rounded">
-                <span className="font-mono text-red-700 dark:text-red-300">
-                  L{error.line}:
-                </span>{' '}
-                <span className="text-red-600 dark:text-red-400">{error.message}</span>
+            {result.staticAnalysis.errors.map((error, i) => (
+              <div key={i} className="text-xs bg-red-50 dark:bg-red-950/30 p-2 rounded">
+                <span className="font-mono">{error.file}:{error.line}</span>
+                <span className="mx-2">-</span>
+                {error.message}
               </div>
             ))}
           </div>

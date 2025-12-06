@@ -168,44 +168,9 @@ export interface ExecutionSettings {
 // ============================================================================
 
 export type EditorLayoutMode = 'side-by-side' | 'stacked' | 'tabbed' | 'focus-editor';
-export type FileNavigatorStyle = 'tabs' | 'vertical' | 'hidden';
-export type SidebarPosition = 'left' | 'right';
-export type ToolbarStyle = 'full' | 'compact' | 'icon-only';
-
-export interface ResponsiveBreakpoints {
-  collapseSidebar: number;
-  compactToolbar: number;
-  zenMode: number;
-}
-
-export interface EditorLayoutConfig {
-  sidebarPosition: SidebarPosition;
-  sidebarDefaultWidth: number;
-  sidebarMinWidth: number;
-  sidebarMaxWidth: number;
-  sidebarCollapsible: boolean;
-  sidebarDefaultCollapsed: boolean;
-  
-  fileNavigator: FileNavigatorStyle;
-  
-  toolbarStyle: ToolbarStyle;
-  primaryActions: ('run' | 'submit')[];
-  secondaryActions: ('reset' | 'hint' | 'format')[];
-  
-  showStatusBar: boolean;
-  
-  responsiveBreakpoints: ResponsiveBreakpoints;
-  
-  zenModeConfig: {
-    hideMinimap: boolean;
-    increaseFontSize: number;
-    hideLineNumbers: boolean;
-  };
-}
 
 export interface EditorUIConfig {
   layoutMode: EditorLayoutMode;
-  layout: EditorLayoutConfig;
   showFileTree: boolean;
   showTestPanel: boolean;
   showOutputPanel: boolean;
