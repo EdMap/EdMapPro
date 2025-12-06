@@ -265,7 +265,7 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel
-            defaultSize={sidebarCollapsed ? 100 : 100 - (layout.sidebarDefaultWidth / 12)}
+            defaultSize={sidebarCollapsed ? 100 : 70}
             minSize={50}
           >
             <div className="flex h-full">
@@ -334,9 +334,9 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
             <>
               <ResizableHandle withHandle className="w-1.5 bg-border/50 hover:bg-primary/20 transition-colors" />
               <ResizablePanel
-                defaultSize={layout.sidebarDefaultWidth / 12}
-                minSize={layout.sidebarMinWidth / 12}
-                maxSize={layout.sidebarMaxWidth / 12}
+                defaultSize={30}
+                minSize={20}
+                maxSize={50}
               >
                 <div className="h-full flex flex-col bg-muted/10">
                   <ScrollArea className="flex-1">
