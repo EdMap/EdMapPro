@@ -34,6 +34,29 @@ export const developerCodeExecutionConfig: RoleCodeExecutionConfig = {
   
   ui: {
     layoutMode: 'side-by-side',
+    layout: {
+      sidebarPosition: 'right',
+      sidebarDefaultWidth: 320,
+      sidebarMinWidth: 240,
+      sidebarMaxWidth: 480,
+      sidebarCollapsible: true,
+      sidebarDefaultCollapsed: false,
+      fileNavigator: 'vertical',
+      toolbarStyle: 'full',
+      primaryActions: ['run', 'submit'],
+      secondaryActions: ['reset', 'hint', 'format'],
+      showStatusBar: true,
+      responsiveBreakpoints: {
+        collapseSidebar: 1024,
+        compactToolbar: 768,
+        zenMode: 640,
+      },
+      zenModeConfig: {
+        hideMinimap: true,
+        increaseFontSize: 2,
+        hideLineNumbers: false,
+      },
+    },
     showFileTree: true,
     showTestPanel: true,
     showOutputPanel: true,
@@ -41,9 +64,9 @@ export const developerCodeExecutionConfig: RoleCodeExecutionConfig = {
     showToolbar: true,
     toolbarActions: ['run', 'format', 'reset', 'hint', 'submit'],
     panelSizes: {
-      editor: 60,
-      tests: 20,
-      output: 20,
+      editor: 70,
+      tests: 15,
+      output: 15,
     },
   },
   

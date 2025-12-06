@@ -16,6 +16,7 @@ import type {
   ScaffoldingConfig,
   ExecutionSettings,
   EditorUIConfig,
+  EditorLayoutConfig,
   FileConfig,
   TestCase,
   CodeChallenge,
@@ -70,12 +71,58 @@ function mergeExecutionSettings(
   };
 }
 
+const defaultLayoutConfig: EditorLayoutConfig = {
+  sidebarPosition: 'right',
+  sidebarDefaultWidth: 300,
+  sidebarMinWidth: 200,
+  sidebarMaxWidth: 450,
+  sidebarCollapsible: true,
+  sidebarDefaultCollapsed: false,
+  fileNavigator: 'tabs',
+  toolbarStyle: 'full',
+  primaryActions: ['run', 'submit'],
+  secondaryActions: ['reset', 'hint', 'format'],
+  showStatusBar: true,
+  responsiveBreakpoints: {
+    collapseSidebar: 1024,
+    compactToolbar: 768,
+    zenMode: 640,
+  },
+  zenModeConfig: {
+    hideMinimap: true,
+    increaseFontSize: 2,
+    hideLineNumbers: false,
+  },
+};
+
+function mergeLayoutConfig(
+  roleLayout?: Partial<EditorLayoutConfig>,
+  levelLayout?: Partial<EditorLayoutConfig>
+): EditorLayoutConfig {
+  return {
+    ...defaultLayoutConfig,
+    ...roleLayout,
+    ...levelLayout,
+    responsiveBreakpoints: {
+      ...defaultLayoutConfig.responsiveBreakpoints,
+      ...roleLayout?.responsiveBreakpoints,
+      ...levelLayout?.responsiveBreakpoints,
+    },
+    zenModeConfig: {
+      ...defaultLayoutConfig.zenModeConfig,
+      ...roleLayout?.zenModeConfig,
+      ...levelLayout?.zenModeConfig,
+    },
+  };
+}
+
 function mergeUIConfig(
   roleConfig: Partial<EditorUIConfig>,
   levelOverrides: Partial<EditorUIConfig> = {}
 ): EditorUIConfig {
   const defaults: EditorUIConfig = {
     layoutMode: 'side-by-side',
+    layout: defaultLayoutConfig,
     showFileTree: true,
     showTestPanel: true,
     showOutputPanel: true,
@@ -94,6 +141,7 @@ function mergeUIConfig(
       ...roleConfig.panelSizes,
       ...levelOverrides.panelSizes,
     },
+    layout: mergeLayoutConfig(roleConfig.layout, levelOverrides.layout),
   };
 }
 
