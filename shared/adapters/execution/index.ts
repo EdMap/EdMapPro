@@ -222,6 +222,7 @@ ${levelModifiers.showExampleResponses ? 'Include example responses to help the d
     uiConfig: mergedUIConfig,
     prompts: mergedPrompts,
     levelModifiers,
+    knowledgeBase: roleConfig.knowledgeBase,
   };
 }
 

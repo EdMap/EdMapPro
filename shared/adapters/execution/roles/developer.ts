@@ -353,6 +353,63 @@ If the update is vague, gently ask for more detail. If it's good, acknowledge br
         'Unclear variable names',
       ],
     },
+    knowledgeBase: {
+      concepts: [
+        {
+          concept: 'optional chaining',
+          aliases: ['?.', 'optional chaining operator', 'safe navigation'],
+          explanation: 'Optional chaining (`?.`) lets you safely access nested properties without worrying about whether intermediate values are null or undefined. Instead of crashing, it returns undefined if any part of the chain is nullish.',
+          codeExample: '// Instead of:\nif (user && user.address && user.address.city) { ... }\n\n// You can write:\nconst city = user?.address?.city;',
+          qaAngle: 'This prevents runtime crashes when data is unexpectedly missing, which is common with API responses.',
+        },
+        {
+          concept: 'null check',
+          aliases: ['null guard', 'nullish check', 'defensive coding', 'null validation'],
+          explanation: 'A null check verifies that a value exists before you use it. This prevents "Cannot read property of undefined" errors that crash your app.',
+          codeExample: '// Early return pattern:\nfunction processUser(user) {\n  if (!user) return null;\n  return user.name.toUpperCase();\n}',
+          qaAngle: 'Missing null checks are one of the most common sources of production bugs. Always validate before accessing nested properties.',
+        },
+        {
+          concept: 'early return',
+          aliases: ['guard clause', 'early exit', 'return early'],
+          explanation: 'Early return is a pattern where you handle edge cases at the start of a function and return immediately, rather than nesting your main logic inside if-else blocks. It makes code more readable.',
+          codeExample: '// Instead of deeply nested if-else:\nfunction process(data) {\n  if (!data) return null;\n  if (!data.items) return [];\n  \n  // Main logic here, not nested\n  return data.items.map(...);\n}',
+        },
+        {
+          concept: 'destructuring',
+          aliases: ['object destructuring', 'array destructuring', 'destructure'],
+          explanation: 'Destructuring lets you extract values from objects or arrays into distinct variables in a concise way. It makes code cleaner and more readable.',
+          codeExample: '// Object destructuring:\nconst { name, email } = user;\n\n// Array destructuring:\nconst [first, second] = items;\n\n// With defaults:\nconst { role = "user" } = config;',
+        },
+        {
+          concept: 'async await',
+          aliases: ['async/await', 'async function', 'await keyword'],
+          explanation: 'Async/await is a way to write asynchronous code that looks synchronous. An async function returns a Promise, and await pauses execution until the Promise resolves.',
+          codeExample: 'async function fetchUser(id) {\n  try {\n    const response = await fetch(`/api/users/${id}`);\n    const user = await response.json();\n    return user;\n  } catch (error) {\n    console.error("Failed to fetch user:", error);\n  }\n}',
+          qaAngle: 'Always wrap await calls in try-catch for proper error handling.',
+        },
+        {
+          concept: 'spread operator',
+          aliases: ['...', 'spread syntax', 'object spread', 'array spread'],
+          explanation: 'The spread operator (`...`) expands an array or object into individual elements. It is commonly used to copy arrays/objects or merge them together.',
+          codeExample: '// Copy and add to array:\nconst newItems = [...items, newItem];\n\n// Merge objects:\nconst updated = { ...user, name: "New Name" };',
+        },
+        {
+          concept: 'type coercion',
+          aliases: ['type conversion', 'implicit conversion', 'truthy falsy'],
+          explanation: 'Type coercion is when JavaScript automatically converts one type to another. This can cause bugs with == vs === comparisons. Always use strict equality (===) to avoid surprises.',
+          codeExample: '// Problematic:\n"5" == 5  // true (coerced)\n\n// Safe:\n"5" === 5  // false (strict)\n\n// Explicit conversion:\nNumber("5") === 5  // true',
+          qaAngle: 'Type coercion bugs are subtle and hard to catch. Strict equality prevents an entire class of bugs.',
+        },
+        {
+          concept: 'error handling',
+          aliases: ['try catch', 'exception handling', 'error boundary'],
+          explanation: 'Error handling using try-catch allows you to gracefully handle exceptions without crashing the application. Always catch errors at appropriate boundaries and provide meaningful error messages.',
+          codeExample: 'try {\n  const result = await riskyOperation();\n  return result;\n} catch (error) {\n  console.error("Operation failed:", error.message);\n  // Return fallback or rethrow\n  throw new Error(`Failed to complete: ${error.message}`);\n}',
+          qaAngle: 'Unhandled errors crash the app. Proper error handling ensures graceful degradation.',
+        },
+      ],
+    },
   },
   
   uiControls: {

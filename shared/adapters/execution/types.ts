@@ -120,6 +120,18 @@ export interface ReviewerResponsePatterns {
   approval: string[];
 }
 
+export interface ConceptExplanation {
+  concept: string;
+  aliases: string[];
+  explanation: string;
+  codeExample?: string;
+  qaAngle?: string;
+}
+
+export interface PRReviewKnowledgeBase {
+  concepts: ConceptExplanation[];
+}
+
 export interface ReviewerPersona extends AIPersona {
   expertise: string[];
   reviewStyle: 'thorough' | 'balanced' | 'quick';
@@ -231,6 +243,7 @@ export interface PRReviewConfig {
   uiConfig: PRReviewUIConfig;
   prompts: PRReviewPrompts;
   levelModifiers: PRReviewModifiers;
+  knowledgeBase?: PRReviewKnowledgeBase;
 }
 
 export interface RolePRReviewConfig {
@@ -245,6 +258,7 @@ export interface RolePRReviewConfig {
   basePrompts: Omit<PRReviewPrompts, 'systemPrompt'> & {
     baseSystemPrompt: string;
   };
+  knowledgeBase?: PRReviewKnowledgeBase;
 }
 
 export type MinorResponseBehavior = 'auto-resolve' | 'intelligent-follow-up' | 'manual';
