@@ -508,7 +508,11 @@ Time:        0.842s`;
       updateTicket.mutate({ gitState: newGitState });
       
       setTimeout(() => {
-        addTerminalLine('hint', `Commit saved. Push your branch with: git push -u origin ${gitState.branchName}`);
+        if (gitState.prCreated) {
+          addTerminalLine('hint', `Commit saved. Push your changes to update the PR: git push origin ${gitState.branchName}`);
+        } else {
+          addTerminalLine('hint', `Commit saved. Push your branch with: git push -u origin ${gitState.branchName}`);
+        }
       }, 500);
       return;
     }
@@ -543,7 +547,13 @@ Time:        0.842s`;
       updateTicket.mutate({ gitState: newGitState });
       
       setTimeout(() => {
-        addTerminalLine('hint', `Branch pushed. Create a pull request with: gh pr create --title "Title" --body "Description"`);
+        if (gitState.prCreated) {
+          addTerminalLine('success', `New commits pushed to existing PR.`);
+          addTerminalLine('hint', `Your changes have been pushed. Go back to the PR Review and click "Request Re-review" to notify reviewers.`);
+          setShowCodeDuringReview(false);
+        } else {
+          addTerminalLine('hint', `Branch pushed. Create a pull request with: gh pr create --title "Title" --body "Description"`);
+        }
       }, 500);
       return;
     }
