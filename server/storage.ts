@@ -3685,12 +3685,18 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
           { item: 'Receive stakeholder feedback', completed: feedbackComplete, required: true },
         ];
       }
-      case 'retro':
+      case 'retro': {
+        const retroProgress = (workspace.workspaceMetadata as any)?.retroProgress || {};
+        const hasWentWell = (retroProgress.wentWell || 0) > 0;
+        const hasToImprove = (retroProgress.toImprove || 0) > 0;
+        const hasActionItems = (retroProgress.actionItemsCount || 0) > 0;
+        
         return [
-          { item: 'Share what went well', completed: false, required: true },
-          { item: 'Identify improvements', completed: false, required: true },
-          { item: 'Commit to action items', completed: false, required: true },
+          { item: 'Share what went well', completed: hasWentWell, required: true },
+          { item: 'Identify improvements', completed: hasToImprove, required: true },
+          { item: 'Commit to action items', completed: hasActionItems, required: true },
         ];
+      }
       default:
         return [];
     }

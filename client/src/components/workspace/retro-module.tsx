@@ -167,9 +167,21 @@ export function RetroModule({
 
   const completePhase = useMutation({
     mutationFn: async () => {
-      return apiRequest('PATCH', `/api/workspaces/${workspaceId}/phase`, {
-        newPhase: 'onboarding' as WorkspacePhase,
-        status: 'completed',
+      // First save retro progress to metadata (following adapter architecture pattern)
+      await apiRequest('PATCH', `/api/workspaces/${workspaceId}/metadata`, {
+        retroProgress: {
+          wentWell: wentWellCards.length,
+          toImprove: toImproveCards.length,
+          actionItemsCount: actionItems.length,
+          retroCards: cards,
+          actions: actionItems,
+          completedAt: new Date().toISOString(),
+        }
+      });
+      
+      // Then advance to next phase using the standard advance endpoint
+      // advanceWorkspacePhase handles retro → planning transition automatically
+      return apiRequest('POST', `/api/workspaces/${workspaceId}/advance`, {
         payload: {
           wentWell: wentWellCards.length,
           toImprove: toImproveCards.length,
@@ -185,10 +197,12 @@ export function RetroModule({
         setShowCelebration(true);
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+          queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'state'] });
           onComplete();
         }, 2000);
       } else {
         queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'state'] });
         onComplete();
       }
     },
