@@ -12,6 +12,7 @@ import {
   Loader2,
   Code2,
   Send,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BottomDock, type DockTab } from "./bottom-dock";
@@ -45,6 +46,7 @@ interface CodeEditorPanelProps {
   onTestResult?: (result: ExecutionResponse) => void;
   externalRunTests?: boolean;
   onExternalRunTestsComplete?: () => void;
+  hideSubmitButton?: boolean;
 }
 
 export function CodeEditorPanel({ 
@@ -60,6 +62,7 @@ export function CodeEditorPanel({
   onTestResult,
   externalRunTests = false,
   onExternalRunTestsComplete,
+  hideSubmitButton = false,
 }: CodeEditorPanelProps) {
   const [files, setFiles] = useState<Record<string, string>>(adapter.files.starterFiles);
   const [activeFile, setActiveFile] = useState<string>(Object.keys(adapter.files.starterFiles)[0] || '');
@@ -206,7 +209,7 @@ export function CodeEditorPanel({
             </Button>
           )}
           
-          {adapter.ui.toolbarActions.includes('submit') && lastResult?.overallPass && (
+          {adapter.ui.toolbarActions.includes('submit') && lastResult?.overallPass && !hideSubmitButton && (
             <Button
               size="sm"
               variant="default"
@@ -217,6 +220,13 @@ export function CodeEditorPanel({
               <Send className="w-4 h-4 mr-1" />
               Submit
             </Button>
+          )}
+          
+          {hideSubmitButton && lastResult?.overallPass && (
+            <Badge variant="default" className="bg-green-600 text-white px-3 py-1">
+              <Check className="w-3 h-3 mr-1" />
+              Tests passing — ready for git workflow
+            </Badge>
           )}
         </div>
       </div>

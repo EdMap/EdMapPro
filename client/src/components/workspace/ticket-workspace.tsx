@@ -56,7 +56,7 @@ interface TicketWorkspaceProps {
 
 interface TerminalLine {
   id: string;
-  type: 'command' | 'output' | 'error' | 'hint' | 'success';
+  type: 'command' | 'output' | 'error' | 'hint' | 'success' | 'info';
   content: string;
   timestamp: Date;
 }
@@ -259,25 +259,25 @@ export function TicketWorkspace({
     const failed = result.testResults.filter(t => !t.passed).length;
     const total = result.testResults.length;
     
-    if (result.allPassed) {
+    if (result.overallPass) {
       let output = `\nPASS  All tests passed!\n\n`;
       result.testResults.forEach(test => {
-        output += `  ✓ ${test.name} (${Math.floor(Math.random() * 10 + 2)}ms)\n`;
+        output += `  ✓ ${test.testName} (${test.executionTimeMs || Math.floor(Math.random() * 10 + 2)}ms)\n`;
       });
       output += `\nTest Suites: 1 passed, 1 total\n`;
       output += `Tests:       ${passed} passed, ${total} total\n`;
-      output += `Time:        ${(Math.random() * 0.5 + 0.3).toFixed(3)}s`;
+      output += `Time:        ${(result.latencyMs / 1000).toFixed(3)}s`;
       addTerminalLine('success', output);
       addTerminalLine('hint', 'All tests passing! Now stage your changes with: git add .');
     } else {
       let output = `\nFAIL  Some tests failed\n\n`;
       result.testResults.forEach(test => {
         if (test.passed) {
-          output += `  ✓ ${test.name} (${Math.floor(Math.random() * 10 + 2)}ms)\n`;
+          output += `  ✓ ${test.testName} (${test.executionTimeMs || Math.floor(Math.random() * 10 + 2)}ms)\n`;
         } else {
-          output += `  ✕ ${test.name} (${Math.floor(Math.random() * 15 + 5)}ms)\n`;
-          if (test.error) {
-            output += `    Error: ${test.error}\n`;
+          output += `  ✕ ${test.testName} (${test.executionTimeMs || Math.floor(Math.random() * 15 + 5)}ms)\n`;
+          if (test.explanation) {
+            output += `    ${test.explanation}\n`;
           }
         }
       });
@@ -285,8 +285,8 @@ export function TicketWorkspace({
       output += `Tests:       ${failed} failed, ${passed} passed, ${total} total`;
       addTerminalLine('error', output);
       
-      if (result.feedback) {
-        addTerminalLine('hint', `AI Feedback: ${result.feedback}`);
+      if (result.feedback?.summary) {
+        addTerminalLine('hint', `AI Feedback: ${result.feedback.summary}`);
       }
     }
   }, [addTerminalLine]);
@@ -426,7 +426,17 @@ Time:        0.842s`;
         return;
       }
       
-      if (adapter.codeWorkConfig.enabled && 
+      if (useMonacoEditor && codeExecutionAdapter) {
+        if (!lastTestResult) {
+          addTerminalLine('error', "Run tests first before staging. Use: npm test");
+          addTerminalLine('hint', "Tests verify your code is correct before you commit.");
+          return;
+        }
+        if (!lastTestResult.overallPass) {
+          addTerminalLine('error', "Tests are failing. Fix your code and run npm test again before staging.");
+          return;
+        }
+      } else if (adapter.codeWorkConfig.enabled && 
           adapter.codeWorkConfig.requireCompletionBeforeStage && 
           codeWorkTemplate && 
           !codeWorkComplete) {
@@ -1056,6 +1066,7 @@ Time:        0.842s`;
                     externalRunTests={triggerExternalTests}
                     onExternalRunTestsComplete={() => setTriggerExternalTests(false)}
                     onTestResult={handleTestResult}
+                    hideSubmitButton={true}
                   />
                 </div>
               )}
