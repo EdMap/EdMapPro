@@ -1041,7 +1041,7 @@ Time:        0.842s`;
           )}
           
           {adapter.codeWorkConfig.enabled && codeWorkTemplate && gitState.branchName && 
-           (!codeWorkComplete || (isFullEditorMode && !gitState.prCreated)) && (
+           !isInReviewPhase && (!codeWorkComplete || (isFullEditorMode && !gitState.prCreated)) && (
             <div className={cn(
               "border-b",
               isFullEditorMode ? "flex-1 overflow-hidden" : "p-4 bg-amber-50/30 dark:bg-amber-950/10"
