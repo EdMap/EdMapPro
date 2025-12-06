@@ -83,7 +83,7 @@ function mergeUIConfig(
     showHintPanel: true,
     panelSizes: { editor: 60, tests: 20, output: 20 },
     showToolbar: true,
-    toolbarActions: ['run', 'format', 'reset', 'hint', 'submit'],
+    toolbarActions: ['format', 'reset'],
     bottomDock: {
       enabled: true,
       enabledTabs: ['terminal', 'tests', 'chat', 'tips'],
