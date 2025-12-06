@@ -64,7 +64,22 @@ export function CodeEditorPanel({
   onExternalRunTestsComplete,
   hideSubmitButton = false,
 }: CodeEditorPanelProps) {
-  const [files, setFiles] = useState<Record<string, string>>(adapter.files.starterFiles);
+  const storageKey = `edmap-code-${ticketId}`;
+  
+  const [files, setFiles] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed === 'object' && parsed !== null) {
+          return { ...adapter.files.starterFiles, ...parsed };
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load saved code:', e);
+    }
+    return adapter.files.starterFiles;
+  });
   const [activeFile, setActiveFile] = useState<string>(Object.keys(adapter.files.starterFiles)[0] || '');
   const [lastResult, setLastResult] = useState<ExecutionResponse | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
@@ -105,10 +120,15 @@ export function CodeEditorPanel({
       setFiles(prev => {
         const newFiles = { ...prev, [activeFile]: value };
         onFilesChange?.(newFiles);
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(newFiles));
+        } catch (e) {
+          console.error('Failed to save code:', e);
+        }
         return newFiles;
       });
     }
-  }, [activeFile, onFilesChange]);
+  }, [activeFile, onFilesChange, storageKey]);
   
   const handleRunTests = useCallback(() => {
     analyzeCodeMutation.mutate();
@@ -117,7 +137,12 @@ export function CodeEditorPanel({
   const handleReset = useCallback(() => {
     setFiles(adapter.files.starterFiles);
     setLastResult(null);
-  }, [adapter.files.starterFiles]);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (e) {
+      console.error('Failed to clear saved code:', e);
+    }
+  }, [adapter.files.starterFiles, storageKey]);
   
   const handleRequestHint = useCallback(() => {
     if (adapter.scaffolding.hintLevel === 'never') return;
