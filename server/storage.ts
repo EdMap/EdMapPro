@@ -3674,12 +3674,17 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
           { item: 'Complete assigned tickets', completed: false, required: true },
           { item: 'Submit code for review', completed: false, required: false },
         ];
-      case 'review':
+      case 'review': {
+        const reviewProgress = (workspace.workspaceMetadata as any)?.reviewProgress || {};
+        const demoComplete = reviewProgress.demoComplete || false;
+        const feedbackComplete = reviewProgress.feedbackComplete || false;
+        
         return [
-          { item: 'Prepare demo', completed: false, required: true },
-          { item: 'Present completed work', completed: false, required: true },
-          { item: 'Receive stakeholder feedback', completed: false, required: true },
+          { item: 'Prepare demo', completed: demoComplete, required: true },
+          { item: 'Present completed work', completed: demoComplete, required: true },
+          { item: 'Receive stakeholder feedback', completed: feedbackComplete, required: true },
         ];
+      }
       case 'retro':
         return [
           { item: 'Share what went well', completed: false, required: true },

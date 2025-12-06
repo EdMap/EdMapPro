@@ -52,7 +52,7 @@ export default function WorkspaceReview() {
   const { workspace } = state;
 
   const handleComplete = () => {
-    navigate(`/workspace/${workspaceId}`);
+    navigate(`/workspace/${workspaceId}/retro`);
   };
 
   const handleBack = () => {
@@ -73,8 +73,8 @@ export default function WorkspaceReview() {
           journeyId={workspace.journeyId}
           companyName={workspace.companyName}
           role={workspace.role}
-          level={workspace.level}
-          sprintId={workspace.currentSprintId}
+          level={(workspace.workspaceMetadata as any)?.level || 'intern'}
+          sprintId={workspace.currentSprintId ?? undefined}
           onComplete={handleComplete}
           onBack={handleBack}
         />

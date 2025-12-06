@@ -208,6 +208,22 @@ export function ReviewModule({
     }
   }, [currentStep]);
 
+  const saveProgress = useMutation({
+    mutationFn: async (progress: { demoComplete?: boolean; feedbackComplete?: boolean }) => {
+      return apiRequest('PATCH', `/api/workspaces/${workspaceId}/metadata`, {
+        reviewProgress: {
+          demoComplete: progress.demoComplete || currentStep === 'feedback' || currentStep === 'summary',
+          feedbackComplete: progress.feedbackComplete || currentStep === 'summary',
+          demoNotes,
+          feedbackReceived: generatedFeedback.length,
+        }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'state'] });
+    },
+  });
+
   const completePhase = useMutation({
     mutationFn: async () => {
       return apiRequest('PATCH', `/api/workspaces/${workspaceId}/phase`, {
@@ -218,11 +234,16 @@ export function ReviewModule({
           feedbackReceived: generatedFeedback.length,
           completedTickets: completedTickets.map(t => t.id),
           totalPoints,
+          reviewProgress: {
+            demoComplete: true,
+            feedbackComplete: true,
+          }
         }
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'state'] });
       onComplete();
     },
     onError: () => {
@@ -239,6 +260,7 @@ export function ReviewModule({
       setCurrentDemoItem(currentDemoItem + 1);
     } else {
       setCurrentStep('feedback');
+      saveProgress.mutate({ demoComplete: true });
     }
   };
 
@@ -259,6 +281,7 @@ export function ReviewModule({
       setCurrentFeedback(currentFeedback + 1);
     } else {
       setCurrentStep('summary');
+      saveProgress.mutate({ demoComplete: true, feedbackComplete: true });
     }
   };
 

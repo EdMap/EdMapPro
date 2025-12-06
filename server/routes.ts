@@ -2948,6 +2948,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/workspaces/:workspaceId/metadata - Update workspace metadata
+  app.patch("/api/workspaces/:workspaceId/metadata", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const metadataUpdates = req.body;
+      
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      const existingMetadata = (workspace.workspaceMetadata as Record<string, unknown>) || {};
+      const updatedMetadata = { ...existingMetadata, ...metadataUpdates };
+      
+      const updated = await storage.updateWorkspaceInstance(workspaceId, {
+        workspaceMetadata: updatedMetadata,
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Failed to update workspace metadata:", error);
+      res.status(500).json({ message: "Failed to update workspace metadata" });
+    }
+  });
+
   // POST /api/workspaces/:workspaceId/advance - Advance to next phase
   app.post("/api/workspaces/:workspaceId/advance", async (req, res) => {
     try {
