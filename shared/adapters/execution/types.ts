@@ -238,6 +238,8 @@ export interface RolePRReviewConfig {
   };
 }
 
+export type MinorResponseBehavior = 'auto-resolve' | 'intelligent-follow-up' | 'manual';
+
 export interface PRReviewModifiers {
   commentCountMultiplier: number;
   severityDistribution: {
@@ -248,6 +250,7 @@ export interface PRReviewModifiers {
   feedbackTone: 'educational' | 'collaborative' | 'direct' | 'peer';
   showExampleResponses: boolean;
   autoResolveMinorOnResponse: boolean;
+  minorResponseBehavior: MinorResponseBehavior;
   requireExplicitApprovalRequest: boolean;
   uiOverrides: Partial<PRReviewUIConfig>;
 }

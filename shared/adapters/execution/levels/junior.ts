@@ -57,6 +57,7 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
     feedbackTone: 'collaborative',
     showExampleResponses: true,
     autoResolveMinorOnResponse: false,
+    minorResponseBehavior: 'intelligent-follow-up',
     requireExplicitApprovalRequest: false,
     uiOverrides: {
       layoutMode: 'split-diff',

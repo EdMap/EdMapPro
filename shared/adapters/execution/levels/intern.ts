@@ -51,6 +51,7 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
     feedbackTone: 'educational',
     showExampleResponses: true,
     autoResolveMinorOnResponse: true,
+    minorResponseBehavior: 'intelligent-follow-up',
     requireExplicitApprovalRequest: false,
     uiOverrides: {
       layoutMode: 'conversation-first',

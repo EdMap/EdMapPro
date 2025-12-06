@@ -57,6 +57,7 @@ export const midExecutionOverlay: LevelExecutionOverlay = {
     feedbackTone: 'direct',
     showExampleResponses: false,
     autoResolveMinorOnResponse: false,
+    minorResponseBehavior: 'manual',
     requireExplicitApprovalRequest: true,
     uiOverrides: {
       layoutMode: 'split-diff',

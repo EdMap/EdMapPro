@@ -57,6 +57,7 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
     feedbackTone: 'peer',
     showExampleResponses: false,
     autoResolveMinorOnResponse: false,
+    minorResponseBehavior: 'manual',
     requireExplicitApprovalRequest: true,
     uiOverrides: {
       layoutMode: 'unified',
