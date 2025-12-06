@@ -176,6 +176,10 @@ function mergePRReviewConfig(
     expandThreadsByDefault: true,
     highlightUnresolved: true,
     showRevisionHistory: false,
+    showReturnToCode: true,
+    showReviewBanner: true,
+    showProgressIndicator: true,
+    enableMarkAddressed: true,
   };
 
   const mergedUIConfig: PRReviewUIConfig = {

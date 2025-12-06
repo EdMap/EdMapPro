@@ -165,6 +165,41 @@ export interface PRReviewUIConfig {
   expandThreadsByDefault: boolean;
   highlightUnresolved: boolean;
   showRevisionHistory: boolean;
+  // Rework flow UI config
+  showReturnToCode: boolean;
+  showReviewBanner: boolean;
+  showProgressIndicator: boolean;
+  enableMarkAddressed: boolean;
+}
+
+// PR Review state for tracking review→rework→re-review cycle
+export type PRReviewStatus = 'pending_review' | 'changes_requested' | 'approved' | 'merged';
+
+export interface PRReviewState {
+  status: PRReviewStatus;
+  currentCycle: number;
+  threads: ReviewThreadState[];
+  lastTestsPassed: boolean;
+  lastTestsRunAt?: string;
+  canRequestReReview: boolean;
+  canMerge: boolean;
+}
+
+export interface ReviewThreadState {
+  threadId: string;
+  severity: 'minor' | 'major' | 'blocking';
+  status: 'open' | 'addressed' | 'resolved' | 'dismissed';
+  filename?: string;
+  lineNumber?: number;
+  userAddressedAt?: string;
+  reviewerResolvedAt?: string;
+}
+
+export interface ReworkGuidance {
+  returnToCodeMessage: string;
+  addressedHint: string;
+  reReviewHint: string;
+  testRequirementMessage: string;
 }
 
 export interface PRReviewPrompts {

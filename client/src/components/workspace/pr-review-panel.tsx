@@ -27,6 +27,7 @@ import {
   Eye,
   MessageCircle,
   History,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { 
@@ -50,6 +51,13 @@ interface PRReviewPanelProps {
   onCommentSubmit: (threadId: string, content: string) => void;
   onRequestReReview: () => void;
   onMerge: () => void;
+  onReturnToCode?: () => void;
+  reviewState?: {
+    status: 'pending_review' | 'changes_requested' | 'approved' | 'merged';
+    lastTestsPassed: boolean;
+    addressedCount: number;
+    totalBlockingCount: number;
+  };
 }
 
 interface SimulatedThread {
@@ -514,6 +522,8 @@ export function PRReviewPanel({
   onCommentSubmit,
   onRequestReReview,
   onMerge,
+  onReturnToCode,
+  reviewState,
 }: PRReviewPanelProps) {
   const { uiConfig, levelModifiers, reviewers } = prReviewConfig;
   
@@ -547,11 +557,21 @@ export function PRReviewPanel({
     [threads]
   );
   
+  const testsAreBlocking = reviewState?.lastTestsPassed === false;
+  
   const canMerge = useMemo(() => {
     if (prReviewConfig.requireAllResolved && unresolvedCount > 0) return false;
     if (blockingCount > 0) return false;
+    if (testsAreBlocking) return false;
     return reviewPhase === 'approved';
-  }, [prReviewConfig.requireAllResolved, unresolvedCount, blockingCount, reviewPhase]);
+  }, [prReviewConfig.requireAllResolved, unresolvedCount, blockingCount, reviewPhase, testsAreBlocking]);
+  
+  const canRequestReReview = useMemo(() => {
+    if (reviewPhase === 'in_review' || reviewPhase === 'approved') return false;
+    if (blockingCount > 0) return false;
+    if (testsAreBlocking) return false;
+    return true;
+  }, [reviewPhase, blockingCount, testsAreBlocking]);
   
   const fileGroups = useMemo(() => {
     const groups: Record<string, SimulatedThread[]> = {};
@@ -1128,6 +1148,85 @@ export function PRReviewPanel({
   const resolvedCount = threads.length - unresolvedCount;
   const progressPercent = threads.length > 0 ? Math.round((resolvedCount / threads.length) * 100) : 0;
   
+  const addressedThreadsCount = useMemo(() => 
+    threads.filter(t => t.status === 'resolved' || t.comments.some(c => c.isUser)).length,
+    [threads]
+  );
+  
+  const canRequestReReviewNow = useMemo(() => {
+    const hasUnaddressedBlocking = threads.some(
+      t => t.status === 'open' && t.severity === 'blocking' && !t.comments.some(c => c.isUser)
+    );
+    return !hasUnaddressedBlocking && reviewPhase === 'changes_requested';
+  }, [threads, reviewPhase]);
+  
+  const renderChangesRequestedBanner = () => {
+    if (reviewPhase !== 'changes_requested' || !uiConfig.showReviewBanner) return null;
+    
+    return (
+      <div 
+        className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4"
+        role="alert"
+        aria-label="Changes requested - action required"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-medium text-amber-700 dark:text-amber-300">
+                Changes Requested
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {blockingCount > 0 
+                  ? `${blockingCount} blocking issue${blockingCount !== 1 ? 's' : ''} need${blockingCount === 1 ? 's' : ''} to be fixed in your code.`
+                  : `Review the feedback below and address the comments.`
+                }
+              </p>
+              {uiConfig.showProgressIndicator && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="flex gap-0.5">
+                    {threads.map((t, i) => (
+                      <div 
+                        key={i}
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          t.status === 'resolved' 
+                            ? "bg-green-500" 
+                            : t.comments.some(c => c.isUser)
+                              ? "bg-blue-500"
+                              : t.severity === 'blocking'
+                                ? "bg-red-500"
+                                : "bg-amber-500"
+                        )}
+                        title={t.status === 'resolved' ? 'Resolved' : t.comments.some(c => c.isUser) ? 'Addressed' : 'Open'}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {addressedThreadsCount}/{threads.length} addressed
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {uiConfig.showReturnToCode && onReturnToCode && blockingCount > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onReturnToCode}
+              className="bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0"
+              data-testid="button-return-to-code"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
+              Return to Code
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
   const renderReviewChecklist = () => {
     if (!uiConfig.showReviewChecklist) return null;
     
@@ -1245,6 +1344,7 @@ export function PRReviewPanel({
       <Separator />
       
       <CardContent className="pt-4">
+        {renderChangesRequestedBanner()}
         {renderReviewChecklist()}
         
         {uiConfig.layoutMode === 'conversation-first' && renderConversationFirstLayout()}
@@ -1262,6 +1362,11 @@ export function PRReviewPanel({
                 <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                   <AlertCircle className="h-4 w-4" aria-hidden="true" />
                   <span className="font-medium">{blockingCount} blocking issue{blockingCount !== 1 ? 's' : ''} must be resolved before merge</span>
+                </div>
+              ) : testsAreBlocking ? (
+                <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                  <span className="font-medium">Tests must pass before requesting re-review</span>
                 </div>
               ) : unresolvedCount > 0 ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1286,12 +1391,12 @@ export function PRReviewPanel({
             </div>
             
             <div className="flex items-center gap-3">
-              {reviewPhase !== 'approved' && unresolvedCount === 0 && (
+              {reviewPhase !== 'approved' && (
                 <Button 
                   variant="outline" 
                   onClick={handleRequestReReview}
-                  disabled={reviewPhase === 'in_review'}
-                  aria-label="Request reviewers to re-review your changes"
+                  disabled={!canRequestReReview || reviewPhase === 'in_review'}
+                  aria-label={canRequestReReview ? "Request reviewers to re-review your changes" : "Cannot request re-review - resolve blocking issues and pass tests first"}
                   data-testid="button-request-re-review"
                 >
                   <RefreshCw className={cn("h-4 w-4 mr-2", reviewPhase === 'in_review' && "animate-spin")} aria-hidden="true" />
