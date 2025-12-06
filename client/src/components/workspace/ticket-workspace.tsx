@@ -416,11 +416,8 @@ Time:        0.842s`;
       const branchMatch = cmd.match(/git\s+checkout\s+-b\s+(\S+)/i) || cmd.match(/git\s+switch\s+-c\s+(\S+)/i);
       const branchName = branchMatch ? branchMatch[1] : `feature/${ticket?.ticketKey?.toLowerCase()}-fix`;
       
-      const output = typeof branchCommands.successOutput === 'function'
-        ? branchCommands.successOutput(ticket?.ticketKey || 'TICK-001')
-        : branchCommands.successOutput;
-      
-      addTerminalLine('success', output.replace(/\$\{ticketId\.toLowerCase\(\)\}/g, (ticket?.ticketKey || 'tick-001').toLowerCase()));
+      // Use actual branch name from user's command in the success message
+      addTerminalLine('success', `Switched to a new branch '${branchName}'`);
       
       const newGitState: GitTicketState = {
         ...gitState,
