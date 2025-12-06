@@ -455,7 +455,10 @@ function generateInitialThreads(
     { name: 'src/hooks/useTransaction.ts', lines: [8, 34, 78] },
   ];
   
-  for (let i = 0; i < commentCount; i++) {
+  // Ensure at least one comment from each reviewer
+  const actualCommentCount = Math.max(commentCount, reviewers.length);
+  
+  for (let i = 0; i < actualCommentCount; i++) {
     const rand = Math.random();
     let severity: 'minor' | 'major' | 'blocking';
     if (rand < severityDist.blocking) {
@@ -466,7 +469,10 @@ function generateInitialThreads(
       severity = 'minor';
     }
     
-    const reviewer = reviewers[i % reviewers.length];
+    // First loop through all reviewers, then randomize for extras
+    const reviewer = i < reviewers.length 
+      ? reviewers[i] 
+      : reviewers[Math.floor(Math.random() * reviewers.length)];
     const file = files[i % files.length];
     const templateList = templates[severity];
     const content = templateList[i % templateList.length];
