@@ -76,6 +76,7 @@ function mergeUIConfig(
 ): EditorUIConfig {
   const defaults: EditorUIConfig = {
     layoutMode: 'side-by-side',
+    defaultEditorMode: 'full',
     showFileTree: true,
     showTestPanel: true,
     showOutputPanel: true,

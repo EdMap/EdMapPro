@@ -36,6 +36,7 @@ export const midCodeExecutionOverlay: LevelCodeExecutionOverlay = {
   
   uiOverrides: {
     layoutMode: 'side-by-side',
+    defaultEditorMode: 'full',
     showHintPanel: false,
     toolbarActions: ['run', 'format', 'reset', 'submit'],
   },

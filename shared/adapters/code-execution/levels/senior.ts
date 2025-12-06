@@ -37,6 +37,7 @@ export const seniorCodeExecutionOverlay: LevelCodeExecutionOverlay = {
   
   uiOverrides: {
     layoutMode: 'focus-editor',
+    defaultEditorMode: 'full',
     showHintPanel: false,
     showFileTree: true,
     toolbarActions: ['run', 'format', 'submit'],

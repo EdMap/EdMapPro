@@ -37,6 +37,7 @@ export const internCodeExecutionOverlay: LevelCodeExecutionOverlay = {
   
   uiOverrides: {
     layoutMode: 'stacked',
+    defaultEditorMode: 'full',
     showHintPanel: true,
     toolbarActions: ['run', 'hint', 'submit'],
     panelSizes: {

@@ -36,6 +36,7 @@ export const juniorCodeExecutionOverlay: LevelCodeExecutionOverlay = {
   
   uiOverrides: {
     layoutMode: 'side-by-side',
+    defaultEditorMode: 'full',
     showHintPanel: true,
     toolbarActions: ['run', 'format', 'hint', 'submit'],
   },

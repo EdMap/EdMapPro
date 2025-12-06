@@ -143,7 +143,7 @@ export function TicketWorkspace({
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(true);
   const [optimisticCodeWorkComplete, setOptimisticCodeWorkComplete] = useState<boolean | null>(null);
   const [isCodeWorkSaving, setIsCodeWorkSaving] = useState(false);
-  const [useMonacoEditor, setUseMonacoEditor] = useState(false);
+  const [useMonacoEditor, setUseMonacoEditor] = useState(true);
   const [triggerExternalTests, setTriggerExternalTests] = useState(false);
   const [lastTestResult, setLastTestResult] = useState<ExecutionResponse | null>(null);
 

@@ -169,6 +169,8 @@ export interface ExecutionSettings {
 
 export type EditorLayoutMode = 'side-by-side' | 'stacked' | 'tabbed' | 'focus-editor';
 
+export type EditorMode = 'simple' | 'full';
+
 export type DockTab = 'terminal' | 'tests' | 'chat' | 'tips';
 
 export interface BottomDockConfig {
@@ -182,6 +184,7 @@ export interface BottomDockConfig {
 
 export interface EditorUIConfig {
   layoutMode: EditorLayoutMode;
+  defaultEditorMode: EditorMode;
   showFileTree: boolean;
   showTestPanel: boolean;
   showOutputPanel: boolean;
