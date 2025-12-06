@@ -83,6 +83,14 @@ function mergeUIConfig(
     panelSizes: { editor: 60, tests: 20, output: 20 },
     showToolbar: true,
     toolbarActions: ['run', 'format', 'reset', 'hint', 'submit'],
+    bottomDock: {
+      enabled: true,
+      enabledTabs: ['terminal', 'tests', 'chat', 'tips'],
+      defaultTab: 'terminal',
+      defaultExpanded: true,
+      collapsedHeight: 40,
+      expandedHeight: 250,
+    },
   };
   
   return {
@@ -93,6 +101,11 @@ function mergeUIConfig(
       ...defaults.panelSizes,
       ...roleConfig.panelSizes,
       ...levelOverrides.panelSizes,
+    },
+    bottomDock: {
+      ...defaults.bottomDock,
+      ...roleConfig.bottomDock,
+      ...levelOverrides.bottomDock,
     },
   };
 }

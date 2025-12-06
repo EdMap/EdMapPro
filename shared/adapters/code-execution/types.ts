@@ -169,6 +169,17 @@ export interface ExecutionSettings {
 
 export type EditorLayoutMode = 'side-by-side' | 'stacked' | 'tabbed' | 'focus-editor';
 
+export type DockTab = 'terminal' | 'tests' | 'chat' | 'tips';
+
+export interface BottomDockConfig {
+  enabled: boolean;
+  enabledTabs: DockTab[];
+  defaultTab: DockTab;
+  defaultExpanded: boolean;
+  collapsedHeight: number;
+  expandedHeight: number;
+}
+
 export interface EditorUIConfig {
   layoutMode: EditorLayoutMode;
   showFileTree: boolean;
@@ -182,6 +193,7 @@ export interface EditorUIConfig {
   };
   showToolbar: boolean;
   toolbarActions: ('run' | 'format' | 'reset' | 'hint' | 'submit')[];
+  bottomDock: BottomDockConfig;
 }
 
 // ============================================================================

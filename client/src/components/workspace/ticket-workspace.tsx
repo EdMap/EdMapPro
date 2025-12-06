@@ -166,13 +166,13 @@ export function TicketWorkspace({
     terminalCollapsible: false,
   };
   
-  const shouldShowTerminal = isInReviewPhase 
+  const shouldShowTerminal = !useMonacoEditor && (isInReviewPhase 
     ? reviewPhaseLayout.showGitTerminal 
-    : adapter.uiControls.showGitTerminal;
+    : adapter.uiControls.showGitTerminal);
   
-  const shouldShowTeamChat = isInReviewPhase 
+  const shouldShowTeamChat = !useMonacoEditor && (isInReviewPhase 
     ? reviewPhaseLayout.showTeamChat 
-    : adapter.uiControls.showTeamChat;
+    : adapter.uiControls.showTeamChat);
   
   const shouldShowQuickActions = isInReviewPhase 
     ? reviewPhaseLayout.showQuickActions 
@@ -949,10 +949,37 @@ Time:        0.842s`;
                   />
                 </div>
               ) : codeExecutionAdapter && (
-                <div className="flex-1 h-[500px]">
+                <div className="flex-1 h-full min-h-[600px]">
                   <CodeEditorPanel
                     adapter={codeExecutionAdapter}
                     ticketId={ticket?.ticketKey || String(ticketId)}
+                    terminalLines={terminalLines.map(line => ({
+                      type: line.type === 'command' ? 'input' : line.type as 'output' | 'error' | 'success' | 'info',
+                      content: line.content,
+                      timestamp: line.timestamp,
+                    }))}
+                    onTerminalCommand={(cmd) => {
+                      addTerminalLine('command', `$ ${cmd}`);
+                      processGitCommand(cmd);
+                    }}
+                    chatMessages={chatMessages.map(msg => ({
+                      id: msg.id,
+                      sender: msg.from,
+                      senderRole: msg.role,
+                      content: msg.content,
+                      timestamp: msg.timestamp,
+                      isUser: msg.from === 'You',
+                    }))}
+                    onSendChat={(message) => {
+                      setChatMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        from: 'You',
+                        role: 'Developer',
+                        content: message,
+                        color: 'bg-blue-500',
+                        timestamp: new Date(),
+                      }]);
+                    }}
                     onSubmit={async (files, result) => {
                       if (result.overallPass) {
                         setOptimisticCodeWorkComplete(true);
