@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +28,12 @@ import {
   MessageCircle,
   History,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { Role, Level } from "@shared/adapters";
 import type { 
   PRReviewConfig, 
   ReviewerPersona, 
@@ -40,6 +44,34 @@ import type {
   ConceptExplanation,
   PRReviewKnowledgeBase,
 } from "@shared/adapters/execution/types";
+
+interface LLMReviewComment {
+  id: string;
+  reviewerId: string;
+  reviewerName: string;
+  reviewerRole: string;
+  content: string;
+  severity: 'minor' | 'major' | 'blocking';
+  type: 'suggestion' | 'question' | 'request_changes' | 'approval';
+  filename?: string;
+  lineNumber?: number;
+  codeSnippet?: string;
+  requiresResponse: boolean;
+}
+
+interface LLMReviewResponse {
+  success: boolean;
+  reviewerId: string;
+  comments: LLMReviewComment[];
+  overallAssessment: string;
+  approvalStatus: 'approved' | 'changes_requested' | 'needs_discussion';
+}
+
+interface CodeReviewAPIResponse {
+  success: boolean;
+  reviews: LLMReviewResponse[];
+  reviewers: { id: string; name: string; role: string; color: string }[];
+}
 
 interface PRReviewPanelProps {
   prReviewConfig: PRReviewConfig;
@@ -60,6 +92,10 @@ interface PRReviewPanelProps {
     addressedCount: number;
     totalBlockingCount: number;
   };
+  useLLMReviews?: boolean;
+  codeFiles?: Record<string, string>;
+  userLevel?: Level;
+  userRole?: Role;
 }
 
 interface SimulatedThread {
@@ -592,6 +628,10 @@ export function PRReviewPanel({
   onMerge,
   onReturnToCode,
   reviewState,
+  useLLMReviews = false,
+  codeFiles,
+  userLevel = 'intern',
+  userRole = 'developer',
 }: PRReviewPanelProps) {
   const { uiConfig, levelModifiers, reviewers } = prReviewConfig;
   
@@ -603,8 +643,9 @@ export function PRReviewPanel({
   };
   
   const [threads, setThreads] = useState<SimulatedThread[]>(() => 
-    generateInitialThreads(prReviewConfig, ticketContext)
+    useLLMReviews ? [] : generateInitialThreads(prReviewConfig, ticketContext)
   );
+  const [isLoadingReviews, setIsLoadingReviews] = useState(useLLMReviews);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(() => {
     if (uiConfig.expandThreadsByDefault) {
@@ -614,6 +655,76 @@ export function PRReviewPanel({
   });
   const [showFileTree, setShowFileTree] = useState(uiConfig.showFileTree);
   const [reviewPhase, setReviewPhase] = useState<'in_review' | 'changes_requested' | 'approved'>('changes_requested');
+  
+  const fetchLLMReviewsMutation = useMutation({
+    mutationFn: async () => {
+      if (!codeFiles || Object.keys(codeFiles).length === 0) {
+        throw new Error('No code files to review');
+      }
+      const response = await apiRequest('POST', '/api/code-review', {
+        ticketId: ticketKey,
+        ticketTitle,
+        ticketDescription: ticketDescription || '',
+        files: codeFiles,
+        userLevel,
+        userRole,
+      });
+      return response.json() as Promise<CodeReviewAPIResponse>;
+    },
+    onSuccess: (data) => {
+      const newThreads: SimulatedThread[] = [];
+      const reviewerColors: Record<string, string> = {};
+      data.reviewers.forEach(r => {
+        reviewerColors[r.id] = r.color;
+      });
+      
+      data.reviews.forEach((review, reviewIndex) => {
+        review.comments.forEach((comment, commentIndex) => {
+          const issueContext = extractIssueKeywords(ticketContext)[0] || 'code implementation';
+          
+          newThreads.push({
+            id: `llm-thread-${reviewIndex}-${commentIndex}`,
+            reviewerId: comment.reviewerId,
+            reviewerName: comment.reviewerName,
+            reviewerRole: comment.reviewerRole,
+            reviewerColor: reviewerColors[comment.reviewerId] || '#3B82F6',
+            filename: comment.filename,
+            lineNumber: comment.lineNumber,
+            codeSnippet: comment.codeSnippet,
+            comments: [{
+              id: `llm-comment-${reviewIndex}-${commentIndex}`,
+              authorId: comment.reviewerId,
+              authorName: comment.reviewerName,
+              authorRole: comment.reviewerRole,
+              content: comment.content,
+              type: comment.type,
+              isUser: false,
+              createdAt: new Date().toISOString(),
+            }],
+            status: 'open',
+            severity: comment.severity,
+            createdAt: new Date().toISOString(),
+            issueContext,
+          });
+        });
+      });
+      
+      setThreads(newThreads);
+      setExpandedThreads(new Set(newThreads.map(t => t.id)));
+      setIsLoadingReviews(false);
+    },
+    onError: (error) => {
+      console.error('Failed to fetch LLM reviews:', error);
+      setThreads(generateInitialThreads(prReviewConfig, ticketContext));
+      setIsLoadingReviews(false);
+    },
+  });
+  
+  useEffect(() => {
+    if (useLLMReviews && codeFiles && Object.keys(codeFiles).length > 0 && threads.length === 0) {
+      fetchLLMReviewsMutation.mutate();
+    }
+  }, [useLLMReviews, codeFiles]);
   
   const unresolvedCount = useMemo(() => 
     threads.filter(t => t.status === 'open').length, 
@@ -1622,6 +1733,20 @@ export function PRReviewPanel({
       </div>
     );
   };
+  
+  if (isLoadingReviews) {
+    return (
+      <Card className="border-green-200 dark:border-green-800" data-testid="pr-review-panel-loading">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-green-600 dark:text-green-400 mb-4" />
+          <h3 className="text-lg font-medium mb-2">Reviewers are looking at your code...</h3>
+          <p className="text-sm text-muted-foreground text-center max-w-md">
+            Marcus (Senior Developer) and Alex (QA Engineer) are analyzing your code and will provide feedback shortly.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card className="border-green-200 dark:border-green-800" data-testid="pr-review-panel">

@@ -197,6 +197,23 @@ export function TicketWorkspace({
   // Computed value with fallback for rendering
   const isFullEditorMode = useMonacoEditor ?? (codeExecutionAdapter?.ui.defaultEditorMode === 'full') ?? true;
   
+  const codeFilesForReview = useMemo(() => {
+    if (!ticket?.ticketKey) return {};
+    try {
+      const storageKey = `edmap-code-${ticket.ticketKey}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed === 'object' && parsed !== null) {
+          return parsed as Record<string, string>;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load code files for review:', e);
+    }
+    return codeExecutionAdapter?.files.starterFiles || {};
+  }, [ticket?.ticketKey, codeExecutionAdapter?.files.starterFiles]);
+
   const reviewPhaseLayout = adapter.uiControls.reviewPhaseLayout || {
     showGitTerminal: true,
     showTeamChat: true,
@@ -1262,6 +1279,10 @@ Time:        0.842s`;
                 ticketDescription={ticket.description}
                 branchName={gitState.branchName || ''}
                 commits={gitState.commits}
+                useLLMReviews={true}
+                codeFiles={codeFilesForReview}
+                userLevel={level as Level}
+                userRole={role as Role}
                 onThreadResolve={(threadId) => {
                   addTerminalLine('output', `Thread ${threadId} marked as resolved`);
                 }}
