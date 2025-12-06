@@ -1,9 +1,36 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, Component, type ReactNode } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+class CodeEditorErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
+    console.error('CodeEditorPanel error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg">
+          <p className="font-medium">Error loading code editor</p>
+          <p className="text-sm mt-1">{this.state.error?.message}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -72,26 +99,42 @@ interface CodeEditorPanelProps {
   onSubmit?: (files: Record<string, string>, result: ExecutionResponse) => void;
 }
 
-export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanelProps) {
+function CodeEditorPanelInner({ adapter, ticketId, onSubmit }: CodeEditorPanelProps) {
+  if (!adapter) {
+    return (
+      <div className="p-4 text-muted-foreground">
+        Loading editor...
+      </div>
+    );
+  }
+
   const layout = useMemo(() => {
-    const adapterLayout = adapter.ui.layout;
-    if (!adapterLayout) return defaultLayout;
-    return {
-      ...defaultLayout,
-      ...adapterLayout,
-      responsiveBreakpoints: {
-        ...defaultLayout.responsiveBreakpoints,
-        ...adapterLayout.responsiveBreakpoints,
-      },
-      zenModeConfig: {
-        ...defaultLayout.zenModeConfig,
-        ...adapterLayout.zenModeConfig,
-      },
-    };
-  }, [adapter.ui.layout]);
+    try {
+      const adapterLayout = adapter?.ui?.layout;
+      if (!adapterLayout) return defaultLayout;
+      return {
+        ...defaultLayout,
+        ...adapterLayout,
+        responsiveBreakpoints: {
+          ...defaultLayout.responsiveBreakpoints,
+          ...adapterLayout.responsiveBreakpoints,
+        },
+        zenModeConfig: {
+          ...defaultLayout.zenModeConfig,
+          ...adapterLayout.zenModeConfig,
+        },
+      };
+    } catch (e) {
+      console.error('Error merging layout:', e);
+      return defaultLayout;
+    }
+  }, [adapter?.ui?.layout]);
+
+  const starterFiles = adapter?.files?.starterFiles ?? {};
+  const fileKeys = Object.keys(starterFiles);
   
-  const [files, setFiles] = useState<Record<string, string>>(adapter.files.starterFiles);
-  const [activeFile, setActiveFile] = useState<string>(Object.keys(adapter.files.starterFiles)[0] || '');
+  const [files, setFiles] = useState<Record<string, string>>(starterFiles);
+  const [activeFile, setActiveFile] = useState<string>(fileKeys[0] || '');
   const [lastResult, setLastResult] = useState<ExecutionResponse | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [showHint, setShowHint] = useState(false);
@@ -123,10 +166,10 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
       const response = await apiRequest('POST', '/api/analyze-code', {
         ticketId,
         files,
-        testCases: adapter.testCases,
-        language: adapter.editor.language,
-        userLevel: adapter.metadata.level,
-        userRole: adapter.metadata.role,
+        testCases: adapter?.testCases ?? [],
+        language: adapter?.editor?.language ?? 'typescript',
+        userLevel: adapter?.metadata?.level ?? 'intern',
+        userRole: adapter?.metadata?.role ?? 'developer',
       });
       return response.json() as Promise<ExecutionResponse>;
     },
@@ -146,15 +189,15 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
   }, [analyzeCodeMutation]);
   
   const handleReset = useCallback(() => {
-    setFiles(adapter.files.starterFiles);
+    setFiles(adapter?.files?.starterFiles ?? {});
     setLastResult(null);
-  }, [adapter.files.starterFiles]);
+  }, [adapter?.files?.starterFiles]);
   
   const handleRequestHint = useCallback(() => {
-    if (adapter.scaffolding.hintLevel === 'never') return;
+    if (adapter?.scaffolding?.hintLevel === 'never') return;
     setShowHint(true);
     setHintsUsed(prev => prev + 1);
-  }, [adapter.scaffolding.hintLevel]);
+  }, [adapter?.scaffolding?.hintLevel]);
   
   const handleSubmit = useCallback(() => {
     if (lastResult && onSubmit) {
@@ -328,6 +371,14 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
                     theme={adapter.editor.theme}
                     value={files[activeFile] || ''}
                     onChange={handleEditorChange}
+                    loading={
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    }
+                    onMount={() => {
+                      console.log('Monaco editor mounted');
+                    }}
                     options={{
                       minimap: { enabled: showMinimap },
                       fontSize: editorFontSize,
@@ -474,6 +525,14 @@ export function CodeEditorPanel({ adapter, ticketId, onSubmit }: CodeEditorPanel
         </div>
       )}
     </div>
+  );
+}
+
+export function CodeEditorPanel(props: CodeEditorPanelProps) {
+  return (
+    <CodeEditorErrorBoundary>
+      <CodeEditorPanelInner {...props} />
+    </CodeEditorErrorBoundary>
   );
 }
 
