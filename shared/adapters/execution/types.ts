@@ -347,6 +347,32 @@ export interface TicketCompletionModifiers {
   messagesOverride?: Partial<TicketCompletionConfig['celebrationMessages']>;
 }
 
+export interface SprintCompletionConfig {
+  showProgressBar: boolean;
+  showCompletionBanner: boolean;
+  bannerPosition: 'top' | 'inline' | 'modal';
+  progressMessages: {
+    inProgress: string;
+    nearComplete: string;
+    allDone: string;
+  };
+  completionCTA: {
+    label: string;
+    description: string;
+    nextPhase: 'review' | 'retro';
+  };
+  celebrationStyle: 'confetti' | 'simple' | 'minimal';
+  showTeamMessage: boolean;
+  teamMessage: string;
+}
+
+export interface SprintCompletionModifiers {
+  progressMessagesOverride?: Partial<SprintCompletionConfig['progressMessages']>;
+  completionCTAOverride?: Partial<SprintCompletionConfig['completionCTA']>;
+  celebrationStyleOverride?: SprintCompletionConfig['celebrationStyle'];
+  teamMessageOverride?: string;
+}
+
 export interface ExecutionUIControls {
   showGitTerminal: boolean;
   showTeamChat: boolean;
@@ -415,7 +441,8 @@ export interface SprintExecutionAdapter {
   codeWorkConfig: CodeWorkConfig;
   aiInteractions: AIInteractionConfig;
   prReviewConfig: PRReviewConfig;
-  completionConfig: TicketCompletionConfig;
+  ticketCompletion: TicketCompletionConfig;
+  sprintCompletion: SprintCompletionConfig;
   
   uiControls: ExecutionUIControls;
   difficulty: ExecutionDifficulty;
@@ -440,7 +467,8 @@ export interface RoleExecutionAdapter {
   };
   aiInteractions: Omit<AIInteractionConfig, 'responsePersonality'>;
   prReviewConfig: RolePRReviewConfig;
-  completionConfig: TicketCompletionConfig;
+  ticketCompletionConfig: TicketCompletionConfig;
+  sprintCompletionConfig: SprintCompletionConfig;
   
   uiControls: Partial<ExecutionUIControls>;
   difficulty: Partial<ExecutionDifficulty>;
@@ -481,7 +509,8 @@ export interface LevelExecutionOverlay {
     mentorGuidance: 'heavy' | 'moderate' | 'light' | 'none';
   };
   
-  completionModifiers: TicketCompletionModifiers;
+  ticketCompletionModifiers: TicketCompletionModifiers;
+  sprintCompletionModifiers: SprintCompletionModifiers;
 }
 
 export interface TicketWorkProgress {
