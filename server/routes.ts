@@ -12,6 +12,7 @@ import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
 import { getSprintPlanningAdapter } from "@shared/adapters/planning";
 import { getTeamIntroConfig, buildTeamIntroSystemPrompt } from "@shared/adapters/team-intro";
+import { getComprehensionConfig, buildComprehensionSystemPrompt, buildComprehensionGuidance, analyzeComprehensionState, type ComprehensionState } from "@shared/adapters/comprehension";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -3902,21 +3903,36 @@ ${stateGuidance}`;
         return res.status(404).json({ message: "Workspace not found" });
       }
 
-      // Count user messages for conversation state tracking
+      // Get comprehension adapter config
+      const userRole = 'developer';
+      const userLevel = 'intern';
+      const config = getComprehensionConfig(userRole, userLevel);
+      
+      // Count USER messages only for state tracking (not total messages)
       const userMessageCount = conversationHistory 
         ? conversationHistory.filter((m: any) => m.sender === 'You').length 
         : 0;
       const isFirstResponse = userMessageCount <= 1;
+      
+      // Analyze conversation state (only user messages for understanding)
+      const userOnlyHistory = (conversationHistory || []).filter((m: any) => m.sender === 'You');
+      const sarahHistory = (conversationHistory || []).filter((m: any) => m.sender !== 'You');
+      const state = analyzeComprehensionState(userOnlyHistory, userMessage);
+      
+      // Check if Sarah already offered next steps (from her messages)
+      const sarahOfferedNextSteps = sarahHistory.some((m: any) => {
+        const msg = m.message.toLowerCase();
+        return msg.includes('dev environment') || msg.includes('first ticket') || 
+               msg.includes('tomorrow') || msg.includes('set up') || msg.includes('ready to move on');
+      });
+      state.sarahOfferedNextSteps = sarahOfferedNextSteps;
+      
+      // Build prompts using adapter
+      const baseSystemPrompt = buildComprehensionSystemPrompt(config, workspace.companyName);
+      const stateGuidance = buildComprehensionGuidance(config, state, userMessageCount, isFirstResponse);
+      const systemPrompt = `${baseSystemPrompt}\n\n${stateGuidance}`;
 
-      // Initialize topic tracking
-      let topicsCovered = {
-        userShowedUnderstanding: false,
-        userAskedQuestions: false,
-        sarahAnsweredQuestions: false,
-        sarahOfferedNextSteps: false
-      };
-
-      // Check if Groq API key is available and initialize
+      // Check if Groq API key is available
       let groq: any = null;
       if (process.env.GROQ_API_KEY) {
         try {
@@ -3927,90 +3943,10 @@ ${stateGuidance}`;
         }
       }
 
-      // Try to analyze conversation with Groq if available
-      if (groq) {
-        try {
-          const fullConversation = conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0
-            ? conversationHistory.map((m: any) => `${m.sender}: ${m.message}`).join('\n')
-            : `You: ${userMessage}`;
-
-          const analysisResponse = await groq.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              {
-                role: "system",
-                content: `Analyze this conversation between a new intern ("You") and Sarah (Tech Lead) during a documentation comprehension check.
-
-Determine which topics have been covered:
-
-USER UNDERSTANDING EXAMPLES (mark userShowedUnderstanding true if ANY of these):
-- Explains what the product does: "The dashboard helps merchants manage payments"
-- Describes a feature: "It handles timezone conversions for merchants"
-- Shows they read the docs: "I saw in the docs that it uses React"
-- Summarizes concepts: "So basically it's an analytics platform"
-
-USER QUESTIONS EXAMPLES (mark userAskedQuestions true if ANY of these):
-- Asks about codebase: "How is the frontend structured?", "What database do you use?"
-- Asks about team: "How does the team work together?", "Who handles what?"
-- Asks about processes: "How do code reviews work?", "What's the deploy process?"
-
-SARAH NEXT STEPS EXAMPLES (mark sarahOfferedNextSteps true if):
-- Sarah mentions moving on: "ready to move on", "get you set up", "start working"
-- Sarah talks about next steps: "tomorrow we'll", "your first ticket", "dev environment"
-
-Return JSON: {"userShowedUnderstanding": boolean, "userAskedQuestions": boolean, "sarahAnsweredQuestions": boolean, "sarahOfferedNextSteps": boolean}
-Respond ONLY with valid JSON.`
-              },
-              { role: "user", content: fullConversation }
-            ],
-            temperature: 0.1,
-            max_tokens: 100
-          });
-
-          const analysisText = analysisResponse.choices[0]?.message?.content || '{}';
-          try {
-            const parsed = JSON.parse(analysisText.replace(/```json\n?|\n?```/g, '').trim());
-            topicsCovered = {
-              userShowedUnderstanding: !!parsed.userShowedUnderstanding,
-              userAskedQuestions: !!parsed.userAskedQuestions,
-              sarahAnsweredQuestions: !!parsed.sarahAnsweredQuestions,
-              sarahOfferedNextSteps: !!parsed.sarahOfferedNextSteps
-            };
-          } catch (e) {
-            console.log('Could not parse comprehension analysis');
-          }
-        } catch (e) {
-          console.log('Comprehension analysis failed');
-        }
-      }
-
-      // Determine conversation state
-      const userComplete = topicsCovered.userShowedUnderstanding;
-      const shouldOfferNextSteps = userComplete && userMessageCount >= 2 && !topicsCovered.sarahOfferedNextSteps;
-
-      // Generate response
       let responseText: string;
       let shouldClose = false;
 
       if (groq) {
-        // Build system prompt based on conversation state
-        const systemPrompt = `You are Sarah, the Tech Lead at ${workspace.companyName}. 
-Personality: Supportive, encouraging, technically knowledgeable.
-Context: Checking in with a new intern about what they learned from the documentation.
-
-RULES:
-- Keep responses SHORT: 2-3 sentences MAX
-- Be warm and encouraging - this is a casual chat, not a test
-- ALWAYS acknowledge what they said before asking follow-up
-
-${shouldOfferNextSteps || topicsCovered.sarahOfferedNextSteps ? 
-`WRAP UP: Acknowledge their understanding, mention you'll get them set up with their dev environment tomorrow, and tell them their first ticket awaits. Offer to answer any questions anytime.` 
-:
-isFirstResponse ?
-`FIRST REPLY: Warmly acknowledge what they shared (be specific!), show appreciation, ask if they have questions about the codebase or team.`
-:
-`CONTINUE: ${!userComplete ? "Encourage them to share more about what they understood" : "Acknowledge what they shared and ask if they have questions about the codebase or team."}`}`;
-
         const messages: any[] = [{ role: "system", content: systemPrompt }];
         if (conversationHistory && Array.isArray(conversationHistory)) {
           for (const msg of conversationHistory) {
@@ -4031,12 +3967,10 @@ isFirstResponse ?
           });
           responseText = response.choices[0]?.message?.content || "That's great! Any questions about the codebase?";
         } catch (e) {
-          // Use fallback if Groq call fails
-          responseText = getFallbackSarahResponse(userMessageCount, shouldOfferNextSteps);
+          responseText = getFallbackSarahResponse(userMessageCount, state.sarahOfferedNextSteps);
         }
       } else {
-        // Use fallback if no Groq available
-        responseText = getFallbackSarahResponse(userMessageCount, shouldOfferNextSteps);
+        responseText = getFallbackSarahResponse(userMessageCount, state.sarahOfferedNextSteps);
       }
 
       // Check if response contains next-step indicators
@@ -4046,27 +3980,30 @@ isFirstResponse ?
         responseText.toLowerCase().includes('set up') ||
         responseText.toLowerCase().includes('ready to move on');
 
-      // Update topics based on response content
-      const updatedTopics = {
-        ...topicsCovered,
-        userShowedUnderstanding: topicsCovered.userShowedUnderstanding || userMessageCount >= 1,
-        sarahOfferedNextSteps: topicsCovered.sarahOfferedNextSteps || responseHasNextSteps
+      // Update state based on response
+      const updatedState: ComprehensionState = {
+        ...state,
+        userShowedUnderstanding: state.userShowedUnderstanding || userMessageCount >= 1,
+        sarahOfferedNextSteps: state.sarahOfferedNextSteps || responseHasNextSteps
       };
 
-      // Determine if conversation should close
-      const sufficientExchanges = userMessageCount >= 3;
-      shouldClose = (updatedTopics.userShowedUnderstanding && updatedTopics.sarahOfferedNextSteps) || 
-                   (sufficientExchanges && updatedTopics.sarahOfferedNextSteps);
+      // Determine closing based on adapter config (using user message count, not total)
+      const criteria = config.levelOverlay.closingCriteria;
+      const minTurnsMet = userMessageCount >= criteria.minUserMessages;
+      const maxTurnsReached = userMessageCount >= criteria.maxTurns;
+      const understandingMet = !criteria.requireUnderstandingDemo || updatedState.userShowedUnderstanding;
+      
+      shouldClose = maxTurnsReached || (minTurnsMet && understandingMet && updatedState.sarahOfferedNextSteps);
 
       const completionState = shouldClose ? 'closed' : 
-        updatedTopics.userShowedUnderstanding ? 'almostReady' : 'discussing';
+        updatedState.userShowedUnderstanding ? 'almostReady' : 'discussing';
 
       res.json({ 
         response: responseText, 
-        sender: 'Sarah',
+        sender: config.persona.name,
         isClosing: shouldClose,
         completionState,
-        topicsCovered: updatedTopics
+        topicsCovered: updatedState
       });
 
     } catch (error) {
