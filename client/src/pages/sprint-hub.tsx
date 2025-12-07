@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,15 +18,19 @@ import {
   AlertCircle,
   ExternalLink,
   ChevronRight,
+  Trophy,
 } from "lucide-react";
 import { 
   useSprintOverview, 
   useKanbanState,
   useMoveTicket,
+  useJourneyDashboard,
   type TicketStatus,
 } from "@/hooks/use-sprint-workflow";
 import type { SprintTicket } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { getSprintExecutionAdapter } from "@shared/adapters/execution";
+import type { Role, Level } from "@shared/adapters";
 
 type TicketGitState = {
   branchCreated?: boolean;
@@ -305,9 +309,16 @@ export default function SprintHub() {
   const [selectedTicket, setSelectedTicket] = useState<SprintTicket | null>(null);
   
   const { data: overview, isLoading } = useSprintOverview(sprintId);
+  const { data: journeyDashboard } = useJourneyDashboard(journeyId);
   const { ticketsByStatus } = useKanbanState(sprintId);
   const moveTicket = useMoveTicket();
   const { toast } = useToast();
+  
+  const adapter = useMemo(() => {
+    const role = (journeyDashboard?.journey?.journeyMetadata as any)?.role || 'developer';
+    const level = (journeyDashboard?.journey?.journeyMetadata as any)?.entryLevel || 'intern';
+    return getSprintExecutionAdapter(role as Role, level as Level);
+  }, [journeyDashboard]);
 
   const handleMoveTicket = (ticketId: number, newStatus: TicketStatus) => {
     moveTicket.mutate(
@@ -349,6 +360,16 @@ export default function SprintHub() {
     .filter(t => t.status === 'done')
     .reduce((sum, t) => sum + (t.storyPoints || 0), 0);
   const progressPercent = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0;
+  
+  const allDone = overview.tickets.length > 0 && overview.tickets.every(t => t.status === 'done');
+  const nearComplete = overview.tickets.length > 0 && ticketsByStatus.done.length === overview.tickets.length - 1;
+  
+  const sprintConfig = adapter.sprintCompletion;
+  const progressMessage = allDone 
+    ? sprintConfig.progressMessages.allDone 
+    : nearComplete 
+      ? sprintConfig.progressMessages.nearComplete 
+      : sprintConfig.progressMessages.inProgress;
 
   return (
     <div className="container max-w-7xl mx-auto p-6 space-y-6" data-testid="sprint-hub">
@@ -434,7 +455,57 @@ export default function SprintHub() {
         </Card>
       </div>
 
-      {upcomingCeremonies.length > 0 && (
+      {allDone && (
+        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
+                  <Trophy className="h-6 w-6 text-green-600 dark:text-green-300" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-green-800 dark:text-green-200">
+                    {sprintConfig.progressMessages.allDone}
+                  </h3>
+                  {sprintConfig.showTeamMessage && sprintConfig.teamMessage && (
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      {sprintConfig.teamMessage}
+                    </p>
+                  )}
+                  <p className="text-xs text-green-500 dark:text-green-500 mt-1">
+                    {sprintConfig.completionCTA.description}
+                  </p>
+                </div>
+              </div>
+              <Link href={`/journey/${journeyId}/sprint/${sprintId}/ceremony/${upcomingCeremonies[0]?.id || ''}`}>
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 gap-2"
+                  data-testid="button-complete-sprint"
+                  disabled={!upcomingCeremonies[0]}
+                >
+                  {sprintConfig.completionCTA.label}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!allDone && nearComplete && (
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Target className="h-5 w-5 text-amber-600" />
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                {sprintConfig.progressMessages.nearComplete}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!allDone && upcomingCeremonies.length > 0 && (
         <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
