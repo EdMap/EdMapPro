@@ -3729,10 +3729,9 @@ Respond ONLY with valid JSON, no other text.`
         console.log('Topic analysis failed, continuing with defaults');
       }
 
-      // Determine conversation state
-      const userComplete = topicsCovered.userProfessional && topicsCovered.userPersonal;
-      const teammateComplete = topicsCovered.teammateProfessional && topicsCovered.teammatePersonal;
-      const allTopicsCovered = userComplete && teammateComplete;
+      // Determine conversation state - professional topics required, personal/hobbies optional
+      const essentialTopicsCovered = topicsCovered.userProfessional && topicsCovered.teammateProfessional;
+      const allTopicsCovered = essentialTopicsCovered; // Personal topics are nice-to-have, not required
       
       // Check if we've offered to answer questions (look for question offer in history)
       const hasOfferedQuestions = conversationHistory && Array.isArray(conversationHistory) &&
@@ -3805,11 +3804,7 @@ ${!topicsCovered.teammateProfessional ?
   "Share your work background briefly." :
   !topicsCovered.userProfessional ? 
     "Ask about their background, studies, or what got them into this field." :
-  !topicsCovered.teammatePersonal ?
-    "Share your hobby AND ask about theirs." :
-  !topicsCovered.userPersonal ? 
-    "Ask what they do for fun outside of work/studies." :
-    "Respond naturally."}`;
+    "Respond naturally. You can optionally share something personal or ask about their interests if it feels natural, but don't force it."}`;
       }
       
       const systemPrompt = `${adapterSystemPrompt}
