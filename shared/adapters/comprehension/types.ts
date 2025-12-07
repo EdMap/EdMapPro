@@ -60,6 +60,12 @@ export interface ComprehensionPersona {
   roleSpecificContext: string;
 }
 
+export interface ComprehensionCompletionCTA {
+  buttonText: string;
+  description: string;
+  celebrationMessage: string;
+}
+
 export interface ComprehensionLevelOverlay {
   level: Level;
   displayName: string;
@@ -79,6 +85,8 @@ export interface ComprehensionLevelOverlay {
     offerMoreGuidance: boolean;
     assumePriorKnowledge: boolean;
   };
+  
+  completionCTA: ComprehensionCompletionCTA;
 }
 
 export interface ComprehensionConfig {

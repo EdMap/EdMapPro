@@ -39,6 +39,7 @@ import { useAdvanceWorkspacePhase, type WorkspacePhase } from "@/hooks/use-sprin
 import { EnvironmentSetup } from "./environment-setup";
 import { ExploreCodebaseStep } from "./explore-codebase-step";
 import { getOnboardingAdapter } from "@shared/adapters/onboarding";
+import { getComprehensionConfig } from "@shared/adapters/comprehension";
 import type { Role, Level } from "@shared/adapters";
 import type { CodebaseExplorationProgress } from "@shared/adapters/onboarding/types";
 
@@ -161,6 +162,7 @@ export function OnboardingModule({
     : 'intern') as Level;
     
   const onboardingAdapter = getOnboardingAdapter(normalizedRole, normalizedLevel);
+  const comprehensionConfig = getComprehensionConfig(normalizedRole, normalizedLevel);
   const requiresGitTerminal = onboardingAdapter.requiresGitTerminal;
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [expandedDocs, setExpandedDocs] = useState<Record<string, boolean>>({});
@@ -557,7 +559,7 @@ export function OnboardingModule({
           </Card>
         )}
 
-        {/* Step 3: Explore Codebase (unlocks after environment setup) */}
+        {/* Step 3: Explore Codebase (optional - unlocks after environment setup) */}
         {codebaseExplorationEnabled && (
           <Card 
             className={cn(
@@ -612,7 +614,7 @@ export function OnboardingModule({
           </Card>
         )}
 
-        {/* Step 4: Meet Your Team (unlocks after codebase exploration or environment setup) */}
+        {/* Step 4: Meet Your Team (unlocks after codebase exploration if enabled, otherwise after environment setup) */}
         <Card 
           className={cn(
             "cursor-pointer transition-all",
@@ -665,7 +667,7 @@ export function OnboardingModule({
           </CardContent>
         </Card>
 
-        {/* Step 3: Check in with Sarah (unlocks after team intro) */}
+        {/* Step 5: Check in with Sarah (unlocks after team introductions) */}
         <Card 
           className={cn(
             "cursor-pointer transition-all",
@@ -1366,14 +1368,29 @@ export function OnboardingModule({
           )}
 
           {sarahConversationClosed ? (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg p-3 mt-auto">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-800 dark:text-green-200 text-sm">Great chat!</p>
-                  <p className="text-xs text-green-600 dark:text-green-300">You're ready to move on</p>
+            <div className="space-y-3 mt-auto">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-200 text-sm">
+                      {comprehensionConfig.levelOverlay.completionCTA.celebrationMessage}
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-300">
+                      {comprehensionConfig.levelOverlay.completionCTA.description}
+                    </p>
+                  </div>
                 </div>
               </div>
+              <Button 
+                onClick={handleStartPlanning}
+                disabled={advanceWorkspacePhase.isPending}
+                className="w-full bg-green-600 hover:bg-green-700"
+                data-testid="button-start-planning-from-chat"
+              >
+                <ArrowRight className="h-4 w-4 mr-2" />
+                {comprehensionConfig.levelOverlay.completionCTA.buttonText}
+              </Button>
             </div>
           ) : (
             <div className="flex gap-2 mt-auto">

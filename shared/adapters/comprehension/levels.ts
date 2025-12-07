@@ -36,6 +36,12 @@ const internOverlay: ComprehensionLevelOverlay = {
     beExtraEncouraging: true,
     offerMoreGuidance: true,
     assumePriorKnowledge: false
+  },
+  
+  completionCTA: {
+    buttonText: 'Start Planning',
+    description: "You're ready to join your first sprint planning session!",
+    celebrationMessage: 'Great chat! You have a solid understanding of the project.'
   }
 };
 
@@ -66,6 +72,12 @@ const juniorOverlay: ComprehensionLevelOverlay = {
     beExtraEncouraging: true,
     offerMoreGuidance: false,
     assumePriorKnowledge: false
+  },
+  
+  completionCTA: {
+    buttonText: 'Start Planning',
+    description: "You're ready for sprint planning!",
+    celebrationMessage: 'Nice work! You understand the project well.'
   }
 };
 
@@ -96,6 +108,12 @@ const midOverlay: ComprehensionLevelOverlay = {
     beExtraEncouraging: false,
     offerMoreGuidance: false,
     assumePriorKnowledge: true
+  },
+  
+  completionCTA: {
+    buttonText: 'Start Planning',
+    description: 'Ready to jump into planning.',
+    celebrationMessage: 'Good sync! Ready for planning.'
   }
 };
 
@@ -126,6 +144,12 @@ const seniorOverlay: ComprehensionLevelOverlay = {
     beExtraEncouraging: false,
     offerMoreGuidance: false,
     assumePriorKnowledge: true
+  },
+  
+  completionCTA: {
+    buttonText: 'Start Planning',
+    description: 'Move on to planning.',
+    celebrationMessage: 'All set. Let\'s plan.'
   }
 };
 

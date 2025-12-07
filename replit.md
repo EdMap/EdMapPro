@@ -48,6 +48,7 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 -   **Level Overlays**: Intern gets warm encouraging tone with 2-3 user message minimum; senior gets direct professional tone with 1-2 message minimum
 -   **Closing Criteria**: Configurable min/max user messages, optional understanding demonstration requirement
 -   **State Analysis**: Tracks `userShowedUnderstanding`, `userAskedQuestions`, `sarahAnsweredQuestions`, `sarahOfferedNextSteps` - only evaluates user messages to avoid false positives from AI responses
+-   **Completion CTA**: Level-aware completion button text and messages shown when chat completes (buttonText, description, celebrationMessage). Interns get encouraging "You're ready to join your first sprint planning session!" while seniors get direct "Move on to planning."
 
 ## External Dependencies
 
