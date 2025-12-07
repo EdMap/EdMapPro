@@ -11,6 +11,7 @@ import { workspaceOrchestrator } from "./services/workspace-orchestrator";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
 import { getSprintPlanningAdapter } from "@shared/adapters/planning";
+import { getTeamIntroConfig, buildTeamIntroSystemPrompt } from "@shared/adapters/team-intro";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -3754,70 +3755,55 @@ Respond ONLY with valid JSON, no other text.`
       const turnCount = conversationHistory ? conversationHistory.length : 0;
       const isFirstResponse = turnCount <= 1; // First user message
       
-      // Get the last user message for context-aware acknowledgment
-      const lastUserMessage = userMessage.toLowerCase();
+      // Get team-intro adapter config for role/level-aware prompts
+      const userRole = 'developer'; // Default for now, could come from workspace
+      const userLevel = 'intern'; // Default for now, could come from user progress
+      const teamIntroConfig = getTeamIntroConfig(teamMemberName, userRole, userLevel);
+      const adapterSystemPrompt = buildTeamIntroSystemPrompt(teamIntroConfig);
       
-      const systemPrompt = `You are ${teamMemberName}, a ${persona.role} at ${workspace.companyName}. 
-Personality: ${persona.personality}
-Your background: ${persona.background}
-
-This is a quick getting-to-know-you chat with a new intern on their first day.
-
-CRITICAL RESPONSE RULES:
-- Keep responses SHORT: 1-2 sentences MAX
-- Be warm but concise - you're busy but friendly
-- DO NOT write paragraphs or long explanations
-- DO NOT discuss work tasks beyond brief intro
-- ALWAYS acknowledge what they just said before transitioning to a new topic
-- Vary your language - don't use the same phrases repeatedly
-
-ACKNOWLEDGMENT EXAMPLES (use these patterns, vary the wording):
-- "That's cool!" / "Nice!" / "Oh interesting!" / "That's awesome!"
-- "Bootcamp, nice - those can be intense!" / "Data science background, that's solid!"
-- "Chess with your dad, love that!" / "Tennis, nice - great way to stay active!"
-
-${isReadyToClose ? 
-`CONVERSATION IS COMPLETE - You've covered backgrounds, hobbies, and offered to answer questions!
-END THE CONVERSATION NOW - Reference something specific from the chat, then say you need to run:
-- If they mentioned a hobby: "Good luck with the [hobby] and the new role! I've got to run to standup, but ping me anytime."
-- If they had questions: "Hope that helps! Anyway, I've got a meeting - but seriously, reach out anytime."
-- General: "Really enjoyed chatting! Got to jump into a call, but my door's always open. Welcome to the team!"
-Make the goodbye feel personal, not generic. Do NOT ask any more questions.` 
-:
-isFirstResponse ?
-`THIS IS YOUR FIRST REPLY - Introduce yourself properly:
-1. Greet them warmly (vary your greeting - "Hey!", "Hi there!", "Welcome!")
-2. Share YOUR role briefly (e.g., "I'm a ${persona.role} here, been with the company about X years")
-3. Ask about THEIR background/studies/what brought them here (professional question first!)
-Example: "Hey, welcome aboard! I'm one of the senior devs here - been around about 2 years now. What's your background - are you studying CS or coming from somewhere else?"`
-:
-allTopicsCovered && !hasOfferedQuestions ?
-`You've learned about each other! Now offer to answer questions:
-First, briefly acknowledge their last message, then ask if they have questions.
-Example: "That's great! By the way, do you have any questions about the team or how things work around here?"
-Keep it brief - acknowledge + question offer.`
-:
-`GUIDE THE CONVERSATION - Topics still needed: ${missingTopics.join(', ')}
-
-IMPORTANT: Always start by acknowledging what they just shared before moving on!
-
-CONVERSATION FLOW (follow this order):
-1. First, share YOUR professional background if you haven't
-2. Then, learn about THEIR professional background
-3. Share YOUR hobbies/interests AND ask about theirs in the same message
-4. Finally, offer to answer questions about the company/role
-
+      // Build conversation state guidance
+      let stateGuidance = '';
+      
+      if (isReadyToClose) {
+        stateGuidance = `
+CONVERSATION IS COMPLETE - You've covered backgrounds, hobbies, and offered to answer questions!
+END THE CONVERSATION NOW - Reference something specific from the chat, then say you need to run.
+Make the goodbye feel personal using YOUR style. Do NOT ask any more questions.
+Keep it to 1 sentence.`;
+      } else if (isFirstResponse) {
+        stateGuidance = `
+THIS IS YOUR FIRST REPLY:
+1. Greet them warmly in YOUR voice
+2. Briefly mention your role
+3. Ask about THEIR background (professional question first)
+Keep it to 2-3 sentences max.`;
+      } else if (allTopicsCovered && !hasOfferedQuestions) {
+        stateGuidance = `
+You've learned about each other! Now offer to answer questions.
+Briefly acknowledge their last message, then ask if they have questions about the team/company.
+Keep it to 1-2 sentences.`;
+      } else {
+        stateGuidance = `
+GUIDE THE CONVERSATION - Topics still needed: ${missingTopics.join(', ')}
+Always acknowledge what they shared before moving on.
 ${!topicsCovered.teammateProfessional ? 
-  "You haven't shared your work background yet - briefly mention your role/experience." :
+  "Share your work background briefly." :
   !topicsCovered.userProfessional ? 
-    "Acknowledge their greeting, then ask about their background, studies, or what got them into this field." :
+    "Ask about their background, studies, or what got them into this field." :
   !topicsCovered.teammatePersonal ?
-    "Acknowledge what they shared about their background (be specific!), then share your hobby AND ask about theirs." :
+    "Share your hobby AND ask about theirs." :
   !topicsCovered.userPersonal ? 
-    "Acknowledge their response, then ASK what they do for fun outside of work/studies!" :
-    "Acknowledge their response naturally."}
+    "Ask what they do for fun outside of work/studies." :
+    "Respond naturally."}`;
+      }
+      
+      const systemPrompt = `${adapterSystemPrompt}
 
-DO NOT say goodbye until you've offered to answer questions about the company/role!`}`;
+COMPANY CONTEXT: ${workspace.companyName}
+YOUR PERSONAL BACKGROUND: ${persona.background}
+
+THIS IS A GETTING-TO-KNOW-YOU CHAT on the intern's first day.
+${stateGuidance}`;
 
       const messages: any[] = [
         { role: "system", content: systemPrompt }
