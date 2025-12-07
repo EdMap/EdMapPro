@@ -38,7 +38,7 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 
 **Sprint Retrospective System**: Offers role-aware, level-adjusted retrospective ceremonies. `SprintRetroConfig` customizes facilitation styles, prompting frequency, action item requirements, and focuses based on role and level, incorporating sprint context recap and AI-suggested starter cards.
 
-**Sprint Completion System**: Provides adaptive progress tracking and completion guidance in the Execution Module. `SprintCompletionConfig` includes level-aware progress messages (in progress, near complete, all done), completion CTAs with descriptions, optional team celebration messages, and configurable progress bar visibility. Interns receive encouraging team messages, while seniors get direct next-step CTAs.
+**Sprint Completion System**: Provides adaptive progress tracking and completion guidance across both the Sprint Hub dashboard and the Execution Module. `SprintCompletionConfig` includes level-aware progress messages (in progress, near complete, all done), completion CTAs with descriptions, optional team celebration messages, and configurable progress bar visibility. Interns receive encouraging team messages, while seniors get direct next-step CTAs. The Sprint Hub page displays a celebratory banner when all tickets are done, guiding users to the Sprint Review ceremony.
 
 ## External Dependencies
 
