@@ -1,4 +1,10 @@
 import Groq from "groq-sdk";
+import { 
+  getTeamIntroConfig, 
+  buildTeamIntroSystemPrompt, 
+  buildConversationGuidance,
+  type TeamIntroPromptConfig 
+} from "@shared/adapters/team-intro";
 
 const groq = new Groq({ 
   apiKey: process.env.GROQ_API_KEY
@@ -18,6 +24,7 @@ export interface WorkspaceContext {
   currentSprint: string;
   teamMembers: TeamMember[];
   userRole: string;
+  userLevel?: string; // 'intern', 'junior', 'mid', 'senior'
   phase: string; // 'onboarding', 'sprint', 'retro'
   currentDay?: number; // Day 1, Day 2, etc. for intern onboarding
   dayActivities?: string[]; // What the user should be doing today
@@ -453,6 +460,32 @@ Format as JSON:
   ): string {
     const recentHistory = history.slice(-5).map(m => `${m.sender}: ${m.content}`).join('\n');
     
+    // Use team intro adapter for role/level-aware prompts during onboarding
+    const userLevel = context.userLevel || 'junior';
+    const teamIntroConfig = getTeamIntroConfig(member.name, context.userRole, userLevel);
+    
+    // Extract topics already covered from conversation history
+    const topicsCovered: string[] = [];
+    // Simple heuristic: check if keywords from topics appear in history
+    for (const topic of teamIntroConfig.topics) {
+      const keywords = topic.topic.toLowerCase().split(' ');
+      const historyText = recentHistory.toLowerCase();
+      if (keywords.some(kw => kw.length > 4 && historyText.includes(kw))) {
+        topicsCovered.push(topic.id);
+      }
+    }
+    
+    // Build the system prompt using the adapter
+    const adapterSystemPrompt = buildTeamIntroSystemPrompt(teamIntroConfig);
+    
+    // Get conversation guidance based on context
+    const conversationGuidance = buildConversationGuidance(
+      teamIntroConfig,
+      isClosing,
+      topicsCovered,
+      userMessage.length
+    );
+    
     // Build day context for intern onboarding
     let dayContext = '';
     if (context.currentDay) {
@@ -467,30 +500,38 @@ Format as JSON:
       }
     }
 
-    // Add closure guidance if user seems to be wrapping up
-    let closureGuidance = '';
-    if (isClosing) {
-      closureGuidance = `
-
-IMPORTANT: The user seems to be wrapping up this conversation (they've expressed gratitude, said thanks, or indicated they're done). Keep your response BRIEF (1-2 sentences max). Simply acknowledge their message warmly and wish them well. Do NOT ask follow-up questions or extend the conversation. Let them go gracefully.`;
-    }
+    // Channel-specific style
+    const channelStyle = channel === 'standup' ? 'Keep it brief and focused.' 
+      : channel === 'email' ? 'Be professional and structured.' 
+      : 'Be casual and collaborative.';
     
-    return `You are ${member.name}, a ${member.personality} ${member.role} working on ${context.projectName}.
+    return `${adapterSystemPrompt}
 
-Project: ${context.projectDescription}
+PROJECT CONTEXT:
+Project: ${context.projectName} - ${context.projectDescription}
 Current Phase: ${context.phase}${dayContext}
-Channel: ${channel}
-Your expertise: ${member.expertise.join(', ')}
+Channel: ${channel} (${channelStyle})
 
-Recent conversation:
-${recentHistory || 'No previous messages'}
+CONVERSATION SO FAR:
+${recentHistory || 'This is the start of the conversation.'}
 
-User (${context.userRole}): ${userMessage}
+USER'S MESSAGE: ${userMessage}
+${conversationGuidance}
 
-Respond naturally and helpfully as ${member.name}. Keep it conversational and realistic. Be aware of what day of onboarding the intern is on and what they should be working on. ${channel === 'standup' ? 'Keep it brief and focused.' : channel === 'email' ? 'Be professional and structured.' : 'Be casual and collaborative.'}${closureGuidance}`;
+Respond as ${member.name}. Be conversational, genuine, and deliver real onboarding value.`;
   }
 
-  private getSystemPrompt(member: TeamMember, channel: string, isClosing: boolean = false): string {
+  private getSystemPrompt(
+    member: TeamMember, 
+    channel: string, 
+    isClosing: boolean = false,
+    userRole: string = 'developer',
+    userLevel: string = 'junior'
+  ): string {
+    // Use the team intro adapter for role/level-aware system prompts
+    const teamIntroConfig = getTeamIntroConfig(member.name, userRole, userLevel);
+    const adapterSystemPrompt = buildTeamIntroSystemPrompt(teamIntroConfig);
+    
     const channelGuidance = {
       chat: 'casual, quick, collaborative',
       email: 'professional, structured, detailed',
@@ -498,7 +539,7 @@ Respond naturally and helpfully as ${member.name}. Keep it conversational and re
       'code-review': 'technical, constructive, specific'
     };
 
-    let basePrompt = `You are ${member.name}, a ${member.personality} ${member.role}. Communicate in a ${channelGuidance[channel as keyof typeof channelGuidance] || 'professional'} manner. Be helpful, realistic, and stay in character.`;
+    let basePrompt = `${adapterSystemPrompt}\n\nChannel style: ${channelGuidance[channel as keyof typeof channelGuidance] || 'professional'}.`;
     
     if (isClosing) {
       basePrompt += ` The user is wrapping up the conversation - keep your response very brief (1-2 sentences). Don't ask new questions or extend the conversation.`;
