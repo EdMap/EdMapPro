@@ -16,7 +16,8 @@ import type {
   EnvironmentSetupConfig,
   EnvironmentSetupStep,
   TerminalHint,
-  CommandValidationResult
+  CommandValidationResult,
+  CodebaseExplorationConfig
 } from './types';
 
 import { developerOnboardingAdapter, qaOnboardingAdapter, devopsOnboardingAdapter, dataScienceOnboardingAdapter } from './roles/developer';
@@ -125,6 +126,26 @@ function buildEnvironmentSetup(
   };
 }
 
+function buildCodebaseExploration(
+  roleAdapter: RoleOnboardingAdapter,
+  levelOverlay: LevelOnboardingOverlay
+): CodebaseExplorationConfig {
+  const overrides = levelOverlay.codebaseExplorationOverrides || {};
+  const roleConfig = roleAdapter.codebaseExploration;
+  
+  return {
+    enabled: roleConfig.enabled,
+    skippable: overrides.skippable ?? roleConfig.skippable,
+    estimatedMinutes: overrides.estimatedMinutes ?? roleConfig.estimatedMinutes,
+    header: roleConfig.header,
+    missions: overrides.missions ?? roleConfig.missions,
+    highlightedFiles: roleConfig.highlightedFiles,
+    reflectionPrompt: overrides.reflectionPrompt ?? roleConfig.reflectionPrompt,
+    reflectionMinLength: overrides.reflectionMinLength ?? roleConfig.reflectionMinLength,
+    hintVisibility: overrides.hintVisibility ?? roleConfig.hintVisibility ?? 'hover'
+  };
+}
+
 export function getOnboardingAdapter(role: Role, level: Level): OnboardingAdapter {
   const roleAdapter = roleAdapters[role] || roleAdapters.developer;
   const levelOverlay = levelOverlays[level] || levelOverlays.intern;
@@ -139,6 +160,7 @@ export function getOnboardingAdapter(role: Role, level: Level): OnboardingAdapte
     },
     requiresGitTerminal: roleAdapter.requiresGitTerminal,
     environmentSetup: buildEnvironmentSetup(roleAdapter, levelOverlay),
+    codebaseExploration: buildCodebaseExploration(roleAdapter, levelOverlay),
     uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),
     difficulty: mergeDifficulty(roleAdapter.difficulty, levelOverlay.difficultyOverrides),
     evaluation: mergeEvaluation(roleAdapter.evaluation, levelOverlay.evaluationOverrides),

@@ -5,7 +5,31 @@
  * reviewing product documentation: PRDs, roadmaps, user research, and team processes.
  */
 
-import type { RoleOnboardingAdapter } from '../types';
+import type { RoleOnboardingAdapter, CodebaseMission } from '../types';
+
+const pmCodebaseMissions: CodebaseMission[] = [
+  {
+    id: 'readme',
+    label: 'Review the project README',
+    targetFile: 'README.md',
+    hint: 'Get a high-level understanding of the product',
+    required: true
+  },
+  {
+    id: 'product-docs',
+    label: 'Browse product documentation folder',
+    targetFile: 'docs',
+    hint: 'Look for PRDs, roadmaps, or user research',
+    required: true
+  },
+  {
+    id: 'schema',
+    label: 'Review the data model to understand entities',
+    targetFile: 'shared/schema.ts',
+    hint: 'Understand what data the product manages',
+    required: false
+  }
+];
 
 export const pmOnboardingAdapter: RoleOnboardingAdapter = {
   role: 'pm',
@@ -33,6 +57,24 @@ export const pmOnboardingAdapter: RoleOnboardingAdapter = {
       title: 'Documentation Review Complete!',
       description: 'You\'re now familiar with the product and ready to participate in planning.'
     }
+  },
+  
+  codebaseExploration: {
+    enabled: true,
+    skippable: true,
+    estimatedMinutes: 10,
+    header: {
+      title: 'Explore the Product',
+      subtitle: 'Get familiar with how the product is structured and what it does'
+    },
+    missions: pmCodebaseMissions,
+    highlightedFiles: [
+      'README.md',
+      'docs',
+      'shared/schema.ts'
+    ],
+    reflectionPrompt: 'What questions do you have about the product or user needs?',
+    reflectionMinLength: 30
   },
   
   uiControls: {
@@ -82,6 +124,19 @@ export const pmOnboardingAdapter: RoleOnboardingAdapter = {
         'You don\'t need technical environment setup',
         'Focus on understanding product context',
         'Know where to find key documents'
+      ]
+    },
+    {
+      step: 'codebase',
+      objectives: [
+        'Understand how the product is organized',
+        'Review the data model to understand key entities',
+        'Get familiar with the documentation structure'
+      ],
+      tips: [
+        'Focus on the README for product context',
+        'Look at the schema to understand what data is managed',
+        'Browse any product docs or PRDs available'
       ]
     },
     {
