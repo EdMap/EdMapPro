@@ -1736,7 +1736,7 @@ export function PRReviewPanel({
   
   if (isLoadingReviews) {
     return (
-      <Card className="border-green-200 dark:border-green-800" data-testid="pr-review-panel-loading">
+      <Card className="border-green-200 dark:border-green-800 w-full min-w-0 overflow-hidden" data-testid="pr-review-panel-loading">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-green-600 dark:text-green-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">Reviewers are looking at your code...</h3>
@@ -1749,7 +1749,7 @@ export function PRReviewPanel({
   }
   
   return (
-    <Card className="border-green-200 dark:border-green-800" data-testid="pr-review-panel">
+    <Card className="border-green-200 dark:border-green-800 w-full min-w-0 overflow-hidden" data-testid="pr-review-panel">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -2009,12 +2009,14 @@ function ThreadCard({
           </div>
         </CollapsibleTrigger>
         
-        <CollapsibleContent>
-          <div className="border-t">
+        <CollapsibleContent className="min-w-0">
+          <div className="border-t min-w-0">
             {showCodeSnippet && thread.codeSnippet && (
-              <div className="bg-gray-900 text-gray-300 p-3 font-mono text-xs overflow-x-auto">
+              <div className="bg-gray-900 text-gray-300 p-3 font-mono text-xs max-w-full overflow-hidden">
                 <div className="text-gray-500 mb-1">Line {thread.lineNumber}</div>
-                <pre>{thread.codeSnippet}</pre>
+                <div className="overflow-x-auto">
+                  <pre className="whitespace-pre-wrap break-all">{thread.codeSnippet}</pre>
+                </div>
               </div>
             )}
             
@@ -2053,7 +2055,7 @@ function ThreadCard({
                           </span>
                         </div>
                       )}
-                      <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                      <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
                     </div>
                     
                     {showExampleResponse && comment.exampleResponse && !comment.isUser && idx === 0 && thread.status === 'open' && (
