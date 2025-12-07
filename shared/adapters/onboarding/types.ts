@@ -7,7 +7,7 @@
 
 import type { Role, Level } from '../index';
 
-export type OnboardingStep = 'documents' | 'environment' | 'comprehension';
+export type OnboardingStep = 'documents' | 'environment' | 'codebase' | 'comprehension';
 
 export interface EnvironmentSetupStep {
   id: string;
@@ -88,6 +88,7 @@ export interface OnboardingAdapter {
   
   requiresGitTerminal: boolean;
   environmentSetup: EnvironmentSetupConfig;
+  codebaseExploration: CodebaseExplorationConfig;
   uiControls: OnboardingUIControls;
   difficulty: OnboardingDifficulty;
   evaluation: OnboardingEvaluation;
@@ -103,10 +104,22 @@ export interface RoleOnboardingAdapter {
   environmentSetup: Omit<EnvironmentSetupConfig, 'steps'> & {
     baseSteps: EnvironmentSetupStep[];
   };
+  codebaseExploration: Omit<CodebaseExplorationConfig, 'hintVisibility'> & {
+    hintVisibility?: 'always' | 'hover' | 'hidden';
+  };
   uiControls: Partial<OnboardingUIControls>;
   difficulty: Partial<OnboardingDifficulty>;
   evaluation: Partial<OnboardingEvaluation>;
   learningObjectives: OnboardingLearningObjectives[];
+}
+
+export interface CodebaseExplorationOverlay {
+  skippable?: boolean;
+  estimatedMinutes?: number;
+  missions?: CodebaseMission[];
+  reflectionPrompt?: string;
+  reflectionMinLength?: number;
+  hintVisibility?: 'always' | 'hover' | 'hidden';
 }
 
 export interface LevelOnboardingOverlay {
@@ -122,6 +135,7 @@ export interface LevelOnboardingOverlay {
   difficultyOverrides: Partial<OnboardingDifficulty>;
   evaluationOverrides: Partial<OnboardingEvaluation>;
   terminalHintOverrides?: TerminalHint[];
+  codebaseExplorationOverrides?: CodebaseExplorationOverlay;
 }
 
 export interface EnvironmentSetupProgress {
@@ -147,4 +161,33 @@ export interface CommandValidationResult {
   output: string;
   hint?: string;
   nextStepUnlocked: boolean;
+}
+
+export interface CodebaseMission {
+  id: string;
+  label: string;
+  targetFile?: string;
+  hint?: string;
+  required: boolean;
+}
+
+export interface CodebaseExplorationConfig {
+  enabled: boolean;
+  skippable: boolean;
+  estimatedMinutes: number;
+  header: {
+    title: string;
+    subtitle: string;
+  };
+  missions: CodebaseMission[];
+  highlightedFiles: string[];
+  reflectionPrompt: string;
+  reflectionMinLength: number;
+  hintVisibility: 'always' | 'hover' | 'hidden';
+}
+
+export interface CodebaseExplorationProgress {
+  missions: Record<string, boolean>;
+  reflection: string;
+  completedAt?: string;
 }
