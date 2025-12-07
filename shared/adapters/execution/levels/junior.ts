@@ -145,12 +145,23 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
     mentorGuidance: 'moderate',
   },
   
-  completionModifiers: {
+  ticketCompletionModifiers: {
     celebrationStyleOverride: 'simple',
     showProgressRecapOverride: true,
     showLearningHighlightsOverride: true,
     messagesOverride: {
       encouragement: 'Nice work! You completed the full development workflow. Keep building those professional habits!',
+    },
+  },
+  
+  sprintCompletionModifiers: {
+    celebrationStyleOverride: 'simple',
+    progressMessagesOverride: {
+      nearComplete: 'Almost there! Just one more ticket to complete.',
+      allDone: 'Great job! All sprint tickets are complete.',
+    },
+    completionCTAOverride: {
+      label: 'Continue to Review',
     },
   },
 };

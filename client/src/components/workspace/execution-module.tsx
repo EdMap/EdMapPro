@@ -75,6 +75,7 @@ function parseGitState(gitState: unknown): GitTicketState {
   const defaultState: GitTicketState = {
     branchName: null,
     branchCreatedAt: null,
+    codeWorkComplete: false,
     commits: [],
     isPushed: false,
     prCreated: false,
@@ -502,6 +503,14 @@ export function ExecutionModule({
   const progressPercent = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0;
 
   const allDone = tickets.length > 0 && tickets.every(t => t.status === 'done');
+  const nearComplete = tickets.length > 0 && ticketsByStatus.done.length === tickets.length - 1;
+  
+  const sprintConfig = adapter.sprintCompletion;
+  const progressMessage = allDone 
+    ? sprintConfig.progressMessages.allDone 
+    : nearComplete 
+      ? sprintConfig.progressMessages.nearComplete 
+      : sprintConfig.progressMessages.inProgress;
 
   const moveTicket = useMutation({
     mutationFn: async ({ ticketId, newStatus }: { ticketId: number; newStatus: TicketStatus }) => {
@@ -716,7 +725,27 @@ export function ExecutionModule({
         />
       </div>
 
-      {allDone && (
+      {sprintConfig.showProgressBar && !allDone && (
+        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    {progressMessage}
+                  </p>
+                  <span className="text-sm text-muted-foreground">
+                    {ticketsByStatus.done.length}/{tickets.length} tickets
+                  </span>
+                </div>
+                <Progress value={progressPercent} className="h-2" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {allDone && sprintConfig.showCompletionBanner && (
         <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -726,10 +755,13 @@ export function ExecutionModule({
                 </div>
                 <div>
                   <h3 className="font-semibold text-green-800 dark:text-green-200">
-                    Sprint Complete!
+                    {sprintConfig.progressMessages.allDone}
                   </h3>
                   <p className="text-sm text-green-600 dark:text-green-400">
-                    All {tickets.length} tickets have been completed. You delivered {totalPoints} story points.
+                    {sprintConfig.showTeamMessage && sprintConfig.teamMessage}
+                  </p>
+                  <p className="text-xs text-green-500 dark:text-green-500 mt-1">
+                    {sprintConfig.completionCTA.description}
                   </p>
                 </div>
               </div>
@@ -739,7 +771,7 @@ export function ExecutionModule({
                 className="bg-green-600 hover:bg-green-700"
                 data-testid="button-complete-sprint"
               >
-                {completePhase.isPending ? 'Completing...' : 'Continue to Review'}
+                {completePhase.isPending ? 'Completing...' : sprintConfig.completionCTA.label}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>

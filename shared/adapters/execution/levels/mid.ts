@@ -145,12 +145,22 @@ export const midExecutionOverlay: LevelExecutionOverlay = {
     mentorGuidance: 'light',
   },
   
-  completionModifiers: {
+  ticketCompletionModifiers: {
     celebrationStyleOverride: 'simple',
     showProgressRecapOverride: false,
     showLearningHighlightsOverride: false,
     messagesOverride: {
       encouragement: 'Ticket completed. Ready for the next one.',
+    },
+  },
+  
+  sprintCompletionModifiers: {
+    celebrationStyleOverride: 'simple',
+    progressMessagesOverride: {
+      allDone: 'Sprint tickets complete. Ready for review.',
+    },
+    completionCTAOverride: {
+      label: 'Start Review',
     },
   },
 };
