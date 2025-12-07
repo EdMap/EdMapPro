@@ -139,7 +139,7 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
     mentorGuidance: 'heavy',
   },
   
-  completionModifiers: {
+  ticketCompletionModifiers: {
     celebrationStyleOverride: 'confetti',
     showProgressRecapOverride: true,
     showLearningHighlightsOverride: true,
@@ -147,5 +147,18 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
       title: 'Amazing Work! PR Merged!',
       encouragement: 'You did it! You completed your first full development cycle - from creating a branch to getting your code merged. This is exactly how professional developers work every day!',
     },
+  },
+  
+  sprintCompletionModifiers: {
+    celebrationStyleOverride: 'confetti',
+    progressMessagesOverride: {
+      nearComplete: 'You\'re so close! Just one more ticket to go - you\'ve got this!',
+      allDone: 'Incredible work! You completed all your sprint tickets! 🎉',
+    },
+    completionCTAOverride: {
+      label: 'Present Your Work',
+      description: 'Time to show off what you accomplished to your team!',
+    },
+    teamMessageOverride: 'Wow, you completed your first sprint! The team is impressed. Let\'s move to the Sprint Review where you\'ll present your work to stakeholders.',
   },
 };

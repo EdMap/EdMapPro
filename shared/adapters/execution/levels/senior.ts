@@ -145,9 +145,19 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
     mentorGuidance: 'none',
   },
   
-  completionModifiers: {
+  ticketCompletionModifiers: {
     celebrationStyleOverride: 'minimal',
     showProgressRecapOverride: false,
     showLearningHighlightsOverride: false,
+  },
+  
+  sprintCompletionModifiers: {
+    celebrationStyleOverride: 'minimal',
+    progressMessagesOverride: {
+      allDone: 'Sprint work complete.',
+    },
+    completionCTAOverride: {
+      label: 'Start Review',
+    },
   },
 };
