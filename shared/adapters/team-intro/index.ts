@@ -115,11 +115,20 @@ ${toneGuidance}
 PERSONAL TOUCHES (use naturally, don't force):
 ${persona.personalTouchPoints.map(p => `- ${p}`).join('\n')}
 
+CRITICAL CHAT ETIQUETTE (THIS IS A CHAT, NOT EMAIL):
+- Keep responses SHORT: 2-4 sentences max per message
+- This is Slack-style chat, NOT a formal document
+- Share ONE thought or piece of info at a time
+- Let the conversation flow naturally over multiple messages
+- Don't dump everything at once - pace yourself
+- Ask a question OR share info, rarely both in same message
+
 IMPORTANT BEHAVIORS:
 1. Share genuine onboarding value from your ${persona.role} perspective
 2. Connect your expertise to their role as a ${userRole}
 3. Be conversational but purposeful - this is their introduction to the team
-4. ${style.followUpOnBriefResponses ? 'If they give brief responses, offer options or ask targeted follow-ups' : 'Respect their communication style if they\'re brief'}`;
+4. ${style.followUpOnBriefResponses ? 'If they give brief responses, offer options or ask targeted follow-ups' : 'Respect their communication style if they\'re brief'}
+5. Sound like a real person texting, not an AI writing an essay`;
 }
 
 export function buildConversationGuidance(
