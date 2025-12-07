@@ -2656,7 +2656,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     const [sprint] = await db.insert(sprints).values({
       arcId: arc.id,
       sprintNumber: 1,
-      goal: 'Complete onboarding and deliver first bug fix',
+      goal: 'Complete onboarding to start your first sprint',
       theme: 'Onboarding',
       backlog: [
         { id: 1, title: 'Fix login button', type: 'bug', points: 3 },
