@@ -25,6 +25,7 @@ import {
   useKanbanState,
   useMoveTicket,
   useJourneyDashboard,
+  useJourneyWorkspace,
   type TicketStatus,
 } from "@/hooks/use-sprint-workflow";
 import type { SprintTicket } from "@shared/schema";
@@ -310,6 +311,7 @@ export default function SprintHub() {
   
   const { data: overview, isLoading } = useSprintOverview(sprintId);
   const { data: journeyDashboard } = useJourneyDashboard(journeyId);
+  const { data: workspace } = useJourneyWorkspace(journeyId);
   const { ticketsByStatus } = useKanbanState(sprintId);
   const moveTicket = useMoveTicket();
   const { toast } = useToast();
@@ -477,11 +479,11 @@ export default function SprintHub() {
                   </p>
                 </div>
               </div>
-              <Link href={`/journey/${journeyId}/sprint/${sprintId}/ceremony/${upcomingCeremonies[0]?.id || ''}`}>
+              <Link href={`/workspace/${workspace?.id}/review`}>
                 <Button 
                   className="bg-green-600 hover:bg-green-700 gap-2"
                   data-testid="button-complete-sprint"
-                  disabled={!upcomingCeremonies[0]}
+                  disabled={!workspace?.id}
                 >
                   {sprintConfig.completionCTA.label}
                   <ChevronRight className="h-4 w-4" />
