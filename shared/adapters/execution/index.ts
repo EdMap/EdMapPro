@@ -23,6 +23,8 @@ import type {
   CodeWorkMode,
   TicketCompletionConfig,
   TicketCompletionModifiers,
+  SprintCompletionConfig,
+  SprintCompletionModifiers,
 } from './types';
 
 import { 
@@ -163,7 +165,7 @@ function mergeCodeWorkConfig(
   };
 }
 
-function mergeCompletionConfig(
+function mergeTicketCompletionConfig(
   roleConfig: TicketCompletionConfig,
   levelModifiers: TicketCompletionModifiers
 ): TicketCompletionConfig {
@@ -176,6 +178,25 @@ function mergeCompletionConfig(
       ...roleConfig.celebrationMessages,
       ...levelModifiers.messagesOverride,
     },
+  };
+}
+
+function mergeSprintCompletionConfig(
+  roleConfig: SprintCompletionConfig,
+  levelModifiers: SprintCompletionModifiers
+): SprintCompletionConfig {
+  return {
+    ...roleConfig,
+    celebrationStyle: levelModifiers.celebrationStyleOverride ?? roleConfig.celebrationStyle,
+    progressMessages: {
+      ...roleConfig.progressMessages,
+      ...levelModifiers.progressMessagesOverride,
+    },
+    completionCTA: {
+      ...roleConfig.completionCTA,
+      ...levelModifiers.completionCTAOverride,
+    },
+    teamMessage: levelModifiers.teamMessageOverride ?? roleConfig.teamMessage,
   };
 }
 
@@ -288,9 +309,14 @@ ${levelOverlay.standupModifiers.showExamples ? 'Include brief examples when help
       levelOverlay.prReviewModifiers
     ),
     
-    completionConfig: mergeCompletionConfig(
-      roleAdapter.completionConfig,
-      levelOverlay.completionModifiers
+    ticketCompletion: mergeTicketCompletionConfig(
+      roleAdapter.ticketCompletionConfig,
+      levelOverlay.ticketCompletionModifiers
+    ),
+    
+    sprintCompletion: mergeSprintCompletionConfig(
+      roleAdapter.sprintCompletionConfig,
+      levelOverlay.sprintCompletionModifiers
     ),
     
     uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),
