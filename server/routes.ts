@@ -3741,14 +3741,27 @@ Respond ONLY with valid JSON, no other text.`
            (m.message.toLowerCase().includes('company') || m.message.toLowerCase().includes('role') || m.message.toLowerCase().includes('team')))
         );
       
-      // Check if user responded to the question offer (meaning they've had a chance to ask)
+      // Check if user responded to the question offer AND got an answer AND had a chance to follow up
       const questionOfferIndex = conversationHistory?.findIndex((m: any) => 
         m.sender !== 'You' && 
         m.message.toLowerCase().includes('question') && 
         (m.message.toLowerCase().includes('company') || m.message.toLowerCase().includes('role') || m.message.toLowerCase().includes('team'))
       ) ?? -1;
-      const userRespondedToQuestionOffer = questionOfferIndex >= 0 && conversationHistory && 
-        conversationHistory.slice(questionOfferIndex + 1).some((m: any) => m.sender === 'You');
+      
+      // Count exchanges after the question offer (user asks, teammate answers = 1 exchange)
+      const messagesAfterOffer = questionOfferIndex >= 0 && conversationHistory 
+        ? conversationHistory.slice(questionOfferIndex + 1) 
+        : [];
+      const userMessagesAfterOffer = messagesAfterOffer.filter((m: any) => m.sender === 'You').length;
+      const teammateAnswersAfterOffer = messagesAfterOffer.filter((m: any) => m.sender !== 'You').length;
+      
+      // User is done if: (1) they said something like "thanks/no more questions" OR (2) they asked, got answer, and sent another message
+      const lastUserMessage = userMessage.toLowerCase();
+      const userSignaledDone = lastUserMessage.includes('thank') || lastUserMessage.includes('got it') || 
+        lastUserMessage.includes('no question') || lastUserMessage.includes('that\'s all') ||
+        lastUserMessage.includes('all good') || lastUserMessage.includes('makes sense');
+      const hadFullExchange = userMessagesAfterOffer >= 2 && teammateAnswersAfterOffer >= 1;
+      const userRespondedToQuestionOffer = userSignaledDone || hadFullExchange;
       
       // Conversation length constraints
       const turnCount = conversationHistory ? conversationHistory.length : 0;
