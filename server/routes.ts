@@ -3751,10 +3751,14 @@ Respond ONLY with valid JSON, no other text.`
       const userRespondedToQuestionOffer = questionOfferIndex >= 0 && conversationHistory && 
         conversationHistory.slice(questionOfferIndex + 1).some((m: any) => m.sender === 'You');
       
-      // Minimum 6 messages (3 exchanges) before allowing close, and user must have responded to question offer
+      // Conversation length constraints
       const turnCount = conversationHistory ? conversationHistory.length : 0;
       const minimumTurnsMet = turnCount >= 6;
-      const isReadyToClose = allTopicsCovered && hasOfferedQuestions && userRespondedToQuestionOffer && minimumTurnsMet;
+      const maxTurnsReached = turnCount >= 10;
+      
+      // Close if: (1) max turns reached, OR (2) min turns met + topics covered + questions handled
+      const naturalCloseReady = minimumTurnsMet && allTopicsCovered && hasOfferedQuestions && userRespondedToQuestionOffer;
+      const isReadyToClose = maxTurnsReached || naturalCloseReady;
       
       // Determine what's missing to guide the conversation
       const missingTopics: string[] = [];
