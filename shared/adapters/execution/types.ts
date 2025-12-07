@@ -323,6 +323,30 @@ export interface ReviewPhaseLayout {
   terminalCollapsible: boolean;
 }
 
+export interface TicketCompletionConfig {
+  showCelebration: boolean;
+  celebrationStyle: 'confetti' | 'simple' | 'minimal';
+  showProgressRecap: boolean;
+  showLearningHighlights: boolean;
+  autoRedirectDelay: number | null;
+  nextActionOptions: {
+    primary: 'back-to-board' | 'next-ticket' | 'start-retro';
+    secondary?: 'review-code' | 'view-diff' | 'skip';
+  };
+  celebrationMessages: {
+    title: string;
+    subtitle: string;
+    encouragement: string;
+  };
+}
+
+export interface TicketCompletionModifiers {
+  celebrationStyleOverride?: 'confetti' | 'simple' | 'minimal';
+  showProgressRecapOverride?: boolean;
+  showLearningHighlightsOverride?: boolean;
+  messagesOverride?: Partial<TicketCompletionConfig['celebrationMessages']>;
+}
+
 export interface ExecutionUIControls {
   showGitTerminal: boolean;
   showTeamChat: boolean;
@@ -391,6 +415,7 @@ export interface SprintExecutionAdapter {
   codeWorkConfig: CodeWorkConfig;
   aiInteractions: AIInteractionConfig;
   prReviewConfig: PRReviewConfig;
+  completionConfig: TicketCompletionConfig;
   
   uiControls: ExecutionUIControls;
   difficulty: ExecutionDifficulty;
@@ -415,6 +440,7 @@ export interface RoleExecutionAdapter {
   };
   aiInteractions: Omit<AIInteractionConfig, 'responsePersonality'>;
   prReviewConfig: RolePRReviewConfig;
+  completionConfig: TicketCompletionConfig;
   
   uiControls: Partial<ExecutionUIControls>;
   difficulty: Partial<ExecutionDifficulty>;
@@ -454,6 +480,8 @@ export interface LevelExecutionOverlay {
     autoCompleteSteps: boolean;
     mentorGuidance: 'heavy' | 'moderate' | 'light' | 'none';
   };
+  
+  completionModifiers: TicketCompletionModifiers;
 }
 
 export interface TicketWorkProgress {

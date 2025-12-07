@@ -464,6 +464,23 @@ Identify issues that could cause bugs in production.`,
     },
   },
   
+  completionConfig: {
+    showCelebration: true,
+    celebrationStyle: 'confetti',
+    showProgressRecap: true,
+    showLearningHighlights: true,
+    autoRedirectDelay: null,
+    nextActionOptions: {
+      primary: 'back-to-board',
+      secondary: 'review-code',
+    },
+    celebrationMessages: {
+      title: 'PR Merged Successfully!',
+      subtitle: 'Your code is now part of the main branch',
+      encouragement: 'Great work completing this ticket! You followed the full development workflow from branch creation to merge.',
+    },
+  },
+  
   uiControls: {
     showGitTerminal: true,
     showTeamChat: true,

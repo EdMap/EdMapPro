@@ -138,4 +138,14 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
     autoCompleteSteps: false,
     mentorGuidance: 'heavy',
   },
+  
+  completionModifiers: {
+    celebrationStyleOverride: 'confetti',
+    showProgressRecapOverride: true,
+    showLearningHighlightsOverride: true,
+    messagesOverride: {
+      title: 'Amazing Work! PR Merged!',
+      encouragement: 'You did it! You completed your first full development cycle - from creating a branch to getting your code merged. This is exactly how professional developers work every day!',
+    },
+  },
 };

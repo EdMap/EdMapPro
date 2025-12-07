@@ -21,6 +21,8 @@ import type {
   PRReviewModifiers,
   CodeWorkConfig,
   CodeWorkMode,
+  TicketCompletionConfig,
+  TicketCompletionModifiers,
 } from './types';
 
 import { 
@@ -161,6 +163,22 @@ function mergeCodeWorkConfig(
   };
 }
 
+function mergeCompletionConfig(
+  roleConfig: TicketCompletionConfig,
+  levelModifiers: TicketCompletionModifiers
+): TicketCompletionConfig {
+  return {
+    ...roleConfig,
+    celebrationStyle: levelModifiers.celebrationStyleOverride ?? roleConfig.celebrationStyle,
+    showProgressRecap: levelModifiers.showProgressRecapOverride ?? roleConfig.showProgressRecap,
+    showLearningHighlights: levelModifiers.showLearningHighlightsOverride ?? roleConfig.showLearningHighlights,
+    celebrationMessages: {
+      ...roleConfig.celebrationMessages,
+      ...levelModifiers.messagesOverride,
+    },
+  };
+}
+
 function mergePRReviewConfig(
   roleConfig: RolePRReviewConfig,
   levelComments: LevelExecutionOverlay['prReviewComments'],
@@ -268,6 +286,11 @@ ${levelOverlay.standupModifiers.showExamples ? 'Include brief examples when help
       roleAdapter.prReviewConfig,
       levelOverlay.prReviewComments,
       levelOverlay.prReviewModifiers
+    ),
+    
+    completionConfig: mergeCompletionConfig(
+      roleAdapter.completionConfig,
+      levelOverlay.completionModifiers
     ),
     
     uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),

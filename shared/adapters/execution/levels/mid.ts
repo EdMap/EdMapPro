@@ -144,4 +144,13 @@ export const midExecutionOverlay: LevelExecutionOverlay = {
     autoCompleteSteps: false,
     mentorGuidance: 'light',
   },
+  
+  completionModifiers: {
+    celebrationStyleOverride: 'simple',
+    showProgressRecapOverride: false,
+    showLearningHighlightsOverride: false,
+    messagesOverride: {
+      encouragement: 'Ticket completed. Ready for the next one.',
+    },
+  },
 };

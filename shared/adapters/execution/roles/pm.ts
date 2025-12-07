@@ -149,6 +149,22 @@ If the summary lacks detail, ask for specifics. Acknowledge good facilitation br
     },
   },
   
+  completionConfig: {
+    showCelebration: true,
+    celebrationStyle: 'simple',
+    showProgressRecap: true,
+    showLearningHighlights: false,
+    autoRedirectDelay: null,
+    nextActionOptions: {
+      primary: 'back-to-board',
+    },
+    celebrationMessages: {
+      title: 'Task Completed!',
+      subtitle: 'Great coordination on this one',
+      encouragement: 'You successfully facilitated this task through completion.',
+    },
+  },
+  
   uiControls: {
     showGitTerminal: false,
     showTeamChat: true,

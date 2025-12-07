@@ -144,4 +144,10 @@ export const seniorExecutionOverlay: LevelExecutionOverlay = {
     autoCompleteSteps: true,
     mentorGuidance: 'none',
   },
+  
+  completionModifiers: {
+    celebrationStyleOverride: 'minimal',
+    showProgressRecapOverride: false,
+    showLearningHighlightsOverride: false,
+  },
 };

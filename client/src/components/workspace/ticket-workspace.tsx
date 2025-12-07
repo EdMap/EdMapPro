@@ -41,6 +41,7 @@ import { getCodeExecutionAdapter, createCodeChallengeFromBacklog } from "@shared
 import { CodeWorkPanel } from "./code-work-panel";
 import { CodeEditorPanel } from "./code-editor";
 import { PRReviewPanel } from "./pr-review-panel";
+import { TicketCompletionModal } from "./ticket-completion-modal";
 import type { Role, Level, GitCommand } from "@shared/adapters";
 import type { ExecutionResponse } from "@shared/adapters/code-execution/types";
 import type { SprintTicket, GitTicketState } from "@shared/schema";
@@ -148,6 +149,7 @@ export function TicketWorkspace({
   const [triggerExternalTests, setTriggerExternalTests] = useState(false);
   const [lastTestResult, setLastTestResult] = useState<ExecutionResponse | null>(null);
   const [showCodeDuringReview, setShowCodeDuringReview] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
@@ -1334,11 +1336,6 @@ Time:        0.842s`;
                     status: 'done',
                   });
                   
-                  toast({
-                    title: "PR Merged!",
-                    description: "Your changes have been merged into main. Great work!",
-                  });
-                  
                   setChatMessages(prev => [...prev, {
                     id: Date.now().toString(),
                     from: 'Sarah',
@@ -1347,6 +1344,8 @@ Time:        0.842s`;
                     color: 'bg-purple-500',
                     timestamp: new Date(),
                   }]);
+                  
+                  setShowCompletionModal(true);
                 }}
               />
             </div>
@@ -1462,6 +1461,17 @@ Time:        0.842s`;
           )}
         </main>
       </div>
+
+      <TicketCompletionModal
+        isOpen={showCompletionModal}
+        onClose={() => setShowCompletionModal(false)}
+        config={adapter.ticketCompletion}
+        ticketKey={ticket?.ticketKey || ''}
+        ticketTitle={ticket?.title || ''}
+        branchName={gitState.branchName || ''}
+        commitCount={gitState.commits.length}
+        onBackToBoard={onBack}
+      />
     </div>
   );
 }

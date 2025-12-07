@@ -144,4 +144,13 @@ export const juniorExecutionOverlay: LevelExecutionOverlay = {
     autoCompleteSteps: false,
     mentorGuidance: 'moderate',
   },
+  
+  completionModifiers: {
+    celebrationStyleOverride: 'simple',
+    showProgressRecapOverride: true,
+    showLearningHighlightsOverride: true,
+    messagesOverride: {
+      encouragement: 'Nice work! You completed the full development workflow. Keep building those professional habits!',
+    },
+  },
 };
