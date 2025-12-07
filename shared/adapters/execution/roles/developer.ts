@@ -464,7 +464,7 @@ Identify issues that could cause bugs in production.`,
     },
   },
   
-  completionConfig: {
+  ticketCompletionConfig: {
     showCelebration: true,
     celebrationStyle: 'confetti',
     showProgressRecap: true,
@@ -479,6 +479,25 @@ Identify issues that could cause bugs in production.`,
       subtitle: 'Your code is now part of the main branch',
       encouragement: 'Great work completing this ticket! You followed the full development workflow from branch creation to merge.',
     },
+  },
+  
+  sprintCompletionConfig: {
+    showProgressBar: true,
+    showCompletionBanner: true,
+    bannerPosition: 'top',
+    progressMessages: {
+      inProgress: 'Sprint in progress - keep working through your tickets!',
+      nearComplete: 'Almost there! Just one more ticket to go.',
+      allDone: 'All tickets complete! Your sprint work is done.',
+    },
+    completionCTA: {
+      label: 'Start Sprint Review',
+      description: 'Present your completed work to stakeholders and get feedback.',
+      nextPhase: 'review',
+    },
+    celebrationStyle: 'confetti',
+    showTeamMessage: true,
+    teamMessage: 'Great work completing all your sprint tickets! Time to showcase your accomplishments in the Sprint Review.',
   },
   
   uiControls: {
