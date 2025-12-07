@@ -3742,7 +3742,19 @@ Respond ONLY with valid JSON, no other text.`
            (m.message.toLowerCase().includes('company') || m.message.toLowerCase().includes('role') || m.message.toLowerCase().includes('team')))
         );
       
-      const isReadyToClose = allTopicsCovered && hasOfferedQuestions;
+      // Check if user responded to the question offer (meaning they've had a chance to ask)
+      const questionOfferIndex = conversationHistory?.findIndex((m: any) => 
+        m.sender !== 'You' && 
+        m.message.toLowerCase().includes('question') && 
+        (m.message.toLowerCase().includes('company') || m.message.toLowerCase().includes('role') || m.message.toLowerCase().includes('team'))
+      ) ?? -1;
+      const userRespondedToQuestionOffer = questionOfferIndex >= 0 && conversationHistory && 
+        conversationHistory.slice(questionOfferIndex + 1).some((m: any) => m.sender === 'You');
+      
+      // Minimum 6 messages (3 exchanges) before allowing close, and user must have responded to question offer
+      const turnCount = conversationHistory ? conversationHistory.length : 0;
+      const minimumTurnsMet = turnCount >= 6;
+      const isReadyToClose = allTopicsCovered && hasOfferedQuestions && userRespondedToQuestionOffer && minimumTurnsMet;
       
       // Determine what's missing to guide the conversation
       const missingTopics: string[] = [];
@@ -3752,7 +3764,6 @@ Respond ONLY with valid JSON, no other text.`
       if (!topicsCovered.teammatePersonal) missingTopics.push("your personal interests");
       
       // Determine conversation turn for scripted flow
-      const turnCount = conversationHistory ? conversationHistory.length : 0;
       const isFirstResponse = turnCount <= 1; // First user message
       
       // Get team-intro adapter config for role/level-aware prompts

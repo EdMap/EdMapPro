@@ -139,6 +139,20 @@ export const priyaPersona: TeamMemberPersona = {
     'Joined NovaPay a year ago from a larger company'
   ],
   
+  personalTopicTransitions: [
+    "Oh btw, I spent all Saturday on a trail in the mountains. Do you get outdoors much?",
+    "Random question - are you into podcasts? I'm always looking for new recs.",
+    "So when you're not coding, what's your thing? I'm big into hiking and podcasts.",
+    "I actually came from UX design before PM - total career pivot! What got you into tech?"
+  ],
+  
+  warmClosings: [
+    "This was great! I have a stakeholder call but let's chat more soon.",
+    "Love the energy! I need to prep for a demo, but welcome to the team!",
+    "Ok I should run - product review in 10. But excited to work with you!",
+    "So glad we connected! Ping me literally anytime, I mean it."
+  ],
+  
   closingPhrases: [
     'If you ever want context on why we\'re building something a certain way, just ask!',
     'I love explaining the user stories behind our features, so don\'t hesitate to reach out.',

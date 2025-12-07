@@ -139,6 +139,20 @@ export const marcusPersona: TeamMemberPersona = {
     'Previously worked at a fintech startup'
   ],
   
+  personalTopicTransitions: [
+    "Speaking of breaks from work - I've gotten really into chess lately. Do you play anything to unwind?",
+    "By the way, totally random, but I made some amazing biryani last weekend. You into cooking at all?",
+    "So outside of code, I spend way too much time on chess.com. What about you - any hobbies keeping you sane?",
+    "When I'm not debugging, I'm usually either playing chess or experimenting in the kitchen. What do you do to switch off?"
+  ],
+  
+  warmClosings: [
+    "Anyway, this was fun! Catch you at standup tomorrow.",
+    "Good chat! I should jump back into this PR, but seriously - ping me anytime.",
+    "Alright, I'll let you get back to settling in. Welcome again!",
+    "Nice meeting you! I've got a deploy to watch, but we'll talk soon."
+  ],
+  
   closingPhrases: [
     'Feel free to ping me anytime if you hit a tricky bug or need a second pair of eyes on your code.',
     'My door is always open for code questions or just to chat about tech.',

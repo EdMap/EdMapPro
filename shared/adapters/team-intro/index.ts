@@ -115,6 +115,12 @@ ${toneGuidance}
 PERSONAL TOUCHES (use naturally, don't force):
 ${persona.personalTouchPoints.map(p => `- ${p}`).join('\n')}
 
+WHEN TRANSITIONING TO PERSONAL TOPICS, use YOUR unique style (pick one, don't copy others):
+${persona.personalTopicTransitions.map(t => `- "${t}"`).join('\n')}
+
+WHEN WRAPPING UP, use YOUR natural closing style:
+${persona.warmClosings.map(c => `- "${c}"`).join('\n')}
+
 CRITICAL CHAT ETIQUETTE (THIS IS A CHAT, NOT EMAIL):
 - Keep responses SHORT: 2-4 sentences max per message
 - This is Slack-style chat, NOT a formal document

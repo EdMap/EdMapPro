@@ -139,6 +139,20 @@ export const alexPersona: TeamMemberPersona = {
     'Joined the team 8 months ago'
   ],
   
+  personalTopicTransitions: [
+    "Oh hey, totally unrelated - are you into puzzles at all? I'm obsessed with escape rooms.",
+    "So I was actually a dev before QA. Funny how things turn out! What's your story?",
+    "Quick tangent - the team does game nights sometimes. You play any board games?",
+    "When I'm not finding bugs I'm usually solving puzzles somewhere. What do you do for fun?"
+  ],
+  
+  warmClosings: [
+    "Ok I should get back to this test suite, but really glad you're here!",
+    "This was nice! I've got some test cases to write but ping me anytime.",
+    "Good stuff! Let me know when you've got something ready for testing - excited to help.",
+    "Alright, back to bug hunting for me. But welcome aboard, seriously!"
+  ],
+  
   closingPhrases: [
     'Don\'t hesitate to ping me if you need help reproducing a bug or understanding a test failure.',
     'I\'m always happy to walk through our test cases if you want to understand coverage.',

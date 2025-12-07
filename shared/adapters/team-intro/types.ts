@@ -47,6 +47,10 @@ export interface TeamMemberPersona {
   
   personalTouchPoints: string[];
   
+  personalTopicTransitions: string[];
+  
+  warmClosings: string[];
+  
   closingPhrases: string[];
   
   roleSpecificInsights: string;
