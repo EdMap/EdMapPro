@@ -5,7 +5,33 @@
  * Hints available on request only. Some troubleshooting scenarios introduced.
  */
 
-import type { LevelOnboardingOverlay } from '../types';
+import type { LevelOnboardingOverlay, CodebaseMission } from '../types';
+
+const midCodebaseMissions: CodebaseMission[] = [
+  {
+    id: 'readme',
+    label: 'Review project documentation',
+    targetFile: 'README.md',
+    required: true
+  },
+  {
+    id: 'architecture',
+    label: 'Understand the overall architecture',
+    required: true
+  },
+  {
+    id: 'schema',
+    label: 'Analyze the data model',
+    targetFile: 'shared/schema.ts',
+    required: true
+  },
+  {
+    id: 'adapters',
+    label: 'Study the adapter pattern implementation',
+    targetFile: 'shared/adapters',
+    required: false
+  }
+];
 
 export const midLevelOverlay: LevelOnboardingOverlay = {
   level: 'mid',
@@ -45,5 +71,14 @@ export const midLevelOverlay: LevelOnboardingOverlay = {
     { command: 'cd', description: 'Change dir' },
     { command: 'npm install', description: 'Install deps' },
     { command: 'npm run dev', description: 'Start server' }
-  ]
+  ],
+  
+  codebaseExplorationOverrides: {
+    skippable: true,
+    estimatedMinutes: 10,
+    missions: midCodebaseMissions,
+    reflectionPrompt: 'Any architectural observations or suggestions?',
+    reflectionMinLength: 20,
+    hintVisibility: 'hidden'
+  }
 };
