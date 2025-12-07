@@ -5,7 +5,52 @@
  * full git environment setup: clone, install, run, and verify.
  */
 
-import type { RoleOnboardingAdapter, EnvironmentSetupStep } from '../types';
+import type { RoleOnboardingAdapter, EnvironmentSetupStep, CodebaseMission } from '../types';
+
+const developerCodebaseMissions: CodebaseMission[] = [
+  {
+    id: 'readme',
+    label: 'Find and read the README.md',
+    targetFile: 'README.md',
+    hint: 'Look in the root of the repository',
+    required: true
+  },
+  {
+    id: 'package-json',
+    label: 'Locate package.json and identify the dev script',
+    targetFile: 'package.json',
+    hint: 'Check the "scripts" section',
+    required: true
+  },
+  {
+    id: 'entry-point',
+    label: 'Find the main entry point of the application',
+    targetFile: 'src/main.tsx',
+    hint: 'Common locations: src/index.ts, src/main.tsx, or app.ts',
+    required: true
+  },
+  {
+    id: 'schema',
+    label: 'Explore the database schema or data models',
+    targetFile: 'shared/schema.ts',
+    hint: 'Look for files named schema, models, or types',
+    required: true
+  },
+  {
+    id: 'routes',
+    label: 'Identify where API routes are defined',
+    targetFile: 'server/routes.ts',
+    hint: 'Backend routes are usually in a routes or api folder',
+    required: false
+  },
+  {
+    id: 'components',
+    label: 'Browse the UI components structure',
+    targetFile: 'client/src/components',
+    hint: 'Frontend components are typically in a components folder',
+    required: false
+  }
+];
 
 const developerEnvironmentSteps: EnvironmentSetupStep[] = [
   {
@@ -86,7 +131,8 @@ export const developerOnboardingAdapter: RoleOnboardingAdapter = {
     'terminal-navigation',
     'dependency-management',
     'local-runtime-mastery',
-    'git-fundamentals'
+    'git-fundamentals',
+    'codebase-navigation'
   ],
   requiresGitTerminal: true,
   
@@ -108,6 +154,26 @@ export const developerOnboardingAdapter: RoleOnboardingAdapter = {
       title: 'Environment Ready!',
       description: 'Your development environment is set up. You can now start working on tickets.'
     }
+  },
+  
+  codebaseExploration: {
+    enabled: true,
+    skippable: false,
+    estimatedMinutes: 15,
+    header: {
+      title: 'Explore the Codebase',
+      subtitle: 'Before your first standup, take a few minutes to orient yourself in the repository'
+    },
+    missions: developerCodebaseMissions,
+    highlightedFiles: [
+      'README.md',
+      'package.json',
+      'src/main.tsx',
+      'shared/schema.ts',
+      'server/routes.ts'
+    ],
+    reflectionPrompt: 'What did you notice about the project structure? Any questions or observations?',
+    reflectionMinLength: 50
   },
   
   uiControls: {
@@ -159,6 +225,21 @@ export const developerOnboardingAdapter: RoleOnboardingAdapter = {
       ]
     },
     {
+      step: 'codebase',
+      objectives: [
+        'Navigate the project directory structure',
+        'Identify key files: README, package.json, entry points',
+        'Understand the data model and schema',
+        'Locate where API routes are defined'
+      ],
+      tips: [
+        'Start with README.md for project overview',
+        'Check package.json scripts to see how to run things',
+        'Look for patterns in how folders are organized',
+        'Note which technologies and libraries are used'
+      ]
+    },
+    {
       step: 'comprehension',
       objectives: [
         'Demonstrate understanding of the project',
@@ -184,6 +265,7 @@ export const qaOnboardingAdapter: RoleOnboardingAdapter = {
     'terminal-navigation',
     'dependency-management',
     'local-runtime-mastery',
+    'codebase-navigation',
     'testing-environment-setup'
   ],
   requiresGitTerminal: true
@@ -199,6 +281,7 @@ export const devopsOnboardingAdapter: RoleOnboardingAdapter = {
     'terminal-navigation',
     'dependency-management',
     'local-runtime-mastery',
+    'codebase-navigation',
     'infrastructure-awareness'
   ],
   requiresGitTerminal: true
@@ -214,6 +297,7 @@ export const dataScienceOnboardingAdapter: RoleOnboardingAdapter = {
     'terminal-navigation',
     'dependency-management',
     'local-runtime-mastery',
+    'codebase-navigation',
     'data-environment-setup'
   ],
   requiresGitTerminal: true
