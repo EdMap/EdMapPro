@@ -40,6 +40,8 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 
 **Sprint Completion System**: Provides adaptive progress tracking and completion guidance across both the Sprint Hub dashboard and the Execution Module. `SprintCompletionConfig` includes level-aware progress messages (in progress, near complete, all done), completion CTAs with descriptions, optional team celebration messages, and configurable progress bar visibility. Interns receive encouraging team messages, while seniors get direct next-step CTAs. The Sprint Hub page displays a celebratory banner when all tickets are done, guiding users to the Sprint Review ceremony.
 
+**Team Introduction Adapter System**: Located in `shared/adapters/team-intro/`, this provides role-aware, level-adjusted prompts for 1:1 conversations with team members (Marcus, Priya, Alex) during onboarding. Each persona has role-specific required topics (Marcus: code reviews/tech stack, Priya: product context/stakeholders, Alex: QA processes/testing). Level overlays adjust conversation tone, depth, and scaffolding - interns receive proactive guidance while seniors get concise peer-level discussion. Closing checklists ensure valuable onboarding content is delivered before conversations end. The `WorkspaceOrchestrator` consumes these adapters via `getTeamIntroConfig()`, `buildTeamIntroSystemPrompt()`, and `buildConversationGuidance()` functions.
+
 ## External Dependencies
 
 ### AI Services
