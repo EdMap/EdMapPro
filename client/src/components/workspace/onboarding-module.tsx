@@ -299,7 +299,12 @@ export function OnboardingModule({
   const handleEnvironmentComplete = () => {
     const newProgress = { ...progress, environmentComplete: true };
     updateProgress(newProgress);
-    setCurrentStep('overview');
+    // Navigate to codebase exploration if enabled, otherwise back to overview
+    if (codebaseExplorationEnabled) {
+      setCurrentStep('codebase');
+    } else {
+      setCurrentStep('overview');
+    }
   };
   
   const handleCodebaseExplorationComplete = (explorationProgress: CodebaseExplorationProgress) => {

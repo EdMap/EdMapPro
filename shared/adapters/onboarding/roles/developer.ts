@@ -162,7 +162,7 @@ export const developerOnboardingAdapter: RoleOnboardingAdapter = {
     estimatedMinutes: 15,
     header: {
       title: 'Explore the Codebase',
-      subtitle: 'Before your first standup, take a few minutes to orient yourself in the repository'
+      subtitle: 'Before you meet the team, take a few minutes to orient yourself in the repository'
     },
     missions: developerCodebaseMissions,
     highlightedFiles: [

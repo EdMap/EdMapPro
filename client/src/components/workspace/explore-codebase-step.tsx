@@ -183,8 +183,8 @@ export default router;`
     type: 'folder',
     content: `📁 components/
 ├── 📁 ui/           # Shadcn UI components (Button, Card, etc.)
-├── 📁 dashboard/    # Dashboard-specific components
-├── 📁 workspace/    # Workspace simulation components
+├── 📁 dashboard/    # Dashboard views and widgets
+├── 📁 merchants/    # Merchant management components
 ├── 📁 layout/       # Layout components (Sidebar, Header)
 └── 📄 theme-provider.tsx`
   },
@@ -261,10 +261,25 @@ export function ExploreCodebaseStep({
   const handleViewFile = (mission: CodebaseMission) => {
     const fileData = getMockFileContent(mission.targetFile);
     if (fileData) {
-      setPreviewFile(fileData);
+      // Set both states together to avoid showing stale data
       setExpandedMission(mission.id);
+      // Use a timeout to ensure the UI updates after expansion
+      setTimeout(() => setPreviewFile(fileData), 0);
     }
   };
+  
+  // Update preview file when expanded mission changes (for when clicking the collapsible trigger)
+  useEffect(() => {
+    if (expandedMission) {
+      const mission = config.missions.find(m => m.id === expandedMission);
+      if (mission?.targetFile) {
+        const fileData = getMockFileContent(mission.targetFile);
+        if (fileData) {
+          setPreviewFile(fileData);
+        }
+      }
+    }
+  }, [expandedMission, config.missions]);
 
   const handleComplete = () => {
     onComplete({
