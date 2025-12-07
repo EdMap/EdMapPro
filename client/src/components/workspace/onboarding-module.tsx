@@ -31,13 +31,16 @@ import {
   Play,
   Target,
   Coffee,
-  Terminal
+  Terminal,
+  FolderOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdvanceWorkspacePhase, type WorkspacePhase } from "@/hooks/use-sprint-workflow";
 import { EnvironmentSetup } from "./environment-setup";
+import { ExploreCodebaseStep } from "./explore-codebase-step";
 import { getOnboardingAdapter } from "@shared/adapters/onboarding";
 import type { Role, Level } from "@shared/adapters";
+import type { CodebaseExplorationProgress } from "@shared/adapters/onboarding/types";
 
 interface TeamMember {
   name: string;
@@ -52,6 +55,8 @@ interface OnboardingProgress {
   teamIntrosComplete: Record<string, boolean>;
   docsRead: Record<string, boolean>;
   environmentComplete: boolean;
+  codebaseExplorationComplete: boolean;
+  codebaseExplorationProgress?: CodebaseExplorationProgress;
   comprehensionComplete: boolean;
 }
 
@@ -124,7 +129,7 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
-type OnboardingStep = 'overview' | 'team-intro' | 'documentation' | 'environment' | 'comprehension';
+type OnboardingStep = 'overview' | 'team-intro' | 'documentation' | 'environment' | 'codebase' | 'comprehension';
 
 export function OnboardingModule({ 
   workspaceId, 
@@ -185,6 +190,7 @@ export function OnboardingModule({
     teamIntrosComplete: {},
     docsRead: {},
     environmentComplete: !requiresGitTerminal,
+    codebaseExplorationComplete: false,
     comprehensionComplete: false
   });
 
@@ -242,11 +248,17 @@ export function OnboardingModule({
   const allTeamIntrosComplete = teamIntroCount >= DEFAULT_TEAM.length;
   const allDocsRead = docsReadCount >= DOCUMENTATION_SECTIONS.length;
   const environmentComplete = progress.environmentComplete ?? !requiresGitTerminal;
+  const codebaseExplorationComplete = progress.codebaseExplorationComplete ?? false;
+  const codebaseExplorationEnabled = onboardingAdapter.codebaseExploration.enabled;
+  const codebaseExplorationSkippable = onboardingAdapter.codebaseExploration.skippable;
   
-  const totalSteps = requiresGitTerminal ? 4 : 3;
+  const totalSteps = requiresGitTerminal 
+    ? (codebaseExplorationEnabled ? 5 : 4)
+    : (codebaseExplorationEnabled ? 4 : 3);
   const completedSteps = 
     (allDocsRead ? 1 : 0) +
     (requiresGitTerminal && environmentComplete ? 1 : 0) +
+    (codebaseExplorationEnabled && codebaseExplorationComplete ? 1 : 0) +
     (allTeamIntrosComplete ? 1 : 0) +
     (progress.comprehensionComplete ? 1 : 0);
   
@@ -286,6 +298,25 @@ export function OnboardingModule({
   
   const handleEnvironmentComplete = () => {
     const newProgress = { ...progress, environmentComplete: true };
+    updateProgress(newProgress);
+    setCurrentStep('overview');
+  };
+  
+  const handleCodebaseExplorationComplete = (explorationProgress: CodebaseExplorationProgress) => {
+    const newProgress = { 
+      ...progress, 
+      codebaseExplorationComplete: true,
+      codebaseExplorationProgress: explorationProgress
+    };
+    updateProgress(newProgress);
+    setCurrentStep('overview');
+  };
+  
+  const handleCodebaseExplorationSkip = () => {
+    const newProgress = { 
+      ...progress, 
+      codebaseExplorationComplete: true 
+    };
     updateProgress(newProgress);
     setCurrentStep('overview');
   };
@@ -521,14 +552,69 @@ export function OnboardingModule({
           </Card>
         )}
 
-        {/* Step 3: Meet Your Team (unlocks after environment setup or documentation for PM) */}
+        {/* Step 3: Explore Codebase (unlocks after environment setup) */}
+        {codebaseExplorationEnabled && (
+          <Card 
+            className={cn(
+              "cursor-pointer transition-all",
+              !(allDocsRead && environmentComplete) ? "opacity-60 cursor-not-allowed" : "hover:shadow-md",
+              codebaseExplorationComplete ? "border-green-200 bg-green-50/50 dark:bg-green-900/10" : ""
+            )}
+            onClick={() => allDocsRead && environmentComplete && !codebaseExplorationComplete && setCurrentStep('codebase')}
+            data-testid="card-codebase-exploration"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "h-10 w-10 rounded-full flex items-center justify-center",
+                    codebaseExplorationComplete ? "bg-green-100" : "bg-teal-100"
+                  )}>
+                    <FolderOpen className={cn(
+                      "h-5 w-5",
+                      codebaseExplorationComplete ? "text-green-600" : "text-teal-600"
+                    )} />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Explore Codebase</h4>
+                    <p className="text-sm text-gray-500">
+                      {!(allDocsRead && environmentComplete)
+                        ? requiresGitTerminal 
+                          ? "Complete environment setup first" 
+                          : "Complete documentation first"
+                        : codebaseExplorationComplete
+                        ? "You've explored the project structure"
+                        : "Navigate the repository and learn key files"
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!(allDocsRead && environmentComplete) && <Clock className="h-5 w-5 text-gray-400" />}
+                  {allDocsRead && environmentComplete && !codebaseExplorationComplete && (
+                    <Badge variant="outline" className="text-xs">
+                      ~{onboardingAdapter.codebaseExploration.estimatedMinutes} min
+                    </Badge>
+                  )}
+                  {codebaseExplorationComplete ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ) : (allDocsRead && environmentComplete) ? (
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  ) : null}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Meet Your Team (unlocks after codebase exploration or environment setup) */}
         <Card 
           className={cn(
             "cursor-pointer transition-all",
-            !(allDocsRead && environmentComplete) ? "opacity-60 cursor-not-allowed" : "hover:shadow-md",
+            !(allDocsRead && environmentComplete && (codebaseExplorationComplete || !codebaseExplorationEnabled)) ? "opacity-60 cursor-not-allowed" : "hover:shadow-md",
             allTeamIntrosComplete ? "border-green-200 bg-green-50/50 dark:bg-green-900/10" : ""
           )}
-          onClick={() => allDocsRead && environmentComplete && setCurrentStep('team-intro')}
+          onClick={() => allDocsRead && environmentComplete && (codebaseExplorationComplete || !codebaseExplorationEnabled) && setCurrentStep('team-intro')}
           data-testid="card-team-intro"
         >
           <CardContent className="p-4">
@@ -546,25 +632,27 @@ export function OnboardingModule({
                 <div>
                   <h4 className="font-semibold">Meet Your Team</h4>
                   <p className="text-sm text-gray-500">
-                    {!(allDocsRead && environmentComplete)
-                      ? requiresGitTerminal 
-                        ? "Complete environment setup first" 
-                        : "Complete documentation first"
+                    {!(allDocsRead && environmentComplete && (codebaseExplorationComplete || !codebaseExplorationEnabled))
+                      ? codebaseExplorationEnabled && !codebaseExplorationComplete && allDocsRead && environmentComplete
+                        ? "Complete codebase exploration first"
+                        : requiresGitTerminal 
+                          ? "Complete environment setup first" 
+                          : "Complete documentation first"
                       : "Get to know the people you'll be working with"
                     }
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {!(allDocsRead && environmentComplete) && <Clock className="h-5 w-5 text-gray-400" />}
-                {allDocsRead && environmentComplete && (
+                {!(allDocsRead && environmentComplete && (codebaseExplorationComplete || !codebaseExplorationEnabled)) && <Clock className="h-5 w-5 text-gray-400" />}
+                {allDocsRead && environmentComplete && (codebaseExplorationComplete || !codebaseExplorationEnabled) && (
                   <Badge variant={allTeamIntrosComplete ? "default" : "secondary"}>
                     {teamIntroCount}/{DEFAULT_TEAM.length}
                   </Badge>
                 )}
                 {allTeamIntrosComplete ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
-                ) : (allDocsRead && environmentComplete) ? (
+                ) : (allDocsRead && environmentComplete && (codebaseExplorationComplete || !codebaseExplorationEnabled)) ? (
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 ) : null}
               </div>
@@ -1326,6 +1414,15 @@ export function OnboardingModule({
           level={normalizedLevel}
           onComplete={handleEnvironmentComplete}
           onBack={() => setCurrentStep('overview')}
+        />
+      )}
+      {currentStep === 'codebase' && codebaseExplorationEnabled && (
+        <ExploreCodebaseStep
+          config={onboardingAdapter.codebaseExploration}
+          onComplete={handleCodebaseExplorationComplete}
+          onBack={() => setCurrentStep('overview')}
+          onSkip={codebaseExplorationSkippable ? handleCodebaseExplorationSkip : undefined}
+          initialProgress={progress.codebaseExplorationProgress}
         />
       )}
       {currentStep === 'comprehension' && renderComprehension()}
