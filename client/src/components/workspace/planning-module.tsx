@@ -800,8 +800,20 @@ export function PlanningModule({
     const newMessageCount = messages.length - previousMessageCountRef.current;
     previousMessageCountRef.current = messages.length;
     
-    // If no new messages or staggering disabled, show all immediately
-    if (newMessageCount <= 0 || !staggerEnabled) {
+    // If no new messages, nothing to do
+    if (newMessageCount <= 0) {
+      setVisibleMessageCount(messages.length);
+      return;
+    }
+    
+    // Get the new messages
+    const startIndex = messages.length - newMessageCount;
+    const newMessages = messages.slice(startIndex);
+    
+    // If any of the new messages are user messages, show them immediately
+    // (User messages should never be staggered)
+    const hasUserMessage = newMessages.some(m => m.isUser);
+    if (hasUserMessage || !staggerEnabled) {
       setVisibleMessageCount(messages.length);
       return;
     }
@@ -810,9 +822,7 @@ export function PlanningModule({
     staggerTimeoutsRef.current.forEach(clearTimeout);
     staggerTimeoutsRef.current = [];
     
-    // Stagger only the NEW messages
-    const startIndex = messages.length - newMessageCount;
-    
+    // Stagger only AI/team messages
     if (startIndex < messages.length) {
       setIsStaggering(true);
       
