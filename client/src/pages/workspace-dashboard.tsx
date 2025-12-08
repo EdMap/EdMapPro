@@ -58,6 +58,23 @@ function getPhaseTip(phase: WorkspacePhase): string {
   }
 }
 
+function getPhaseStatusDescription(phase: WorkspacePhase, sprint: { sprintNumber: number; theme: string; goal: string } | null): string {
+  switch (phase) {
+    case 'onboarding': 
+      return "Complete onboarding to start your first sprint";
+    case 'planning': 
+      return "Define sprint scope and set your team's goal";
+    case 'execution': 
+      return sprint?.goal || "Complete your assigned tickets";
+    case 'review': 
+      return "Demo completed work to stakeholders";
+    case 'retro': 
+      return "Reflect on what went well and what to improve";
+    default: 
+      return "";
+  }
+}
+
 export default function WorkspaceDashboard() {
   const params = useParams<{ workspaceId: string }>();
   const workspaceId = params.workspaceId ? parseInt(params.workspaceId) : null;
@@ -272,24 +289,20 @@ export default function WorkspaceDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {currentSprint ? (
-                <div className="space-y-2">
-                  <p className="font-medium" data-testid="text-sprint-theme">
-                    {currentSprint.theme}
-                  </p>
-                  <p className="text-sm text-muted-foreground" data-testid="text-sprint-goal">
-                    {currentSprint.goal}
-                  </p>
+              <div className="space-y-2">
+                <p className="font-medium" data-testid="text-sprint-phase">
+                  {getPhaseLabel(currentPhase)}
+                </p>
+                <p className="text-sm text-muted-foreground" data-testid="text-sprint-description">
+                  {getPhaseStatusDescription(currentPhase, currentSprint)}
+                </p>
+                {currentSprint && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
                     <Clock className="h-4 w-4" />
                     <span>Sprint {currentSprint.sprintNumber}</span>
                   </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No active sprint. Complete {currentPhase === 'onboarding' ? 'onboarding' : 'planning'} to start a sprint.
-                </p>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
 
