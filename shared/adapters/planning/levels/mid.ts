@@ -39,9 +39,9 @@ Treat disagreements as collaborative problem-solving.`
 Here's what we're looking at...`,
     messageStagger: {
       enabled: true,
-      baseDelayMs: 1000,
-      perCharacterDelayMs: 10,
-      maxDelayMs: 3500
+      baseDelayMs: 2000,
+      perCharacterDelayMs: 20,
+      maxDelayMs: 7000
     },
     preMeetingBriefing: {
       enabled: true,

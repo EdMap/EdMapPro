@@ -82,9 +82,9 @@ Looking at our backlog, we've got a timezone display bug that's been escalated, 
     ],
     messageStagger: {
       enabled: true,
-      baseDelayMs: 1200,
-      perCharacterDelayMs: 12,
-      maxDelayMs: 4000
+      baseDelayMs: 2400,
+      perCharacterDelayMs: 24,
+      maxDelayMs: 8000
     },
     preMeetingBriefing: {
       enabled: true,

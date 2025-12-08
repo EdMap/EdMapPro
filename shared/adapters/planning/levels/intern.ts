@@ -120,9 +120,9 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
     ],
     messageStagger: {
       enabled: true,
-      baseDelayMs: 1500,
-      perCharacterDelayMs: 15,
-      maxDelayMs: 5000
+      baseDelayMs: 3000,
+      perCharacterDelayMs: 30,
+      maxDelayMs: 10000
     },
     preMeetingBriefing: {
       enabled: true,
