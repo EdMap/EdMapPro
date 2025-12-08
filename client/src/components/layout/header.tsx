@@ -13,9 +13,31 @@ const pageTitles: Record<string, string> = {
   "/progress": "Progress & Analytics"
 };
 
+function getPageTitle(location: string): string {
+  if (pageTitles[location]) {
+    return pageTitles[location];
+  }
+  
+  if (location.includes('/workspace/')) {
+    if (location.includes('/onboarding')) return 'Onboarding';
+    if (location.includes('/planning')) return 'Sprint Planning';
+    if (location.includes('/execution') || location.includes('/sprint-hub')) return 'Sprint Execution';
+    if (location.includes('/review')) return 'Sprint Review';
+    if (location.includes('/retro')) return 'Sprint Retrospective';
+    if (location.includes('/ticket/')) return 'Ticket Workspace';
+    return 'Workspace';
+  }
+  
+  if (location.includes('/journey')) return 'Job Journey';
+  if (location.includes('/interview')) return 'Interview Simulator';
+  if (location.includes('/negotiation')) return 'Negotiation Practice';
+  
+  return 'Dashboard';
+}
+
 export default function Header() {
   const [location] = useLocation();
-  const pageTitle = pageTitles[location] || "Dashboard";
+  const pageTitle = getPageTitle(location);
 
   const { data: user } = useQuery({
     queryKey: ["/api/user"],
