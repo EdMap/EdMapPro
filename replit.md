@@ -20,7 +20,7 @@ Key features include:
 -   **Interview Simulator**: AI-powered tool with dual-mode experiences, multi-persona AI teams, level calibration, two-phase AI agent architecture (Preparation/Conversation), real-time evaluation, and comprehensive reports.
 -   **Workspace Simulator**: Virtual tech team environment for collaborative project work in dual-mode, featuring multi-character AI teams, role-based practice, dynamic collaboration, and interactive project artifacts.
 -   **Workspace Phase System**: Simulates a complete Scrum sprint cycle (Onboarding → Planning → Execution → Review → Retro) with phase-specific modules and a `PhaseGuard` for linear progression.
--   **Collaborative Sprint Planning**: Role-aware, adapter-driven sprint planning simulating Scrum meetings, with Context, Discussion, and Commitment phases, featuring level overlays, `AutoStartSequence`, message staggering, and AI response guardrails.
+-   **Collaborative Sprint Planning**: Role-aware, adapter-driven sprint planning simulating Scrum meetings, with Context, Discussion, and Commitment phases, featuring level overlays, `AutoStartSequence`, message staggering, and AI response guardrails. Includes pre-meeting briefing screen with meeting agenda, attendees, and level-specific context notes. Message staggering uses level-aware delays (intern: 1500ms base, senior: 800ms base) with typing indicators showing persona-specific avatars.
 -   **Narrative Progression System**: Dynamic journey system with configurable paths and competency tracking.
 -   **Template-Driven Sprint Generation**: Catalogue-based system for generating varied sprint content.
 
