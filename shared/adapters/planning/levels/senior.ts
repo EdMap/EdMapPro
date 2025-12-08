@@ -36,7 +36,21 @@ They should mentor the team through the planning process.`
     },
     autoStartMessage: `Alright, let's kick off planning. I've got the priority list from stakeholders - we need to make some tough calls this sprint.
 
-Before I go through the items, any context from last sprint we should factor in?`
+Before I go through the items, any context from last sprint we should factor in?`,
+    messageStagger: {
+      enabled: true,
+      baseDelayMs: 800,
+      perCharacterDelayMs: 8,
+      maxDelayMs: 3000
+    },
+    preMeetingBriefing: {
+      enabled: false,
+      title: 'Sprint Planning',
+      subtitle: 'Facilitate the planning session',
+      agenda: [],
+      attendees: [],
+      joinButtonText: 'Begin'
+    }
   },
   
   uiOverrides: {

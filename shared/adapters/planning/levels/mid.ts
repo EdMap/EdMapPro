@@ -36,7 +36,29 @@ Treat disagreements as collaborative problem-solving.`
     },
     autoStartMessage: `Hey team, let's get into planning. I'll quickly share what's on the priority list from stakeholders, but I want us to dig into the details together.
 
-Here's what we're looking at...`
+Here's what we're looking at...`,
+    messageStagger: {
+      enabled: true,
+      baseDelayMs: 1000,
+      perCharacterDelayMs: 10,
+      maxDelayMs: 3500
+    },
+    preMeetingBriefing: {
+      enabled: true,
+      title: 'Sprint Planning',
+      subtitle: 'Lead the technical discussion',
+      agenda: [
+        'Review stakeholder priorities',
+        'Drive estimation and scope discussions',
+        'Identify risks and dependencies'
+      ],
+      attendees: [
+        { name: 'Priya', role: 'Product Manager', avatarSeed: 'priya' },
+        { name: 'Marcus', role: 'Senior Developer', avatarSeed: 'marcus' },
+        { name: 'Alex', role: 'QA Engineer', avatarSeed: 'alex' }
+      ],
+      joinButtonText: 'Start Planning'
+    }
   },
   
   uiOverrides: {

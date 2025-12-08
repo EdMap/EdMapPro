@@ -91,6 +91,16 @@ interface CommitmentGuidance {
   suggestedGoal?: string;
 }
 
+interface PreMeetingBriefing {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  agenda: string[];
+  attendees: { name: string; role: string; avatarSeed: string }[];
+  contextNote?: string;
+  joinButtonText: string;
+}
+
 interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
@@ -108,6 +118,7 @@ interface LevelEngagement {
   autoStartMessage: string;
   messageStagger?: MessageStaggerConfig;
   selectionGuidance?: SelectionGuidance;
+  preMeetingBriefing?: PreMeetingBriefing;
 }
 
 interface PlanningSessionState {
@@ -263,6 +274,123 @@ function ChatMessage({ message }: { message: PlanningMessage }) {
           message.isUser ? "text-white" : "text-gray-700 dark:text-gray-200"
         )}>{message.message}</p>
       </div>
+    </div>
+  );
+}
+
+function TypingIndicator({ personaName }: { personaName?: string }) {
+  const colorClass = personaName ? PERSONA_COLORS[personaName] || PERSONA_COLORS.default : PERSONA_COLORS.default;
+  const avatar = personaName ? PERSONA_AVATARS[personaName] || personaName.substring(0, 2).toUpperCase() : '...';
+  
+  return (
+    <div className="flex gap-3.5 mb-5">
+      <Avatar className={cn(
+        "h-10 w-10 flex-shrink-0 border-2 shadow-sm",
+        colorClass.split(' ')[0], "border-white dark:border-gray-700"
+      )}>
+        <AvatarFallback className={cn("text-xs font-medium", colorClass.split(' ')[1])}>
+          {avatar}
+        </AvatarFallback>
+      </Avatar>
+      <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3.5 shadow-sm">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreMeetingBriefingScreen({ 
+  briefing, 
+  onJoin,
+  isJoining 
+}: { 
+  briefing: PreMeetingBriefing; 
+  onJoin: () => void;
+  isJoining: boolean;
+}) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <Card className="max-w-lg w-full shadow-lg border-0">
+        <CardHeader className="text-center pb-4">
+          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+            <Users className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <CardTitle className="text-2xl font-bold">{briefing.title}</CardTitle>
+          <CardDescription className="text-base">{briefing.subtitle}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Meeting Agenda
+            </h4>
+            <ul className="space-y-2">
+              {briefing.agenda.map((item, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-medium">
+                    {i + 1}
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Attendees
+            </h4>
+            <div className="flex flex-wrap gap-3">
+              {briefing.attendees.map((attendee) => (
+                <div key={attendee.name} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                  <Avatar className={cn("h-8 w-8 border", PERSONA_COLORS[attendee.name]?.split(' ')[0] || 'bg-gray-100')}>
+                    <AvatarFallback className={cn("text-xs font-medium", PERSONA_COLORS[attendee.name]?.split(' ')[1] || 'text-gray-700')}>
+                      {PERSONA_AVATARS[attendee.name] || attendee.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="text-sm font-medium">{attendee.name}</div>
+                    <div className="text-xs text-muted-foreground">{attendee.role}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {briefing.contextNote && (
+            <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-3">
+                <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800 dark:text-amber-200">{briefing.contextNote}</p>
+              </div>
+            </div>
+          )}
+          
+          <Button 
+            className="w-full py-6 text-lg" 
+            onClick={onJoin}
+            disabled={isJoining}
+            data-testid="button-join-planning"
+          >
+            {isJoining ? (
+              <>
+                <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                Joining...
+              </>
+            ) : (
+              <>
+                <Play className="h-5 w-5 mr-2" />
+                {briefing.joinButtonText}
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -488,6 +616,8 @@ export function PlanningModule({
   const [mobilePanel, setMobilePanel] = useState<'chat' | 'backlog'>('chat');
   const [showPhaseTransitionHint, setShowPhaseTransitionHint] = useState(false);
   const [pendingPhaseTransitionHint, setPendingPhaseTransitionHint] = useState(false);
+  const [showBriefing, setShowBriefing] = useState(true);
+  const [isJoiningMeeting, setIsJoiningMeeting] = useState(false);
   const staggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
@@ -583,6 +713,24 @@ export function PlanningModule({
       initSession.mutate();
     }
   }, [sessionState, isLoading]);
+  
+  // Determine if we should skip the briefing (session already has messages = returning user)
+  useEffect(() => {
+    if (sessionState?.messages && sessionState.messages.length > 0) {
+      // Skip briefing if session already has any messages (user has already joined before)
+      setShowBriefing(false);
+    }
+  }, [sessionState?.messages]);
+  
+  // Handler for joining the meeting from briefing screen
+  const handleJoinMeeting = () => {
+    setIsJoiningMeeting(true);
+    // Small delay for visual feedback before showing chat
+    setTimeout(() => {
+      setShowBriefing(false);
+      setIsJoiningMeeting(false);
+    }, 500);
+  };
   
   // Message staggering effect - reveals messages one at a time with typing simulation
   // Staggers on fresh sessions (no user messages yet) or when new messages arrive
@@ -803,6 +951,34 @@ export function PlanningModule({
   const engagement = adapterConfig.engagement || defaultEngagement;
   const currentPhaseEngagement = engagement.phaseEngagement[session.currentPhase as keyof typeof engagement.phaseEngagement] || 'respond';
   const promptSuggestions = engagement.promptSuggestions?.[session.currentPhase as keyof typeof engagement.promptSuggestions] || [];
+  const preMeetingBriefing = engagement.preMeetingBriefing;
+  
+  // Show pre-meeting briefing screen if enabled and briefing hasn't been dismissed
+  if (showBriefing && preMeetingBriefing?.enabled) {
+    return (
+      <div className="h-full flex flex-col" data-testid="planning-module-briefing">
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Sprint Planning</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{companyName} • {role}</p>
+            </div>
+            {onBack && (
+              <Button variant="outline" size="sm" onClick={onBack} data-testid="button-back-to-dashboard">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            )}
+          </div>
+        </div>
+        <PreMeetingBriefingScreen 
+          briefing={preMeetingBriefing}
+          onJoin={handleJoinMeeting}
+          isJoining={isJoiningMeeting}
+        />
+      </div>
+    );
+  }
   
   return (
     <div className="h-full flex flex-col" data-testid="planning-module">
@@ -948,18 +1124,7 @@ export function PlanningModule({
                     );
                   })}
                   {isStaggering && visibleMessageCount < messages.length && (
-                    <div className="flex gap-3 mb-5">
-                      <Avatar className="h-9 w-9 bg-gray-100 border-2 border-gray-200 flex-shrink-0">
-                        <AvatarFallback className="text-xs text-gray-400">...</AvatarFallback>
-                      </Avatar>
-                      <div className="rounded-xl px-4 py-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <div className="flex items-center gap-1.5 h-4">
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
-                      </div>
-                    </div>
+                    <TypingIndicator personaName={messages[visibleMessageCount]?.sender} />
                   )}
                   <div ref={messagesEndRef} />
                 </ScrollArea>

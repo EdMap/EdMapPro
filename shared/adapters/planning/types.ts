@@ -115,6 +115,16 @@ export interface MessageStaggerConfig {
   maxDelayMs: number;
 }
 
+export interface PreMeetingBriefing {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  agenda: string[];
+  attendees: { name: string; role: string; avatarSeed: string }[];
+  contextNote?: string;
+  joinButtonText: string;
+}
+
 export interface PhaseTransitionSequence {
   phase: PlanningPhase;
   steps: AutoStartStep[];
@@ -156,6 +166,7 @@ export interface LevelEngagement {
   messageStagger?: MessageStaggerConfig;
   selectionGuidance?: SelectionGuidance;
   commitmentGuidance?: CommitmentGuidance;
+  preMeetingBriefing?: PreMeetingBriefing;
 }
 
 export interface LevelPlanningOverlay {

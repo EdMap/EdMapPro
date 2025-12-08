@@ -82,9 +82,26 @@ Looking at our backlog, we've got a timezone display bug that's been escalated, 
     ],
     messageStagger: {
       enabled: true,
-      baseDelayMs: 600,
-      perCharacterDelayMs: 6,
-      maxDelayMs: 2500
+      baseDelayMs: 1200,
+      perCharacterDelayMs: 12,
+      maxDelayMs: 4000
+    },
+    preMeetingBriefing: {
+      enabled: true,
+      title: 'Sprint Planning Meeting',
+      subtitle: 'Collaborate with the team on sprint scope',
+      agenda: [
+        'Review backlog priorities with Priya',
+        'Discuss estimates and raise concerns',
+        'Help define the sprint commitment'
+      ],
+      attendees: [
+        { name: 'Priya', role: 'Product Manager', avatarSeed: 'priya' },
+        { name: 'Marcus', role: 'Senior Developer', avatarSeed: 'marcus' },
+        { name: 'Alex', role: 'QA Engineer', avatarSeed: 'alex' }
+      ],
+      contextNote: "You'll be asked to share your thoughts on priorities and estimates. Don't worry about having perfect answers - this is a learning experience!",
+      joinButtonText: 'Join Planning'
     }
   },
   

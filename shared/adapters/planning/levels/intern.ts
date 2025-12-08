@@ -120,9 +120,26 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
     ],
     messageStagger: {
       enabled: true,
-      baseDelayMs: 800,
-      perCharacterDelayMs: 8,
-      maxDelayMs: 3000
+      baseDelayMs: 1500,
+      perCharacterDelayMs: 15,
+      maxDelayMs: 5000
+    },
+    preMeetingBriefing: {
+      enabled: true,
+      title: 'Sprint Planning Meeting',
+      subtitle: 'Your first sprint planning session with the team',
+      agenda: [
+        'Review the product backlog and priorities',
+        'Discuss scope and effort estimates',
+        'Commit to a sprint goal together'
+      ],
+      attendees: [
+        { name: 'Priya', role: 'Product Manager', avatarSeed: 'priya' },
+        { name: 'Marcus', role: 'Senior Developer', avatarSeed: 'marcus' },
+        { name: 'Alex', role: 'QA Engineer', avatarSeed: 'alex' }
+      ],
+      contextNote: "This is your first planning session. You'll mostly observe how the team discusses and prioritizes work. Feel free to ask questions!",
+      joinButtonText: 'Join Planning Meeting'
     },
     phaseTransitionSequences: [
       {
