@@ -657,9 +657,19 @@ export function PlanningModule({
       queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
       setInputMessage('');
       
-      // Queue phase transition hint to show after message staggering completes
+      // Check adapter config for auto-advance behavior
       if (data.isPhaseTransitionCue) {
-        setPendingPhaseTransitionHint(true);
+        const shouldAutoAdvance = sessionState?.adapterConfig?.engagement?.autoAdvancePhases;
+        
+        if (shouldAutoAdvance) {
+          // Auto-advance after a short delay to let the user see the closing message
+          setTimeout(() => {
+            advancePhase.mutate();
+          }, 2000);
+        } else {
+          // Queue phase transition hint for manual advance
+          setPendingPhaseTransitionHint(true);
+        }
       }
     },
     onError: async (error) => {

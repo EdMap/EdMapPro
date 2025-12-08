@@ -149,6 +149,7 @@ export interface CommitmentGuidance {
 export interface LevelEngagement {
   mode: EngagementMode;
   autoStartConversation: boolean;
+  autoAdvancePhases: boolean;
   teamTalkRatio: number;
   phaseEngagement: {
     context: PhaseEngagement;

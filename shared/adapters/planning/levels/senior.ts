@@ -28,6 +28,7 @@ They should mentor the team through the planning process.`
   engagement: {
     mode: 'facilitator',
     autoStartConversation: true,
+    autoAdvancePhases: false,
     teamTalkRatio: 0.30,
     phaseEngagement: {
       context: 'lead',

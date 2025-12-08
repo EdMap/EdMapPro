@@ -28,6 +28,7 @@ Treat disagreements as collaborative problem-solving.`
   engagement: {
     mode: 'active',
     autoStartConversation: true,
+    autoAdvancePhases: false,
     teamTalkRatio: 0.45,
     phaseEngagement: {
       context: 'respond',

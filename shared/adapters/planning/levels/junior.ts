@@ -28,6 +28,7 @@ Create opportunities for them to practice contributing in a safe environment.`
   engagement: {
     mode: 'guided',
     autoStartConversation: true,
+    autoAdvancePhases: true,
     teamTalkRatio: 0.65,
     phaseEngagement: {
       context: 'respond',

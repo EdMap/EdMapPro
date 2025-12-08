@@ -29,6 +29,7 @@ Celebrate when they do ask questions or share observations.`
   engagement: {
     mode: 'shadow',
     autoStartConversation: true,
+    autoAdvancePhases: true,
     teamTalkRatio: 0.85,
     phaseEngagement: {
       context: 'observe',
