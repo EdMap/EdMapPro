@@ -354,3 +354,6 @@ export function normalizeLevel(levelName: string): Level {
 
 export { getSprintExecutionAdapter } from './execution';
 export type * from './execution/types';
+
+export { getStandupAdapter } from './standup';
+export type * from './standup/types';
