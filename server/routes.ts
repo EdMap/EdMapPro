@@ -4060,6 +4060,53 @@ ${stateGuidance}`;
   });
 
   // ============================================================================
+  // Standup Feedback Endpoint (AI-Generated Team Responses)
+  // ============================================================================
+  
+  app.post("/api/standup/feedback", async (req, res) => {
+    try {
+      const { generateStandupFeedback } = await import("./services/standup-feedback");
+      
+      const standupFeedbackSchema = z.object({
+        context: z.object({
+          workspaceId: z.number(),
+          sprintId: z.number(),
+          sprintDay: z.number(),
+          role: z.enum(['developer', 'pm', 'qa', 'devops', 'data_science']),
+          level: z.enum(['intern', 'junior', 'mid', 'senior']),
+          companyName: z.string(),
+          userName: z.string().optional().default('Developer'),
+          ticketContext: z.object({
+            inProgress: z.array(z.string()),
+            completed: z.array(z.string()),
+            blocked: z.array(z.string()),
+          }),
+        }),
+        submission: z.object({
+          yesterday: z.string(),
+          today: z.string(),
+          blockers: z.string().optional(),
+        }),
+      });
+      
+      const input = standupFeedbackSchema.parse(req.body);
+      
+      const result = await generateStandupFeedback(input.context, input.submission);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to generate standup feedback:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to generate standup feedback" });
+    }
+  });
+
+  // ============================================================================
   // Code Analysis Endpoint (LLM-Simulated Execution)
   // ============================================================================
   

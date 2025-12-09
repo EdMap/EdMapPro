@@ -21,6 +21,7 @@ import WorkspacePlanning from "@/pages/workspace-planning";
 import WorkspaceExecution from "@/pages/workspace-execution";
 import WorkspaceReview from "@/pages/workspace-review";
 import WorkspaceRetro from "@/pages/workspace-retro";
+import WorkspaceStandup from "@/pages/workspace-standup";
 import TicketWorkspacePage from "@/pages/ticket-workspace-page";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/workspace/:workspaceId/execution" component={WorkspaceExecution} />
       <Route path="/workspace/:workspaceId/review" component={WorkspaceReview} />
       <Route path="/workspace/:workspaceId/retro" component={WorkspaceRetro} />
+      <Route path="/workspace/:workspaceId/standup" component={WorkspaceStandup} />
       <Route path="/workspace/:workspaceId" component={WorkspaceDashboard} />
       <Route path="/progress" component={Progress} />
       <Route component={NotFound} />
