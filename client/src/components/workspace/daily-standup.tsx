@@ -109,37 +109,32 @@ export function DailyStandup({
 
   const feedbackMutation = useMutation({
     mutationFn: async (data: StandupFormData) => {
-      const response = await apiRequest<{ responses: TeamFeedbackResponse[]; success: boolean }>(
+      const response = await apiRequest(
+        "POST",
         "/api/standup/feedback",
         {
-          method: "POST",
-          body: JSON.stringify({
-            context: {
-              workspaceId,
-              sprintId,
-              sprintDay,
-              role: role as Role,
-              level: level as Level,
-              companyName,
-              userName: "Developer",
-              ticketContext: {
-                inProgress: ticketsByStatus.in_progress.map(t => t.ticketKey),
-                completed: ticketsByStatus.done.map(t => t.ticketKey),
-                blocked: [],
-              },
+          context: {
+            workspaceId,
+            sprintId,
+            sprintDay,
+            role: role as Role,
+            level: level as Level,
+            companyName,
+            userName: "Developer",
+            ticketContext: {
+              inProgress: ticketsByStatus.in_progress.map(t => t.ticketKey),
+              completed: ticketsByStatus.done.map(t => t.ticketKey),
+              blocked: [],
             },
-            submission: {
-              yesterday: data.yesterday,
-              today: data.today,
-              blockers: data.blockers || "",
-            },
-          }),
-          headers: {
-            "Content-Type": "application/json",
+          },
+          submission: {
+            yesterday: data.yesterday,
+            today: data.today,
+            blockers: data.blockers || "",
           },
         }
       );
-      return response;
+      return response.json() as Promise<{ responses: TeamFeedbackResponse[]; success: boolean }>;
     },
     onSuccess: (data) => {
       setTeamFeedback(data.responses);

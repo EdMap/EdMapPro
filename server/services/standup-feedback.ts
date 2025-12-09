@@ -122,14 +122,27 @@ Keep each message concise (1-3 sentences). Make responses specific to what the u
 
     const parsed = JSON.parse(jsonMatch[0]) as { responses: Array<{ personaId: string; message: string; type: string }> };
     
-    const feedbackResponses: TeamFeedbackResponse[] = parsed.responses.map(r => {
-      const persona = respondingPersonas.find(p => p.id === r.personaId) || respondingPersonas[0];
-      return {
-        from: persona,
-        message: r.message,
-        type: r.type as TeamFeedbackResponse['type'],
-      };
-    });
+    if (!parsed.responses || !Array.isArray(parsed.responses) || parsed.responses.length === 0) {
+      throw new Error("Invalid response format from AI");
+    }
+    
+    const feedbackResponses: TeamFeedbackResponse[] = parsed.responses
+      .filter(r => r && r.message && typeof r.message === 'string')
+      .map(r => {
+        const persona = respondingPersonas.find(p => p.id === r.personaId) || respondingPersonas[0];
+        if (!persona) {
+          throw new Error("No valid persona found");
+        }
+        return {
+          from: persona,
+          message: r.message,
+          type: (r.type as TeamFeedbackResponse['type']) || 'acknowledgment',
+        };
+      });
+
+    if (feedbackResponses.length === 0) {
+      throw new Error("No valid feedback responses generated");
+    }
 
     return {
       responses: feedbackResponses,
