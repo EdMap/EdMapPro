@@ -29,7 +29,7 @@ export default function WorkspaceStandup() {
   const parsedWorkspaceId = parseInt(workspaceId || "0");
 
   const { data: workspace, isLoading: workspaceLoading } = useQuery<WorkspaceData>({
-    queryKey: ["/api/workspaces", parsedWorkspaceId],
+    queryKey: [`/api/workspaces/${parsedWorkspaceId}`],
     enabled: parsedWorkspaceId > 0,
   });
 
@@ -37,7 +37,7 @@ export default function WorkspaceStandup() {
     sprint: SprintData;
     tickets: SprintTicket[];
   }>({
-    queryKey: ["/api/workspaces", parsedWorkspaceId, "sprint-overview"],
+    queryKey: [`/api/workspaces/${parsedWorkspaceId}/sprint-overview`],
     enabled: parsedWorkspaceId > 0,
   });
 

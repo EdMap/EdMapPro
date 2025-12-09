@@ -2860,6 +2860,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/workspaces/:workspaceId/sprint-overview - Get current sprint overview for standup
+  app.get("/api/workspaces/:workspaceId/sprint-overview", async (req, res) => {
+    try {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const workspace = await storage.getWorkspaceInstance(workspaceId);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      if (!workspace.currentSprintId) {
+        return res.status(404).json({ message: "No active sprint found" });
+      }
+      
+      const sprint = await storage.getSprint(workspace.currentSprintId);
+      if (!sprint) {
+        return res.status(404).json({ message: "Sprint not found" });
+      }
+      
+      const tickets = await storage.getSprintTickets(workspace.currentSprintId);
+      
+      const sprintState = sprint.sprintState as { currentDay?: number } | null;
+      
+      res.json({
+        sprint: {
+          id: sprint.id,
+          theme: sprint.theme,
+          goal: sprint.goal,
+          currentDay: sprintState?.currentDay || 1,
+        },
+        tickets: tickets || [],
+      });
+    } catch (error) {
+      console.error("Failed to get sprint overview:", error);
+      res.status(500).json({ message: "Failed to get sprint overview" });
+    }
+  });
+
   // GET /api/journeys/:journeyId/workspace - Get workspace for a journey
   app.get("/api/journeys/:journeyId/workspace", async (req, res) => {
     try {
