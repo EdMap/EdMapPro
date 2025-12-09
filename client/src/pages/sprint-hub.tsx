@@ -507,20 +507,20 @@ export default function SprintHub() {
         </Card>
       )}
 
-      {!allDone && upcomingCeremonies.length > 0 && (
+      {!allDone && upcomingCeremonies.length > 0 && upcomingCeremonies[0].ceremonyType === 'standup' && (
         <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-blue-600" />
                 <div>
-                  <p className="font-medium">Upcoming: {upcomingCeremonies[0].ceremonyType}</p>
+                  <p className="font-medium">Daily Standup</p>
                   <p className="text-sm text-muted-foreground">
-                    Ready for today's ceremony
+                    Share your progress with the team
                   </p>
                 </div>
               </div>
-              <Link href={`/journey/${journeyId}/sprint/${sprintId}/ceremony/${upcomingCeremonies[0].id}`}>
+              <Link href={`/workspace/${workspace?.id}/execution`}>
                 <Button className="gap-2" data-testid="button-start-ceremony">
                   <Play className="h-4 w-4" />
                   Start
