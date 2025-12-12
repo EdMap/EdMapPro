@@ -40,8 +40,9 @@ import { getBacklogItemById } from "@shared/adapters/planning/backlog-catalogue"
 import { getCodeExecutionAdapter, createCodeChallengeFromBacklog } from "@shared/adapters/code-execution";
 import { CodeWorkPanel } from "./code-work-panel";
 import { CodeEditorPanel } from "./code-editor";
-import { PRReviewPanel } from "./pr-review-panel";
+import { PRReviewPanel, type ExportedReviewThread } from "./pr-review-panel";
 import { TicketCompletionModal } from "./ticket-completion-modal";
+import type { ReviewThread } from "./code-editor/bottom-dock";
 import type { Role, Level, GitCommand } from "@shared/adapters";
 import type { ExecutionResponse } from "@shared/adapters/code-execution/types";
 import type { SprintTicket, GitTicketState } from "@shared/schema";
@@ -150,6 +151,7 @@ export function TicketWorkspace({
   const [lastTestResult, setLastTestResult] = useState<ExecutionResponse | null>(null);
   const [showCodeDuringReview, setShowCodeDuringReview] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [reviewThreads, setReviewThreads] = useState<ReviewThread[]>([]);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
@@ -1199,6 +1201,7 @@ Time:        0.842s`;
                     onTestResult={handleTestResult}
                     onFilesChange={handleCodeFilesChange}
                     hideSubmitButton={true}
+                    reviewThreads={reviewThreads}
                   />
                 </div>
               )}
@@ -1270,6 +1273,7 @@ Time:        0.842s`;
                   onTestResult={handleTestResult}
                   onFilesChange={handleCodeFilesChange}
                   hideSubmitButton={true}
+                  reviewThreads={reviewThreads}
                 />
               </div>
             </div>
@@ -1346,6 +1350,19 @@ Time:        0.842s`;
                   }]);
                   
                   setShowCompletionModal(true);
+                }}
+                onReviewThreadsLoaded={(threads: ExportedReviewThread[]) => {
+                  setReviewThreads(threads.map(t => ({
+                    id: t.id,
+                    reviewerName: t.reviewerName,
+                    reviewerRole: t.reviewerRole,
+                    filename: t.filename,
+                    lineNumber: t.lineNumber,
+                    severity: t.severity,
+                    status: t.status,
+                    content: t.content,
+                    createdAt: t.createdAt,
+                  })));
                 }}
               />
             </div>

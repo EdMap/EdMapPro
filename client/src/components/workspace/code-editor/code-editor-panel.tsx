@@ -15,7 +15,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BottomDock, type DockTab } from "./bottom-dock";
+import { BottomDock, type DockTab, type ReviewThread } from "./bottom-dock";
 import type { CodeExecutionAdapter, ExecutionResponse } from "@shared/adapters/code-execution/types";
 
 interface TerminalLine {
@@ -47,6 +47,8 @@ interface CodeEditorPanelProps {
   externalRunTests?: boolean;
   onExternalRunTestsComplete?: () => void;
   hideSubmitButton?: boolean;
+  reviewThreads?: ReviewThread[];
+  onGoToLine?: (filename: string, lineNumber: number) => void;
 }
 
 export function CodeEditorPanel({ 
@@ -63,6 +65,8 @@ export function CodeEditorPanel({
   externalRunTests = false,
   onExternalRunTestsComplete,
   hideSubmitButton = false,
+  reviewThreads = [],
+  onGoToLine,
 }: CodeEditorPanelProps) {
   const storageKey = `edmap-code-${ticketId}`;
   
@@ -313,6 +317,8 @@ export function CodeEditorPanel({
             tips={visibleHints}
             mentorFeedback={lastResult?.feedback?.mentorComment}
             isRunningTests={analyzeCodeMutation.isPending}
+            reviewThreads={reviewThreads}
+            onGoToLine={onGoToLine}
           />
         )}
       </div>

@@ -73,6 +73,18 @@ interface CodeReviewAPIResponse {
   reviewers: { id: string; name: string; role: string; color: string }[];
 }
 
+export interface ExportedReviewThread {
+  id: string;
+  reviewerName: string;
+  reviewerRole: string;
+  filename?: string;
+  lineNumber?: number;
+  severity: 'minor' | 'major' | 'blocking';
+  status: 'open' | 'addressed' | 'resolved' | 'dismissed';
+  content: string;
+  createdAt: string;
+}
+
 interface PRReviewPanelProps {
   prReviewConfig: PRReviewConfig;
   ticketKey: string;
@@ -96,6 +108,7 @@ interface PRReviewPanelProps {
   codeFiles?: Record<string, string>;
   userLevel?: Level;
   userRole?: Role;
+  onReviewThreadsLoaded?: (threads: ExportedReviewThread[]) => void;
 }
 
 interface SimulatedThread {
@@ -632,6 +645,7 @@ export function PRReviewPanel({
   codeFiles,
   userLevel = 'intern',
   userRole = 'developer',
+  onReviewThreadsLoaded,
 }: PRReviewPanelProps) {
   const { uiConfig, levelModifiers, reviewers } = prReviewConfig;
   
@@ -712,6 +726,21 @@ export function PRReviewPanel({
       setThreads(newThreads);
       setExpandedThreads(new Set(newThreads.map(t => t.id)));
       setIsLoadingReviews(false);
+      
+      if (onReviewThreadsLoaded) {
+        const exportedThreads: ExportedReviewThread[] = newThreads.map(t => ({
+          id: t.id,
+          reviewerName: t.reviewerName,
+          reviewerRole: t.reviewerRole,
+          filename: t.filename,
+          lineNumber: t.lineNumber,
+          severity: t.severity,
+          status: t.status,
+          content: t.comments[0]?.content || '',
+          createdAt: t.createdAt,
+        }));
+        onReviewThreadsLoaded(exportedThreads);
+      }
     },
     onError: (error) => {
       console.error('Failed to fetch LLM reviews:', error);

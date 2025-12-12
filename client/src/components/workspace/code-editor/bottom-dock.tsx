@@ -31,7 +31,7 @@ export interface ReviewThread {
   filename?: string;
   lineNumber?: number;
   severity: 'minor' | 'major' | 'blocking';
-  status: 'open' | 'addressed' | 'resolved';
+  status: 'open' | 'addressed' | 'resolved' | 'dismissed';
   content: string;
   createdAt: string;
 }
