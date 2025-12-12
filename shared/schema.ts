@@ -1732,13 +1732,20 @@ export const pullRequests = pgTable("pull_requests", {
 export const reviewThreads = pgTable("review_threads", {
   id: serial("id").primaryKey(),
   prId: integer("pr_id").references(() => pullRequests.id).notNull(),
+  reviewerId: text("reviewer_id").notNull().default('system'), // e.g., 'marcus', 'alex'
+  reviewerName: text("reviewer_name").notNull().default('Reviewer'),
+  initialComment: text("initial_comment").notNull().default(''), // Original reviewer comment
   filename: text("filename"), // null for general comments
   lineNumber: integer("line_number"), // null for file-level or general comments
   codeSnippet: text("code_snippet"), // The code being commented on
-  status: text("status").notNull().default('open'), // 'open', 'resolved', 'dismissed'
+  status: text("status").notNull().default('open'), // 'open', 'addressed', 'resolved', 'dismissed'
   threadType: text("thread_type").notNull().default('comment'), // 'comment', 'suggestion', 'question', 'request_changes'
   severity: text("severity").notNull().default('minor'), // 'minor', 'major', 'blocking'
   isBlocking: boolean("is_blocking").notNull().default(false),
+  userResponse: text("user_response"), // User's response to the comment
+  userRespondedAt: timestamp("user_responded_at"),
+  reviewerVerdict: text("reviewer_verdict"), // 'approved' | 'needs_more_work'
+  reviewerVerifiedAt: timestamp("reviewer_verified_at"),
   resolvedBy: text("resolved_by"), // 'user' or reviewer persona ID
   threadMetadata: jsonb("thread_metadata").notNull().default('{}'),
   createdAt: timestamp("created_at").defaultNow().notNull(),

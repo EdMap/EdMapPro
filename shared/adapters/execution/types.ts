@@ -239,8 +239,16 @@ export interface PRReviewPrompts {
   systemPrompt: string;
   initialReviewPrompt: string;
   followUpPrompt: string;
+  reReviewPrompt: string;
   approvalCriteria: string[];
   commonIssuesHint: string[];
+}
+
+export interface ReReviewVerificationConfig {
+  requireUserResponse: boolean;
+  requireTestsPass: boolean;
+  strictCodeVerification: boolean;
+  verificationPrompt: string;
 }
 
 export interface PRReviewConfig {
@@ -256,6 +264,7 @@ export interface PRReviewConfig {
   prompts: PRReviewPrompts;
   levelModifiers: PRReviewModifiers;
   knowledgeBase?: PRReviewKnowledgeBase;
+  reReviewConfig: ReReviewVerificationConfig;
 }
 
 export interface RolePRReviewConfig {
