@@ -10,6 +10,7 @@ import {
   workspaceInstances, workspacePhaseEvents,
   planningSessions, planningMessages,
   onboardingSessions,
+  pullRequests, reviewThreads,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
   type WorkspaceProject, type InsertWorkspaceProject,
   type WorkspaceRole, type InsertWorkspaceRole,
@@ -54,6 +55,8 @@ import {
   type PlanningSession, type InsertPlanningSession,
   type PlanningMessage, type InsertPlanningMessage,
   type PlanningSessionState,
+  type PullRequest, type InsertPullRequest,
+  type ReviewThread, type InsertReviewThread,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -301,6 +304,20 @@ export interface IStorage {
   
   // Phase 6: Planning Session State
   getPlanningSessionState(workspaceId: number): Promise<PlanningSessionState | null>;
+  
+  // PR Review Thread operations
+  getReviewThreadsByPR(prId: number): Promise<ReviewThread[]>;
+  getReviewThreadsByTicket(ticketId: number): Promise<ReviewThread[]>;
+  createReviewThread(thread: InsertReviewThread): Promise<ReviewThread>;
+  updateReviewThread(id: number, updates: Partial<ReviewThread>): Promise<ReviewThread | undefined>;
+  respondToReviewThread(threadId: number, userResponse: string): Promise<ReviewThread | undefined>;
+  verifyReviewThread(threadId: number, verdict: 'approved' | 'needs_more_work'): Promise<ReviewThread | undefined>;
+  
+  // Pull Request operations
+  getPullRequest(id: number): Promise<PullRequest | undefined>;
+  getPullRequestByTicket(ticketId: number): Promise<PullRequest | undefined>;
+  createPullRequest(pr: InsertPullRequest): Promise<PullRequest>;
+  updatePullRequest(id: number, updates: Partial<PullRequest>): Promise<PullRequest | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -3904,6 +3921,79 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         reviewComments: []
       });
     }
+  }
+
+  // PR Review Thread operations
+  async getReviewThreadsByPR(prId: number): Promise<ReviewThread[]> {
+    return db.select().from(reviewThreads).where(eq(reviewThreads.prId, prId));
+  }
+
+  async getReviewThreadsByTicket(ticketId: number): Promise<ReviewThread[]> {
+    const pr = await this.getPullRequestByTicket(ticketId);
+    if (!pr) return [];
+    return this.getReviewThreadsByPR(pr.id);
+  }
+
+  async createReviewThread(thread: InsertReviewThread): Promise<ReviewThread> {
+    const [created] = await db.insert(reviewThreads).values(thread).returning();
+    return created;
+  }
+
+  async updateReviewThread(id: number, updates: Partial<ReviewThread>): Promise<ReviewThread | undefined> {
+    const [updated] = await db.update(reviewThreads)
+      .set(updates)
+      .where(eq(reviewThreads.id, id))
+      .returning();
+    return updated;
+  }
+
+  async respondToReviewThread(threadId: number, userResponse: string): Promise<ReviewThread | undefined> {
+    const [updated] = await db.update(reviewThreads)
+      .set({
+        userResponse,
+        userRespondedAt: new Date(),
+        status: 'addressed'
+      })
+      .where(eq(reviewThreads.id, threadId))
+      .returning();
+    return updated;
+  }
+
+  async verifyReviewThread(threadId: number, verdict: 'approved' | 'needs_more_work'): Promise<ReviewThread | undefined> {
+    const [updated] = await db.update(reviewThreads)
+      .set({
+        reviewerVerdict: verdict,
+        reviewerVerifiedAt: new Date(),
+        status: verdict === 'approved' ? 'resolved' : 'open',
+        resolvedAt: verdict === 'approved' ? new Date() : null
+      })
+      .where(eq(reviewThreads.id, threadId))
+      .returning();
+    return updated;
+  }
+
+  // Pull Request operations
+  async getPullRequest(id: number): Promise<PullRequest | undefined> {
+    const [pr] = await db.select().from(pullRequests).where(eq(pullRequests.id, id));
+    return pr;
+  }
+
+  async getPullRequestByTicket(ticketId: number): Promise<PullRequest | undefined> {
+    const [pr] = await db.select().from(pullRequests).where(eq(pullRequests.ticketId, ticketId));
+    return pr;
+  }
+
+  async createPullRequest(pr: InsertPullRequest): Promise<PullRequest> {
+    const [created] = await db.insert(pullRequests).values(pr).returning();
+    return created;
+  }
+
+  async updatePullRequest(id: number, updates: Partial<PullRequest>): Promise<PullRequest | undefined> {
+    const [updated] = await db.update(pullRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(pullRequests.id, id))
+      .returning();
+    return updated;
   }
 }
 
