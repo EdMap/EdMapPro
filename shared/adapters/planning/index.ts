@@ -1,8 +1,13 @@
 /**
  * Sprint Planning Adapter Factory
  * 
- * Merges role adapters with level overlays to create complete
- * SprintPlanningAdapter configurations for each role/level combination.
+ * Merges role adapters with level overlays and tier overlays to create complete
+ * SprintPlanningAdapter configurations.
+ * 
+ * Three-layer configuration:
+ * 1. Role Base - Engagement areas, competency rubric
+ * 2. Level Overlay - Guidance intensity, scaffolding  
+ * 3. Tier Overlay - Ownership level (adaptive, earned through competency)
  */
 
 import type { Role, Level } from '../index';
@@ -14,7 +19,10 @@ import type {
   PlanningUIControls,
   PlanningDifficulty,
   PlanningEvaluation,
-  PlanningPrompts
+  PlanningPrompts,
+  SprintTier,
+  TierStatus,
+  TierPlanningOverlay
 } from './types';
 
 import { developerPlanningAdapter, qaPlanningAdapter, devopsPlanningAdapter, dataSciencePlanningAdapter } from './roles/developer';
@@ -23,8 +31,10 @@ import { internLevelOverlay } from './levels/intern';
 import { juniorLevelOverlay } from './levels/junior';
 import { midLevelOverlay } from './levels/mid';
 import { seniorLevelOverlay } from './levels/senior';
+import { getTierOverlay, getTierAdvancementMessaging } from './tiers';
 
 export * from './types';
+export * from './tiers';
 
 const roleAdapters: Record<Role, RolePlanningAdapter> = {
   developer: developerPlanningAdapter,
@@ -87,23 +97,52 @@ const defaultEngagement: LevelEngagement = {
 
 function buildSystemPrompt(
   roleAdapter: RolePlanningAdapter,
-  levelOverlay: LevelPlanningOverlay
+  levelOverlay: LevelPlanningOverlay,
+  tierOverlay?: TierPlanningOverlay
 ): string {
-  return `${roleAdapter.prompts.baseSystemPrompt}
+  let prompt = `${roleAdapter.prompts.baseSystemPrompt}
 
 ${levelOverlay.promptModifiers.guidanceLevel}
 
 ${levelOverlay.promptModifiers.toneAdjustment}`;
+
+  if (tierOverlay) {
+    prompt += `
+
+${tierOverlay.promptModifiers.ownershipLevel}
+
+${tierOverlay.promptModifiers.responseExpectation}`;
+  }
+
+  return prompt;
 }
 
 function mergeUIControls(
   roleControls: Partial<PlanningUIControls>,
-  levelOverrides: Partial<PlanningUIControls>
+  levelOverrides: Partial<PlanningUIControls>,
+  tierOverrides?: Partial<PlanningUIControls>
 ): PlanningUIControls {
   return {
     ...defaultUIControls,
     ...roleControls,
-    ...levelOverrides
+    ...levelOverrides,
+    ...(tierOverrides || {})
+  };
+}
+
+function mergeEngagement(
+  levelEngagement: LevelEngagement,
+  tierOverrides?: Partial<LevelEngagement>
+): LevelEngagement {
+  if (!tierOverrides) return levelEngagement;
+  
+  return {
+    ...levelEngagement,
+    ...tierOverrides,
+    phaseEngagement: {
+      ...levelEngagement.phaseEngagement,
+      ...(tierOverrides.phaseEngagement || {})
+    }
   };
 }
 
@@ -134,12 +173,30 @@ function mergeEvaluation(
   };
 }
 
-export function getSprintPlanningAdapter(role: Role, level: Level): SprintPlanningAdapter {
+/**
+ * Configuration options for the planning adapter
+ */
+export interface PlanningAdapterOptions {
+  tier?: SprintTier;
+  tierStatus?: TierStatus;
+}
+
+/**
+ * Get a sprint planning adapter with optional tier overlay
+ * 
+ * Three-layer merge: Role Base → Level Overlay → Tier Overlay
+ */
+export function getSprintPlanningAdapter(
+  role: Role, 
+  level: Level,
+  options?: PlanningAdapterOptions
+): SprintPlanningAdapter {
   const roleAdapter = roleAdapters[role] || roleAdapters.developer;
   const levelOverlay = levelOverlays[level] || levelOverlays.intern;
+  const tierOverlay = options?.tier ? getTierOverlay(options.tier) : undefined;
   
   const prompts: PlanningPrompts = {
-    systemPrompt: buildSystemPrompt(roleAdapter, levelOverlay),
+    systemPrompt: buildSystemPrompt(roleAdapter, levelOverlay, tierOverlay),
     contextPhasePrompt: roleAdapter.prompts.contextPhasePrompt,
     discussionPhasePrompt: roleAdapter.prompts.discussionPhasePrompt,
     commitmentPhasePrompt: roleAdapter.prompts.commitmentPhasePrompt,
@@ -147,23 +204,31 @@ export function getSprintPlanningAdapter(role: Role, level: Level): SprintPlanni
     facilitator: roleAdapter.prompts.facilitator
   };
   
-  const engagement: LevelEngagement = levelOverlay.engagement || defaultEngagement;
+  const baseEngagement: LevelEngagement = levelOverlay.engagement || defaultEngagement;
+  const engagement = mergeEngagement(baseEngagement, tierOverlay?.engagementOverrides);
   
   return {
     metadata: {
       role,
       level,
+      tier: options?.tier,
+      tierStatus: options?.tierStatus,
       displayName: `${levelOverlay.displayName} ${roleAdapter.displayName}`,
       description: roleAdapter.description,
       competencies: roleAdapter.competencies
     },
     prompts,
-    uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),
+    uiControls: mergeUIControls(
+      roleAdapter.uiControls, 
+      levelOverlay.uiOverrides,
+      tierOverlay?.uiOverrides
+    ),
     difficulty: mergeDifficulty(roleAdapter.difficulty, levelOverlay.difficultyOverrides),
     evaluation: mergeEvaluation(roleAdapter.evaluation, levelOverlay.evaluationOverrides),
     engagement,
     learningObjectives: roleAdapter.learningObjectives,
-    commitmentGuidance: roleAdapter.commitmentGuidance
+    commitmentGuidance: roleAdapter.commitmentGuidance,
+    tierMessaging: options?.tier ? getTierAdvancementMessaging() : undefined
   };
 }
 

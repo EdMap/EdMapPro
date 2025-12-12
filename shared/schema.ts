@@ -1486,12 +1486,19 @@ export type WorkspaceInstance = typeof workspaceInstances.$inferSelect;
 // Phase 6: Sprint Planning Session Tables
 export type PlanningPhase = 'context' | 'discussion' | 'commitment';
 
+// Sprint Tier types for adaptive progression
+export type SprintTier = 'observer' | 'co_facilitator' | 'emerging_leader';
+export type TierStatus = 'first_attempt' | 'practicing' | 'mastered';
+export type TierAdvancementDecision = 'advance' | 'practice_more' | 'pending';
+
 export const planningSessions = pgTable("planning_sessions", {
   id: serial("id").primaryKey(),
   workspaceId: integer("workspace_id").references(() => workspaceInstances.id).notNull(),
   sprintId: integer("sprint_id").references(() => sprints.id),
   role: text("role").notNull(), // 'developer' | 'pm' | 'qa' | etc.
   level: text("level").notNull(), // 'intern' | 'junior' | 'mid' | 'senior'
+  sprintTier: text("sprint_tier").notNull().default('observer'), // SprintTier: adaptive ownership level
+  tierStatus: text("tier_status").notNull().default('first_attempt'), // TierStatus: first_attempt | practicing | mastered
   currentPhase: text("current_phase").notNull().default('context'), // PlanningPhase
   phaseCompletions: jsonb("phase_completions").notNull().default('{"context": false, "discussion": false, "commitment": false}'),
   selectedItems: jsonb("selected_items").notNull().default('[]'), // Array of backlog item IDs selected for sprint
@@ -1500,7 +1507,7 @@ export const planningSessions = pgTable("planning_sessions", {
   commitmentSummary: text("commitment_summary"),
   knowledgeCheckPassed: boolean("knowledge_check_passed").notNull().default(false),
   autoStartInitialized: boolean("auto_start_initialized").notNull().default(false), // Prevents duplicate auto-start messages on concurrent requests
-  status: text("status").notNull().default('active'), // 'active' | 'completed' | 'abandoned'
+  status: text("status").notNull().default('active'), // 'active' | 'completed' | 'abandoned' | 'archived'
   score: integer("score"), // Final planning score (0-100)
   feedback: jsonb("feedback"), // Evaluation feedback
   startedAt: timestamp("started_at").defaultNow().notNull(),
@@ -1518,10 +1525,29 @@ export const planningMessages = pgTable("planning_messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Planning session assessments for adaptive tier progression
+export const planningSessionAssessments = pgTable("planning_session_assessments", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => planningSessions.id).notNull(),
+  sprintId: integer("sprint_id").references(() => sprints.id).notNull(),
+  journeyId: integer("journey_id").references(() => userJourneys.id).notNull(),
+  tier: text("tier").notNull(), // SprintTier at time of assessment
+  tierReadinessScore: integer("tier_readiness_score").notNull(), // 0-100
+  rubricBreakdown: jsonb("rubric_breakdown").notNull(), // Role-specific rubric scores
+  advancementDecision: text("advancement_decision").notNull().default('pending'), // TierAdvancementDecision
+  practiceObjectives: text("practice_objectives").array(), // Focus areas for next sprint
+  assessedAt: timestamp("assessed_at").defaultNow().notNull(),
+});
+
 // Insert schemas for planning tables
 export const insertPlanningSessionSchema = createInsertSchema(planningSessions).omit({
   id: true,
   startedAt: true,
+});
+
+export const insertPlanningSessionAssessmentSchema = createInsertSchema(planningSessionAssessments).omit({
+  id: true,
+  assessedAt: true,
 });
 
 export const insertPlanningMessageSchema = createInsertSchema(planningMessages).omit({
@@ -1535,6 +1561,9 @@ export type PlanningSession = typeof planningSessions.$inferSelect;
 
 export type InsertPlanningMessage = z.infer<typeof insertPlanningMessageSchema>;
 export type PlanningMessage = typeof planningMessages.$inferSelect;
+
+export type InsertPlanningSessionAssessment = z.infer<typeof insertPlanningSessionAssessmentSchema>;
+export type PlanningSessionAssessment = typeof planningSessionAssessments.$inferSelect;
 
 // Engagement mode types for planning
 export type EngagementMode = 'shadow' | 'guided' | 'active' | 'facilitator';
