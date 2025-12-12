@@ -30,10 +30,11 @@ edmap is an AI-powered B2B onboarding platform transforming students from "Inter
 - Role adapters (Developer, PM) and level overlays (Intern → Senior)
 - Adaptive tier progression for sprint planning (Observer → Co-Facilitator → Emerging Leader)
 - Sprint cycling with session archiving
+- Soft skill events with suggestion-insert UX and dual evaluation (rubric + LLM)
 
 ### Partially Built (🔄)
 
-- Soft skill events (generation works, triggering/UI missing)
+- Soft skill event UI modal (backend complete, frontend pending)
 
 ### Planned (⏳)
 
@@ -67,7 +68,8 @@ edmap is an AI-powered B2B onboarding platform transforming students from "Inter
 │  │   ├── execution/  # Sprint execution adapters                     │
 │  │   ├── review/     # Sprint review adapters                        │
 │  │   ├── retro/      # Retrospective adapters                        │
-│  │   └── code-execution/  # Code editor adapters                     │
+│  │   ├── code-execution/  # Code editor adapters                     │
+│  │   └── soft-skills/     # Soft skill event adapters                │
 │  └── catalogue/      # Sprint content templates                      │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
@@ -81,7 +83,8 @@ edmap is an AI-powered B2B onboarding platform transforming students from "Inter
 │      ├── workspace-orchestrator.ts  # AI chat orchestration          │
 │      ├── progression-engine.ts      # Phase/sprint transitions       │
 │      ├── sprint-generator.ts        # Generate sprint content        │
-│      └── code-analysis.ts           # LLM code execution             │
+│      ├── code-analysis.ts           # LLM code execution             │
+│      └── soft-skill-evaluation.ts   # Soft skill response scoring    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -106,6 +109,7 @@ const config = getSprintExecutionAdapter(role, level);
 | Code Execution | `shared/adapters/code-execution/` | Editor scaffolding |
 | Team Intro | `shared/adapters/team-intro/` | Onboarding conversations |
 | Comprehension | `shared/adapters/comprehension/` | Sarah check-in config |
+| Soft Skills | `shared/adapters/soft-skills/` | Event evaluation, feedback tone |
 
 ---
 
