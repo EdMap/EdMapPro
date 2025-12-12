@@ -151,7 +151,27 @@ export function TicketWorkspace({
   const [lastTestResult, setLastTestResult] = useState<ExecutionResponse | null>(null);
   const [showCodeDuringReview, setShowCodeDuringReview] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [reviewThreads, setReviewThreads] = useState<ReviewThread[]>([]);
+  
+  // Persist review threads in localStorage to survive component remount
+  const reviewThreadsKey = `reviewThreads-${ticketId}`;
+  const [reviewThreads, setReviewThreads] = useState<ReviewThread[]>(() => {
+    try {
+      const stored = localStorage.getItem(reviewThreadsKey);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error('Failed to load review threads from localStorage:', e);
+    }
+    return [];
+  });
+  
+  // Persist review threads whenever they change
+  useEffect(() => {
+    if (reviewThreads.length > 0) {
+      localStorage.setItem(reviewThreadsKey, JSON.stringify(reviewThreads));
+    }
+  }, [reviewThreads, reviewThreadsKey]);
 
   const adapter = useMemo(() => {
     return getSprintExecutionAdapter(role as Role, level as Level);
