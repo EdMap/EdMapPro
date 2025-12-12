@@ -1327,6 +1327,10 @@ Time:        0.842s`;
                 }}
                 onRequestReReview={() => {
                   addTerminalLine('output', 'Re-review requested from reviewers...');
+                  toast({
+                    title: "Re-review Requested",
+                    description: "Your reviewers are looking at your changes again.",
+                  });
                   setChatMessages(prev => [...prev, {
                     id: Date.now().toString(),
                     from: 'Alex',
