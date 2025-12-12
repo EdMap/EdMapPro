@@ -13,6 +13,8 @@ import { z } from "zod";
 import { getSprintPlanningAdapter } from "@shared/adapters/planning";
 import { getTeamIntroConfig, buildTeamIntroSystemPrompt } from "@shared/adapters/team-intro";
 import { getComprehensionConfig, buildComprehensionSystemPrompt, buildComprehensionGuidance, analyzeComprehensionState, type ComprehensionState } from "@shared/adapters/comprehension";
+import { progressionEngine } from "./services/progression-engine";
+import type { Role, Level } from "@shared/adapters";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -3058,6 +3060,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workspaceId = parseInt(req.params.workspaceId);
       const payload = req.body.payload || {};
+      
+      // Check if we're transitioning from retro - need to start a new sprint
+      const currentWorkspace = await storage.getWorkspaceInstance(workspaceId);
+      if (!currentWorkspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
+      
+      // If completing retro phase, we need to start a new sprint cycle
+      if (currentWorkspace.currentPhase === 'retro' && currentWorkspace.journeyId) {
+        console.log(`[Sprint Cycling] Completing retro for workspace ${workspaceId}, starting new sprint...`);
+        
+        try {
+          // Complete the current sprint
+          const completionResult = await progressionEngine.completeSprint(currentWorkspace.journeyId);
+          console.log(`[Sprint Cycling] Sprint completed, next action: ${completionResult.nextAction}`);
+          
+          if (completionResult.nextAction === 'start_new_sprint') {
+            // Start a new sprint
+            const newSprintResult = await progressionEngine.startNewSprint(currentWorkspace.journeyId);
+            console.log(`[Sprint Cycling] New sprint ${newSprintResult.sprint.sprintNumber} created with id ${newSprintResult.sprint.id}`);
+            
+            // Update workspace with new sprint ID
+            await storage.updateWorkspaceInstance(workspaceId, {
+              currentSprintId: newSprintResult.sprint.id,
+            });
+            
+            // Create a new planning session for the new sprint using adapter architecture
+            const journey = await storage.getJourney(currentWorkspace.journeyId);
+            const role = ((journey?.journeyMetadata as any)?.role || 'developer') as Role;
+            const level = ((journey?.journeyMetadata as any)?.entryLevel || 'intern') as Level;
+            
+            // Get adapter for the role/level to configure session properly
+            const adapter = getSprintPlanningAdapter(role, level);
+            const willAutoStart = adapter.engagement?.autoStartConversation ?? false;
+            
+            // Create planning session matching the proper schema structure
+            await storage.createPlanningSession({
+              workspaceId,
+              sprintId: newSprintResult.sprint.id,
+              role: currentWorkspace.role,
+              level,
+              currentPhase: 'context',
+              phaseCompletions: { context: false, discussion: false, commitment: false },
+              selectedItems: [],
+              capacityUsed: 0,
+              status: 'active',
+              knowledgeCheckPassed: false,
+              autoStartInitialized: willAutoStart,
+            });
+            
+            console.log(`[Sprint Cycling] New planning session created for sprint ${newSprintResult.sprint.sprintNumber}`);
+          } else if (completionResult.nextAction === 'proceed_to_graduation') {
+            console.log(`[Sprint Cycling] User ready for graduation, redirecting to final ceremony`);
+            // TODO: Handle graduation flow
+          }
+        } catch (sprintError) {
+          console.error("[Sprint Cycling] Failed to cycle sprint:", sprintError);
+          // Continue with phase advancement even if sprint cycling fails
+        }
+      }
       
       const workspace = await storage.advanceWorkspacePhase(workspaceId, payload);
       
