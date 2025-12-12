@@ -112,12 +112,30 @@ function parseReviewResponse(
   reviewer: ReviewerPersona
 ): { comments: ReviewComment[]; overallAssessment: string; approvalStatus: 'approved' | 'changes_requested' | 'needs_discussion' } {
   try {
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    // Clean up common LLM response issues
+    let cleanedText = responseText
+      // Remove markdown code blocks
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      // Replace backtick-wrapped code snippets with proper JSON strings
+      .replace(/`([^`]*)`/g, (_, code) => `"${code.replace(/"/g, '\\"')}"`)
+      // Fix common issues with newlines in strings
+      .replace(/:\s*"([^"]*)\n([^"]*)"/, (_, p1, p2) => `: "${p1}\\n${p2}"`);
+    
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No JSON found in response');
     }
     
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Additional cleanup: ensure the JSON is valid
+    let jsonStr = jsonMatch[0];
+    
+    // Try to fix unescaped newlines within string values
+    jsonStr = jsonStr.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) => {
+      return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+    });
+    
+    const parsed = JSON.parse(jsonStr);
     
     const comments: ReviewComment[] = (parsed.comments || []).map((c: any, index: number) => ({
       id: `${reviewer.id}-comment-${index + 1}`,
