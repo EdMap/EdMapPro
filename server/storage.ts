@@ -8,7 +8,7 @@ import {
   progressionPaths, projectTemplates, userJourneys, journeyArcs, sprints, sprintActivities, competencySnapshots,
   sprintTickets, ceremonyInstances, gitSessions, gitEvents,
   workspaceInstances, workspacePhaseEvents,
-  planningSessions, planningMessages,
+  planningSessions, planningMessages, planningSessionAssessments,
   onboardingSessions,
   pullRequests, reviewThreads,
   type User, type InsertUser, type SimulationSession, type InsertSimulationSession, type UserProgress, type InsertUserProgress,
@@ -55,6 +55,7 @@ import {
   type PlanningSession, type InsertPlanningSession,
   type PlanningMessage, type InsertPlanningMessage,
   type PlanningSessionState,
+  type PlanningSessionAssessment, type InsertPlanningSessionAssessment,
   type PullRequest, type InsertPullRequest,
   type ReviewThread, type InsertReviewThread,
 } from "@shared/schema";
@@ -304,6 +305,11 @@ export interface IStorage {
   
   // Phase 6: Planning Session State
   getPlanningSessionState(workspaceId: number): Promise<PlanningSessionState | null>;
+  
+  // Phase 6: Planning Session Assessment operations (Tier Progression)
+  getPlanningAssessmentsByJourney(journeyId: number, tier?: string): Promise<PlanningSessionAssessment[]>;
+  createPlanningAssessment(assessment: InsertPlanningSessionAssessment): Promise<PlanningSessionAssessment>;
+  archivePlanningSessions(workspaceId: number): Promise<number>;
   
   // PR Review Thread operations
   getReviewThreadsByPR(prId: number): Promise<ReviewThread[]>;
@@ -3821,6 +3827,35 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       .where(eq(planningSessions.id, id))
       .returning();
     return updated;
+  }
+
+  // Phase 6: Planning Session Assessment operations (Tier Progression)
+  async getPlanningAssessmentsByJourney(journeyId: number, tier?: string): Promise<PlanningSessionAssessment[]> {
+    const conditions = [eq(planningSessionAssessments.journeyId, journeyId)];
+    if (tier) {
+      conditions.push(eq(planningSessionAssessments.tier, tier));
+    }
+    return db.select()
+      .from(planningSessionAssessments)
+      .where(and(...conditions))
+      .orderBy(planningSessionAssessments.assessedAt);
+  }
+
+  async createPlanningAssessment(assessment: InsertPlanningSessionAssessment): Promise<PlanningSessionAssessment> {
+    const [created] = await db.insert(planningSessionAssessments).values(assessment).returning();
+    return created;
+  }
+
+  async archivePlanningSessions(workspaceId: number): Promise<number> {
+    // Archive all active sessions for this workspace (mark as 'archived')
+    const result = await db.update(planningSessions)
+      .set({ status: 'archived' })
+      .where(and(
+        eq(planningSessions.workspaceId, workspaceId),
+        eq(planningSessions.status, 'active')
+      ))
+      .returning();
+    return result.length;
   }
 
   // Phase 6: Planning Message operations

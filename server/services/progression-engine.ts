@@ -10,7 +10,12 @@ import type {
   MasteryBand,
   DifficultyBand,
   ProgressionRequirements,
+  SprintTier,
+  TierStatus,
+  TierAdvancementDecision,
+  PlanningSessionAssessment,
 } from "@shared/schema";
+import { getRoleRubricWeights } from "@shared/adapters/planning/tiers";
 
 interface CompetencyDeltaInput {
   userId: number;
@@ -303,10 +308,12 @@ class ProgressionEngine {
       completedAt: new Date()
     });
 
+    // Only increment completedSprints here, NOT currentSprintNumber
+    // currentSprintNumber is updated in startNewSprint when the next sprint is created
+    // This fixes the off-by-one bug where sprint numbers were double-incremented
     const newCompletedSprints = journey.completedSprints + 1;
     await storage.updateJourney(journeyId, {
-      completedSprints: newCompletedSprints,
-      currentSprintNumber: journey.currentSprintNumber + 1
+      completedSprints: newCompletedSprints
     });
 
     const readiness = await this.calculateReadinessScore(journey.userId);
@@ -515,6 +522,92 @@ class ProgressionEngine {
       arc,
       generatedBacklog
     };
+  }
+
+  /**
+   * Compute next tier based on assessment history
+   * Requires 2 consecutive sessions scoring ≥70 to advance
+   */
+  async computeNextTier(
+    journeyId: number,
+    role: string,
+    currentTier: SprintTier
+  ): Promise<{ nextTier: SprintTier; tierStatus: TierStatus; decision: TierAdvancementDecision }> {
+    const { getNextTier } = await import("@shared/adapters/planning/tiers");
+    
+    // Get recent assessments for this journey at this tier
+    const assessments = await storage.getPlanningAssessmentsByJourney(journeyId, currentTier);
+    
+    // Need at least 2 assessments to consider advancement
+    if (assessments.length < 2) {
+      return {
+        nextTier: currentTier,
+        tierStatus: assessments.length === 0 ? 'first_attempt' : 'practicing',
+        decision: 'pending'
+      };
+    }
+    
+    // Check last 2 consecutive sessions
+    const lastTwo = assessments.slice(-2);
+    const bothPassed = lastTwo.every(a => a.tierReadinessScore >= 70);
+    
+    if (bothPassed) {
+      const nextTier = getNextTier(currentTier);
+      if (nextTier) {
+        return {
+          nextTier,
+          tierStatus: 'first_attempt',
+          decision: 'advance'
+        };
+      } else {
+        // Already at highest tier
+        return {
+          nextTier: currentTier,
+          tierStatus: 'mastered',
+          decision: 'advance'
+        };
+      }
+    }
+    
+    return {
+      nextTier: currentTier,
+      tierStatus: 'practicing',
+      decision: 'practice_more'
+    };
+  }
+
+  /**
+   * Archive old planning sessions when starting a new sprint
+   * This prevents orphaned sessions and keeps the database clean
+   */
+  async archiveOldPlanningSessions(workspaceId: number): Promise<number> {
+    return await storage.archivePlanningSessions(workspaceId);
+  }
+
+  /**
+   * Record a planning session assessment for tier progression tracking
+   */
+  async recordPlanningAssessment(
+    sessionId: number,
+    sprintId: number,
+    journeyId: number,
+    tier: SprintTier,
+    score: number,
+    rubricBreakdown: Record<string, number>,
+    practiceObjectives?: string[]
+  ): Promise<PlanningSessionAssessment> {
+    const decision = score >= 70 ? 'pending' : 'practice_more';
+    
+    return await storage.createPlanningAssessment({
+      sessionId,
+      sprintId,
+      journeyId,
+      tier,
+      tierReadinessScore: score,
+      rubricBreakdown,
+      advancementDecision: decision,
+      practiceObjectives
+    });
   }
 }
 

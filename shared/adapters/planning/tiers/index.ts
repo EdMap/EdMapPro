@@ -118,3 +118,73 @@ export function getTierAdvancementMessaging(): TierAdvancementMessaging {
 }
 
 export { tierOverlays };
+
+/**
+ * Role-specific rubric weights for tier advancement scoring
+ * Each role has different priorities for what makes a good planning participant
+ */
+export interface RoleRubricWeights {
+  participation: number;      // Active engagement in discussion
+  estimation: number;         // Accuracy and contribution to estimation
+  prioritization: number;     // Understanding of priority decisions
+  goalFormulation: number;    // Contribution to sprint goal
+  technicalClarity: number;   // Clear communication of technical concerns
+  testCoverage: number;       // QA-specific: coverage of test scenarios
+}
+
+const developerRubricWeights: RoleRubricWeights = {
+  participation: 0.20,
+  estimation: 0.35,           // Developers focus on estimation accuracy
+  prioritization: 0.15,
+  goalFormulation: 0.10,
+  technicalClarity: 0.20,
+  testCoverage: 0.00
+};
+
+const pmRubricWeights: RoleRubricWeights = {
+  participation: 0.15,
+  estimation: 0.10,
+  prioritization: 0.30,       // PMs focus on prioritization
+  goalFormulation: 0.35,      // and goal formulation
+  technicalClarity: 0.10,
+  testCoverage: 0.00
+};
+
+const qaRubricWeights: RoleRubricWeights = {
+  participation: 0.20,
+  estimation: 0.15,
+  prioritization: 0.15,
+  goalFormulation: 0.10,
+  technicalClarity: 0.10,
+  testCoverage: 0.30          // QA focuses on test coverage questions
+};
+
+const roleRubricWeights: Record<string, RoleRubricWeights> = {
+  developer: developerRubricWeights,
+  pm: pmRubricWeights,
+  qa: qaRubricWeights
+};
+
+export function getRoleRubricWeights(role: string): RoleRubricWeights {
+  return roleRubricWeights[role] || developerRubricWeights;
+}
+
+/**
+ * Calculate tier readiness score based on role-weighted rubric
+ */
+export function calculateTierReadinessScore(
+  role: string,
+  scores: Partial<RoleRubricWeights>
+): number {
+  const weights = getRoleRubricWeights(role);
+  let totalScore = 0;
+  let totalWeight = 0;
+  
+  for (const [key, weight] of Object.entries(weights)) {
+    const score = scores[key as keyof RoleRubricWeights] ?? 0;
+    totalScore += score * weight;
+    totalWeight += weight;
+  }
+  
+  return totalWeight > 0 ? Math.round(totalScore / totalWeight * 100) : 0;
+}
