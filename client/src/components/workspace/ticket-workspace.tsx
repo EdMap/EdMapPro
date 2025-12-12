@@ -1298,6 +1298,7 @@ Time:        0.842s`;
                 codeFiles={codeFilesForReview}
                 userLevel={level as Level}
                 userRole={role as Role}
+                initialThreads={reviewThreads}
                 onThreadResolve={(threadId) => {
                   addTerminalLine('output', `Thread ${threadId} marked as resolved`);
                 }}

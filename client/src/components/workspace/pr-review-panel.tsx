@@ -109,6 +109,7 @@ interface PRReviewPanelProps {
   userLevel?: Level;
   userRole?: Role;
   onReviewThreadsLoaded?: (threads: ExportedReviewThread[]) => void;
+  initialThreads?: ExportedReviewThread[];
 }
 
 interface SimulatedThread {
@@ -121,7 +122,7 @@ interface SimulatedThread {
   lineNumber?: number;
   codeSnippet?: string;
   comments: SimulatedComment[];
-  status: 'open' | 'resolved' | 'dismissed';
+  status: 'open' | 'addressed' | 'resolved' | 'dismissed';
   severity: 'minor' | 'major' | 'blocking';
   createdAt: string;
   issueContext?: string;
@@ -646,6 +647,7 @@ export function PRReviewPanel({
   userLevel = 'intern',
   userRole = 'developer',
   onReviewThreadsLoaded,
+  initialThreads,
 }: PRReviewPanelProps) {
   const { uiConfig, levelModifiers, reviewers } = prReviewConfig;
   
@@ -656,10 +658,37 @@ export function PRReviewPanel({
     description: ticketDescription,
   };
   
-  const [threads, setThreads] = useState<SimulatedThread[]>(() => 
-    useLLMReviews ? [] : generateInitialThreads(prReviewConfig, ticketContext)
-  );
-  const [isLoadingReviews, setIsLoadingReviews] = useState(useLLMReviews);
+  // Convert initialThreads to SimulatedThread format if provided
+  const [threads, setThreads] = useState<SimulatedThread[]>(() => {
+    if (initialThreads && initialThreads.length > 0) {
+      return initialThreads.map(t => ({
+        id: t.id,
+        reviewerId: t.reviewerName.toLowerCase().replace(/\s+/g, '-'),
+        reviewerName: t.reviewerName,
+        reviewerRole: t.reviewerRole,
+        reviewerColor: '#3B82F6',
+        filename: t.filename,
+        lineNumber: t.lineNumber,
+        codeSnippet: '',
+        comments: [{
+          id: `${t.id}-comment`,
+          authorId: t.reviewerName.toLowerCase().replace(/\s+/g, '-'),
+          authorName: t.reviewerName,
+          authorRole: t.reviewerRole,
+          content: t.content,
+          type: 'request_changes' as const,
+          isUser: false,
+          createdAt: t.createdAt,
+        }],
+        status: t.status === 'dismissed' ? 'dismissed' : t.status,
+        severity: t.severity,
+        createdAt: t.createdAt,
+        issueContext: 'code implementation',
+      }));
+    }
+    return useLLMReviews ? [] : generateInitialThreads(prReviewConfig, ticketContext);
+  });
+  const [isLoadingReviews, setIsLoadingReviews] = useState(useLLMReviews && (!initialThreads || initialThreads.length === 0));
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(() => {
     if (uiConfig.expandThreadsByDefault) {
@@ -750,7 +779,8 @@ export function PRReviewPanel({
   });
   
   useEffect(() => {
-    if (useLLMReviews && codeFiles && Object.keys(codeFiles).length > 0 && threads.length === 0) {
+    // Skip fetching if we already have threads from initialThreads
+    if (useLLMReviews && codeFiles && Object.keys(codeFiles).length > 0 && threads.length === 0 && (!initialThreads || initialThreads.length === 0)) {
       fetchLLMReviewsMutation.mutate();
     }
   }, [useLLMReviews, codeFiles]);
