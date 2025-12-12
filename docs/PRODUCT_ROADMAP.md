@@ -198,7 +198,7 @@ Level-aware suggestion visibility: Interns always see suggestions; Seniors see c
 - Templates: `shared/catalogue/templates/soft-skills/*.json`
 - Adapters: `shared/adapters/soft-skills/` (role/level configuration)
 - Evaluation service: `server/services/soft-skill-evaluation.ts`
-- UI component: `client/src/components/workspace/soft-skill-event-modal.tsx`
+- UI component: `client/src/components/workspace/soft-skill-event-modal.tsx` (not yet created)
 - Storage: `getSprintActivitiesByType()` filters by activity type
 
 **API Endpoints:**

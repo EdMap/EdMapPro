@@ -34,7 +34,7 @@ edmap is an AI-powered B2B onboarding platform transforming students from "Inter
 
 ### Partially Built (🔄)
 
-- Soft skill event UI modal (backend complete, frontend pending)
+- Soft skill events (backend + adapters complete, frontend modal not started)
 
 ### Planned (⏳)
 
