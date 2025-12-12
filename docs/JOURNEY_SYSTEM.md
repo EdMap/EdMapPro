@@ -1,6 +1,6 @@
 # edmap Journey System
 
-> **Status**: ✅ Implemented (core flow) | 🔄 Sprint cycling has bugs | ⏳ Graduation pending
+> **Status**: ✅ Implemented (core flow) | ✅ Sprint cycling bug fixed | ⏳ Graduation pending
 
 ## Overview
 
@@ -30,15 +30,15 @@ This document describes how users progress through edmap, from discovering a job
 │  │   ├── Comprehension check with Sarah                                │ │
 │  │   └── → Unlocks Sprint cycles                                       │ │
 │  │                                                                      │ │
-│  │   SPRINT CYCLE (repeats) 🔄                                         │ │
-│  │   ├── Sprint Planning ✅                                            │ │
+│  │   SPRINT CYCLE (repeats) ✅                                         │ │
+│  │   ├── Sprint Planning ✅ (tier progression)                         │ │
 │  │   ├── Sprint Execution ✅                                           │ │
 │  │   │   ├── Kanban board                                              │ │
 │  │   │   ├── Ticket Workspace (git, code, PR review)                   │ │
 │  │   │   └── Daily Standups                                            │ │
 │  │   ├── Sprint Review ✅                                              │ │
 │  │   ├── Sprint Retrospective ✅                                       │ │
-│  │   └── → Next Sprint (cycling has bugs)                              │ │
+│  │   └── → Next Sprint ✅                                              │ │
 │  │                                                                      │ │
 │  │   GRADUATION ⏳                                                      │ │
 │  │   ├── Final 1:1 with Manager                                        │ │

@@ -82,8 +82,49 @@ interface SprintPlanningConfig {
 ### Files
 
 - Adapter: `shared/adapters/planning/`
+- Tier Overlays: `shared/adapters/planning/tiers/`
 - Component: `client/src/components/workspace/planning-module.tsx`
 - Messages: `planning_messages` table
+- Assessments: `planning_session_assessments` table
+
+### Adaptive Tier Progression
+
+Users advance through planning tiers based on demonstrated competency, not sprint count:
+
+| Tier | Role | Team Talk Ratio | Phase Engagement |
+|------|------|-----------------|------------------|
+| Observer | Watch & learn | 80% | Observe all phases |
+| Co-Facilitator | Participate with guidance | 60% | Respond in context/discussion |
+| Emerging Leader | Lead with backup | 40% | Lead all phases |
+
+**Advancement Criteria**: 2 consecutive sessions scoring ≥70 on role-specific rubrics
+
+**Role-Specific Rubric Weights**:
+
+| Role | Primary Focus | Weight |
+|------|---------------|--------|
+| Developer | Estimation accuracy | 35% |
+| PM | Goal formulation + Prioritization | 35% + 30% |
+| QA | Test coverage questions | 30% |
+
+**Tier Overlay Configuration**:
+
+```typescript
+interface TierPlanningOverlay {
+  tier: SprintTier;                    // 'observer' | 'co_facilitator' | 'emerging_leader'
+  engagementOverrides: {
+    mode: EngagementMode;              // 'shadow' | 'guided' | 'active'
+    teamTalkRatio: number;             // AI vs user talk time
+    phaseEngagement: Record<Phase, 'observe' | 'respond' | 'lead'>;
+  };
+  uiOverrides: {
+    showPriorityEditor: boolean;       // Only leaders can edit priorities
+    showEstimationSliders: boolean;    // Co-facilitators+ can estimate
+  };
+}
+```
+
+**Positive UX Framing**: Users who need more practice receive "Building Mastery" messaging with specific focus areas, not "not ready" rejection.
 
 ---
 

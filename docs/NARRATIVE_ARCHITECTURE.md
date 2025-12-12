@@ -58,22 +58,26 @@ Adapters provide role/level-specific configurations:
 
 ```
 shared/adapters/
-├── planning/      # Sprint planning ceremony
-├── execution/     # Git workflow, standups, tickets
-├── review/        # Demo and stakeholder feedback
-├── retro/         # Retrospective facilitation
-├── code-execution/# Monaco editor scaffolding
-├── team-intro/    # Onboarding conversations
-└── comprehension/ # Sarah check-in config
+├── planning/           # Sprint planning ceremony
+│   └── tiers/          # Tier-based ownership progression
+├── execution/          # Git workflow, standups, tickets
+├── review/             # Demo and stakeholder feedback
+├── retro/              # Retrospective facilitation
+├── code-execution/     # Monaco editor scaffolding
+├── team-intro/         # Onboarding conversations
+└── comprehension/      # Sarah check-in config
 ```
 
 ### Merge Precedence
 
 ```
-Defaults → Role Adapter → Level Overlay
+Defaults → Role Adapter → Level Overlay → Tier Overlay
 ```
 
-Level overlays take highest precedence.
+Tier overlays take highest precedence (when applicable). The three-layer composition allows:
+- **Role Base**: Defines core engagement areas and competencies
+- **Level Overlay**: Adjusts guidance intensity and validation strictness
+- **Tier Overlay**: Controls ownership level based on demonstrated competency
 
 ### Level Progression
 

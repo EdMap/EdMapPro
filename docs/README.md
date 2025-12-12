@@ -28,10 +28,11 @@ edmap is an AI-powered B2B onboarding platform transforming students from "Inter
 - Monaco code editor with LLM-simulated execution
 - PR review with persistent threads and re-review workflow
 - Role adapters (Developer, PM) and level overlays (Intern → Senior)
+- Adaptive tier progression for sprint planning (Observer → Co-Facilitator → Emerging Leader)
 
 ### Partially Built (🔄)
 
-- Sprint cycling (core logic exists, bugs pending fix)
+- Sprint cycling (core logic exists, off-by-one bug fixed)
 - Soft skill events (generation works, triggering/UI missing)
 
 ### Planned (⏳)
@@ -98,6 +99,7 @@ const config = getSprintExecutionAdapter(role, level);
 | Adapter Type | Location | Purpose |
 |--------------|----------|---------|
 | Sprint Planning | `shared/adapters/planning/` | Planning ceremony config |
+| Planning Tiers | `shared/adapters/planning/tiers/` | Tier-based ownership levels |
 | Sprint Execution | `shared/adapters/execution/` | Git workflow, standups |
 | Sprint Review | `shared/adapters/review/` | Demo format, stakeholders |
 | Retrospective | `shared/adapters/retro/` | Facilitation style |
