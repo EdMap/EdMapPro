@@ -145,8 +145,45 @@ Help students go from **Intern → Junior Ready** by exposing them to real-world
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **PR Review Flow** | Schema exists, UI pending | `PRReviewConfig` in adapters ready |
-| **Sprint Cycling** | Phase transitions work | Next sprint creation pending |
+| **PR Review Flow** | Functional with re-review | Review threads persist, re-review verification works |
+| **Sprint Cycling** | Core logic exists | See detailed breakdown below |
+
+#### Sprint Cycling - Detailed Status
+
+**✅ What's Built:**
+| Component | Description |
+|-----------|-------------|
+| `progressionEngine.completeSprint()` | Updates journey's `completedSprints` and `currentSprintNumber` |
+| `progressionEngine.startNewSprint()` | Generates new sprint with backlog from templates |
+| Advance endpoint detects retro→planning | Calls completeSprint + startNewSprint when transitioning |
+| Workspace `currentSprintId` update | Points to newly created sprint |
+| New planning session creation | Creates session with adapter config |
+
+**❌ What's Missing:**
+| Issue | Description |
+|-------|-------------|
+| Sprint number off-by-one | Journey's `currentSprintNumber` incremented twice (once in completeSprint, once used by startNewSprint) |
+| Auto-start messages missing | Sprint cycling creates planning session but doesn't insert initial AI chat messages |
+| Old session cleanup | Orphaned planning sessions (no sprint_id) remain active |
+| Backlog items not populated | New sprint's backlog needs proper propagation to `getPlanningSessionState()` |
+
+#### Soft Skill Events - Detailed Status
+
+**✅ What's Built:**
+| Component | Description |
+|-----------|-------------|
+| Template loading | Loads from `shared/catalogue/templates/soft_skills/` |
+| Selection logic | Picks 2-4 events, avoids recent repeats via cooldown |
+| Event generation | `generateSoftSkillEvents()` in sprint-generator.ts |
+| Stored in sprint | Saved to `sprint.backlog` as `softSkillEvents` array |
+
+**❌ What's Missing:**
+| Issue | Description |
+|-------|-------------|
+| Event triggering system | No mechanism to surface events during sprint (e.g., "Day 3: Code review conflict fires") |
+| Event UI component | No component to display soft skill scenarios to the user |
+| Event completion tracking | No way to mark events as handled/resolved |
+| Competency scoring | Events don't yet contribute to competency scores |
 
 ### ⏳ Planned (Not Started)
 
@@ -357,11 +394,13 @@ Branch → Code Work → npm test → Stage → Commit → Push → PR → Revie
 4. ~~Level-based editor scaffolding (templates → empty)~~ ✅
 5. Integrate simulated test results with PR Review - *partial*
 
-### P2: Enhanced Execution
-1. PR review flow in TicketWorkspace (partially complete)
-2. Mid-sprint interruptions (AI team asks questions)
-3. Burndown chart visualization
-4. Sprint cycling (auto-create next sprint after retro)
+### P2: Complete Sprint Cycling & Soft Skills
+1. **Fix sprint cycling bugs** (sprint number off-by-one, auto-start messages, session cleanup)
+2. **Soft skill event triggering** - Day-based event scheduling during sprint execution
+3. **Soft skill event UI** - Modal/chat interface for handling scenarios
+4. **Event completion tracking** - Mark events as handled, track competency impact
+5. Mid-sprint interruptions (AI team asks questions)
+6. Burndown chart visualization
 
 ### P3: Portfolio & Graduation
 1. Artifact collection during sprints
