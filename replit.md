@@ -32,7 +32,12 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 -   **LLM Code Analysis**: Groq-powered backend service (`server/services/code-analysis.ts`) with `/api/analyze-code` endpoint
 -   **Level-aware scaffolding**: Intern gets 80% complete code, Senior gets empty files; tests and hints adjust by level
 
-**PR Review System**: Utilizes adapter architecture to provide level-aware code review experiences, configuring `PRReviewConfig` based on role and level, influencing layout, feedback tone, severity distribution, and auto-resolution of minor comments.
+**PR Review System**: Utilizes adapter architecture to provide level-aware code review experiences, configuring `PRReviewConfig` based on role and level, influencing layout, feedback tone, severity distribution, and auto-resolution of minor comments. Features:
+-   **Persistent Review Threads**: Review comments are stored in `reviewThreads` table with status tracking (`open` → `addressed` → `resolved`)
+-   **Re-Review Workflow**: Users respond to comments → request re-review → LLM verifies each response → comments marked resolved or needs more work
+-   **Backend Endpoints**: `POST /api/review-threads/:threadId/respond`, `POST /api/tickets/:ticketId/request-re-review`, `GET /api/tickets/:ticketId/review-threads`
+-   **LLM Verification**: `codeReviewService.verifyAddressedComments()` uses Groq to verify if user responses adequately address review feedback
+-   **Level-aware Strictness**: Verification strictness configurable via `ReReviewVerificationConfig.strictCodeVerification`
 
 **Sprint Review System**: Provides role-aware, level-adjusted sprint review ceremonies. `SprintReviewConfig` adapts demo formats, feedback tones, and stakeholder interactions based on user role and level, including dynamic demo scripts and AI-generated stakeholder feedback.
 
