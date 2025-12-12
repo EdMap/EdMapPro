@@ -196,9 +196,25 @@ Level-aware suggestion visibility: Interns always see suggestions; Seniors see c
 
 **Key Files:**
 - Templates: `shared/catalogue/templates/soft-skills/*.json`
+- Adapters: `shared/adapters/soft-skills/` (role/level configuration)
 - Evaluation service: `server/services/soft-skill-evaluation.ts`
 - UI component: `client/src/components/workspace/soft-skill-event-modal.tsx`
-- API routes: `POST /api/soft-skill-events/:eventId/respond`
+- Storage: `getSprintActivitiesByType()` filters by activity type
+
+**API Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sprints/:sprintId/soft-skill-events` | GET | List all soft skill events for a sprint |
+| `/api/sprints/:sprintId/soft-skill-events/pending` | GET | Get pending events for current day |
+| `/api/soft-skill-events/:activityId/respond` | POST | Submit response and get evaluation |
+| `/api/soft-skill-events/:activityId/trigger` | POST | Mark event as in-progress |
+
+**Evaluation Service Features:**
+- Dual evaluation path: rubric mapping (instant) or LLM scoring (~2-3s)
+- Weighted scoring using role-specific rubric weights from adapter
+- Competency deltas calculated based on performance
+- Follow-up message generation from scenario sender
+- Graceful fallback when GROQ_API_KEY unavailable
 
 ### ⏳ Planned (Not Started)
 

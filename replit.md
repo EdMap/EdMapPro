@@ -71,7 +71,10 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 -   **Level-Aware Visibility**: Interns always see suggestions labeled "Recommended"; Seniors see collapsed/hidden suggestions
 -   **Evaluation Criteria**: Weighted rubrics per event type (communication, problem-solving, assertiveness, collaboration)
 -   **Event Flow**: Trigger (sprint day) → Display (modal with scenario) → Response → Evaluation → Feedback → Follow-up → Completion
--   **Key Files**: Templates (`soft-skills/*.json`), Evaluation service (`server/services/soft-skill-evaluation.ts`), UI component (`soft-skill-event-modal.tsx`)
+-   **Adapter Architecture**: Role/level adapters in `shared/adapters/soft-skills/` configure suggestion visibility, evaluation strictness, feedback tone
+-   **Evaluation Service**: `server/services/soft-skill-evaluation.ts` handles dual-path evaluation (rubric mapping vs LLM scoring) with competency delta calculation
+-   **API Endpoints**: `GET /api/sprints/:sprintId/soft-skill-events`, `GET .../pending`, `POST /api/soft-skill-events/:activityId/respond`, `POST .../trigger`
+-   **Storage**: `getSprintActivitiesByType()` filters sprint activities by type (e.g., 'soft_skill_event')
 
 ## External Dependencies
 

@@ -456,6 +456,56 @@ Each event template defines weighted criteria:
 - ✅ Response evaluation (direct mapping + LLM scoring)
 - ✅ Event completion tracking
 - ✅ Competency scoring integration
+- ✅ Adapter architecture with role/level configuration
+- ✅ Backend evaluation service with follow-up generation
+- ✅ API routes for event management
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sprints/:sprintId/soft-skill-events` | GET | List all soft skill events (optionally filter by day) |
+| `/api/sprints/:sprintId/soft-skill-events/pending` | GET | Get pending events ready to trigger |
+| `/api/soft-skill-events/:activityId/respond` | POST | Submit response, receive evaluation + follow-up |
+| `/api/soft-skill-events/:activityId/trigger` | POST | Mark event as in-progress |
+
+### Evaluation Service
+
+Located at `server/services/soft-skill-evaluation.ts`:
+
+```typescript
+interface EvaluateResponseInput {
+  activityData: SoftSkillEventActivityData;
+  userResponse: SoftSkillEventUserResponse;
+  role: Role;
+  level: Level;
+}
+
+// Returns evaluation with scores, feedback, and competency deltas
+const evaluation = await softSkillEvaluationService.evaluateResponse(input);
+const followUp = await softSkillEvaluationService.generateFollowUp(input);
+```
+
+**Dual Evaluation Path:**
+- **Rubric mapping** (instant): For unedited suggestions, uses predefined score mapping
+- **LLM scoring** (~2-3s): For edited or custom responses, uses Groq to evaluate
+
+**Adapter-Driven Configuration:**
+- Role adapters define rubric weights (communication, problemSolving, assertiveness, collaboration)
+- Level overlays control feedback tone (encouraging → peer) and evaluation strictness
+- Merged configuration via `getSoftSkillEventAdapter(role, level)`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `shared/adapters/soft-skills/types.ts` | Type definitions for adapters and data structures |
+| `shared/adapters/soft-skills/index.ts` | Factory function `getSoftSkillEventAdapter()` |
+| `shared/adapters/soft-skills/roles/` | Role-specific base configurations |
+| `shared/adapters/soft-skills/levels/` | Level-specific overlays |
+| `server/services/soft-skill-evaluation.ts` | Evaluation service with LLM integration |
+| `server/routes.ts` | API endpoint implementations |
+| `shared/catalogue/templates/soft-skills/` | Event templates (JSON) |
 
 ---
 
