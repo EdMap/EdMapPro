@@ -349,6 +349,107 @@ Random events injected during sprints to practice soft skills.
 
 ---
 
+## Adaptive Sprint Tier Progression
+
+> **Status**: ⏳ Planned
+
+### Overview
+
+Advancement through planning responsibility tiers is **earned through demonstrated competency**, not just sprint count. Users who don't show sufficient competency stay at their current tier with targeted practice opportunities.
+
+### Three-Layer Configuration
+
+```
+Final Config = Role Base + Level Overlay + Tier Overlay (Adaptive)
+```
+
+| Layer | What It Controls | Examples |
+|-------|------------------|----------|
+| **Role Base** | Engagement areas, competency rubric | Dev: estimation; PM: goals |
+| **Level Overlay** | Guidance intensity, scaffolding | Intern: heavy; Senior: none |
+| **Tier Overlay** | Ownership level, talk ratio | Observer → Co-Facilitator → Leader |
+
+### Sprint Tiers
+
+| Tier | User Role | Team Talk Ratio | Controls |
+|------|-----------|-----------------|----------|
+| **Observer** | Watch and learn | 80% team | View-only |
+| **Co-Facilitator** | Participate with guidance | 60% team | Partial controls |
+| **Emerging Leader** | Lead with backup | 40% team | Full controls |
+
+### Role-Specific Engagement Areas
+
+| Role | Primary Engagement | Competency Signals |
+|------|-------------------|-------------------|
+| **Developer** | Estimation, Technical scope | Estimation accuracy, technical questions |
+| **PM** | Goal formulation, Prioritization | Goal clarity, priority rationale |
+| **QA** | Test coverage, Acceptance criteria | Risk identification, edge cases |
+
+### Role-Specific Rubric Weights
+
+```typescript
+// Developer readiness rubric
+{ estimationAccuracy: 0.35, technicalTradeoffs: 0.25, collaboration: 0.20, understanding: 0.20 }
+
+// PM readiness rubric
+{ goalClarity: 0.30, prioritization: 0.30, stakeholderBalance: 0.20, scopeRealism: 0.20 }
+
+// QA readiness rubric
+{ testCoverage: 0.30, acceptanceCriteria: 0.25, riskIdentification: 0.25, edgeCases: 0.20 }
+```
+
+### Tier Advancement Logic
+
+Advancement requires:
+1. Score ≥ threshold for **two consecutive sprints** at current tier
+2. Thresholds are role-specific
+
+```typescript
+function computeNextTier(role: Role, assessments: Assessment[]): SprintTier {
+  const weights = getRoleRubricWeights(role);
+  const threshold = getRoleTierThreshold(role);
+  const recentScores = getLastNScoresAtTier(assessments, currentTier, 2);
+  
+  if (recentScores.length >= 2 && recentScores.every(s => s >= threshold)) {
+    return advanceTier(currentTier);
+  }
+  return currentTier;  // Stay and practice
+}
+```
+
+### User Experience
+
+**When user advances**:
+> "You've been promoted! Your team noticed your contributions. This sprint, you'll take on more responsibility."
+
+**When user stays for more practice**:
+> "You're building mastery! This sprint, you'll deepen your skills with focused practice on [specific objectives]."
+
+### Data Model
+
+```typescript
+interface PlanningSessionAssessment {
+  sprintId: number;
+  tierReadinessScore: number;  // 0-100
+  rubricBreakdown: Record<string, number>;
+  advancementDecision: 'advance' | 'practice_more' | 'pending';
+  practiceObjectives?: string[];
+}
+
+// On JourneyArc/Sprint
+sprintTier: 'observer' | 'co_facilitator' | 'emerging_leader';
+tierStatus: 'first_attempt' | 'practicing' | 'mastered';
+```
+
+### Implementation Files
+
+- Types: `shared/adapters/planning/types.ts`
+- Factory: `shared/adapters/planning/index.ts`
+- Tier Overlays: `shared/adapters/planning/tiers/`
+- Progression: `server/services/progression-engine.ts`
+
+---
+
 ## See Also
 
 - [JOURNEY_SYSTEM.md](./JOURNEY_SYSTEM.md) - Overall user journey

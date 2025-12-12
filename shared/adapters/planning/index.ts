@@ -75,6 +75,7 @@ const defaultEvaluation: PlanningEvaluation = {
 const defaultEngagement: LevelEngagement = {
   mode: 'guided',
   autoStartConversation: true,
+  autoAdvancePhases: false,
   teamTalkRatio: 0.5,
   phaseEngagement: {
     context: 'respond',

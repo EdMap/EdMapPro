@@ -3,11 +3,96 @@
  * 
  * Defines the interface for role-aware, level-adjusted sprint planning experiences.
  * Adapters control prompts, UI behavior, difficulty, and evaluation for each role/level combination.
+ * 
+ * Three-layer configuration:
+ * 1. Role Base - Engagement areas, competency rubric (Dev: estimation, PM: goals)
+ * 2. Level Overlay - Guidance intensity, scaffolding (Intern: heavy, Senior: none)
+ * 3. Tier Overlay - Ownership level, talk ratio (Observer → Co-Facilitator → Leader)
  */
 
 import type { Role, Level } from '../index';
 
 export type PlanningPhase = 'context' | 'discussion' | 'commitment';
+
+/**
+ * Sprint Tiers - Adaptive progression based on demonstrated competency
+ * Users earn advancement, not receive it automatically
+ */
+export type SprintTier = 'observer' | 'co_facilitator' | 'emerging_leader';
+export type TierStatus = 'first_attempt' | 'practicing' | 'mastered';
+export type TierAdvancementDecision = 'advance' | 'practice_more' | 'pending';
+
+/**
+ * Role-specific rubric weights for tier advancement
+ * Each role has different competency signals to track
+ */
+export interface RoleRubricWeights {
+  role: Role;
+  weights: Record<string, number>;
+  tierThreshold: number;
+  consecutiveSessionsRequired: number;
+}
+
+export const DEVELOPER_RUBRIC: RoleRubricWeights = {
+  role: 'developer',
+  weights: {
+    estimationAccuracy: 0.35,
+    technicalTradeoffs: 0.25,
+    collaboration: 0.20,
+    understanding: 0.20
+  },
+  tierThreshold: 70,
+  consecutiveSessionsRequired: 2
+};
+
+export const PM_RUBRIC: RoleRubricWeights = {
+  role: 'pm',
+  weights: {
+    goalClarity: 0.30,
+    prioritization: 0.30,
+    stakeholderBalance: 0.20,
+    scopeRealism: 0.20
+  },
+  tierThreshold: 70,
+  consecutiveSessionsRequired: 2
+};
+
+export const QA_RUBRIC: RoleRubricWeights = {
+  role: 'qa',
+  weights: {
+    testCoverage: 0.30,
+    acceptanceCriteria: 0.25,
+    riskIdentification: 0.25,
+    edgeCases: 0.20
+  },
+  tierThreshold: 70,
+  consecutiveSessionsRequired: 2
+};
+
+export function getRoleRubricWeights(role: Role): RoleRubricWeights {
+  switch (role) {
+    case 'pm': return PM_RUBRIC;
+    case 'qa': return QA_RUBRIC;
+    case 'developer':
+    case 'devops':
+    case 'data_science':
+    default: return DEVELOPER_RUBRIC;
+  }
+}
+
+/**
+ * Planning session assessment for tier advancement decisions
+ */
+export interface PlanningSessionAssessment {
+  sprintId: number;
+  sessionId: number;
+  tier: SprintTier;
+  tierReadinessScore: number;
+  rubricBreakdown: Record<string, number>;
+  advancementDecision: TierAdvancementDecision;
+  practiceObjectives?: string[];
+  assessedAt: Date;
+}
 
 export interface AIPersona {
   name: string;
@@ -67,6 +152,8 @@ export interface SprintPlanningAdapter {
   metadata: {
     role: Role;
     level: Level;
+    tier?: SprintTier;
+    tierStatus?: TierStatus;
     displayName: string;
     description: string;
     competencies: string[];
@@ -79,6 +166,7 @@ export interface SprintPlanningAdapter {
   engagement: LevelEngagement;
   learningObjectives: PlanningLearningObjectives[];
   commitmentGuidance: CommitmentGuidance;
+  tierMessaging?: TierAdvancementMessaging;
 }
 
 export interface RolePlanningAdapter {
@@ -182,6 +270,35 @@ export interface LevelPlanningOverlay {
   uiOverrides: Partial<PlanningUIControls>;
   difficultyOverrides: Partial<PlanningDifficulty>;
   evaluationOverrides: Partial<PlanningEvaluation>;
+}
+
+/**
+ * Tier Planning Overlay - Applied on top of Role + Level
+ * Controls ownership level based on demonstrated competency
+ */
+export interface TierPlanningOverlay {
+  tier: SprintTier;
+  displayName: string;
+  description: string;
+  engagementOverrides: Partial<LevelEngagement>;
+  uiOverrides: Partial<PlanningUIControls>;
+  promptModifiers: {
+    ownershipLevel: string;
+    responseExpectation: string;
+  };
+  advanceMessage: string;
+  practiceMessage: string;
+}
+
+/**
+ * Tier advancement UX messaging
+ */
+export interface TierAdvancementMessaging {
+  advanceTitle: string;
+  advanceDescription: string;
+  practiceTitle: string;
+  practiceDescription: string;
+  practiceObjectivesIntro: string;
 }
 
 export interface PlanningSessionContext {
