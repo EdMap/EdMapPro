@@ -29,10 +29,10 @@ edmap is an AI-powered B2B onboarding platform transforming students from "Inter
 - PR review with persistent threads and re-review workflow
 - Role adapters (Developer, PM) and level overlays (Intern → Senior)
 - Adaptive tier progression for sprint planning (Observer → Co-Facilitator → Emerging Leader)
+- Sprint cycling with session archiving
 
 ### Partially Built (🔄)
 
-- Sprint cycling (core logic exists, off-by-one bug fixed)
 - Soft skill events (generation works, triggering/UI missing)
 
 ### Planned (⏳)
