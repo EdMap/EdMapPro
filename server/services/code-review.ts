@@ -122,7 +122,6 @@ function parseReviewResponse(
       throw new Error('No JSON found in response');
     }
     
-    // Additional cleanup: ensure the JSON is valid
     let jsonStr = jsonMatch[0];
     
     // Try to fix unescaped newlines within string values
@@ -130,7 +129,34 @@ function parseReviewResponse(
       return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
     });
     
-    const parsed = JSON.parse(jsonStr);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (firstError) {
+      // Try to salvage partial JSON by extracting first complete comment
+      console.log('[CodeReview] First parse failed, attempting to extract partial data');
+      
+      // Try to find at least one complete comment object
+      const commentMatch = jsonStr.match(/"content"\s*:\s*"([^"]+)"/);
+      const severityMatch = jsonStr.match(/"severity"\s*:\s*"(minor|major|blocking)"/);
+      
+      if (commentMatch) {
+        // Create a minimal valid response from what we could extract
+        parsed = {
+          comments: [{
+            content: commentMatch[1],
+            severity: severityMatch ? severityMatch[1] : 'minor',
+            type: 'suggestion',
+            requiresResponse: false
+          }],
+          overallAssessment: 'Review completed with partial data.',
+          approvalStatus: 'needs_discussion'
+        };
+        console.log('[CodeReview] Successfully extracted partial review data');
+      } else {
+        throw firstError;
+      }
+    }
     
     const comments: ReviewComment[] = (parsed.comments || []).map((c: any, index: number) => ({
       id: `${reviewer.id}-comment-${index + 1}`,
