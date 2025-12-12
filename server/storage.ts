@@ -240,6 +240,7 @@ export interface IStorage {
   
   // Phase 3: Sprint Activity operations
   getSprintActivities(sprintId: number, dayNumber?: number): Promise<SprintActivity[]>;
+  getSprintActivitiesByType(sprintId: number, activityType: string): Promise<SprintActivity[]>;
   getSprintActivity(id: number): Promise<SprintActivity | undefined>;
   createSprintActivity(activity: InsertSprintActivity): Promise<SprintActivity>;
   updateSprintActivity(id: number, updates: Partial<SprintActivity>): Promise<SprintActivity | undefined>;
@@ -3275,6 +3276,15 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
   async getSprintActivity(id: number): Promise<SprintActivity | undefined> {
     const results = await db.select().from(sprintActivities).where(eq(sprintActivities.id, id));
     return results[0];
+  }
+
+  async getSprintActivitiesByType(sprintId: number, activityType: string): Promise<SprintActivity[]> {
+    return await db.select().from(sprintActivities)
+      .where(and(
+        eq(sprintActivities.sprintId, sprintId),
+        eq(sprintActivities.activityType, activityType)
+      ))
+      .orderBy(sprintActivities.dayNumber, sprintActivities.activityOrder);
   }
 
   async createSprintActivity(activity: InsertSprintActivity): Promise<SprintActivity> {

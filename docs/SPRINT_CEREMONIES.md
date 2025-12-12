@@ -346,28 +346,116 @@ The last sprint's 1:1 is extended to include:
 
 ---
 
-## Soft Skill Events (🔄 Partial)
+## Soft Skill Events (✅ Implemented)
 
 ### Overview
 
-Random events injected during sprints to practice soft skills.
+Soft skill events are realistic workplace scenarios injected during sprints to practice professional communication, negotiation, and collaboration skills. Events appear as chat messages from team members, simulating natural workplace interruptions.
 
 ### Event Types
 
-| Event | Day | Description |
-|-------|-----|-------------|
-| Code Review Conflict | 2-3 | Peer disagrees with approach |
-| Requirement Change | 4-5 | PM changes requirements mid-sprint |
-| Deadline Pressure | 6-7 | Push to complete on time |
-| Production Incident | 4-5 | Urgent interrupt |
-| Scope Creep | 3-4 | PM requests additional work |
+| Event | Day | Description | Sender |
+|-------|-----|-------------|--------|
+| Code Review Conflict | 2-3 | Peer disagrees with approach | Marcus |
+| Deadline Pressure | 6-7 | Manager asks for earlier delivery | Sarah/Priya |
+| Teammate Asks Help | 3-4 | Junior team member needs guidance | Alex |
+| Unclear Requirements | 4-5 | Ambiguous ticket details need clarification | Priya |
 
-### Current Status
+### UX Design: Suggestion-Insert Pattern
 
-- ✅ Events are generated and stored in sprint backlog
-- ❌ No triggering mechanism during sprint
-- ❌ No UI to display/handle events
-- ❌ No completion tracking
+Events use a **suggestion-insert** pattern where curated responses populate an editable message input, allowing users to learn from examples while practicing their own articulation.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  💬 Priya (PM)                                      │
+│                                                     │
+│  "Hey! Quick question - our biggest client demo    │
+│   is scheduled for Friday. Any chance we can ship  │
+│   the feature by then instead of next Wednesday?"  │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│  Suggested responses:                               │
+│  ┌─────────────────┐ ┌───────────────────────────┐  │
+│  │ Ask for details │ │ Propose reduced scope     │  │
+│  └─────────────────┘ └───────────────────────────┘  │
+│  ┌─────────────────────────────────┐                │
+│  │ Need time to assess             │                │
+│  └─────────────────────────────────┘                │
+├─────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────┐    │
+│  │ Type your response...                   [→] │    │
+│  └─────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
+```
+
+**Clicking a suggestion inserts text into the input:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│  ┌─────────────────────────────────────────────┐    │
+│  │ Let me understand the situation better.     │    │
+│  │ What specifically needs to be ready for    │    │
+│  │ the demo?                               [→] │    │
+│  └─────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
+```
+
+User can then:
+- **Send as-is** → Quick response, learns the pattern
+- **Edit it** → Makes it their own, more authentic
+- **Clear and write fresh** → Full autonomy
+
+### Response Evaluation
+
+| Scenario | suggestionId | wasEdited | Evaluation Method |
+|----------|--------------|-----------|-------------------|
+| Used suggestion as-is | `"ask-clarifying"` | `false` | Direct rubric mapping (instant) |
+| Used suggestion + edited | `"ask-clarifying"` | `true` | LLM evaluation (~2-3s) |
+| Wrote from scratch | `null` | N/A | LLM evaluation (~2-3s) |
+
+### Level-Aware Behavior
+
+| Level | Suggestions | Default State |
+|-------|-------------|---------------|
+| Intern | Always visible, labeled "Recommended" | Empty input, encouraged to use suggestions |
+| Junior | Visible | Empty input |
+| Mid | Collapsed by default | Empty input |
+| Senior | Hidden (expandable if stuck) | Empty input |
+
+### Evaluation Criteria
+
+Each event template defines weighted criteria:
+
+```typescript
+{
+  communication: 25,     // Clear, professional response
+  problemSolving: 30,    // Offers alternatives/solutions
+  assertiveness: 25,     // Advocates for realistic timelines
+  collaboration: 20      // Tries to understand business need
+}
+```
+
+### Event Flow
+
+1. **Trigger**: Event fires based on sprint day (configured in template)
+2. **Display**: Modal appears with scenario + suggestions
+3. **Response**: User types response (optionally using suggestions)
+4. **Evaluation**: Response scored against rubric
+5. **Feedback**: Conversational feedback highlighting strengths/growth areas
+6. **Follow-up**: AI responds naturally based on user's approach
+7. **Completion**: Event marked complete, competency deltas applied
+
+### Implementation Status
+
+- ✅ Template loading from `shared/catalogue/templates/soft-skills/`
+- ✅ Selection logic (picks 2-4 events, avoids recent repeats via cooldown)
+- ✅ Event generation via `generateSoftSkillEvents()` in sprint-generator.ts
+- ✅ Stored in sprint backlog as `softSkillEvents` array
+- ✅ Triggering mechanism based on sprint day
+- ✅ Suggestion-insert UI modal component
+- ✅ Response evaluation (direct mapping + LLM scoring)
+- ✅ Event completion tracking
+- ✅ Competency scoring integration
 
 ---
 

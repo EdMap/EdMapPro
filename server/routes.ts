@@ -4410,6 +4410,173 @@ ${stateGuidance}`;
     }
   });
 
+  // ============================================================================
+  // Soft Skill Event Endpoints
+  // ============================================================================
+  
+  app.get("/api/sprints/:sprintId/soft-skill-events", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const currentDay = req.query.day ? parseInt(req.query.day as string) : undefined;
+      
+      const activities = await storage.getSprintActivitiesByType(sprintId, 'soft_skill_event');
+      
+      const events = activities.map(activity => ({
+        id: activity.id,
+        eventId: (activity.activityData as any)?.eventId || `event-${activity.id}`,
+        templateId: (activity.activityData as any)?.templateId,
+        day: activity.dayNumber,
+        status: activity.status,
+        scenario: (activity.activityData as any)?.scenario,
+        responseOptions: (activity.activityData as any)?.responseOptions,
+        adapterConfig: (activity.activityData as any)?.adapterConfig,
+        userResponse: activity.userResponse,
+        evaluation: activity.evaluation,
+      }));
+      
+      if (currentDay !== undefined) {
+        const filteredEvents = events.filter(e => e.day === currentDay);
+        return res.json(filteredEvents);
+      }
+      
+      res.json(events);
+    } catch (error) {
+      console.error("Failed to get soft skill events:", error);
+      res.status(500).json({ message: "Failed to get soft skill events" });
+    }
+  });
+  
+  app.get("/api/sprints/:sprintId/soft-skill-events/pending", async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.sprintId);
+      const currentDay = req.query.day ? parseInt(req.query.day as string) : 1;
+      
+      const activities = await storage.getSprintActivitiesByType(sprintId, 'soft_skill_event');
+      
+      const pendingEvents = activities
+        .filter(a => a.status === 'pending' && a.dayNumber <= currentDay)
+        .map(activity => ({
+          id: activity.id,
+          eventId: (activity.activityData as any)?.eventId || `event-${activity.id}`,
+          templateId: (activity.activityData as any)?.templateId,
+          day: activity.dayNumber,
+          scenario: (activity.activityData as any)?.scenario,
+          responseOptions: (activity.activityData as any)?.responseOptions,
+          evaluationCriteria: (activity.activityData as any)?.evaluationCriteria,
+          adapterConfig: (activity.activityData as any)?.adapterConfig,
+        }));
+      
+      res.json(pendingEvents);
+    } catch (error) {
+      console.error("Failed to get pending soft skill events:", error);
+      res.status(500).json({ message: "Failed to get pending soft skill events" });
+    }
+  });
+  
+  app.post("/api/soft-skill-events/:activityId/respond", async (req, res) => {
+    try {
+      const { softSkillEvaluationService } = await import("./services/soft-skill-evaluation");
+      
+      const activityId = parseInt(req.params.activityId);
+      
+      const responseSchema = z.object({
+        text: z.string().min(1),
+        suggestionId: z.string().nullable(),
+        wasEdited: z.boolean(),
+        originalSuggestionText: z.string().nullable(),
+        role: z.enum(['developer', 'pm', 'qa', 'devops', 'data_science']),
+        level: z.enum(['intern', 'junior', 'mid', 'senior']),
+      });
+      
+      const input = responseSchema.parse(req.body);
+      
+      const activity = await storage.getSprintActivity(activityId);
+      if (!activity) {
+        return res.status(404).json({ message: "Activity not found" });
+      }
+      
+      const userResponse = {
+        text: input.text,
+        suggestionId: input.suggestionId,
+        wasEdited: input.wasEdited,
+        originalSuggestionText: input.originalSuggestionText,
+        respondedAt: new Date().toISOString(),
+        timeToRespond: 0,
+      };
+      
+      const evaluation = await softSkillEvaluationService.evaluateResponse({
+        activityData: activity.activityData as any,
+        userResponse,
+        role: input.role as Role,
+        level: input.level as Level,
+      });
+      
+      const followUp = await softSkillEvaluationService.generateFollowUp({
+        activityData: activity.activityData as any,
+        userResponse,
+        evaluation,
+        role: input.role as Role,
+        level: input.level as Level,
+      });
+      
+      await storage.updateSprintActivity(activityId, {
+        status: 'completed',
+        userResponse,
+        evaluation,
+        completedAt: new Date(),
+      });
+      
+      res.json({
+        evaluation,
+        followUp: {
+          sender: (activity.activityData as any)?.scenario?.sender || 'Team Member',
+          message: followUp,
+          sentAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Failed to respond to soft skill event:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to respond to soft skill event" });
+    }
+  });
+  
+  app.post("/api/soft-skill-events/:activityId/trigger", async (req, res) => {
+    try {
+      const activityId = parseInt(req.params.activityId);
+      
+      const activity = await storage.getSprintActivity(activityId);
+      if (!activity) {
+        return res.status(404).json({ message: "Activity not found" });
+      }
+      
+      if (activity.status !== 'pending') {
+        return res.status(400).json({ message: "Event already triggered or completed" });
+      }
+      
+      await storage.updateSprintActivity(activityId, {
+        status: 'in_progress',
+        startedAt: new Date(),
+      });
+      
+      res.json({
+        id: activity.id,
+        eventId: (activity.activityData as any)?.eventId || `event-${activity.id}`,
+        scenario: (activity.activityData as any)?.scenario,
+        responseOptions: (activity.activityData as any)?.responseOptions,
+        adapterConfig: (activity.activityData as any)?.adapterConfig,
+      });
+    } catch (error) {
+      console.error("Failed to trigger soft skill event:", error);
+      res.status(500).json({ message: "Failed to trigger soft skill event" });
+    }
+  });
+
   // Helper function for fallback Sarah responses
   function getFallbackSarahResponse(messageCount: number, offerNextSteps: boolean): string {
     if (offerNextSteps || messageCount >= 3) {

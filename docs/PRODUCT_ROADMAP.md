@@ -167,23 +167,38 @@ Help students go from **Intern → Junior Ready** by exposing them to real-world
 | Old session cleanup | Orphaned planning sessions (no sprint_id) remain active |
 | Backlog items not populated | New sprint's backlog needs proper propagation to `getPlanningSessionState()` |
 
-#### Soft Skill Events - Detailed Status
+#### Soft Skill Events - ✅ Implemented
+
+**UX Design: Suggestion-Insert Pattern**
+
+Soft skill events use a hybrid response pattern where curated suggestions populate an editable input field:
+
+| User Action | suggestionId | wasEdited | Evaluation |
+|-------------|--------------|-----------|------------|
+| Used suggestion as-is | `"ask-clarifying"` | `false` | Direct rubric mapping (instant) |
+| Used suggestion + edited | `"ask-clarifying"` | `true` | LLM evaluation (~2-3s) |
+| Wrote from scratch | `null` | N/A | LLM evaluation (~2-3s) |
+
+Level-aware suggestion visibility: Interns always see suggestions; Seniors see collapsed/hidden suggestions.
 
 **✅ What's Built:**
 | Component | Description |
 |-----------|-------------|
-| Template loading | Loads from `shared/catalogue/templates/soft_skills/` |
+| Template loading | Loads from `shared/catalogue/templates/soft-skills/` |
 | Selection logic | Picks 2-4 events, avoids recent repeats via cooldown |
 | Event generation | `generateSoftSkillEvents()` in sprint-generator.ts |
 | Stored in sprint | Saved to `sprint.backlog` as `softSkillEvents` array |
+| Triggering system | Events fire based on sprint day during execution module |
+| UI component | `SoftSkillEventModal` with suggestion-insert pattern |
+| Response evaluation | Direct rubric mapping + LLM scoring for edited/custom |
+| Completion tracking | `softSkillEventCompletions` table tracks status |
+| Competency scoring | Event scores contribute to competency deltas |
 
-**❌ What's Missing:**
-| Issue | Description |
-|-------|-------------|
-| Event triggering system | No mechanism to surface events during sprint (e.g., "Day 3: Code review conflict fires") |
-| Event UI component | No component to display soft skill scenarios to the user |
-| Event completion tracking | No way to mark events as handled/resolved |
-| Competency scoring | Events don't yet contribute to competency scores |
+**Key Files:**
+- Templates: `shared/catalogue/templates/soft-skills/*.json`
+- Evaluation service: `server/services/soft-skill-evaluation.ts`
+- UI component: `client/src/components/workspace/soft-skill-event-modal.tsx`
+- API routes: `POST /api/soft-skill-events/:eventId/respond`
 
 ### ⏳ Planned (Not Started)
 

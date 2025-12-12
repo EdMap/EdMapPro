@@ -108,8 +108,8 @@ Tier overlays take highest precedence (when applicable). The three-layer composi
 │  3. SELECT USER TICKETS                                                  │
 │     └── 1-3 tickets at appropriate complexity                            │
 │                                                                          │
-│  4. GENERATE SOFT SKILL EVENTS ✅ (triggering ❌)                        │
-│     └── 2-4 events, avoiding recent repeats                              │
+│  4. GENERATE SOFT SKILL EVENTS ✅                                        │
+│     └── 2-4 events, suggestion-insert UX, LLM evaluation                 │
 │                                                                          │
 │  5. SCHEDULE ACROSS DAYS                                                 │
 │     └── Place ceremonies and events throughout sprint                    │

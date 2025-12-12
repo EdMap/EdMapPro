@@ -357,3 +357,6 @@ export type * from './execution/types';
 
 export { getStandupAdapter } from './standup';
 export type * from './standup/types';
+
+export { getSoftSkillEventAdapter, buildSoftSkillEventActivityData } from './soft-skills';
+export type * from './soft-skills/types';

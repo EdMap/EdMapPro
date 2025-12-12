@@ -64,6 +64,15 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 -   **Assessment Persistence**: `planningSessionAssessments` table tracks tier readiness scores and advancement decisions
 -   **Positive UX Framing**: "Practice more" messaging with specific focus areas rather than negative "not ready" feedback
 
+**Soft Skill Event System**: Realistic workplace scenarios injected during sprints to practice professional communication, negotiation, and collaboration. Uses a **suggestion-insert UX pattern** where curated responses populate an editable message input:
+-   **Templates**: Located in `shared/catalogue/templates/soft-skills/` (deadline-pressure, code-review-feedback, teammate-asks-help, unclear-requirements)
+-   **UX Pattern**: Suggestion chips insert text into message input (not direct submission); user can edit, send as-is, or write from scratch
+-   **Evaluation Logic**: `suggestionId` + `wasEdited` flag determines evaluation path - direct rubric mapping for unedited suggestions, LLM scoring for edited/free-form responses
+-   **Level-Aware Visibility**: Interns always see suggestions labeled "Recommended"; Seniors see collapsed/hidden suggestions
+-   **Evaluation Criteria**: Weighted rubrics per event type (communication, problem-solving, assertiveness, collaboration)
+-   **Event Flow**: Trigger (sprint day) → Display (modal with scenario) → Response → Evaluation → Feedback → Follow-up → Completion
+-   **Key Files**: Templates (`soft-skills/*.json`), Evaluation service (`server/services/soft-skill-evaluation.ts`), UI component (`soft-skill-event-modal.tsx`)
+
 ## External Dependencies
 
 ### AI Services
