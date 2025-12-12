@@ -87,24 +87,19 @@ Explanation depth: ${levelConfig.explanationDepth}
 Assume knowledge level: ${levelConfig.assumeKnowledgeLevel}
 Tone: ${levelConfig.toneModifier}
 
-Respond with a JSON object:
-{
-  "comments": [
-    {
-      "content": "Your comment here",
-      "severity": "minor|major|blocking",
-      "type": "suggestion|question|request_changes",
-      "filename": "optional filename",
-      "lineNumber": optional_line_number,
-      "codeSnippet": "optional relevant code",
-      "requiresResponse": true|false
-    }
-  ],
-  "overallAssessment": "Brief summary of the code quality",
-  "approvalStatus": "approved|changes_requested|needs_discussion"
-}
+IMPORTANT: You MUST respond with ONLY valid JSON. No markdown, no code blocks, no explanation text before or after the JSON.
 
-Provide ${levelConfig.maxCommentsPerReviewer} comments maximum. Focus on the most important issues.`;
+Your response must be exactly this structure (replace values with your actual review):
+{"comments":[{"content":"Your specific feedback here","severity":"minor","type":"suggestion","requiresResponse":false}],"overallAssessment":"Brief summary","approvalStatus":"needs_discussion"}
+
+Rules:
+- severity must be one of: "minor", "major", "blocking"
+- type must be one of: "suggestion", "question", "request_changes"
+- approvalStatus must be one of: "approved", "changes_requested", "needs_discussion"
+- Use double quotes for all strings
+- Do NOT use backticks anywhere in your response
+- Do NOT wrap response in markdown code blocks
+- Provide ${levelConfig.maxCommentsPerReviewer} comments maximum`;
 }
 
 function parseReviewResponse(
@@ -242,6 +237,7 @@ export class CodeReviewService {
       });
 
       const responseText = response.choices[0]?.message?.content || '';
+      console.log(`[CodeReview] Raw LLM response from ${reviewer.name}:`, responseText.substring(0, 500));
       const parsed = parseReviewResponse(responseText, reviewer);
 
       return {
