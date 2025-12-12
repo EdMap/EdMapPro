@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import {
   useMoveTicket,
   useJourneyDashboard,
   useJourneyWorkspace,
+  useAdvanceWorkspacePhase,
   type TicketStatus,
 } from "@/hooks/use-sprint-workflow";
 import type { SprintTicket } from "@shared/schema";
@@ -309,11 +310,13 @@ export default function SprintHub() {
   
   const [selectedTicket, setSelectedTicket] = useState<SprintTicket | null>(null);
   
+  const [, navigate] = useLocation();
   const { data: overview, isLoading } = useSprintOverview(sprintId);
   const { data: journeyDashboard } = useJourneyDashboard(journeyId);
   const { data: workspace } = useJourneyWorkspace(journeyId);
   const { ticketsByStatus } = useKanbanState(sprintId);
   const moveTicket = useMoveTicket();
+  const advancePhase = useAdvanceWorkspacePhase();
   const { toast } = useToast();
   
   const adapter = useMemo(() => {
@@ -337,6 +340,26 @@ export default function SprintHub() {
           if (selectedTicket?.id === ticketId) {
             setSelectedTicket(prev => prev ? { ...prev, status: newStatus } : null);
           }
+        }
+      }
+    );
+  };
+
+  const handleProceedToReview = () => {
+    if (!workspace?.id) return;
+    
+    advancePhase.mutate(
+      { workspaceId: workspace.id },
+      {
+        onSuccess: () => {
+          navigate(`/workspace/${workspace.id}/review`);
+        },
+        onError: (error) => {
+          toast({
+            title: "Cannot proceed to review",
+            description: error.message,
+            variant: "destructive",
+          });
         }
       }
     );
@@ -479,16 +502,15 @@ export default function SprintHub() {
                   </p>
                 </div>
               </div>
-              <Link href={`/workspace/${workspace?.id}/review`}>
-                <Button 
-                  className="bg-green-600 hover:bg-green-700 gap-2"
-                  data-testid="button-complete-sprint"
-                  disabled={!workspace?.id}
-                >
-                  {sprintConfig.completionCTA.label}
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              <Button 
+                className="bg-green-600 hover:bg-green-700 gap-2"
+                data-testid="button-complete-sprint"
+                disabled={!workspace?.id || advancePhase.isPending}
+                onClick={handleProceedToReview}
+              >
+                {advancePhase.isPending ? 'Preparing...' : sprintConfig.completionCTA.label}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
