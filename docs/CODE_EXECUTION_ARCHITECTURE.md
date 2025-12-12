@@ -1,5 +1,7 @@
 # Code Execution Architecture
 
+> **Status**: ✅ Implemented - Monaco editor with LLM-simulated execution is live
+
 ## Overview
 
 edmap uses **LLM-Simulated Code Execution** to provide instant, educational feedback on user-written code without the infrastructure costs and complexity of real sandboxed execution. The LLM analyzes code, predicts behavior, and simulates test results while providing rich explanatory feedback.
@@ -194,38 +196,96 @@ export interface CodeEditorModifiers {
 
 ## Component Architecture
 
-### New Components
+### Implemented Components
 
 ```
 client/src/components/workspace/
 ├── code-editor/
-│   ├── monaco-editor.tsx        # Embedded Monaco editor wrapper
-│   ├── editor-toolbar.tsx       # Run, format, reset buttons
-│   ├── file-tabs.tsx            # Multi-file tab navigation
-│   └── inline-hints.tsx         # Mentor hints in editor margin
-├── execution/
-│   ├── test-runner-panel.tsx    # Simulated test output display
-│   ├── execution-trace.tsx      # Step-by-step code trace
-│   ├── static-analysis.tsx      # Real lint/type errors
-│   └── combined-feedback.tsx    # Merged analysis results
-└── ticket-workspace.tsx         # Updated to include editor
+│   ├── code-editor-panel.tsx   # ✅ Main Monaco editor wrapper
+│   ├── bottom-dock.tsx         # ✅ Test output and feedback panel
+│   └── index.tsx               # ✅ Exports
+├── code-work-panel.tsx         # ✅ Code work simulation
+├── pr-review-panel.tsx         # ✅ PR review with threads
+└── ticket-workspace.tsx        # ✅ Full ticket environment
+
+server/services/
+└── code-analysis.ts            # ✅ LLM code execution service
+
+shared/adapters/code-execution/
+├── index.ts                    # ✅ Factory function
+├── types.ts                    # ✅ ExecutionProvider, CodeChallenge
+├── roles/                      # ✅ Developer, PM configs
+├── levels/                     # ✅ Intern → Senior scaffolding
+└── providers/
+    └── llm-provider.ts         # ✅ Groq-powered analysis
 ```
 
-### Data Flow
+### Not Yet Implemented
 
 ```
-User Types Code
+client/src/components/workspace/
+├── execution/                  # ⏳ Planned
+│   ├── test-runner-panel.tsx   # Separate test output display
+│   ├── execution-trace.tsx     # Step-by-step code trace
+│   ├── static-analysis.tsx     # Real lint/type errors (ESLint)
+│   └── combined-feedback.tsx   # Merged analysis results
+```
+
+> **Note**: Static analysis (ESLint, TypeScript) is planned but not yet implemented. Currently only LLM simulation is used.
+
+### Data Flow (Current Implementation)
+
+```
+User Types Code in Monaco Editor
       │
       ▼
 ┌─────────────────┐
-│  Debounce       │ (300ms default)
+│  User clicks    │
+│  "Run Tests"    │
 └─────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────┐
+│         LLM SIMULATION              │
+│         (API call)                  │
+│                                     │
+│  POST /api/analyze-code             │
+│  • Sends code + test cases          │
+│  • Groq analyzes and predicts       │
+│  • Returns simulated test results   │
+└─────────────────────────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────┐
+│         FEEDBACK                    │
+│                                     │
+│  • Test pass/fail results           │
+│  • Explanations of failures         │
+│  • Educational tips                 │
+│  • Mentor-style comments            │
+└─────────────────────────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────┐
+│         UPDATE UI                   │
+│                                     │
+│  • Bottom dock shows results        │
+│  • PR Review references execution   │
+│  • Ticket status updated            │
+└─────────────────────────────────────┘
+```
+
+### Planned Enhancement (Static Analysis)
+
+```
+User Types Code
       │
       ├──────────────────────────────┐
       ▼                              ▼
 ┌─────────────────┐        ┌─────────────────┐
 │ Static Analysis │        │ LLM Simulation  │
 │ (client-side)   │        │ (API call)      │
+│ ⏳ PLANNED      │        │ ✅ IMPLEMENTED  │
 │                 │        │                 │
 │ • ESLint        │        │ POST /api/      │
 │ • TypeScript    │        │   analyze-code  │
@@ -235,19 +295,6 @@ User Types Code
                      ▼
            ┌─────────────────┐
            │ Combined Result │
-           │                 │
-           │ • Syntax errors │
-           │ • Type errors   │
-           │ • Test results  │
-           │ • Explanations  │
-           └─────────────────┘
-                     │
-                     ▼
-           ┌─────────────────┐
-           │ Update UI       │
-           │ • Editor marks  │
-           │ • Test panel    │
-           │ • PR Review     │
            └─────────────────┘
 ```
 
