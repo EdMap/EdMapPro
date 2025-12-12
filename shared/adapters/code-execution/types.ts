@@ -171,7 +171,7 @@ export type EditorLayoutMode = 'side-by-side' | 'stacked' | 'tabbed' | 'focus-ed
 
 export type EditorMode = 'simple' | 'full';
 
-export type DockTab = 'terminal' | 'tests' | 'chat' | 'tips';
+export type DockTab = 'terminal' | 'tests' | 'chat' | 'tips' | 'review';
 
 export interface BottomDockConfig {
   enabled: boolean;

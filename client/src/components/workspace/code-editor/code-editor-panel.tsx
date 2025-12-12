@@ -177,7 +177,17 @@ export function CodeEditorPanel({
   const passedTests = lastResult?.testResults.filter(t => t.passed).length || 0;
   const totalTests = lastResult?.testResults.length || adapter.testCases.length;
   
-  const bottomDockConfig = adapter.ui.bottomDock;
+  // Dynamically add 'review' tab when there are review threads
+  const bottomDockConfig = useMemo(() => {
+    const baseConfig = adapter.ui.bottomDock;
+    if (reviewThreads.length > 0 && !baseConfig.enabledTabs.includes('review' as DockTab)) {
+      return {
+        ...baseConfig,
+        enabledTabs: [...baseConfig.enabledTabs, 'review' as DockTab],
+      };
+    }
+    return baseConfig;
+  }, [adapter.ui.bottomDock, reviewThreads.length]);
   
   return (
     <div className="flex flex-col h-full bg-background" data-testid="code-editor-panel">
