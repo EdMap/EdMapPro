@@ -55,6 +55,15 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 -   **State Analysis**: Tracks `userShowedUnderstanding`, `userAskedQuestions`, `sarahAnsweredQuestions`, `sarahOfferedNextSteps` - only evaluates user messages to avoid false positives from AI responses
 -   **Completion CTA**: Level-aware completion button text and messages shown when chat completes (buttonText, description, celebrationMessage). Interns get encouraging "You're ready to join your first sprint planning session!" while seniors get direct "Move on to planning."
 
+**Adaptive Sprint Tier Progression System**: Located in `shared/adapters/planning/tiers/`, this provides competency-based tier advancement for sprint planning ceremonies. Users earn advancement through demonstrated performance rather than automatic sprint-count progression:
+-   **Three Tiers**: Observer (watch and learn) → Co-Facilitator (participate with guidance) → Emerging Leader (lead with team backup)
+-   **Three-Layer Adapter Composition**: Role Base + Level Overlay + Tier Overlay merge to create personalized configurations
+-   **Advancement Criteria**: Requires 2 consecutive sessions scoring ≥70 on role-specific rubrics to advance
+-   **Role-Specific Rubric Weights**: Developers focus on estimation accuracy (35%), PMs on prioritization (30%) and goal formulation (35%), QA on test coverage (30%)
+-   **Tier Overlays**: Control engagement mode, team talk ratio, phase engagement levels, and UI permissions (estimation sliders, priority editor access)
+-   **Assessment Persistence**: `planningSessionAssessments` table tracks tier readiness scores and advancement decisions
+-   **Positive UX Framing**: "Practice more" messaging with specific focus areas rather than negative "not ready" feedback
+
 ## External Dependencies
 
 ### AI Services
