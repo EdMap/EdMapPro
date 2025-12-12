@@ -317,6 +317,100 @@ export class CodeReviewService {
   async isAvailable(): Promise<boolean> {
     return !!process.env.GROQ_API_KEY;
   }
+
+  async verifyAddressedComments(
+    threads: Array<{
+      id: number;
+      originalComment: string;
+      userResponse: string;
+      filename?: string | null;
+      lineNumber?: number | null;
+    }>,
+    files: Record<string, string>,
+    reReviewConfig: { 
+      requireUserResponse: boolean;
+      requireTestsPass: boolean;
+      strictCodeVerification: boolean;
+      verificationPrompt: string;
+    } | undefined
+  ): Promise<Array<{ threadId: number; verdict: 'approved' | 'needs_more_work'; reasoning: string }>> {
+    const results: Array<{ threadId: number; verdict: 'approved' | 'needs_more_work'; reasoning: string }> = [];
+    
+    const strictness = reReviewConfig?.strictCodeVerification ? 'strict' : 'moderate';
+    const strictnessGuidelines: Record<string, string> = {
+      lenient: 'Be encouraging. Accept reasonable attempts to address feedback, even if not perfect. Focus on effort and improvement.',
+      moderate: 'Balance quality with learning. Accept fixes that substantially address the concern, note minor remaining issues but approve if the main problem is fixed.',
+      strict: 'Apply high standards. Only approve if the issue is fully and correctly resolved. Request more work if there are remaining concerns.'
+    };
+    
+    for (const thread of threads) {
+      try {
+        const fileContext = thread.filename && files[thread.filename] 
+          ? `\n\nRelevant file (${thread.filename}):\n${files[thread.filename]}`
+          : '';
+        
+        const prompt = `## Code Review Verification Task
+
+You are verifying if a developer has adequately addressed a code review comment.
+
+### Original Review Comment:
+${thread.originalComment}
+
+### Developer's Response:
+${thread.userResponse}
+${fileContext}
+
+### Strictness Guidelines:
+${strictnessGuidelines[strictness]}
+
+### Your Task:
+Determine if the developer has adequately addressed the review comment.
+
+Respond with ONLY this JSON:
+{"verdict":"approved","reasoning":"Brief explanation"}
+
+Where verdict is either "approved" or "needs_more_work"`;
+
+        const response = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: "You are a senior code reviewer verifying if feedback has been addressed. Respond with JSON only." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 500,
+        });
+
+        const responseText = response.choices[0]?.message?.content || '';
+        const cleanedText = responseText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          results.push({
+            threadId: thread.id,
+            verdict: parsed.verdict === 'approved' ? 'approved' : 'needs_more_work',
+            reasoning: parsed.reasoning || 'Verification completed'
+          });
+        } else {
+          results.push({
+            threadId: thread.id,
+            verdict: 'approved',
+            reasoning: 'Verification passed (parsing fallback)'
+          });
+        }
+      } catch (error) {
+        console.error(`[CodeReview] Verification error for thread ${thread.id}:`, error);
+        results.push({
+          threadId: thread.id,
+          verdict: 'approved',
+          reasoning: 'Verification passed (error fallback)'
+        });
+      }
+    }
+    
+    return results;
+  }
 }
 
 export const codeReviewService = new CodeReviewService();

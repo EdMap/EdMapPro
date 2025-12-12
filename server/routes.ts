@@ -4061,19 +4061,71 @@ ${stateGuidance}`;
       
       const codeReviewSchema = z.object({
         ticketId: z.string(),
+        ticketIdNumeric: z.number().optional(),
         ticketTitle: z.string(),
         ticketDescription: z.string(),
         files: z.record(z.string()),
         userLevel: z.enum(['intern', 'junior', 'mid', 'senior']),
         userRole: z.enum(['developer', 'pm', 'qa', 'devops', 'data_science']),
+        branchName: z.string().optional(),
+        workspaceId: z.number().optional(),
       });
       
       const input = codeReviewSchema.parse(req.body);
+      
+      const numericTicketId = input.ticketIdNumeric || parseInt(input.ticketId, 10);
+      const isValidNumericId = !isNaN(numericTicketId) && numericTicketId > 0;
+      
+      if (!isValidNumericId) {
+        console.warn('[CodeReview] No valid numeric ticket ID provided - review threads will not be persisted for re-review workflow');
+      }
       
       const adapter = getSprintExecutionAdapter(input.userRole, input.userLevel);
       const prConfig = adapter.prReviewConfig;
       
       const results = await codeReviewService.reviewCodeWithAllReviewers(input, prConfig);
+      
+      let persistedThreadIds: number[] = [];
+      let prId: number | null = null;
+      let persistenceSkipped = false;
+      
+      if (isValidNumericId) {
+        let pr = await storage.getPullRequestByTicket(numericTicketId);
+        
+        if (!pr) {
+          pr = await storage.createPullRequest({
+            workspaceId: input.workspaceId || 1,
+            ticketId: numericTicketId,
+            sourceBranch: input.branchName || `feature/${input.ticketId}`,
+            targetBranch: 'main',
+            title: input.ticketTitle,
+            description: input.ticketDescription,
+            status: 'changes_requested',
+            prNumber: Date.now() % 10000,
+          });
+        }
+        
+        prId = pr.id;
+        
+        for (const reviewResult of results) {
+          for (const comment of reviewResult.comments) {
+            const thread = await storage.createReviewThread({
+              prId: pr.id,
+              reviewerId: comment.reviewerId,
+              reviewerName: comment.reviewerName,
+              initialComment: comment.content,
+              filename: comment.filename || null,
+              lineNumber: comment.lineNumber || null,
+              severity: comment.severity,
+              threadType: comment.type,
+              status: 'open',
+            });
+            persistedThreadIds.push(thread.id);
+          }
+        }
+      } else {
+        persistenceSkipped = true;
+      }
       
       res.json({
         success: true,
@@ -4084,6 +4136,9 @@ ${stateGuidance}`;
           role: r.role,
           color: r.color,
         })),
+        persistedThreadIds,
+        prId,
+        persistenceSkipped,
       });
     } catch (error) {
       console.error("Failed to review code:", error);
@@ -4094,6 +4149,102 @@ ${stateGuidance}`;
         });
       }
       res.status(500).json({ message: "Failed to review code" });
+    }
+  });
+
+  // ============================================================================
+  // PR Review Thread Endpoints (Respond, Request Re-Review)
+  // ============================================================================
+
+  app.post("/api/review-threads/:threadId/respond", async (req, res) => {
+    try {
+      const threadId = parseInt(req.params.threadId);
+      const { userResponse } = req.body;
+      
+      if (!userResponse || typeof userResponse !== 'string') {
+        return res.status(400).json({ message: "userResponse is required" });
+      }
+      
+      const updated = await storage.respondToReviewThread(threadId, userResponse);
+      if (!updated) {
+        return res.status(404).json({ message: "Thread not found" });
+      }
+      
+      res.json({ success: true, thread: updated });
+    } catch (error) {
+      console.error("Failed to respond to review thread:", error);
+      res.status(500).json({ message: "Failed to respond to review thread" });
+    }
+  });
+
+  app.post("/api/tickets/:ticketId/request-re-review", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const { files, userLevel, userRole } = req.body;
+      
+      const { codeReviewService } = await import("./services/code-review");
+      const { getSprintExecutionAdapter } = await import("@shared/adapters/execution");
+      
+      const pr = await storage.getPullRequestByTicket(ticketId);
+      if (!pr) {
+        return res.status(404).json({ message: "Pull request not found" });
+      }
+      
+      const threads = await storage.getReviewThreadsByPR(pr.id);
+      const addressedThreads = threads.filter(t => t.status === 'addressed' && t.userResponse);
+      
+      if (addressedThreads.length === 0) {
+        return res.status(400).json({ message: "No comments have been addressed yet" });
+      }
+      
+      const adapter = getSprintExecutionAdapter(userRole || 'developer', userLevel || 'intern');
+      const reReviewConfig = adapter.prReviewConfig.reReviewConfig;
+      
+      const mappedThreads = addressedThreads.map(t => ({
+        id: t.id,
+        originalComment: t.initialComment,
+        userResponse: t.userResponse || '',
+        filename: t.filename,
+        lineNumber: t.lineNumber
+      }));
+      
+      const verificationResults = await codeReviewService.verifyAddressedComments(
+        mappedThreads,
+        files,
+        reReviewConfig
+      );
+      
+      for (const result of verificationResults) {
+        await storage.verifyReviewThread(result.threadId, result.verdict);
+      }
+      
+      const updatedThreads = await storage.getReviewThreadsByPR(pr.id);
+      const allResolved = updatedThreads.every(t => t.status === 'resolved');
+      
+      if (allResolved) {
+        await storage.updatePullRequest(pr.id, { status: 'approved' });
+      }
+      
+      res.json({
+        success: true,
+        verificationResults,
+        allResolved,
+        threads: updatedThreads
+      });
+    } catch (error) {
+      console.error("Failed to request re-review:", error);
+      res.status(500).json({ message: "Failed to request re-review" });
+    }
+  });
+
+  app.get("/api/tickets/:ticketId/review-threads", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const threads = await storage.getReviewThreadsByTicket(ticketId);
+      res.json({ threads });
+    } catch (error) {
+      console.error("Failed to get review threads:", error);
+      res.status(500).json({ message: "Failed to get review threads" });
     }
   });
 
