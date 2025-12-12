@@ -36,6 +36,7 @@ edmap is an AI-powered B2B onboarding platform transforming students from "Inter
 
 ### Planned (⏳)
 
+- Static analysis (ESLint, TypeScript) for real-time error detection
 - Portfolio system and graduation flow
 - Multi-language support (Python, C++)
 - Full content for PM, QA, DevOps roles

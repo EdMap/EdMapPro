@@ -27,13 +27,15 @@ This approach aligns with edmap's core value proposition: users are learning thr
 
 | Risk | Mitigation |
 |------|------------|
-| LLM hallucinations | Static analysis layer catches real syntax/type errors |
+| LLM hallucinations | Ticket complexity calibrated; future static analysis planned |
 | Complex logic errors | Ticket complexity calibrated to LLM capabilities |
 | User trust ("is this real?") | Position as "AI mentor review" within simulation |
 
+> **Note**: Static analysis (ESLint, TypeScript type checking) is **planned but not yet implemented**. Currently LLM simulation handles all code analysis.
+
 ---
 
-## System Architecture
+## System Architecture (Current Implementation)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -59,24 +61,24 @@ This approach aligns with edmap's core value proposition: users are learning thr
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                       ANALYSIS PIPELINE                                  │
+│                       LLM SIMULATION PIPELINE ✅                         │
 │                                                                          │
-│  ┌─────────────────────┐    ┌─────────────────────┐                     │
-│  │  STATIC ANALYSIS    │    │  LLM SIMULATION     │                     │
-│  │  (Real, Instant)    │    │  (AI-Powered)       │                     │
-│  │                     │    │                     │                     │
-│  │  • ESLint errors    │    │  • Test predictions │                     │
-│  │  • TypeScript types │    │  • Behavior trace   │                     │
-│  │  • Syntax check     │    │  • Educational tips │                     │
-│  │  • Import errors    │    │  • Improvement hints│                     │
-│  └─────────────────────┘    └─────────────────────┘                     │
-│           │                          │                                   │
-│           ▼                          ▼                                   │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │               COMBINED FEEDBACK                                  │    │
-│  │  • Real errors from static analysis (100% accurate)             │    │
-│  │  • Simulated test results from LLM (~90% accurate)              │    │
-│  │  • Educational explanations of why code works/fails             │    │
+│  │               LLM CODE ANALYSIS (Groq)                           │    │
+│  │                                                                   │    │
+│  │  • Analyzes code for correctness                                 │    │
+│  │  • Predicts test pass/fail for each test case                    │    │
+│  │  • Explains why tests pass or fail                               │    │
+│  │  • Provides educational feedback and suggestions                 │    │
+│  │  • Returns mentor-style improvement tips                         │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              │                                           │
+│                              ▼                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │               FEEDBACK TO USER                                   │    │
+│  │  • Simulated test results (~90% accurate)                        │    │
+│  │  • Educational explanations of why code works/fails              │    │
+│  │  • Level-appropriate hints and suggestions                       │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -90,6 +92,8 @@ This approach aligns with edmap's core value proposition: users are learning thr
 │  • "Edge case not handled - what if userId is empty string?"            │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+> **Future Enhancement**: Static analysis (ESLint, TypeScript) will be added as a second pipeline branch to catch real syntax/type errors with 100% accuracy.
 
 ---
 
