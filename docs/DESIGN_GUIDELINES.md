@@ -212,14 +212,66 @@ Below the chat input, you see three suggestion chips (if you're an intern, they'
 
 You tap "Propose reduced scope" and the text appears in your input field. You tweak it slightly: "I could have the happy path ready by Thursday, but error handling and edge cases would need to ship Monday. Would that work for the demo?"
 
-You hit send. A moment later, Marcus replies: "That actually works - they mainly want to show the flow. Thanks for being flexible!"
+You hit send. A moment later, Marcus replies: "That actually works - they mainly want to show the flow. Thanks for being flexible! I'll create a ticket for the Thursday deliverable."
 
 A subtle card slides in showing your evaluation:
 - **Communication**: 88 - Clear and professional
 - **Problem-solving**: 92 - Offered concrete alternative  
 - **Assertiveness**: 85 - Maintained realistic scope
 
-The event completes. Your soft skills competency ticks up. You return to your ticket, a little more prepared for the real world.
+A toast appears: "Marcus added 'Payment Integration - Happy Path' to your board."
+
+You glance at your Kanban board - there it is in your Backlog, linked back to this conversation. The event completes. Your soft skills competency ticks up. You drag the new ticket to "In Progress" and get to work, a little more prepared for the real world.
+
+---
+
+### Chat-First → Conditional Ticket Flow
+
+The soft skill event IS the conversation. The ticket is a natural consequence.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. EVENT TRIGGERS                                           │
+│     Notification badge → User opens chat                     │
+├─────────────────────────────────────────────────────────────┤
+│  2. CONVERSATION (Soft Skill Practice)                       │
+│     Marcus: "Can you do X by Thursday?"                      │
+│     User: [Responds using suggestions or custom text]        │
+│     → Evaluation happens HERE                                │
+├─────────────────────────────────────────────────────────────┤
+│  3. OUTCOME                                                  │
+│     ┌─────────────┬─────────────────────────────────────┐   │
+│     │ ACCEPTED    │ Marcus creates ticket on Kanban     │   │
+│     │             │ Toast: "Ticket added to your board" │   │
+│     ├─────────────┼─────────────────────────────────────┤   │
+│     │ DECLINED    │ No ticket created                   │   │
+│     │             │ Coaching feedback provided          │   │
+│     ├─────────────┼─────────────────────────────────────┤   │
+│     │ DEFERRED    │ Ticket created with later due date  │   │
+│     │             │ "Let's revisit next sprint"         │   │
+│     └─────────────┴─────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Event Outcome Schema
+
+```typescript
+interface SoftSkillEventOutcome {
+  decision: 'accepted' | 'declined' | 'deferred';
+  createdTicketId?: number;    // If accepted/deferred
+  ticketTitle?: string;        // Generated from conversation
+  coachingNote?: string;       // If declined - learning opportunity
+  originatingEventId: string;  // Link back to conversation
+}
+```
+
+### Key Design Principles
+
+1. **Conversation is the event** - Evaluation happens on communication, not task completion
+2. **Tickets are consequences** - Natural outcome of agreeing to work
+3. **Traceability** - Every ticket links back to its originating conversation
+4. **Coaching on refusal** - Declining is valid, but comes with feedback
+5. **Authentic flow** - Mirrors how real work gets assigned via Slack/Teams
 
 ---
 
