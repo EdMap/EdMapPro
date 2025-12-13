@@ -183,3 +183,103 @@
 | Warning/Pending | Amber |
 | Error/Blocked | Red |
 | Neutral/Inactive | Gray |
+
+---
+
+## Soft Skill Events UI Architecture
+
+> **Status**: 🔄 In Design - Pending implementation
+
+### Overview
+
+Soft skill events are workplace scenarios that appear during sprints to practice professional communication. The UI uses a **channel-aware dispatcher architecture** where each event specifies which communication channel(s) to use.
+
+### User Experience Narrative
+
+**Day 2 of your sprint. You're in the zone, working on your ticket...**
+
+A subtle notification badge pulses in the workspace header. You tap it and see: "Marcus needs to talk to you about the timeline."
+
+You click through, and the team chat opens with Marcus's message already there:
+
+> "Hey, just got out of a meeting with the client. They're asking if we can get the payment integration done by Thursday instead of next Monday. I know it's tight. What do you think?"
+
+Below the chat input, you see three suggestion chips (if you're an intern, they're prominently labeled "Recommended"):
+
+- **Ask for details** - "What specifically needs to be ready for the demo?"
+- **Propose reduced scope** - "I could have the core flow ready, but edge cases would need to wait"
+- **Need time to assess** - "Let me check my current tasks and get back to you in an hour"
+
+You tap "Propose reduced scope" and the text appears in your input field. You tweak it slightly: "I could have the happy path ready by Thursday, but error handling and edge cases would need to ship Monday. Would that work for the demo?"
+
+You hit send. A moment later, Marcus replies: "That actually works - they mainly want to show the flow. Thanks for being flexible!"
+
+A subtle card slides in showing your evaluation:
+- **Communication**: 88 - Clear and professional
+- **Problem-solving**: 92 - Offered concrete alternative  
+- **Assertiveness**: 85 - Maintained realistic scope
+
+The event completes. Your soft skills competency ticks up. You return to your ticket, a little more prepared for the real world.
+
+---
+
+### Communication Channels
+
+| Channel | Use Case | Visual Treatment |
+|---------|----------|------------------|
+| `chat_dm` | Direct message scenarios (deadline pressure, help requests) | Appears in team chat with persona avatar |
+| `pr_review_thread` | Code feedback scenarios | Appears as review comment in PR panel |
+| `ceremony_agenda` | Meeting negotiation (planning tension, retro conflict) | Appears as agenda card in ceremony module |
+| `notification_badge` | Alerts and urgency indicators | Badge in workspace header |
+| `modal_standalone` | Complex or multi-step scenarios (fallback) | Dedicated modal overlay |
+
+### Multi-Channel Support
+
+Events can specify multiple channels:
+
+```typescript
+channels: [
+  { channelId: "chat_dm", role: "primary", responseCapture: "self" },
+  { channelId: "notification_badge", role: "auxiliary", lifecycle: { dismissOnPrimaryOpened: true } }
+]
+```
+
+**Coordination rules:**
+- Primary channel captures the user's response for evaluation
+- Auxiliary channels alert/coordinate but don't capture responses
+- Lifecycle hooks dismiss auxiliary surfaces when primary is addressed
+
+### Level-Aware Scaffolding
+
+| Level | Suggestions | Visual State |
+|-------|-------------|--------------|
+| Intern | Always visible | Expanded, labeled "Recommended" |
+| Junior | Visible | Expanded with subtle helper text |
+| Mid | Available | Collapsed, labeled "Optional prompts" |
+| Senior | Accessible | Hidden behind discreet icon |
+
+### Event Log Surface
+
+All soft skill events are tracked in a universal **Event Log** accessible from the workspace sidebar:
+- View past events and your responses
+- See evaluation feedback and growth areas
+- Track soft skill competency progression
+- Replay scenarios for review
+
+### Visual Affordances
+
+| Element | Treatment |
+|---------|-----------|
+| Event badge | Subtle pulse animation, accent color |
+| "Soft Skill Event" ribbon | Small label on injected messages/comments |
+| Suggestion chips | Rounded pills with hover state, click inserts text |
+| Evaluation card | Slide-in from right, dismissible after 5s |
+| Completion indicator | Checkmark animation on event log entry |
+
+### Design Requirements Before Implementation
+
+1. **Formalize contracts** - Channel descriptor schema, coordinator hooks, lifecycle policies
+2. **Design event log surface** - Universal place to see/review all soft skill events  
+3. **Define entry affordances** - Consistent "you're in an event" framing across channels
+4. **Plan testing strategy** - Contract tests per renderer, integration tests for bindings
+5. **Level-aware consistency** - Suggestion scaffolding must work identically across all renderers
