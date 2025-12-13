@@ -64,17 +64,18 @@ The platform extensively uses adapter systems for sprint planning, execution, PR
 -   **Assessment Persistence**: `planningSessionAssessments` table tracks tier readiness scores and advancement decisions
 -   **Positive UX Framing**: "Practice more" messaging with specific focus areas rather than negative "not ready" feedback
 
-**Soft Skill Event System**: Realistic workplace scenarios injected during sprints to practice professional communication, negotiation, and collaboration. Uses a **suggestion-insert UX pattern** where curated responses populate an editable message input:
--   **Templates**: Located in `shared/catalogue/templates/soft-skills/` (deadline-pressure, code-review-feedback, teammate-asks-help, unclear-requirements)
+**Soft Skill Event System**: Realistic workplace scenarios injected during sprints to practice professional communication, negotiation, and collaboration. **Status: Design complete, implementation deferred to Phase 2 (see `docs/ROADMAP.md`).**
+-   **One Event Per Sprint**: Single, meaningful soft skill moment per sprint with cadence gate (Day 2-4 window)
+-   **Event Taxonomy**: 5 categories (Task-Generating, Support/Escalation, Feedback/Review, Team Dynamics, Context/Discovery) each with target competency
+-   **Selection Mechanism**: Random → personalized progression using confidence thresholds; supports interview-seeded initial targeting
+-   **Templates**: Located in `shared/catalogue/templates/soft-skills/`
 -   **UX Pattern**: Suggestion chips insert text into message input (not direct submission); user can edit, send as-is, or write from scratch
 -   **Evaluation Logic**: `suggestionId` + `wasEdited` flag determines evaluation path - direct rubric mapping for unedited suggestions, LLM scoring for edited/free-form responses
 -   **Level-Aware Visibility**: Interns always see suggestions labeled "Recommended"; Seniors see collapsed/hidden suggestions
--   **Evaluation Criteria**: Weighted rubrics per event type (communication, problem-solving, assertiveness, collaboration)
--   **Event Flow**: Trigger (sprint day) → Display (modal with scenario) → Response → Evaluation → Feedback → Follow-up → Completion
 -   **Adapter Architecture**: Role/level adapters in `shared/adapters/soft-skills/` configure suggestion visibility, evaluation strictness, feedback tone
 -   **Evaluation Service**: `server/services/soft-skill-evaluation.ts` handles dual-path evaluation (rubric mapping vs LLM scoring) with competency delta calculation
--   **API Endpoints**: `GET /api/sprints/:sprintId/soft-skill-events`, `GET .../pending`, `POST /api/soft-skill-events/:activityId/respond`, `POST .../trigger`
--   **Storage**: `getSprintActivitiesByType()` filters sprint activities by type (e.g., 'soft_skill_event')
+-   **Extensible Actions**: Action set definitions with optional follow-through hooks for future HR/escalation simulations
+-   **Full Design**: See `docs/ROADMAP.md` for complete architecture, data model, and implementation plan
 
 ## External Dependencies
 
