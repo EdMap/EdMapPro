@@ -3270,6 +3270,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check if we need to insert auto-start sequence (using flag for idempotency)
         if (adapter.engagement?.autoStartConversation) {
+          // Get user and workspace info for personalization
+          const workspace = await storage.getWorkspaceInstance(workspaceId);
+          const user = await storage.getUser(workspace?.userId || 0);
+          const userName = user?.username || 'team member';
+          const userRole = workspace?.role || 'Developer';
+          
+          // Fetch backlog items for dynamic message interpolation
+          const planningState = await storage.getPlanningSessionState(workspaceId);
+          const backlogItemsForGet: BacklogItem[] = planningState?.backlogItems?.map(item => ({
+            id: item.id,
+            title: item.title,
+            type: item.type,
+            priority: item.priority,
+            points: item.points,
+          })) || [];
+          const backlogSummary = summarizeBacklog(backlogItemsForGet);
+          
+          const personalize = (text: string): string => {
+            return interpolateMessage(text, backlogSummary, userName, userRole);
+          };
+          
           const sequence = adapter.engagement.autoStartSequence;
           
           if (sequence && sequence.length > 0) {
@@ -3279,7 +3300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 sessionId: session.id,
                 sender: step.personaName,
                 senderRole: step.personaRole,
-                message: step.message,
+                message: personalize(step.message),
                 phase: step.phase,
                 isUser: false,
               });
@@ -3295,7 +3316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sessionId: session.id,
               sender: 'Priya',
               senderRole: 'Product Manager',
-              message: adapter.engagement.autoStartMessage,
+              message: personalize(adapter.engagement.autoStartMessage),
               phase: 'context',
               isUser: false,
             });
