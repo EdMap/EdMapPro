@@ -151,21 +151,21 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
             personaName: 'Priya',
             personaRole: 'Product Manager',
             phase: 'discussion',
-            message: `Alright team, let's dive into the backlog! Take a look at the items on the right panel.`
+            message: `Alright team, let's dive into the backlog! Take a look at the items on the right panel and let's discuss what makes sense for this sprint.`
           },
           {
             personaId: 'marcus',
             personaName: 'Marcus',
             personaRole: 'Senior Developer',
             phase: 'discussion',
-            message: `I see that timezone bug at the top - TICK-001. That's been causing customer complaints. Should probably prioritize that.`
+            message: `Looking at the top items, I think the bugs should take priority - they're impacting users directly. The features can follow once we've stabilized things.`
           },
           {
             personaId: 'alex',
             personaName: 'Alex',
             personaRole: 'QA Engineer',
             phase: 'discussion',
-            message: `Agreed on the timezone fix. And I'd suggest we look at TICK-004 too - that null check in the payment flow is a risk. Both are quick wins at 2-3 points each.`
+            message: `Agreed. Let's select the high-priority items first. They look like reasonable scope and I can start writing test cases while development is in progress.`
           }
         ]
       },
@@ -200,14 +200,13 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
       }
     ],
     selectionGuidance: {
-      mode: 'autoAssign',
-      suggestedItemIds: ['TICK-001', 'TICK-004'],
-      confirmationPrompt: `Good thinking, team. I've selected TICK-001 and TICK-004 based on what Marcus and Alex recommended - you can see them highlighted in the backlog panel on the right.
+      mode: 'prompted',
+      confirmationPrompt: `Great discussion team! Now let's select the items we want to commit to for this sprint.
 
-{{userName}}, take a moment to review the selected items. Feel free to ask questions about them, or if everything looks good, click Continue to move forward.`,
-      visualCueCopy: 'Items selected by team',
+{{userName}}, take a look at the backlog panel on the right and select the items the team discussed. Click on items to add them to the sprint, then click Continue when ready.`,
+      visualCueCopy: 'Select items for sprint',
       backlogPanelHighlight: true,
-      nextStepHint: 'Review selected items, then click Continue when ready'
+      nextStepHint: 'Select backlog items, then click Continue when ready'
     }
   },
   
