@@ -152,6 +152,11 @@ export function TicketWorkspace({
   const [showCodeDuringReview, setShowCodeDuringReview] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   
+  // Track if we've already cleared state for the current reset cycle (prevents infinite loop)
+  const lastClearedTicketRef = useRef<string | null>(null);
+  // Key to force CodeEditorPanel remount when ticket is reset
+  const [editorResetKey, setEditorResetKey] = useState(0);
+  
   // Persist review threads in localStorage to survive component remount
   const reviewThreadsKey = `reviewThreads-${ticketId}`;
   const [reviewThreads, setReviewThreads] = useState<ReviewThread[]>(() => {
@@ -240,6 +245,68 @@ export function TicketWorkspace({
     }
     setCodeFilesForReview(codeExecutionAdapter?.files.starterFiles || {});
   }, [ticket?.ticketKey, codeExecutionAdapter?.files.starterFiles]);
+
+  // Auto-clear saved code and review threads when ticket is reset to "todo" with fresh gitState
+  // This effect runs only when the ticket's reset state actually changes
+  const ticketResetSignature = useMemo(() => {
+    if (!ticket?.ticketKey) return null;
+    
+    // Check if ticket is in "todo" status with a completely fresh/reset gitState
+    // All git state fields must indicate a clean slate
+    const isReset = ticket.status === 'todo' && 
+      !gitState.branchName && 
+      gitState.commits.length === 0 &&
+      !gitState.codeWorkComplete &&
+      !gitState.isPushed &&
+      !gitState.prCreated &&
+      !gitState.isMerged;
+    
+    return isReset ? `${ticket.ticketKey}-reset` : null;
+  }, [ticket?.ticketKey, ticket?.status, gitState.branchName, gitState.commits.length, gitState.codeWorkComplete, gitState.isPushed, gitState.prCreated, gitState.isMerged]);
+  
+  useEffect(() => {
+    // Only clear if we have a reset signature and haven't already cleared for this exact state
+    if (ticketResetSignature && lastClearedTicketRef.current !== ticketResetSignature) {
+      lastClearedTicketRef.current = ticketResetSignature;
+      
+      const ticketKey = ticket?.ticketKey;
+      if (!ticketKey) return;
+      
+      // Clear saved code from localStorage
+      const codeStorageKey = `edmap-code-${ticketKey}`;
+      try {
+        if (localStorage.getItem(codeStorageKey)) {
+          localStorage.removeItem(codeStorageKey);
+          console.log(`Auto-cleared saved code for reset ticket: ${ticketKey}`);
+        }
+      } catch (e) {
+        console.error('Failed to clear saved code:', e);
+      }
+      
+      // Clear review threads from localStorage
+      const threadsKey = `reviewThreads-${ticketId}`;
+      try {
+        if (localStorage.getItem(threadsKey)) {
+          localStorage.removeItem(threadsKey);
+          console.log(`Auto-cleared review threads for reset ticket: ${ticketKey}`);
+        }
+      } catch (e) {
+        console.error('Failed to clear review threads:', e);
+      }
+      
+      // Reset component state - batch all updates together
+      setCodeFilesForReview({});
+      setReviewThreads([]);
+      setLastTestResult(null);
+      setOptimisticCodeWorkComplete(null);
+      setTerminalLines([]);
+      // Force CodeEditorPanel to remount with fresh state from localStorage (now empty)
+      setEditorResetKey(prev => prev + 1);
+    } else if (!ticketResetSignature && lastClearedTicketRef.current) {
+      // Ticket is no longer in reset state (user started working), allow future reset handling
+      lastClearedTicketRef.current = null;
+    }
+  }, [ticketResetSignature, ticket?.ticketKey, ticketId]);
   
   const handleCodeFilesChange = useCallback((files: Record<string, string>) => {
     setCodeFilesForReview(files);
@@ -1160,6 +1227,7 @@ Time:        0.842s`;
               ) : codeExecutionAdapter && (
                 <div className="flex-1 h-full min-h-[600px]">
                   <CodeEditorPanel
+                    key={`editor-${ticket?.ticketKey}-${editorResetKey}`}
                     adapter={codeExecutionAdapter}
                     ticketId={ticket?.ticketKey || String(ticketId)}
                     terminalLines={terminalLines.map(line => ({
@@ -1250,6 +1318,7 @@ Time:        0.842s`;
               </div>
               <div className="flex-1 h-full min-h-[600px]">
                 <CodeEditorPanel
+                  key={`editor-review-${ticket?.ticketKey}-${editorResetKey}`}
                   adapter={codeExecutionAdapter}
                   ticketId={ticket?.ticketKey || String(ticketId)}
                   terminalLines={terminalLines.map(line => ({
