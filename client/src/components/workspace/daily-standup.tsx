@@ -107,6 +107,32 @@ export function DailyStandup({
     },
   });
 
+  const completeStandupMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(
+        "POST",
+        "/api/standup/complete",
+        { sprintId, sprintDay }
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      onComplete();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save standup completion. Continuing anyway.",
+        variant: "destructive",
+      });
+      onComplete();
+    },
+  });
+
+  const handleCompleteStandup = () => {
+    completeStandupMutation.mutate();
+  };
+
   const feedbackMutation = useMutation({
     mutationFn: async (data: StandupFormData) => {
       const response = await apiRequest(
@@ -397,7 +423,8 @@ export function DailyStandup({
                     
                     <div className="pt-4">
                       <Button 
-                        onClick={onComplete} 
+                        onClick={handleCompleteStandup}
+                        disabled={completeStandupMutation.isPending}
                         className="w-full"
                         data-testid="button-continue-to-board"
                       >

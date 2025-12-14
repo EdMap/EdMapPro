@@ -4311,6 +4311,48 @@ ${stateGuidance}`;
   });
 
   // ============================================================================
+  // Standup Completion Endpoint
+  // ============================================================================
+  
+  app.post("/api/standup/complete", async (req, res) => {
+    try {
+      const completeStandupSchema = z.object({
+        sprintId: z.number(),
+        sprintDay: z.number(),
+      });
+      
+      const { sprintId, sprintDay } = completeStandupSchema.parse(req.body);
+      
+      // Find the standup ceremony for this sprint
+      const ceremonies = await storage.getCeremonyInstances(sprintId);
+      const standupCeremony = ceremonies.find(
+        c => c.ceremonyType === 'standup' && c.status === 'pending'
+      );
+      
+      if (!standupCeremony) {
+        return res.json({ success: true, message: "No pending standup found" });
+      }
+      
+      // Mark the ceremony as completed
+      await storage.updateCeremonyInstance(standupCeremony.id, {
+        status: 'completed',
+        completedAt: new Date(),
+      });
+      
+      res.json({ success: true, ceremonyId: standupCeremony.id });
+    } catch (error) {
+      console.error("Failed to complete standup:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to complete standup" });
+    }
+  });
+
+  // ============================================================================
   // Standup Feedback Endpoint (AI-Generated Team Responses)
   // ============================================================================
   
