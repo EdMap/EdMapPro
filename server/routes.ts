@@ -3336,6 +3336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set autoStartInitialized: true upfront if we will auto-start (prevents race condition)
         session = await storage.createPlanningSession({
           workspaceId,
+          sprintId: workspace.currentSprintId, // Link to current sprint for backlog access
           role: workspace.role,
           level: sessionLevel,
           currentPhase: 'context',
