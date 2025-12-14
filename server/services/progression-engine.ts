@@ -423,6 +423,7 @@ class ProgressionEngine {
           acceptanceCriteria: string[];
           difficulty: string;
         };
+        isCarryover?: boolean;
       }>;
       softSkillEvents: Array<{
         templateId: string;
@@ -451,6 +452,47 @@ class ProgressionEngine {
 
     const previousSprints = await storage.getSprintsByJourney(journeyId);
     
+    // Get incomplete tickets from the previous sprint for carryover
+    let carryoverTickets: Array<{
+      templateId: string;
+      type: string;
+      day: number;
+      generatedTicket: {
+        title: string;
+        description: string;
+        acceptanceCriteria: string[];
+        difficulty: string;
+      };
+      isCarryover: boolean;
+    }> = [];
+
+    if (previousSprints.length > 0) {
+      // Get the most recent sprint
+      const lastSprint = previousSprints.sort((a, b) => b.sprintNumber - a.sprintNumber)[0];
+      const previousTickets = await storage.getSprintTickets(lastSprint.id);
+      
+      // Find incomplete tickets (not 'done')
+      const incompleteTickets = previousTickets.filter(ticket => ticket.status !== 'done');
+      
+      // Convert incomplete tickets to carryover format, preserving original type
+      carryoverTickets = incompleteTickets.map((ticket, index) => ({
+        templateId: ticket.ticketKey,
+        type: ticket.type, // Preserve original type (bug, feature, improvement, etc.)
+        day: index + 1, // Assign to early days in the new sprint
+        generatedTicket: {
+          title: ticket.title,
+          description: ticket.description,
+          acceptanceCriteria: (ticket.acceptanceCriteria as string[]) || [],
+          difficulty: this.priorityToDifficulty(ticket.priority as 'high' | 'medium' | 'low'),
+        },
+        isCarryover: true,
+      }));
+
+      if (carryoverTickets.length > 0) {
+        console.log(`Carrying over ${carryoverTickets.length} incomplete tickets from Sprint ${lastSprint.sprintNumber}`);
+      }
+    }
+
     let readiness;
     try {
       readiness = await this.calculateReadinessScore(journey.userId);
@@ -472,8 +514,22 @@ class ProgressionEngine {
       previousSprints: previousSprints as any[],
       userCompetencyGaps: readiness.gaps,
       avoidThemes: [],
-      avoidTemplates: []
+      avoidTemplates: carryoverTickets.map(t => t.templateId) // Avoid regenerating carryover tickets
     });
+
+    // Combine carryover tickets with newly generated tickets
+    // Redistribute all tickets within the 5-day sprint window
+    const allTickets = [...carryoverTickets, ...generatedBacklog.tickets.map((ticket: any) => ({
+      ...ticket,
+      isCarryover: false,
+    }))];
+    
+    // Redistribute day assignments within valid sprint bounds (days 1-5)
+    const SPRINT_DAYS = 5;
+    const combinedTickets = allTickets.map((ticket, index) => ({
+      ...ticket,
+      day: Math.min((index % SPRINT_DAYS) + 1, SPRINT_DAYS), // Distribute evenly across sprint days
+    }));
 
     const arcs = await storage.getJourneyArcs(journeyId);
     const newArcOrder = arcs.length + 1;
@@ -492,23 +548,31 @@ class ProgressionEngine {
       }
     });
 
+    // Build full backlog object with combined tickets
+    const fullBacklog = {
+      ...generatedBacklog,
+      tickets: combinedTickets, // Combined carryover + new tickets
+    };
+
     const sprint = await storage.createSprint({
       arcId: arc.id,
       sprintNumber: newSprintNumber,
       goal: `Complete ${generatedBacklog.theme.name} sprint objectives`,
       theme: generatedBacklog.theme.name,
-      backlog: generatedBacklog.tickets,
-      userTickets: generatedBacklog.tickets.filter((t: any) => t.type === 'bug' || t.type === 'feature'),
+      backlog: fullBacklog, // Store full GeneratedSprintBacklog object
+      userTickets: combinedTickets, // Include all ticket types for user queue
       teamTickets: [],
       ceremonies: generatedBacklog.ceremonies,
       generationMetadata: {
         themeId: generatedBacklog.theme.id,
         usedTemplateIds: [
+          ...carryoverTickets.map((t: any) => t.templateId), // Include carryover template IDs
           ...generatedBacklog.tickets.map((t: any) => t.templateId),
           ...generatedBacklog.softSkillEvents.map((e: any) => e.templateId)
         ],
         difficultyBand,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        carryoverCount: carryoverTickets.length,
       }
     });
 
@@ -520,8 +584,18 @@ class ProgressionEngine {
     return {
       sprint,
       arc,
-      generatedBacklog
+      generatedBacklog: fullBacklog
     };
+  }
+
+  // Helper to convert priority back to difficulty for carryover tickets
+  private priorityToDifficulty(priority: 'high' | 'medium' | 'low'): string {
+    switch (priority) {
+      case 'high': return 'junior_ready';
+      case 'medium': return 'contributor';
+      case 'low': return 'explorer';
+      default: return 'contributor';
+    }
   }
 
   /**

@@ -3916,18 +3916,81 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     // Get completed ticket keys from previous sprints to filter them out
     const completedTicketKeys = await this.getCompletedTicketKeysForWorkspace(workspaceId, session.sprintId || undefined);
 
-    const catalogueItems = getBacklogItems();
-    // Filter out items that were completed in previous sprints
-    const availableItems = catalogueItems.filter(item => !completedTicketKeys.includes(item.id));
-    const backlogItems = availableItems.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      type: item.type,
-      priority: item.priority,
-      points: item.points,
-      selected: selectedItemIds.includes(item.id)
-    }));
+    // Try to use dynamically generated sprint backlog, fall back to static catalogue
+    let backlogItems: Array<{
+      id: string;
+      title: string;
+      description: string;
+      type: 'bug' | 'feature' | 'improvement';
+      priority: 'high' | 'medium' | 'low';
+      points: number;
+      selected: boolean;
+      isCarryover?: boolean;
+    }> = [];
+
+    // Load sprint's generated backlog if sprintId exists
+    if (session.sprintId) {
+      const sprint = await this.getSprint(session.sprintId);
+      if (sprint && sprint.backlog) {
+        // Handle both full GeneratedSprintBacklog object and legacy array formats
+        const backlogData = sprint.backlog as unknown;
+        let tickets: Array<{
+          templateId: string;
+          type: string;
+          day: number;
+          appliedContext?: Record<string, string>;
+          generatedTicket: {
+            title: string;
+            description: string;
+            acceptanceCriteria: string[];
+            difficulty: string;
+          };
+          isCarryover?: boolean;
+        }> = [];
+
+        // Check if backlog is full object with tickets property or direct array
+        if (Array.isArray(backlogData)) {
+          tickets = backlogData;
+        } else if (backlogData && typeof backlogData === 'object' && 'tickets' in backlogData) {
+          const backlogObj = backlogData as { tickets?: unknown[] };
+          if (Array.isArray(backlogObj.tickets)) {
+            tickets = backlogObj.tickets as typeof tickets;
+          }
+        }
+
+        if (tickets.length > 0) {
+          // Convert generated tickets to BacklogItem format
+          backlogItems = tickets
+            .filter(ticket => ticket.templateId && !completedTicketKeys.includes(ticket.templateId))
+            .map((ticket) => ({
+              id: ticket.templateId,
+              title: ticket.generatedTicket?.title || 'Untitled',
+              description: ticket.generatedTicket?.description || '',
+              type: (ticket.type === 'bug' || ticket.type === 'feature' || ticket.type === 'improvement' 
+                ? ticket.type : 'feature') as 'bug' | 'feature' | 'improvement',
+              priority: this.difficultyToPriority(ticket.generatedTicket?.difficulty || 'contributor'),
+              points: this.difficultyToPoints(ticket.generatedTicket?.difficulty || 'contributor'),
+              selected: selectedItemIds.includes(ticket.templateId),
+              isCarryover: ticket.isCarryover || false,
+            }));
+        }
+      }
+    }
+
+    // Fall back to static catalogue if no sprint backlog available
+    if (backlogItems.length === 0) {
+      const catalogueItems = getBacklogItems();
+      const availableItems = catalogueItems.filter(item => !completedTicketKeys.includes(item.id));
+      backlogItems = availableItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        type: item.type,
+        priority: item.priority,
+        points: item.points,
+        selected: selectedItemIds.includes(item.id)
+      }));
+    }
 
     const adapter = getSprintPlanningAdapter(session.role as import('@shared/adapters').Role, session.level as import('@shared/adapters').Level);
 
@@ -3947,6 +4010,25 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         commitmentGuidance: adapter.commitmentGuidance,
       }
     };
+  }
+
+  // Helper methods for converting difficulty to priority/points
+  private difficultyToPriority(difficulty: string): 'high' | 'medium' | 'low' {
+    switch (difficulty) {
+      case 'explorer': return 'low';
+      case 'contributor': return 'medium';
+      case 'junior_ready': return 'high';
+      default: return 'medium';
+    }
+  }
+
+  private difficultyToPoints(difficulty: string): number {
+    switch (difficulty) {
+      case 'explorer': return 2;
+      case 'contributor': return 3;
+      case 'junior_ready': return 5;
+      default: return 3;
+    }
   }
 
   async createSprintTicketsFromPlanning(workspaceId: number, sprintId: number): Promise<void> {
@@ -3971,26 +4053,76 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     const remainingTickets = await this.getSprintTickets(sprintId);
     const existingTicketKeys = remainingTickets.map(t => t.ticketKey);
 
-    for (const itemId of selectedItemIds) {
-      const catalogueItem = getBacklogItemById(itemId);
-      if (!catalogueItem) continue;
+    // Try to load from sprint's generated backlog first
+    const sprint = await this.getSprint(sprintId);
+    let backlogTickets: Array<{
+      templateId: string;
+      type: string;
+      day: number;
+      appliedContext?: Record<string, string>;
+      generatedTicket: {
+        title: string;
+        description: string;
+        acceptanceCriteria: string[];
+        difficulty: string;
+      };
+      isCarryover?: boolean;
+    }> = [];
 
+    if (sprint?.backlog) {
+      const backlogData = sprint.backlog as unknown;
+      // Handle both full GeneratedSprintBacklog object and legacy array formats
+      if (Array.isArray(backlogData)) {
+        backlogTickets = backlogData;
+      } else if (backlogData && typeof backlogData === 'object' && 'tickets' in backlogData) {
+        const backlogObj = backlogData as { tickets?: unknown[] };
+        if (Array.isArray(backlogObj.tickets)) {
+          backlogTickets = backlogObj.tickets as typeof backlogTickets;
+        }
+      }
+    }
+
+    for (const itemId of selectedItemIds) {
       if (existingTicketKeys.includes(itemId)) continue;
 
-      await this.createSprintTicket({
-        sprintId,
-        ticketKey: catalogueItem.id,
-        title: catalogueItem.title,
-        description: catalogueItem.description,
-        type: catalogueItem.type,
-        priority: catalogueItem.priority,
-        storyPoints: catalogueItem.points,
-        status: 'todo',
-        dayAssigned: 1,
-        acceptanceCriteria: catalogueItem.acceptanceCriteria || [],
-        gitState: {},
-        reviewComments: []
-      });
+      // First try to find in sprint's generated backlog
+      const generatedTicket = backlogTickets.find(t => t.templateId === itemId);
+      
+      if (generatedTicket) {
+        await this.createSprintTicket({
+          sprintId,
+          ticketKey: generatedTicket.templateId,
+          title: generatedTicket.generatedTicket.title,
+          description: generatedTicket.generatedTicket.description,
+          type: generatedTicket.type,
+          priority: this.difficultyToPriority(generatedTicket.generatedTicket.difficulty),
+          storyPoints: this.difficultyToPoints(generatedTicket.generatedTicket.difficulty),
+          status: 'todo',
+          dayAssigned: generatedTicket.day || 1,
+          acceptanceCriteria: generatedTicket.generatedTicket.acceptanceCriteria || [],
+          gitState: {},
+          reviewComments: []
+        });
+      } else {
+        // Fall back to static catalogue
+        const catalogueItem = getBacklogItemById(itemId);
+        if (!catalogueItem) continue;
+
+        await this.createSprintTicket({
+          sprintId,
+          ticketKey: catalogueItem.id,
+          title: catalogueItem.title,
+          description: catalogueItem.description,
+          type: catalogueItem.type,
+          priority: catalogueItem.priority,
+          storyPoints: catalogueItem.points,
+          status: 'todo',
+          dayAssigned: 1,
+          acceptanceCriteria: catalogueItem.acceptanceCriteria || [],
+          gitState: {},
+          reviewComments: []
+        });
+      }
     }
   }
 
