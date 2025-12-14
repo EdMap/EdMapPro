@@ -177,23 +177,23 @@ The pagination can wait - it's more of a performance nice-to-have at this point.
             personaName: 'Priya',
             personaRole: 'Product Manager',
             phase: 'commitment',
-            message: `Great discussion everyone! Now let's finalize our sprint commitment.`
+            message: `Great discussion everyone! Now let's finalize our sprint commitment based on what we've selected.`
           },
           {
             personaId: 'marcus',
             personaName: 'Marcus',
             personaRole: 'Senior Developer',
             phase: 'commitment',
-            message: `We've got the timezone fix and payment null check - both are critical bugs affecting users.`
+            message: `Looking at the selected items, this feels like a solid scope for the sprint. We should be able to deliver quality work without overcommitting.`
           },
           {
             personaId: 'priya',
             personaName: 'Priya',
             personaRole: 'Product Manager',
             phase: 'commitment',
-            message: `Right. Our sprint goal will be: "Improve payment reliability and fix user-facing timezone issues."
+            message: `Agreed. I'll formulate our sprint goal based on the items we've committed to.
 
-{{userName}}, as a developer you'd typically help estimate and commit to the work, but the PM usually defines the goal. Does this goal make sense given what we've selected? Any questions before we start the sprint?`,
+{{userName}}, does everything look good? Any questions before we kick off the sprint?`,
             requiresUserResponse: true
           }
         ]

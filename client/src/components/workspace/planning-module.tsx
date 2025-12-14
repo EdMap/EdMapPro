@@ -917,13 +917,16 @@ export function PlanningModule({
     if (!sessionState) return false;
     const { session, backlogItems } = sessionState;
     
+    // Don't allow advancing while messages are still being staggered/displayed
+    const allMessagesDisplayed = visibleMessageCount >= messages.length && !isStaggering;
+    
     switch (session.currentPhase) {
       case 'context':
-        return sessionState.messages.length >= 2;
+        return sessionState.messages.length >= 2 && allMessagesDisplayed;
       case 'discussion':
-        return (session.selectedItems || []).length > 0;
+        return (session.selectedItems || []).length > 0 && allMessagesDisplayed;
       case 'commitment':
-        return !!session.goalStatement;
+        return !!session.goalStatement && allMessagesDisplayed;
       default:
         return false;
     }
