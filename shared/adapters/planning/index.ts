@@ -35,6 +35,7 @@ import { getTierOverlay, getTierAdvancementMessaging } from './tiers';
 
 export * from './types';
 export * from './tiers';
+export * from './message-builder';
 
 const roleAdapters: Record<Role, RolePlanningAdapter> = {
   developer: developerPlanningAdapter,

@@ -73,47 +73,43 @@ Feel free to observe how we run these meetings - I'll check in with you as we go
         phase: 'context',
         message: `Alright, let me walk through everything we have in the backlog right now. Looking at our board, we've got:
 
-- A timezone display bug affecting users in different regions
-- The user notifications feature that's been requested
-- A null check issue in the payment flow
-- A request to add pagination to the user list
-- Some technical debt items around test coverage
+{{backlogSummary}}
 
-Based on stakeholder feedback and support tickets, I'd recommend we prioritize the timezone bug first - it's been escalated. The notifications feature is also high priority for user engagement.`
+Based on stakeholder feedback and support tickets, I'd recommend we start with the high-priority items. {{bugsSummary}} should be addressed first since they're impacting users directly.`
       },
       {
         personaId: 'marcus',
         personaName: 'Marcus',
         personaRole: 'Senior Developer',
         phase: 'context',
-        message: `Makes sense on the timezone bug - I've seen similar issues before. Usually comes down to storing everything in UTC and converting on display. Should be a targeted fix.
+        message: `That makes sense. Looking at the bugs, those are good candidates for quick wins. The features like {{featuresSummary}} will need more discussion on scope.
 
-Quick question on notifications - are we talking push notifications or just in-app? That would significantly change the scope.`
+Let me think about the technical approach - do we have any blockers or dependencies I should know about?`
       },
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `Good question. For now, we're scoping it to in-app notifications only. Push notifications are on the roadmap for next quarter.
+        message: `Good question. No major blockers right now. Given our velocity, I think we can realistically fit the high-priority bugs and at least one feature work item.
 
-Given our velocity, I think we can realistically fit the timezone fix, the notifications feature, and maybe the payment bug. The pagination might need to wait unless we have extra capacity.`
+We should prioritize based on user impact and effort.`
       },
       {
         personaId: 'alex',
         personaName: 'Alex',
         personaRole: 'QA Engineer',
         phase: 'context',
-        message: `I'd prioritize the payment bug over pagination if we have room. Failed payments directly impact revenue, and I was working in that area last sprint so the context is fresh.
+        message: `I agree with that approach. I'll start writing test cases for the bugs while development is in progress. That way we can validate fixes quickly.
 
-The pagination can wait - it's more of a performance nice-to-have at this point.`
+The lower priority items can wait for the next sprint if needed.`
       },
       {
         personaId: 'priya',
         personaName: 'Priya',
         personaRole: 'Product Manager',
         phase: 'context',
-        message: `Good point, Alex. Let's tentatively plan for timezone, notifications, and payment bug as our core scope.
+        message: `Great input, team. Let's keep that prioritization in mind as we move forward.
 
 {{userName}}, you've been listening to how we prioritize - any questions so far about the backlog or how we're deciding what to work on?`,
         requiresUserResponse: true

@@ -10,7 +10,7 @@ import { openaiService } from "./services/openai";
 import { workspaceOrchestrator } from "./services/workspace-orchestrator";
 import { insertSimulationSessionSchema } from "@shared/schema";
 import { z } from "zod";
-import { getSprintPlanningAdapter } from "@shared/adapters/planning";
+import { getSprintPlanningAdapter, summarizeBacklog, interpolateMessage, type BacklogItem } from "@shared/adapters/planning";
 import { getTeamIntroConfig, buildTeamIntroSystemPrompt } from "@shared/adapters/team-intro";
 import { getComprehensionConfig, buildComprehensionSystemPrompt, buildComprehensionGuidance, analyzeComprehensionState, type ComprehensionState } from "@shared/adapters/comprehension";
 import { progressionEngine } from "./services/progression-engine";
@@ -3123,10 +3123,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 : role === 'pm' ? 'Product Manager'
                 : 'team member';
               
+              // Fetch backlog items for dynamic message interpolation
+              const planningState = await storage.getPlanningSessionState(workspaceId);
+              const backlogItemsForMsg: BacklogItem[] = planningState?.backlogItems?.map(item => ({
+                id: item.id,
+                title: item.title,
+                type: item.type,
+                priority: item.priority,
+                points: item.points,
+              })) || [];
+              const backlogSummary = summarizeBacklog(backlogItemsForMsg);
+              
               const personalize = (text: string): string => {
-                return text
-                  .replace(/\{\{userName\}\}/g, userName)
-                  .replace(/\{\{userRole\}\}/g, userRole);
+                return interpolateMessage(text, backlogSummary, userName, userRole);
               };
               
               const sequence = adapter.engagement?.autoStartSequence;
@@ -3360,11 +3369,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : workspace.role === 'pm' ? 'Product Manager'
             : 'team member';
           
-          // Helper to substitute personalization placeholders
+          // Fetch backlog items for dynamic message interpolation
+          const planningState = await storage.getPlanningSessionState(workspaceId);
+          const backlogItems: BacklogItem[] = planningState?.backlogItems?.map(item => ({
+            id: item.id,
+            title: item.title,
+            type: item.type,
+            priority: item.priority,
+            points: item.points,
+          })) || [];
+          const backlogSummary = summarizeBacklog(backlogItems);
+          
+          // Helper to substitute personalization and backlog placeholders
           const personalize = (text: string): string => {
-            return text
-              .replace(/\{\{userName\}\}/g, userName)
-              .replace(/\{\{userRole\}\}/g, userRole);
+            return interpolateMessage(text, backlogSummary, userName, userRole);
           };
           
           const sequence = adapter.engagement?.autoStartSequence;
@@ -3603,13 +3621,22 @@ CRITICAL RULES:
         const workspace = await storage.getWorkspaceInstance(workspaceId);
         const user = await storage.getUser(workspace?.userId || 0);
         
-        // Helper to personalize messages
+        // Fetch backlog items for dynamic message interpolation
+        const planningState = await storage.getPlanningSessionState(workspaceId);
+        const backlogItemsForInterpolation: BacklogItem[] = planningState?.backlogItems?.map(item => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          priority: item.priority,
+          points: item.points,
+        })) || [];
+        const backlogSummary = summarizeBacklog(backlogItemsForInterpolation);
+        
+        // Helper to personalize messages with user and backlog data
         const personalize = (text: string) => {
           const userName = user?.username || 'team member';
           const userRole = workspace?.role || 'Developer';
-          return text
-            .replace(/\{\{userName\}\}/g, userName)
-            .replace(/\{\{userRole\}\}/g, userRole);
+          return interpolateMessage(text, backlogSummary, userName, userRole);
         };
         
         // Handle commitment guidance for commitment phase
