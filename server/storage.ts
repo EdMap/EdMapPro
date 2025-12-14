@@ -3343,6 +3343,27 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     return results[0];
   }
 
+  async getCompletedTicketKeysForWorkspace(workspaceId: number, currentSprintId?: number): Promise<string[]> {
+    const workspace = await this.getWorkspaceInstance(workspaceId);
+    if (!workspace || !workspace.journeyId) return [];
+
+    const allSprints = await this.getSprintsByJourney(workspace.journeyId);
+    
+    // Include all sprints except the current one (we want to filter out completed work from previous sprints)
+    const previousSprints = currentSprintId 
+      ? allSprints.filter(s => s.id !== currentSprintId)
+      : allSprints;
+
+    const completedKeys: string[] = [];
+    for (const sprint of previousSprints) {
+      const tickets = await this.getSprintTickets(sprint.id);
+      // Case-insensitive status check to handle 'done', 'Done', 'DONE' variants
+      const doneTickets = tickets.filter(t => t.status?.toLowerCase() === 'done');
+      completedKeys.push(...doneTickets.map(t => t.ticketKey));
+    }
+    return completedKeys;
+  }
+
   async createSprintTicket(ticket: InsertSprintTicket): Promise<SprintTicket> {
     const results = await db.insert(sprintTickets).values({
       ...ticket,
@@ -3892,8 +3913,13 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
 
     const selectedItemIds = (session.selectedItems as string[]) || [];
 
+    // Get completed ticket keys from previous sprints to filter them out
+    const completedTicketKeys = await this.getCompletedTicketKeysForWorkspace(workspaceId, session.sprintId || undefined);
+
     const catalogueItems = getBacklogItems();
-    const backlogItems = catalogueItems.map(item => ({
+    // Filter out items that were completed in previous sprints
+    const availableItems = catalogueItems.filter(item => !completedTicketKeys.includes(item.id));
+    const backlogItems = availableItems.map(item => ({
       id: item.id,
       title: item.title,
       description: item.description,
