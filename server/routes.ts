@@ -3096,7 +3096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const willAutoStart = adapter.engagement?.autoStartConversation ?? false;
             
             // Create planning session matching the proper schema structure
-            await storage.createPlanningSession({
+            const newPlanningSession = await storage.createPlanningSession({
               workspaceId,
               sprintId: newSprintResult.sprint.id,
               role: currentWorkspace.role,
@@ -3111,6 +3111,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             
             console.log(`[Sprint Cycling] New planning session created for sprint ${newSprintResult.sprint.sprintNumber}`);
+            
+            // Generate auto-start messages using the adapter architecture (same as POST /planning)
+            if (willAutoStart && newPlanningSession) {
+              const user = await storage.getUser(currentWorkspace.userId);
+              const userName = user?.username || 'team member';
+              const userRole = role === 'developer' ? 'Developer' 
+                : role === 'qa' ? 'QA Engineer'
+                : role === 'devops' ? 'DevOps Engineer'
+                : role === 'data_science' ? 'Data Scientist'
+                : role === 'pm' ? 'Product Manager'
+                : 'team member';
+              
+              const personalize = (text: string): string => {
+                return text
+                  .replace(/\{\{userName\}\}/g, userName)
+                  .replace(/\{\{userRole\}\}/g, userRole);
+              };
+              
+              const sequence = adapter.engagement?.autoStartSequence;
+              
+              if (sequence && sequence.length > 0) {
+                for (const step of sequence) {
+                  await storage.createPlanningMessage({
+                    sessionId: newPlanningSession.id,
+                    sender: step.personaName,
+                    senderRole: step.personaRole,
+                    message: personalize(step.message),
+                    phase: step.phase,
+                    isUser: false,
+                  });
+                  
+                  if (step.requiresUserResponse) {
+                    break;
+                  }
+                }
+              } else if (adapter.engagement?.autoStartMessage) {
+                await storage.createPlanningMessage({
+                  sessionId: newPlanningSession.id,
+                  sender: 'Priya',
+                  senderRole: 'Product Manager',
+                  message: personalize(adapter.engagement.autoStartMessage),
+                  phase: 'context',
+                  isUser: false,
+                });
+              }
+              
+              console.log(`[Sprint Cycling] Auto-start messages created for planning session ${newPlanningSession.id}`);
+            }
           } else if (completionResult.nextAction === 'proceed_to_graduation') {
             console.log(`[Sprint Cycling] User ready for graduation, redirecting to final ceremony`);
             // TODO: Handle graduation flow
