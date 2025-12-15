@@ -563,6 +563,7 @@ export function ExecutionModule({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'state'] });
       onComplete();
     },
     onError: () => {
