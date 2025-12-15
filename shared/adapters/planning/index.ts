@@ -147,6 +147,51 @@ function mergeEngagement(
   };
 }
 
+/**
+ * Apply sprint context to engagement messages
+ * For Sprint 1: Welcome as new team member
+ * For Sprint 2+: Acknowledge as returning team member
+ */
+function applySprintContext(
+  engagement: LevelEngagement,
+  sprintNumber: number,
+  userName: string = 'team member',
+  userRole: string = 'Developer'
+): LevelEngagement {
+  if (sprintNumber <= 1) {
+    return engagement;
+  }
+  
+  const returningWelcome = `Good morning everyone! Thanks for joining our Sprint ${sprintNumber} planning. Great to see the team back together.
+
+Let's dive into what we have for this sprint.`;
+
+  const returningAutoStartMessage = returningWelcome;
+  
+  const modifiedAutoStartSequence = engagement.autoStartSequence?.map((step, index) => {
+    if (index === 0 && step.personaId === 'priya') {
+      return {
+        ...step,
+        message: returningWelcome
+      };
+    }
+    return step;
+  });
+
+  const modifiedPreMeetingBriefing = engagement.preMeetingBriefing ? {
+    ...engagement.preMeetingBriefing,
+    subtitle: `Sprint ${sprintNumber} planning session`,
+    contextNote: `This is Sprint ${sprintNumber}. You know the team and the process. Let's focus on the new backlog items.`
+  } : undefined;
+
+  return {
+    ...engagement,
+    autoStartMessage: returningAutoStartMessage,
+    autoStartSequence: modifiedAutoStartSequence,
+    preMeetingBriefing: modifiedPreMeetingBriefing
+  };
+}
+
 function mergeDifficulty(
   roleDifficulty: Partial<PlanningDifficulty>,
   levelOverrides: Partial<PlanningDifficulty>
@@ -180,6 +225,9 @@ function mergeEvaluation(
 export interface PlanningAdapterOptions {
   tier?: SprintTier;
   tierStatus?: TierStatus;
+  sprintNumber?: number;
+  userName?: string;
+  userRole?: string;
 }
 
 /**
@@ -206,7 +254,16 @@ export function getSprintPlanningAdapter(
   };
   
   const baseEngagement: LevelEngagement = levelOverlay.engagement || defaultEngagement;
-  const engagement = mergeEngagement(baseEngagement, tierOverlay?.engagementOverrides);
+  let engagement = mergeEngagement(baseEngagement, tierOverlay?.engagementOverrides);
+  
+  if (options?.sprintNumber) {
+    engagement = applySprintContext(
+      engagement, 
+      options.sprintNumber, 
+      options.userName, 
+      options.userRole
+    );
+  }
   
   return {
     metadata: {

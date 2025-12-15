@@ -3358,8 +3358,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Determine session level (can be enhanced to use workspace level or user preference)
         const sessionLevel = 'intern'; // Default to intern for now
         
-        // Get adapter to check auto-start settings for the correct level
-        const adapter = getSprintPlanningAdapter(workspace.role, sessionLevel);
+        // Get sprint number for context-aware messages
+        const sprint = workspace.currentSprintId ? await storage.getSprint(workspace.currentSprintId) : null;
+        const sprintNumber = sprint?.sprintNumber || 1;
+        
+        // Get user info for personalization
+        const user = await storage.getUser(workspace.userId);
+        const userName = user?.username || 'team member';
+        const userRoleDisplay = workspace.role === 'developer' ? 'Developer' 
+          : workspace.role === 'qa' ? 'QA Engineer'
+          : workspace.role === 'devops' ? 'DevOps Engineer'
+          : workspace.role === 'data_science' ? 'Data Scientist'
+          : workspace.role === 'pm' ? 'Product Manager'
+          : 'team member';
+        
+        // Get adapter with sprint context for correct welcome messages
+        const adapter = getSprintPlanningAdapter(workspace.role, sessionLevel, {
+          sprintNumber,
+          userName,
+          userRole: userRoleDisplay
+        });
         const willAutoStart = adapter.engagement?.autoStartConversation ?? false;
         
         // Create new session with workspace role/level
@@ -3380,16 +3398,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Now insert auto-start messages (flag already set, so GET won't duplicate)
         if (willAutoStart) {
-          // Get user info for personalization
-          const user = await storage.getUser(workspace.userId);
-          const userName = user?.username || 'team member';
-          const userRole = workspace.role === 'developer' ? 'Developer' 
-            : workspace.role === 'qa' ? 'QA Engineer'
-            : workspace.role === 'devops' ? 'DevOps Engineer'
-            : workspace.role === 'data_science' ? 'Data Scientist'
-            : workspace.role === 'pm' ? 'Product Manager'
-            : 'team member';
-          
           // Fetch backlog items for dynamic message interpolation
           const planningState = await storage.getPlanningSessionState(workspaceId);
           const backlogItems: BacklogItem[] = planningState?.backlogItems?.map(item => ({
@@ -3403,7 +3411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Helper to substitute personalization and backlog placeholders
           const personalize = (text: string): string => {
-            return interpolateMessage(text, backlogSummary, userName, userRole);
+            return interpolateMessage(text, backlogSummary, userName, userRoleDisplay);
           };
           
           const sequence = adapter.engagement?.autoStartSequence;
