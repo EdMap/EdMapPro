@@ -426,6 +426,255 @@ export function UserList() {
         failing: '✗ shows paginated user list\n  Expected page controls to be visible\n  Received: null\n\nTests: 1 failed, 5 passed, 6 total'
       }
     }
+  },
+  // Sprint 2 tickets (tick-006, tick-007, tick-008)
+  {
+    id: 'tick-006',
+    title: 'Usage metrics shows incorrect value - usage stats look wrong',
+    description: 'The usage metrics is displaying wildly incorrect numbers. For example, adding 10 + 5 shows as 105. This appears to be a type coercion issue where values from URL query parameter are being treated as strings.',
+    type: 'bug',
+    priority: 'high',
+    points: 3,
+    acceptanceCriteria: [
+      'Usage metrics correctly sums numeric values',
+      'URL query parameters are properly parsed as numbers',
+      'Edge cases with empty or invalid values are handled'
+    ],
+    codeWork: {
+      files: [
+        {
+          filename: 'src/services/metricsService.ts',
+          language: 'typescript',
+          buggyCode: `export function calculateUsageMetrics(params: URLSearchParams): number {
+  // Bug: URL params are strings, concatenating instead of adding
+  const current = params.get('current') || 0;
+  const previous = params.get('previous') || 0;
+  
+  return current + previous;
+}
+
+export function parseMetricValue(value: string | null): number {
+  // Bug: Returns string if value exists, causing concatenation
+  return value || 0;
+}`,
+          fixedCode: `export function calculateUsageMetrics(params: URLSearchParams): number {
+  // Fix: Parse URL params as integers before arithmetic
+  const current = parseInt(params.get('current') || '0', 10);
+  const previous = parseInt(params.get('previous') || '0', 10);
+  
+  // Validate parsed values are actual numbers
+  if (isNaN(current) || isNaN(previous)) {
+    return 0;
+  }
+  
+  return current + previous;
+}
+
+export function parseMetricValue(value: string | null): number {
+  // Fix: Always return a proper number
+  if (!value) return 0;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? 0 : parsed;
+}`,
+          highlightLines: [3, 4, 5],
+          explanation: 'URL query parameters are always strings. Using + operator on strings concatenates them ("10" + "5" = "105"). The fix uses parseInt() to convert strings to numbers before arithmetic.'
+        }
+      ],
+      testCommand: 'npm test -- metricsService.test.ts',
+      testOutput: {
+        passing: '✓ calculateUsageMetrics adds numeric values correctly\n✓ handles empty params with default 0\n✓ handles invalid non-numeric values\n✓ parseMetricValue returns number type\n\nTests: 4 passed, 4 total',
+        failing: '✗ calculateUsageMetrics adds numeric values correctly\n  Expected: 15\n  Received: "105"\n\nTests: 1 failed, 3 passed, 4 total'
+      }
+    }
+  },
+  {
+    id: 'tick-007',
+    title: 'Fix null reference error in user profile settings',
+    description: 'The application crashes when accessing user.profile.settings for users who have not configured their profile. Need to add proper null checks.',
+    type: 'bug',
+    priority: 'high',
+    points: 2,
+    acceptanceCriteria: [
+      'No crash when user.profile is null',
+      'No crash when user.profile.settings is null',
+      'Default values returned for missing settings',
+      'Proper TypeScript types for nullable fields'
+    ],
+    codeWork: {
+      files: [
+        {
+          filename: 'src/services/userSettingsService.ts',
+          language: 'typescript',
+          buggyCode: `interface User {
+  id: string;
+  name: string;
+  profile: {
+    settings: {
+      theme: string;
+      notifications: boolean;
+      language: string;
+    };
+  };
+}
+
+export function getUserTheme(user: User): string {
+  // Bug: Crashes if profile or settings is undefined
+  return user.profile.settings.theme;
+}
+
+export function getUserNotificationPreference(user: User): boolean {
+  // Bug: No null check
+  return user.profile.settings.notifications;
+}
+
+export function getUserLanguage(user: User): string {
+  // Bug: Throws when accessing nested null
+  return user.profile.settings.language;
+}`,
+          fixedCode: `interface UserSettings {
+  theme: string;
+  notifications: boolean;
+  language: string;
+}
+
+interface UserProfile {
+  settings?: UserSettings;
+}
+
+interface User {
+  id: string;
+  name: string;
+  profile?: UserProfile;
+}
+
+const DEFAULT_SETTINGS: UserSettings = {
+  theme: 'light',
+  notifications: true,
+  language: 'en',
+};
+
+export function getUserTheme(user: User): string {
+  // Fix: Use optional chaining with nullish coalescing
+  return user.profile?.settings?.theme ?? DEFAULT_SETTINGS.theme;
+}
+
+export function getUserNotificationPreference(user: User): boolean {
+  // Fix: Safe access with default fallback
+  return user.profile?.settings?.notifications ?? DEFAULT_SETTINGS.notifications;
+}
+
+export function getUserLanguage(user: User): string {
+  // Fix: Graceful fallback for missing settings
+  return user.profile?.settings?.language ?? DEFAULT_SETTINGS.language;
+}`,
+          highlightLines: [12, 13, 17, 21],
+          explanation: 'The bug was accessing nested properties without null checks. The fix uses optional chaining (?.) and nullish coalescing (??) to safely access nested properties and provide sensible defaults.'
+        }
+      ],
+      testCommand: 'npm test -- userSettingsService.test.ts',
+      testOutput: {
+        passing: '✓ getUserTheme returns theme when set\n✓ getUserTheme returns default when profile is null\n✓ getUserTheme returns default when settings is null\n✓ getUserNotificationPreference handles null profile\n✓ getUserLanguage handles missing settings\n\nTests: 5 passed, 5 total',
+        failing: '✗ getUserTheme returns default when profile is null\n  TypeError: Cannot read property \'settings\' of undefined\n\nTests: 1 failed, 4 passed, 5 total'
+      }
+    }
+  },
+  {
+    id: 'tick-008',
+    title: 'Race condition when saving user preferences',
+    description: 'When users rapidly change preferences, sometimes the wrong value gets saved. This appears to be a race condition in our async save logic.',
+    type: 'bug',
+    priority: 'medium',
+    points: 3,
+    acceptanceCriteria: [
+      'Only the latest preference value is saved',
+      'Previous pending saves are cancelled',
+      'UI reflects the actual saved state',
+      'No stale data overwrites newer data'
+    ],
+    codeWork: {
+      files: [
+        {
+          filename: 'src/hooks/usePreferenceSave.ts',
+          language: 'typescript',
+          buggyCode: `import { useState } from 'react';
+
+export function usePreferenceSave() {
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Bug: Multiple rapid calls can complete out of order
+  const savePreference = async (key: string, value: string) => {
+    setIsSaving(true);
+    
+    // Simulated API call with variable delay
+    await fetch('/api/preferences', {
+      method: 'POST',
+      body: JSON.stringify({ key, value }),
+    });
+    
+    setIsSaving(false);
+  };
+  
+  return { savePreference, isSaving };
+}`,
+          fixedCode: `import { useState, useRef, useCallback } from 'react';
+
+export function usePreferenceSave() {
+  const [isSaving, setIsSaving] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const saveVersionRef = useRef(0);
+  
+  // Fix: Cancel previous pending requests and track versions
+  const savePreference = useCallback(async (key: string, value: string) => {
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
+    // Track version to ignore stale responses
+    const version = ++saveVersionRef.current;
+    
+    setIsSaving(true);
+    
+    try {
+      await fetch('/api/preferences', {
+        method: 'POST',
+        body: JSON.stringify({ key, value }),
+        signal: controller.signal,
+      });
+      
+      // Only update state if this is still the latest request
+      if (version === saveVersionRef.current) {
+        setIsSaving(false);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was cancelled, ignore
+        return;
+      }
+      // Only handle error if this is still the latest request
+      if (version === saveVersionRef.current) {
+        setIsSaving(false);
+        throw error;
+      }
+    }
+  }, []);
+  
+  return { savePreference, isSaving };
+}`,
+          highlightLines: [7, 8, 10, 11, 12, 13],
+          explanation: 'The race condition occurred because multiple async requests could complete in any order. The fix uses AbortController to cancel previous requests and a version counter to ignore stale responses.'
+        }
+      ],
+      testCommand: 'npm test -- usePreferenceSave.test.ts',
+      testOutput: {
+        passing: '✓ saves preference successfully\n✓ cancels previous request on rapid calls\n✓ only processes latest request result\n✓ handles abort errors gracefully\n✓ isSaving reflects correct state\n\nTests: 5 passed, 5 total',
+        failing: '✗ only processes latest request result\n  Expected: "value3" (last call)\n  Received: "value1" (first call completed last)\n\nTests: 1 failed, 4 passed, 5 total'
+      }
+    }
   }
 ];
 
