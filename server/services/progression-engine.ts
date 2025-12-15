@@ -15,7 +15,7 @@ import type {
   TierAdvancementDecision,
   PlanningSessionAssessment,
 } from "@shared/schema";
-import { getRoleRubricWeights } from "@shared/adapters/planning/tiers";
+import { getRoleRubricWeights } from "@shared/adapters/planning/types";
 
 interface CompetencyDeltaInput {
   userId: number;

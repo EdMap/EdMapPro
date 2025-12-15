@@ -120,10 +120,11 @@ export function getTierAdvancementMessaging(): TierAdvancementMessaging {
 export { tierOverlays };
 
 /**
- * Role-specific rubric weights for tier advancement scoring
+ * Tier-specific rubric weights for tier advancement scoring
  * Each role has different priorities for what makes a good planning participant
+ * Note: Different from RoleRubricWeights in types.ts which defines role config
  */
-export interface RoleRubricWeights {
+export interface TierRubricScores {
   participation: number;      // Active engagement in discussion
   estimation: number;         // Accuracy and contribution to estimation
   prioritization: number;     // Understanding of priority decisions
@@ -132,7 +133,7 @@ export interface RoleRubricWeights {
   testCoverage: number;       // QA-specific: coverage of test scenarios
 }
 
-const developerRubricWeights: RoleRubricWeights = {
+const developerTierRubric: TierRubricScores = {
   participation: 0.20,
   estimation: 0.35,           // Developers focus on estimation accuracy
   prioritization: 0.15,
@@ -141,7 +142,7 @@ const developerRubricWeights: RoleRubricWeights = {
   testCoverage: 0.00
 };
 
-const pmRubricWeights: RoleRubricWeights = {
+const pmTierRubric: TierRubricScores = {
   participation: 0.15,
   estimation: 0.10,
   prioritization: 0.30,       // PMs focus on prioritization
@@ -150,7 +151,7 @@ const pmRubricWeights: RoleRubricWeights = {
   testCoverage: 0.00
 };
 
-const qaRubricWeights: RoleRubricWeights = {
+const qaTierRubric: TierRubricScores = {
   participation: 0.20,
   estimation: 0.15,
   prioritization: 0.15,
@@ -159,14 +160,14 @@ const qaRubricWeights: RoleRubricWeights = {
   testCoverage: 0.30          // QA focuses on test coverage questions
 };
 
-const roleRubricWeights: Record<string, RoleRubricWeights> = {
-  developer: developerRubricWeights,
-  pm: pmRubricWeights,
-  qa: qaRubricWeights
+const tierRubricByRole: Record<string, TierRubricScores> = {
+  developer: developerTierRubric,
+  pm: pmTierRubric,
+  qa: qaTierRubric
 };
 
-export function getRoleRubricWeights(role: string): RoleRubricWeights {
-  return roleRubricWeights[role] || developerRubricWeights;
+export function getTierRubricScores(role: string): TierRubricScores {
+  return tierRubricByRole[role] || developerTierRubric;
 }
 
 /**
@@ -174,14 +175,14 @@ export function getRoleRubricWeights(role: string): RoleRubricWeights {
  */
 export function calculateTierReadinessScore(
   role: string,
-  scores: Partial<RoleRubricWeights>
+  scores: Partial<TierRubricScores>
 ): number {
-  const weights = getRoleRubricWeights(role);
+  const weights = getTierRubricScores(role);
   let totalScore = 0;
   let totalWeight = 0;
   
   for (const [key, weight] of Object.entries(weights)) {
-    const score = scores[key as keyof RoleRubricWeights] ?? 0;
+    const score = scores[key as keyof TierRubricScores] ?? 0;
     totalScore += score * weight;
     totalWeight += weight;
   }
