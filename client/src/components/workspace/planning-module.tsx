@@ -665,7 +665,7 @@ export function PlanningModule({
           // Auto-advance after a short delay to let the user see the closing message
           setTimeout(() => {
             advancePhase.mutate();
-          }, 800);
+          }, 2000);
         } else {
           // Queue phase transition hint for manual advance
           setPendingPhaseTransitionHint(true);
@@ -881,7 +881,7 @@ export function PlanningModule({
         setPendingPhaseTransitionHint(false);
         // Auto-hide after 10 seconds
         setTimeout(() => setShowPhaseTransitionHint(false), 10000);
-      }, 100);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [visibleMessageCount, sessionState?.messages?.length, pendingPhaseTransitionHint, isStaggering]);

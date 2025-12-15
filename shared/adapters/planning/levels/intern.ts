@@ -117,9 +117,9 @@ The lower priority items can wait for the next sprint if needed.`
     ],
     messageStagger: {
       enabled: true,
-      baseDelayMs: 1800,
-      perCharacterDelayMs: 18,
-      maxDelayMs: 6000
+      baseDelayMs: 3000,
+      perCharacterDelayMs: 30,
+      maxDelayMs: 10000
     },
     preMeetingBriefing: {
       enabled: true,
