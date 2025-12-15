@@ -40,9 +40,9 @@ They should mentor the team through the planning process.`
 Before I go through the items, any context from last sprint we should factor in?`,
     messageStagger: {
       enabled: true,
-      baseDelayMs: 1600,
-      perCharacterDelayMs: 16,
-      maxDelayMs: 6000
+      baseDelayMs: 1000,
+      perCharacterDelayMs: 10,
+      maxDelayMs: 3500
     },
     preMeetingBriefing: {
       enabled: false,
