@@ -198,6 +198,92 @@ function applyStarterCodeTransform(
   return transformed;
 }
 
+/**
+ * Create a fallback code challenge from ticket data when no backlog item exists
+ * This allows the code editor to work for dynamically generated tickets
+ */
+export function createFallbackCodeChallenge(
+  ticket: {
+    title: string;
+    description: string;
+    type: string;
+    ticketKey: string;
+    acceptanceCriteria?: string[];
+  },
+  level: Level = 'intern'
+): CodeChallenge {
+  const isBug = ticket.type === 'bug';
+  const fileName = isBug ? 'src/fix.ts' : 'src/feature.ts';
+  
+  const starterCode = isBug
+    ? `// ${ticket.title}
+// 
+// Description: ${ticket.description}
+//
+// Your task: Fix the bug described above
+// Hint: Read the description carefully and identify the issue
+
+export function solve() {
+  // TODO: Implement your fix here
+  throw new Error('Not implemented');
+}
+`
+    : `// ${ticket.title}
+//
+// Description: ${ticket.description}
+//
+// Your task: Implement the feature described above
+
+export function implement() {
+  // TODO: Implement the feature here
+  throw new Error('Not implemented');
+}
+`;
+
+  const solutionCode = starterCode.replace(
+    "throw new Error('Not implemented');",
+    "// Solution implemented\n  return true;"
+  );
+
+  const testCases: TestCase[] = [
+    {
+      id: 'test-1',
+      name: `${ticket.title} - basic functionality`,
+      description: `Verify the implementation works correctly`,
+      assertions: ['Implementation should not throw errors', 'Function should return expected result'],
+      hidden: false,
+    },
+  ];
+
+  if (ticket.acceptanceCriteria) {
+    ticket.acceptanceCriteria.forEach((criteria, index) => {
+      testCases.push({
+        id: `test-ac-${index + 1}`,
+        name: criteria,
+        description: criteria,
+        assertions: [criteria],
+        hidden: false,
+      });
+    });
+  }
+
+  return {
+    language: 'typescript',
+    starterFiles: { [fileName]: starterCode },
+    solutionFiles: { [fileName]: solutionCode },
+    testCases,
+    hints: [
+      `Read the ticket description carefully`,
+      `Consider edge cases in your implementation`,
+      level === 'intern' ? `Don't hesitate to ask for help in the team chat` : undefined,
+    ].filter(Boolean) as string[],
+    acceptanceCriteria: ticket.acceptanceCriteria || [],
+    difficulty: level === 'senior' ? 'advanced' : level === 'intern' ? 'beginner' : 'intermediate',
+    estimatedMinutes: 15,
+    concepts: [],
+  };
+}
+
 export function createCodeChallengeFromBacklog(
   backlogCodeWork: {
     files: Array<{

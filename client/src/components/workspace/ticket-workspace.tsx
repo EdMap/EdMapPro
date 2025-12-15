@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getSprintExecutionAdapter } from "@shared/adapters";
 import { getBacklogItemById } from "@shared/adapters/planning/backlog-catalogue";
-import { getCodeExecutionAdapter, createCodeChallengeFromBacklog } from "@shared/adapters/code-execution";
+import { getCodeExecutionAdapter, createCodeChallengeFromBacklog, createFallbackCodeChallenge } from "@shared/adapters/code-execution";
 import { CodeWorkPanel } from "./code-work-panel";
 import { CodeEditorPanel } from "./code-editor";
 import { PRReviewPanel, type ExportedReviewThread } from "./pr-review-panel";
@@ -201,19 +201,34 @@ export function TicketWorkspace({
   const codeWorkComplete = optimisticCodeWorkComplete ?? (gitState.codeWorkComplete || false);
 
   const codeExecutionAdapter = useMemo(() => {
-    if (!codeWorkTemplate) return null;
+    let codeChallenge;
     
-    const codeChallenge = createCodeChallengeFromBacklog(
-      codeWorkTemplate,
-      backlogItem?.acceptanceCriteria || []
-    );
+    if (codeWorkTemplate) {
+      codeChallenge = createCodeChallengeFromBacklog(
+        codeWorkTemplate,
+        backlogItem?.acceptanceCriteria || []
+      );
+    } else if (ticket) {
+      codeChallenge = createFallbackCodeChallenge(
+        {
+          title: ticket.title,
+          description: ticket.description,
+          type: ticket.type,
+          ticketKey: ticket.ticketKey,
+          acceptanceCriteria: (ticket.acceptanceCriteria as string[]) || [],
+        },
+        level as Level
+      );
+    } else {
+      return null;
+    }
     
     return getCodeExecutionAdapter({
       role: role as Role,
       level: level as Level,
       codeChallenge,
     });
-  }, [codeWorkTemplate, backlogItem?.acceptanceCriteria, role, level]);
+  }, [codeWorkTemplate, backlogItem?.acceptanceCriteria, role, level, ticket]);
 
   // Sync editor mode from adapter config (respects adapter architecture)
   useEffect(() => {
