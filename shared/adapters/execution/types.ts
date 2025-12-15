@@ -349,11 +349,26 @@ export interface TicketCompletionConfig {
   };
 }
 
+// Context passed to dynamic message functions
+export interface SprintContext {
+  sprintNumber: number;
+  isFirstSprint: boolean;
+}
+
+// Messages can be static strings or functions that receive sprint context
+export type DynamicMessage = string | ((ctx: SprintContext) => string);
+
+export interface DynamicCelebrationMessages {
+  title?: DynamicMessage;
+  subtitle?: DynamicMessage;
+  encouragement?: DynamicMessage;
+}
+
 export interface TicketCompletionModifiers {
   celebrationStyleOverride?: 'confetti' | 'simple' | 'minimal';
   showProgressRecapOverride?: boolean;
   showLearningHighlightsOverride?: boolean;
-  messagesOverride?: Partial<TicketCompletionConfig['celebrationMessages']>;
+  messagesOverride?: DynamicCelebrationMessages;
 }
 
 export interface SprintCompletionConfig {
@@ -375,11 +390,17 @@ export interface SprintCompletionConfig {
   teamMessage: string;
 }
 
+export interface DynamicProgressMessages {
+  inProgress?: DynamicMessage;
+  nearComplete?: DynamicMessage;
+  allDone?: DynamicMessage;
+}
+
 export interface SprintCompletionModifiers {
-  progressMessagesOverride?: Partial<SprintCompletionConfig['progressMessages']>;
+  progressMessagesOverride?: DynamicProgressMessages;
   completionCTAOverride?: Partial<SprintCompletionConfig['completionCTA']>;
   celebrationStyleOverride?: SprintCompletionConfig['celebrationStyle'];
-  teamMessageOverride?: string;
+  teamMessageOverride?: DynamicMessage;
 }
 
 export interface ExecutionUIControls {

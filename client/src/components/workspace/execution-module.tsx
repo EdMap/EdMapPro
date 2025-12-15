@@ -482,9 +482,16 @@ export function ExecutionModule({
   const [selectedTicket, setSelectedTicket] = useState<SprintTicket | null>(null);
   const [sprintDay, setSprintDay] = useState(1);
 
+  const { data: sprintData } = useQuery<{ sprint: { sprintNumber: number } }>({
+    queryKey: [`/api/sprints/${sprintId}`],
+    enabled: !!sprintId,
+  });
+  
+  const sprintNumber = sprintData?.sprint?.sprintNumber ?? 1;
+
   const adapter = useMemo(() => {
-    return getSprintExecutionAdapter(role as Role, level as Level);
-  }, [role, level]);
+    return getSprintExecutionAdapter(role as Role, level as Level, { sprintNumber });
+  }, [role, level, sprintNumber]);
 
   const { data: tickets = [], isLoading, error } = useQuery<SprintTicket[]>({
     queryKey: ['/api/sprints', sprintId, 'tickets'],

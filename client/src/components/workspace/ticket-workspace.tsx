@@ -178,9 +178,16 @@ export function TicketWorkspace({
     }
   }, [reviewThreads, reviewThreadsKey]);
 
+  const { data: sprintData } = useQuery<{ sprint: { sprintNumber: number } }>({
+    queryKey: [`/api/sprints/${sprintId}`],
+    enabled: !!sprintId,
+  });
+  
+  const sprintNumber = sprintData?.sprint?.sprintNumber ?? 1;
+
   const adapter = useMemo(() => {
-    return getSprintExecutionAdapter(role as Role, level as Level);
-  }, [role, level]);
+    return getSprintExecutionAdapter(role as Role, level as Level, { sprintNumber });
+  }, [role, level, sprintNumber]);
 
   const { data: ticket, isLoading, error } = useQuery<SprintTicket>({
     queryKey: [`/api/tickets/${ticketId}`],

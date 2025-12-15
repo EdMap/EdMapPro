@@ -145,7 +145,9 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
     showLearningHighlightsOverride: true,
     messagesOverride: {
       title: 'Amazing Work! PR Merged!',
-      encouragement: 'You did it! You completed your first full development cycle - from creating a branch to getting your code merged. This is exactly how professional developers work every day!',
+      encouragement: (ctx) => ctx.isFirstSprint
+        ? 'You did it! You completed your first full development cycle - from creating a branch to getting your code merged. This is exactly how professional developers work every day!'
+        : 'Great job! Another ticket done. You\'re really getting the hang of the development workflow - your code quality keeps improving!',
     },
   },
   
@@ -159,6 +161,8 @@ export const internExecutionOverlay: LevelExecutionOverlay = {
       label: 'Present Your Work',
       description: 'Time to show off what you accomplished to your team!',
     },
-    teamMessageOverride: 'Wow, you completed your first sprint! The team is impressed. Let\'s move to the Sprint Review where you\'ll present your work to stakeholders.',
+    teamMessageOverride: (ctx) => ctx.isFirstSprint
+      ? 'Wow, you completed your first sprint! The team is impressed. Let\'s move to the Sprint Review where you\'ll present your work to stakeholders.'
+      : `Great work on Sprint ${ctx.sprintNumber}! You're building real momentum now. Let's move to the Sprint Review.`,
   },
 };

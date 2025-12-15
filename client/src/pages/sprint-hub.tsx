@@ -319,11 +319,13 @@ export default function SprintHub() {
   const advancePhase = useAdvanceWorkspacePhase();
   const { toast } = useToast();
   
+  const sprintNumber = overview?.sprint?.sprintNumber ?? 1;
+  
   const adapter = useMemo(() => {
     const role = (journeyDashboard?.journey?.journeyMetadata as any)?.role || 'developer';
     const level = (journeyDashboard?.journey?.journeyMetadata as any)?.entryLevel || 'intern';
-    return getSprintExecutionAdapter(role as Role, level as Level);
-  }, [journeyDashboard]);
+    return getSprintExecutionAdapter(role as Role, level as Level, { sprintNumber });
+  }, [journeyDashboard, sprintNumber]);
 
   const handleMoveTicket = (ticketId: number, newStatus: TicketStatus) => {
     moveTicket.mutate(

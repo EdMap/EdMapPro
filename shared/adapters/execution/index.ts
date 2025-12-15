@@ -25,6 +25,8 @@ import type {
   TicketCompletionModifiers,
   SprintCompletionConfig,
   SprintCompletionModifiers,
+  SprintContext,
+  DynamicMessage,
 } from './types';
 
 import { 
@@ -54,6 +56,12 @@ const levelOverlays: Record<Level, LevelExecutionOverlay> = {
   mid: midExecutionOverlay,
   senior: seniorExecutionOverlay,
 };
+
+function resolveDynamicMessage(message: DynamicMessage | undefined, ctx: SprintContext, fallback: string): string {
+  if (message === undefined) return fallback;
+  if (typeof message === 'function') return message(ctx);
+  return message;
+}
 
 function mergeUIControls(
   roleControls: Partial<ExecutionUIControls>,
@@ -167,36 +175,42 @@ function mergeCodeWorkConfig(
 
 function mergeTicketCompletionConfig(
   roleConfig: TicketCompletionConfig,
-  levelModifiers: TicketCompletionModifiers
+  levelModifiers: TicketCompletionModifiers,
+  sprintContext: SprintContext
 ): TicketCompletionConfig {
+  const messages = levelModifiers.messagesOverride;
   return {
     ...roleConfig,
     celebrationStyle: levelModifiers.celebrationStyleOverride ?? roleConfig.celebrationStyle,
     showProgressRecap: levelModifiers.showProgressRecapOverride ?? roleConfig.showProgressRecap,
     showLearningHighlights: levelModifiers.showLearningHighlightsOverride ?? roleConfig.showLearningHighlights,
     celebrationMessages: {
-      ...roleConfig.celebrationMessages,
-      ...levelModifiers.messagesOverride,
+      title: resolveDynamicMessage(messages?.title, sprintContext, roleConfig.celebrationMessages.title),
+      subtitle: resolveDynamicMessage(messages?.subtitle, sprintContext, roleConfig.celebrationMessages.subtitle),
+      encouragement: resolveDynamicMessage(messages?.encouragement, sprintContext, roleConfig.celebrationMessages.encouragement),
     },
   };
 }
 
 function mergeSprintCompletionConfig(
   roleConfig: SprintCompletionConfig,
-  levelModifiers: SprintCompletionModifiers
+  levelModifiers: SprintCompletionModifiers,
+  sprintContext: SprintContext
 ): SprintCompletionConfig {
+  const progressMsgs = levelModifiers.progressMessagesOverride;
   return {
     ...roleConfig,
     celebrationStyle: levelModifiers.celebrationStyleOverride ?? roleConfig.celebrationStyle,
     progressMessages: {
-      ...roleConfig.progressMessages,
-      ...levelModifiers.progressMessagesOverride,
+      inProgress: resolveDynamicMessage(progressMsgs?.inProgress, sprintContext, roleConfig.progressMessages.inProgress),
+      nearComplete: resolveDynamicMessage(progressMsgs?.nearComplete, sprintContext, roleConfig.progressMessages.nearComplete),
+      allDone: resolveDynamicMessage(progressMsgs?.allDone, sprintContext, roleConfig.progressMessages.allDone),
     },
     completionCTA: {
       ...roleConfig.completionCTA,
       ...levelModifiers.completionCTAOverride,
     },
-    teamMessage: levelModifiers.teamMessageOverride ?? roleConfig.teamMessage,
+    teamMessage: resolveDynamicMessage(levelModifiers.teamMessageOverride, sprintContext, roleConfig.teamMessage),
   };
 }
 
@@ -265,9 +279,22 @@ ${levelModifiers.showExampleResponses ? 'Include example responses to help the d
   };
 }
 
-export function getSprintExecutionAdapter(role: Role, level: Level): SprintExecutionAdapter {
+export interface SprintExecutionAdapterOptions {
+  sprintNumber?: number;
+}
+
+export function getSprintExecutionAdapter(
+  role: Role, 
+  level: Level, 
+  options: SprintExecutionAdapterOptions = {}
+): SprintExecutionAdapter {
   const roleAdapter = roleAdapters[role] || roleAdapters.developer;
   const levelOverlay = levelOverlays[level] || levelOverlays.intern;
+  
+  const sprintContext: SprintContext = {
+    sprintNumber: options.sprintNumber ?? 1,
+    isFirstSprint: (options.sprintNumber ?? 1) === 1,
+  };
   
   const feedbackPrompt = `${roleAdapter.standupConfig.baseFeedbackPrompt}
 Tone: ${levelOverlay.standupModifiers.feedbackTone}
@@ -311,12 +338,14 @@ ${levelOverlay.standupModifiers.showExamples ? 'Include brief examples when help
     
     ticketCompletion: mergeTicketCompletionConfig(
       roleAdapter.ticketCompletionConfig,
-      levelOverlay.ticketCompletionModifiers
+      levelOverlay.ticketCompletionModifiers,
+      sprintContext
     ),
     
     sprintCompletion: mergeSprintCompletionConfig(
       roleAdapter.sprintCompletionConfig,
-      levelOverlay.sprintCompletionModifiers
+      levelOverlay.sprintCompletionModifiers,
+      sprintContext
     ),
     
     uiControls: mergeUIControls(roleAdapter.uiControls, levelOverlay.uiOverrides),
