@@ -59,7 +59,13 @@ const levelOverlays: Record<Level, LevelExecutionOverlay> = {
 
 function resolveDynamicMessage(message: DynamicMessage | undefined, ctx: SprintContext, fallback: string): string {
   if (message === undefined) return fallback;
-  if (typeof message === 'function') return message(ctx);
+  if (typeof message === 'function') {
+    try {
+      return message(ctx);
+    } catch {
+      return fallback;
+    }
+  }
   return message;
 }
 
