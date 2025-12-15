@@ -246,8 +246,8 @@ export class SprintGenerator {
       softSkillPool = this.getAllTemplateIds().softSkills;
     }
 
-    const targetBugCount = Math.min(2, bugPool.length);
-    const targetFeatureCount = Math.min(1, featurePool.length);
+    const targetBugCount = Math.min(3, bugPool.length);
+    const targetFeatureCount = Math.min(2, featurePool.length);
     const targetSoftSkillCount = Math.min(2, softSkillPool.length);
 
     const selectedBugs = this.selectRandomItems(bugPool, targetBugCount);
