@@ -4031,6 +4031,16 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     }
   }
 
+  // Helper to generate proper sequential ticket keys like tick-001, tick-002
+  private generateTicketKey(sprintNumber: number, ticketIndex: number): string {
+    // Format: tick-{3-digit global index}
+    // Sprint 1: tick-001, tick-002... Sprint 2 continues: tick-006, tick-007...
+    // Calculate global index based on sprint number and ticket index
+    const globalIndex = ((sprintNumber - 1) * 5) + ticketIndex; // Assuming ~5 tickets per sprint
+    const paddedIndex = String(globalIndex).padStart(3, '0');
+    return `tick-${paddedIndex}`;
+  }
+
   async createSprintTicketsFromPlanning(workspaceId: number, sprintId: number): Promise<void> {
     const [planningSession] = await db.select()
       .from(planningSessions)
@@ -4044,8 +4054,23 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
 
     const existingTickets = await this.getSprintTickets(sprintId);
     
+    // Build a map of templateId -> existing ticketKey for matching
+    const templateToTicketKey = new Map<string, string>();
     for (const ticket of existingTickets) {
-      if (!selectedItemIds.includes(ticket.ticketKey)) {
+      // For carryover tickets, they might already have NOVA-xxx keys
+      // Store both the ticketKey and any templateId reference
+      templateToTicketKey.set(ticket.ticketKey, ticket.ticketKey);
+    }
+    
+    // Delete tickets not in selected list (match by either ticketKey or templateId)
+    for (const ticket of existingTickets) {
+      // Check if this ticket's key or its template matches any selected item
+      const isSelected = selectedItemIds.some(id => 
+        id === ticket.ticketKey || 
+        id.includes(ticket.ticketKey) ||
+        ticket.ticketKey.includes(id)
+      );
+      if (!isSelected) {
         await db.delete(sprintTickets).where(eq(sprintTickets.id, ticket.id));
       }
     }
@@ -4082,16 +4107,32 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
       }
     }
 
+    // Get sprint number for generating proper ticket keys
+    const sprintNumber = sprint?.sprintNumber || 1;
+    
+    // Track ticket index for generating sequential keys
+    let ticketIndex = remainingTickets.length + 1;
+
     for (const itemId of selectedItemIds) {
-      if (existingTicketKeys.includes(itemId)) continue;
+      // Check if we already have this item (by templateId or ticketKey)
+      const alreadyExists = existingTicketKeys.some(key => 
+        key === itemId || 
+        itemId.includes(key) ||
+        key.includes(itemId)
+      );
+      if (alreadyExists) continue;
 
       // First try to find in sprint's generated backlog
       const generatedTicket = backlogTickets.find(t => t.templateId === itemId);
       
       if (generatedTicket) {
+        // Generate proper ticket key like NOVA-201
+        const ticketKey = this.generateTicketKey(sprintNumber, ticketIndex);
+        ticketIndex++;
+        
         await this.createSprintTicket({
           sprintId,
-          ticketKey: generatedTicket.templateId,
+          ticketKey,
           title: generatedTicket.generatedTicket.title,
           description: generatedTicket.generatedTicket.description,
           type: generatedTicket.type,
@@ -4108,9 +4149,13 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
         const catalogueItem = getBacklogItemById(itemId);
         if (!catalogueItem) continue;
 
+        // Generate proper ticket key like NOVA-201
+        const ticketKey = this.generateTicketKey(sprintNumber, ticketIndex);
+        ticketIndex++;
+
         await this.createSprintTicket({
           sprintId,
-          ticketKey: catalogueItem.id,
+          ticketKey,
           title: catalogueItem.title,
           description: catalogueItem.description,
           type: catalogueItem.type,
