@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 
 interface BacklogItem {
   id: string;
+  displayKey?: string; // tick-XXX format for UI display
   title: string;
   type: 'bug' | 'feature' | 'improvement';
   priority: 'high' | 'medium' | 'low';
@@ -499,7 +500,7 @@ function BacklogPanel({
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-[10px] font-mono text-muted-foreground bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{item.id}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{item.displayKey || item.id}</span>
                         <Badge className={cn("text-[10px] py-0 px-1.5", getTypeColor(item.type))} variant="secondary">
                           <Icon className="h-2.5 w-2.5 mr-0.5" />
                           {item.type}

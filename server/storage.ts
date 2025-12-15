@@ -3919,6 +3919,7 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     // Try to use dynamically generated sprint backlog, fall back to static catalogue
     let backlogItems: Array<{
       id: string;
+      displayKey: string; // tick-XXX format for UI display
       title: string;
       description: string;
       type: 'bug' | 'feature' | 'improvement';
@@ -3960,10 +3961,20 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
 
         if (tickets.length > 0) {
           // Convert generated tickets to BacklogItem format
-          backlogItems = tickets
-            .filter(ticket => ticket.templateId && !completedTicketKeys.includes(ticket.templateId))
-            .map((ticket) => ({
-              id: ticket.templateId,
+          // Keep templateId as id (for selection matching), add displayKey for UI
+          const sprintNumber = sprint.sprintNumber || 1;
+          const filteredTickets = tickets.filter(ticket => 
+            ticket.templateId && !completedTicketKeys.includes(ticket.templateId)
+          );
+          
+          backlogItems = filteredTickets.map((ticket, index) => {
+            // Generate display key like tick-006, tick-007 for Sprint 2
+            const globalIndex = ((sprintNumber - 1) * 5) + (index + 1);
+            const displayKey = `tick-${String(globalIndex).padStart(3, '0')}`;
+            
+            return {
+              id: ticket.templateId, // Keep templateId for selection matching
+              displayKey, // tick-XXX format for UI display
               title: ticket.generatedTicket?.title || 'Untitled',
               description: ticket.generatedTicket?.description || '',
               type: (ticket.type === 'bug' || ticket.type === 'feature' || ticket.type === 'improvement' 
@@ -3972,7 +3983,8 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
               points: this.difficultyToPoints(ticket.generatedTicket?.difficulty || 'contributor'),
               selected: selectedItemIds.includes(ticket.templateId),
               isCarryover: ticket.isCarryover || false,
-            }));
+            };
+          });
         }
       }
     }
@@ -3981,15 +3993,20 @@ Python, TensorFlow, PyTorch, SQL, Spark, AWS, Kubernetes`,
     if (backlogItems.length === 0) {
       const catalogueItems = getBacklogItems();
       const availableItems = catalogueItems.filter(item => !completedTicketKeys.includes(item.id));
-      backlogItems = availableItems.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        type: item.type,
-        priority: item.priority,
-        points: item.points,
-        selected: selectedItemIds.includes(item.id)
-      }));
+      // Keep catalogue id for selection, add displayKey for UI
+      backlogItems = availableItems.map((item, index) => {
+        const displayKey = `tick-${String(index + 1).padStart(3, '0')}`;
+        return {
+          id: item.id, // Keep catalogue id for selection matching
+          displayKey, // tick-XXX format for UI display
+          title: item.title,
+          description: item.description,
+          type: item.type,
+          priority: item.priority,
+          points: item.points,
+          selected: selectedItemIds.includes(item.id)
+        };
+      });
     }
 
     const adapter = getSprintPlanningAdapter(session.role as import('@shared/adapters').Role, session.level as import('@shared/adapters').Level);
