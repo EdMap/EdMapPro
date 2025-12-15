@@ -18,12 +18,6 @@ export interface BacklogSummary {
   featuresSummary: string;
 }
 
-export interface InterpolationContext {
-  userName?: string;
-  userRole?: string;
-  sprintNumber?: number;
-}
-
 /**
  * Summarize backlog items into a structured format for message generation
  */
