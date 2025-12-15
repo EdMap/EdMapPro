@@ -713,6 +713,8 @@ export function PlanningModule({
       queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspaceId}/planning`] });
       setShowPhaseTransitionHint(false); // Reset hint when advancing
       if (data.completed) {
+        // Invalidate workspace state so the dashboard shows the new phase immediately
+        queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'state'] });
         onComplete(sessionState?.session.goalStatement || '', (sessionState?.session.selectedItems as string[]) || []);
       }
     }
